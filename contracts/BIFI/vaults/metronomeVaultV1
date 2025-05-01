@@ -16,10 +16,6 @@ import "./interfaces/ILBHooksBaseRewarder.sol";
 contract MetronomeVaultV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    // Token addresses
-    address public want;
-    // LBRouter address
-    address public lbRouter;
     
     event Rebalanced(
         address tokenX, 
@@ -42,6 +38,10 @@ contract MetronomeVaultV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGua
     function initialize(
         address _wantX,
         address _wantY,
+        uint256 _binStep,
+        uint256 _amountXMin,
+        uint256 _amountYMin,
+        uint256 _idSlippage,
         string memory _name,
         string memory _symbol,
         address _lbRouter
@@ -52,6 +52,10 @@ contract MetronomeVaultV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGua
         __ReentrancyGuard_init();
         wantX = _wantX;
         wantY = _wantY;
+        binStep = _binStep;
+        amountXMin = _amountXMin;
+        amountXMin = _amountYMin;
+        idSlippage = _idSlippage;
         lbRouter = _lbRouter;
         lbpContract = _lbpContract;
     }
@@ -157,14 +161,14 @@ contract MetronomeVaultV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGua
      * @return amountYRemoved Amount of token Y removed
      */
     function rebalance(
-        address tokenX,
-        address tokenY,
-        uint16 binStep,
+        // address tokenX - We dont need it since I had it in Initiliaze and its always gonna be the same.
+        // address tokenY - We dont need it since I had it in Initiliaze and its always gonna be the same.
+        // uint16 binStep - We dont need it since I had it in Initiliaze and its always gonna be the same.
         // Add liquidity params
-        uint256 amountXMin,
-        uint256 amountYMin,
+        //** uint256 amountXMin,
+        //** uint256 amountYMin,
         uint256 activeIdDesired,
-        uint256 idSlippage,
+        //** uint256 idSlippage,
         int256[] calldata deltaIds,
         uint256[] calldata distributionX,
         uint256[] calldata distributionY,
