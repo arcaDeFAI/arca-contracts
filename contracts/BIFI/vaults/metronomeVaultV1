@@ -1,0 +1,268 @@
+pragma solidity ^0.8.0;
+
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+
+import "./interfaces/ILBRouter.sol";
+
+/**
+ * @dev Implementation of a vault to deposit funds for yield optimizing.
+ * This is the contract that receives funds and that users interface with.
+ * Rebalancing functionality is implemented directly in this contract.
+ */
+contract MetronomeVaultV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+
+    // Token addresses
+    address public want;
+    // LBRouter address
+    address public lbRouter;
+    
+    event Rebalanced(
+        address tokenX, 
+        address tokenY, 
+        uint256 amountXAdded, 
+        uint256 amountYAdded, 
+        uint256 amountXRemoved, 
+        uint256 amountYRemoved
+    );
+
+    /**
+     * @dev Initializes the vault's own 'fana' token.
+     * This token is minted when someone does a deposit. It is burned in order
+     * to withdraw the corresponding portion of the underlying assets.
+     * @param _wantX the address of the tokenX that the vault will hold as underlying value.
+     * @param _wantY the address of the tokenY that the vault will hold as underlying value.
+     * @param _name the name of the vault token ''Metronome WS-SCUSD Vault''.
+     * @param _symbol the symbol of the vault token ''fanaWSSC.
+     */
+    function initialize(
+        address _wantX,
+        address _wantY,
+        string memory _name,
+        string memory _symbol,
+        address _lbRouter
+        address _lbpContract
+    ) public initializer {
+        __ERC20_init(_name, _symbol);
+        __Ownable_init();
+        __ReentrancyGuard_init();
+        wantX = _wantX;
+        wantY = _wantY;
+        lbRouter = _lbRouter;
+        lbpContract = _lbpContract;
+    }
+
+    /**
+     * @dev It calculates the total underlying value of {token} held by the system.
+     * It takes into account the vault contract balance.
+     */
+    function balance() public view returns (uint) {
+        return IERC20Upgradeable(want).balanceOf(address(this));
+    }
+
+    /**
+     * @dev Custom logic in here for how much the vault allows to be borrowed.
+     * We return 100% of tokens for now. Under certain conditions we might
+     * want to keep some of the system funds at hand in the vault, instead
+     * of putting them to work.
+     */
+    function available() public view returns (uint256) {
+        return IERC20Upgradeable(want).balanceOf(address(this));
+    }
+
+    /**
+     * @dev Function for various UIs to display the current value of one of our yield tokens.
+     * Returns an uint256 with 18 decimals of how much underlying asset one vault share represents.
+     */
+    function getPricePerFullShare() public view returns (uint256) {
+        return totalSupply() == 0 ? 1e18 : balance() * 1e18 / totalSupply();
+    }
+
+    /**
+     * @dev A helper function to call deposit() with all the sender's funds.
+     */
+    function depositAll() external {
+        deposit(IERC20Upgradeable(want).balanceOf(msg.sender));
+    }
+
+    /**
+     * @dev The entrypoint of funds into the system. People deposit with this function
+     * into the vault.
+     */
+    function deposit(uint _amount) public nonReentrant {
+        uint256 _pool = balance();
+        IERC20Upgradeable(want).safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 _after = balance();
+        _amount = _after - _pool; // Additional check for deflationary tokens
+        uint256 shares = 0;
+        if (totalSupply() == 0) {
+            shares = _amount;
+        } else {
+            shares = (_amount * totalSupply()) / _pool;
+        }
+        _mint(msg.sender, shares);
+    }
+
+    /**
+     * @dev A helper function to call withdraw() with all the sender's funds.
+     */
+    function withdrawAll() external {
+        withdraw(balanceOf(msg.sender));
+    }
+
+    /**
+     * @dev Function to exit the system. The vault will withdraw the required tokens
+     * from the strategy and pay up the token holder. A proportional number of IOU
+     * tokens are burned in the process.
+     */
+    function withdraw(uint256 _shares) public nonReentrant {
+        uint256 r = (balance() * _shares) / totalSupply();
+        _burn(msg.sender, _shares);
+        IERC20Upgradeable(want).safeTransfer(msg.sender, r);
+    }
+
+      /**
+     * @dev Rebalance function that combines addLiquidity and removeLiquidity functionality
+     * This function is external and can only be called by the owner
+     * It performs safety checks and is compliant with fee on transfer tokens
+     * It will use all available tokens in the vault including previously deposited tokens
+     * @param tokenX The address of token X
+     * @param tokenY The address of token Y
+     * @param binStep The bin step of the LBPair
+     * @param addLiquidityParams Parameters for adding liquidity:
+     *        - amountXMin Minimum amount of token X to add
+     *        - amountYMin Minimum amount of token Y to add
+     *        - activeIdDesired The desired active bin id
+     *        - idSlippage The number of bins to slip
+     *        - deltaIds The bin ids deltas
+     *        - distributionX The distribution of tokenX
+     *        - distributionY The distribution of tokenY
+     * @param removeLiquidityParams Parameters for removing liquidity:
+     *        - ids Array of bin ids
+     *        - amounts Array of amounts to remove
+     *        - amountXMin The min amount to receive of token X
+     *        - amountYMin The min amount to receive of token Y
+     * @param to The address of the recipient
+     * @param refundTo The address that will receive potential refunds
+     * @param deadline The deadline of the tx
+     * @param forceRebalance If true, will remove liquidity first before adding (for rebalancing)
+     *                      If false, will only add liquidity (for first time)
+     * @return amountXAdded Amount of token X added
+     * @return amountYAdded Amount of token Y added
+     * @return amountXRemoved Amount of token X removed
+     * @return amountYRemoved Amount of token Y removed
+     */
+    function rebalance(
+        address tokenX,
+        address tokenY,
+        uint16 binStep,
+        // Add liquidity params
+        uint256 amountXMin,
+        uint256 amountYMin,
+        uint256 activeIdDesired,
+        uint256 idSlippage,
+        int256[] calldata deltaIds,
+        uint256[] calldata distributionX,
+        uint256[] calldata distributionY,
+        // Remove liquidity params
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        uint256 removeAmountXMin,
+        uint256 removeAmountYMin,
+        // Shared params
+        address to,
+        address refundTo,
+        uint256 deadline,
+        // Control param
+        bool forceRebalance
+    ) external onlyOwner nonReentrant returns (
+        uint256 amountXAdded,
+        uint256 amountYAdded,
+        uint256 amountXRemoved,
+        uint256 amountYRemoved
+    ) {
+        require(block.timestamp <= deadline, "Transaction expired");
+        
+        // Check available balances of tokenX and tokenY in the vault before any operations
+        uint256 availableX = IERC20Upgradeable(tokenX).balanceOf(address(this));
+        uint256 availableY = IERC20Upgradeable(tokenY).balanceOf(address(this));
+        
+        // First, handle removal of liquidity if we're rebalancing or have IDs to remove from
+        if ((forceRebalance || ids.length > 0) && amounts.length > 0) {
+            require(ids.length == amounts.length, "Array lengths must match");
+            
+            // Call the removeLiquidity function on the LBRouter
+            (amountXRemoved, amountYRemoved) = ILBRouter(lbRouter).removeLiquidity(
+                tokenX,
+                tokenY, 
+                binStep,
+                removeAmountXMin,
+                removeAmountYMin,
+                ids,
+                amounts,
+                address(this),  // First send removed tokens to this contract
+                deadline
+            );
+            
+            // Update available balances after liquidity removal
+            availableX = IERC20Upgradeable(tokenX).balanceOf(address(this));
+            availableY = IERC20Upgradeable(tokenY).balanceOf(address(this));
+        }
+        
+        // Then, handle adding liquidity using all available tokens in the vault
+        if (availableX > 0 || availableY > 0) {
+            // Use all available tokens in the vault for adding liquidity
+            uint256 amountX = availableX;
+            uint256 amountY = availableY;
+            
+            // Approve router to spend tokens
+            if (amountX > 0) {
+                IERC20Upgradeable(tokenX).safeApprove(lbRouter, 0); // Clear previous approvals
+                IERC20Upgradeable(tokenX).safeApprove(lbRouter, amountX);
+            }
+            
+            if (amountY > 0) {
+                IERC20Upgradeable(tokenY).safeApprove(lbRouter, 0); // Clear previous approvals
+                IERC20Upgradeable(tokenY).safeApprove(lbRouter, amountY);
+            }
+            
+            // Call the actual addLiquidity function on the LBRouter
+            ILBRouter.LiquidityParameters memory liquidityParams = ILBRouter.LiquidityParameters({
+                tokenX: tokenX,
+                tokenY: tokenY,
+                binStep: binStep,
+                amountX: amountX,
+                amountY: amountY,
+                amountXMin: amountXMin,
+                amountYMin: amountYMin,
+                activeIdDesired: activeIdDesired,
+                idSlippage: idSlippage,
+                deltaIds: deltaIds,
+                distributionX: distributionX,
+                distributionY: distributionY,
+                to: to,
+                refundTo: refundTo,
+                deadline: deadline
+            });
+            
+            (amountXAdded, amountYAdded,,,) = ILBRouter(lbRouter).addLiquidity(liquidityParams);
+        }
+        
+        emit Rebalanced(tokenX, tokenY, amountXAdded, amountYAdded, amountXRemoved, amountYRemoved);
+        
+        return (amountXAdded, amountYAdded, amountXRemoved, amountYRemoved);
+    }  
+    
+    /**
+     * @dev Rescues random funds stuck that the contract can't handle.
+     * @param _token address of the token to rescue.
+     */
+    function inCaseTokensGetStuck(address _token) external onlyOwner {
+        require(_token != want, "!token");
+
+        uint256 amount = IERC20Upgradeable(_token).balanceOf(address(this));
+        IERC20Upgradeable(_token).safeTransfer(msg.sender, amount);
+    }
