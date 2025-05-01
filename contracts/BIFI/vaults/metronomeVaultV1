@@ -6,6 +6,7 @@ import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 import "./interfaces/ILBRouter.sol";
+import "./interfaces/ILBHooksBaseRewarder.sol";
 
 /**
  * @dev Implementation of a vault to deposit funds for yield optimizing.
