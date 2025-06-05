@@ -14,6 +14,7 @@ import "./interfaces/ILBPair.sol";
  * Separate share tracking for tokenX and tokenY
  * This contract receives funds and users interface with it.
  * Rebalancing functionality processes queues and manages liquidity.
+ * Enhanced with METRO reward claiming and automatic compounding functionality.
  */
 contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -33,6 +34,13 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256 timestamp;
     }
 
+    // Swap path structure for LB Router
+    struct SwapPath {
+        uint256[] pairBinSteps;
+        uint8[] versions;
+        address[] tokenPath;
+    }
+
     // State variables 
     address public tokenX; // Main token X that the vault will hold
     address public tokenY; // Main token Y that the vault will hold
@@ -43,6 +51,21 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     address public lbRouter; // Address of the LB Router contract
     address public lbpContract; // Address of the LBP contract
     address public rewarder; // Address of the LBHooksBaseRewarder contract
+    address public rewardToken; // Address of the reward token (METRO)
+    
+    // Native token address (WAVAX or similar)
+    address public nativeToken;
+    
+    // Swap paths for METRO -> tokenX and METRO -> tokenY
+    SwapPath public metroToTokenXPath;
+    SwapPath public metroToTokenYPath;
+    SwapPath public metroToNativePath;
+    
+    // Minimum amounts for swapping (to avoid dust)
+    uint256 public minSwapAmount;
+
+    // Store bin IDs from last add liquidity operation
+    uint256[] public lastAddLiquidityBinIds;
     
     // Separate share tracking
     uint256 public totalSharesX;
@@ -59,6 +82,10 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     // Track tokens waiting in queues
     uint256 public queuedTokenX;
     uint256 public queuedTokenY;
+    
+    // Compounding tracking
+    uint256 public totalCompoundedX; // Total tokenX compounded from rewards
+    uint256 public totalCompoundedY; // Total tokenY compounded from rewards
     
     // Events
     event DepositQueued(address indexed user, uint256 amount, bool isTokenX);
@@ -82,22 +109,17 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         address token,
         uint256 amount
     );
+    
+    event RewardsCompounded(
+        uint256 metroAmount,
+        uint256 tokenXCompounded,
+        uint256 tokenYCompounded
+    );
 
     /**
      * @dev Initializes the vault's own token.
      * These tokens are minted when someone does a deposit. It is burned in order
      * to withdraw the corresponding portion of the underlying assets.
-     * @param _tokenX the address of the tokenX that the vault will hold as underlying value.
-     * @param _tokenY the address of the tokenY that the vault will hold as underlying value.
-     * @param _binStep the bin step for the liquidity positions
-     * @param _amountXMin the minimum amount of tokenX to add during rebalance
-     * @param _amountYMin the minimum amount of tokenY to add during rebalance
-     * @param _idSlippage the number of bins to slip
-     * @param _name the name of the vault token ''Metronome WS-SCUSD Vault''.
-     * @param _symbol the symbol of the vault token ''fanaWSSC.
-     * @param _lbRouter the address of the LB Router
-     * @param _lbpContract the address of the LBP contract
-     * @param _rewarder the address of the LBHooksBaseRewarder contract for claiming.
      */
     function initialize(
         address _tokenX,
@@ -110,7 +132,9 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         string memory _symbol,
         address _lbRouter,
         address _lbpContract,
-        address _rewarder
+        address _rewarder,
+        address _rewardToken,
+        address _nativeToken
     ) public initializer {
         __ERC20_init(_name, _symbol);
         __Ownable_init();
@@ -125,9 +149,12 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         lbRouter = _lbRouter;
         lbpContract = _lbpContract;
         rewarder = _rewarder;
+        rewardToken = _rewardToken;
+        nativeToken = _nativeToken;
         
         depositQueueStart = 0;
         withdrawQueueStart = 0;
+        minSwapAmount = 1e15; // 0.001 METRO minimum
     }
 
     /**
@@ -163,12 +190,35 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     }
 
     /**
+     * @dev Get total supply for tokenX Shares (for backwards compatibility)
+     */
+    function totalSupplyX() public view returns (uint256) {
+        return totalSharesX;
+    }
+
+    /**
      * @dev Function for various UIs to display the current value of one of our yield tokens.
      * Returns an uint256 with 18 decimals of how much underlying asset one vault share represents.
      * This is a simplified implementation that considers only tokenX for share value calculation.
      */
-    function getPricePerFullShare() public view returns (uint256) {
-        return totalSupply() == 0 ? 1e18 : balanceX() * 1e18 / totalSupply();
+    function getPricePerFullShareX() public view returns (uint256) {
+        return totalSupplyX() == 0 ? 1e18 : balanceX() * 1e18 / totalSupplyX();
+    }
+
+    /**
+     * @dev Get total supply for tokenY shares (for backwards compatibility)
+     */
+    function totalSupplyY() public view returns (uint256) {
+        return totalSharesY;
+    }
+
+    /**
+     * @dev Function for various UIs to display the current value of one of our yield tokens.
+     * Returns an uint256 with 18 decimals of how much underlying asset one vault share represents.
+     * This is a simplified implementation that considers only tokenY for share value calculation.
+     */
+    function getPricePerFullShareY() public view returns (uint256) {
+        return totalSupplyY() == 0 ? 1e18 : balanceY() * 1e18 / totalSupplyY();
     }
 
     /**
@@ -187,7 +237,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
 
     /**
      * @dev Modified deposit function for tokenX - now adds to queue instead of immediate minting
-     * Tokens are held in contract until next rebalance
+     * Tokens are held in contract until next rebalance. Necessary for the rebalance and will help to calculate Shares.
      */
     function depositX(uint256 _amount) public nonReentrant {
         require(_amount > 0, "Amount must be greater than 0");
@@ -288,14 +338,15 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     }
 
     /**
-     * @dev Modified rebalance function that processes queues
+     * @dev Enhanced rebalance function with METRO claiming and compounding
      * 1. Remove liquidity first
-     * 2. Process withdraw queue (fulfill withdrawals and burn shares)
-     * 3. Process deposit queue (mint shares)
-     * 4. Add liquidity with remaining tokens
+     * 2. Claim METRO rewards and compound them
+     * 3. Process withdraw queue (fulfill withdrawals and burn shares)
+     * 4. Process deposit queue (mint shares)
+     * 5. Add liquidity with remaining tokens
      */
     function rebalance(
-        uint256 activeIdDesired,
+        // uint256 activeIdDesired,
         int256[] calldata deltaIds,
         uint256[] calldata distributionX,
         uint256[] calldata distributionY,
@@ -335,13 +386,16 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             );
         }
         
-        // Step 2: Process withdraw queue FIRST (before calculating deposit shares)
+        // Step 2: Claim and compound METRO rewards BEFORE processing queues
+        _claimAndCompoundRewards();
+        
+        // Step 3: Process withdraw queue FIRST (before calculating deposit shares)
         uint256 withdrawsProcessed = _processWithdrawQueue(amountXRemoved, amountYRemoved);
         
-        // Step 3: Process deposit queue (mint shares based on current state)
+        // Step 4: Process deposit queue (mint shares based on current state including compounded rewards)
         uint256 depositsProcessed = _processDepositQueue();
         
-        // Step 4: Add liquidity with remaining available tokens
+        // Step 5: Add liquidity with remaining available tokens
         uint256 availableTokenX = availableX();
         uint256 availableTokenY = availableY();
         
@@ -365,7 +419,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 amountY: availableTokenY,
                 amountXMin: amountXMin,
                 amountYMin: amountYMin,
-                activeIdDesired: activeIdDesired,
+                activeIdDesired: ILBPair(lbpContract).getActiveID(),
                 idSlippage: idSlippage,
                 deltaIds: deltaIds,
                 distributionX: distributionX,
@@ -375,12 +429,108 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 deadline: deadline
             });
             
-            (amountXAdded, amountYAdded,,,) = ILBRouter(lbRouter).addLiquidity(liquidityParams);
+            (amountXAdded, amountYAdded) = ILBRouter(lbRouter).addLiquidity(liquidityParams);
         }
         
         emit Rebalanced(tokenX, tokenY, amountXAdded, amountYAdded, amountXRemoved, amountYRemoved, depositsProcessed, withdrawsProcessed);
         
         return (amountXAdded, amountYAdded, amountXRemoved, amountYRemoved);
+    }
+
+    /**
+     * @dev Claims METRO rewards and compounds them into tokenX and tokenY
+     * This increases the value of existing shares without minting new ones
+     */
+    function _claimAndCompoundRewards() internal {
+        if (rewarder == address(0)) return;
+        
+        // Get bin IDs where we have positions
+        uint256[] memory binIds = getVaultBinIds();
+        if (binIds.length == 0) return;
+        
+        // Get balance before claiming
+        uint256 metroBalanceBefore = IERC20Upgradeable(rewardToken).balanceOf(address(this));
+        
+        // Claim METRO rewards
+        try ILBHooksBaseRewarder(rewarder).claim(address(this), binIds) {
+            // Calculate claimed amount
+            uint256 metroBalanceAfter = IERC20Upgradeable(rewardToken).balanceOf(address(this));
+            uint256 metroClaimed = metroBalanceAfter - metroBalanceBefore;
+            
+            if (metroClaimed > minSwapAmount) {
+                // Split METRO 50/50 and swap to tokenX and tokenY
+                uint256 metroForTokenX = metroClaimed / 2;
+                uint256 metroForTokenY = metroClaimed - metroForTokenX;
+                
+                uint256 tokenXObtained = 0;
+                uint256 tokenYObtained = 0;
+                
+                // Swap METRO to tokenX
+                if (metroForTokenX > 0) {
+                    tokenXObtained = _swapMetroToToken(metroForTokenX, tokenX, metroToTokenXPath);
+                }
+                
+                // Swap METRO to tokenY
+                if (metroForTokenY > 0) {
+                    tokenYObtained = _swapMetroToToken(metroForTokenY, tokenY, metroToTokenYPath);
+                }
+                
+                // Update compounding totals - these tokens increase share value
+                totalCompoundedX += tokenXObtained;
+                totalCompoundedY += tokenYObtained;
+                
+                emit RewardsClaimed(rewarder, rewardToken, metroClaimed);
+                emit RewardsCompounded(metroClaimed, tokenXObtained, tokenYObtained);
+            }
+        } catch {
+            // Claiming failed, continue with rebalance
+        }
+    }
+
+    /**
+     * @dev Swaps METRO to target token using the appropriate path
+     */
+    function _swapMetroToToken(
+        uint256 metroAmount, 
+        address targetToken, 
+        SwapPath memory swapPath
+    ) internal returns (uint256 amountOut) {
+        if (metroAmount == 0 || swapPath.tokenPath.length == 0) return 0;
+        
+        // Approve METRO for router
+        IERC20Upgradeable(rewardToken).safeApprove(lbRouter, 0);
+        IERC20Upgradeable(rewardToken).safeApprove(lbRouter, metroAmount);
+        
+        uint256 balanceBefore = IERC20Upgradeable(targetToken).balanceOf(address(this));
+        
+        try ILBRouter(lbRouter).swapExactTokensForTokens(
+            metroAmount,
+            0, // Accept any amount of target token
+            swapPath,
+            address(this),
+            block.timestamp + 300
+        ) returns (uint256 amountOutReturned) {
+            // Verify actual received amount
+            uint256 balanceAfter = IERC20Upgradeable(targetToken).balanceOf(address(this));
+            amountOut = balanceAfter - balanceBefore;
+        } catch {
+            // Swap failed, try native swap if target is not native
+            if (targetToken != nativeToken && metroToNativePath.tokenPath.length > 0) {
+                try ILBRouter(lbRouter).swapExactTokensForNATIVE(
+                    metroAmount,
+                    0,
+                    metroToNativePath,
+                    address(this),
+                    block.timestamp + 300
+                ) {
+                    // Additional logic for native token handling could go here
+                } catch {
+                    // Both swaps failed, keep METRO
+                }
+            }
+        }
+        
+        return amountOut;
     }
 
     /**
@@ -400,7 +550,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             if (request.sharesX > 0 && totalSharesX > 0) {
                 // Share of removed liquidity
                 userAmountX = (totalXRemoved * request.sharesX) / totalSharesX;
-                // Also include their share of existing tokenX balance
+                // Also include their share of existing tokenX balance (including compounded rewards)
                 uint256 existingX = availableX();
                 if (existingX > 0) {
                     userAmountX += (existingX * request.sharesX) / totalSharesX;
@@ -410,7 +560,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             if (request.sharesY > 0 && totalSharesY > 0) {
                 // Share of removed liquidity
                 userAmountY = (totalYRemoved * request.sharesY) / totalSharesY;
-                // Also include their share of existing tokenY balance
+                // Also include their share of existing tokenY balance (including compounded rewards)
                 uint256 existingY = availableY();
                 if (existingY > 0) {
                     userAmountY += (existingY * request.sharesY) / totalSharesY;
@@ -445,22 +595,22 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
 
     /**
      * @dev Internal function to process deposit queue
-     * Mints shares based on current token balances after withdrawals are processed
+     * Mints shares based on current token balances after withdrawals are processed and rewards compounded
      */
     function _processDepositQueue() internal returns (uint256 processed) {
         uint256 queueLength = depositQueue.length;
-        
+            
         for (uint256 i = depositQueueStart; i < queueLength; i++) {
             DepositRequest memory request = depositQueue[i];
             
             uint256 newShares = 0;
             
             if (request.isTokenX) {
-                // Calculate sharesX to mint
+                // Calculate sharesX to mint (benefits from compounded rewards increasing balance)
                 if (totalSharesX == 0) {
                     newShares = request.amount;
                 } else {
-                    uint256 currentBalanceX = availableX();
+                    uint256 currentBalanceX = availableX(); // This includes compounded tokenX
                     if (currentBalanceX > 0) {
                         newShares = (request.amount * totalSharesX) / currentBalanceX;
                     } else {
@@ -468,16 +618,19 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                     }
                 }
                 
+                // Update user shares and totals AFTER calculation
                 sharesX[request.user] += newShares;
                 totalSharesX += newShares;
+                
+                // Remove from queued tokens (this adds to available balance for next person)
                 queuedTokenX -= request.amount;
                 
             } else {
-                // Calculate sharesY to mint
+                // Calculate sharesY to mint (benefits from compounded rewards increasing balance)
                 if (totalSharesY == 0) {
                     newShares = request.amount;
                 } else {
-                    uint256 currentBalanceY = availableY();
+                    uint256 currentBalanceY = availableY(); // This includes compounded tokenY
                     if (currentBalanceY > 0) {
                         newShares = (request.amount * totalSharesY) / currentBalanceY;
                     } else {
@@ -485,8 +638,11 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                     }
                 }
                 
+                // Update user shares and totals AFTER calculation
                 sharesY[request.user] += newShares;
                 totalSharesY += newShares;
+                
+                // Remove from queued tokens (this adds to available balance for next person)
                 queuedTokenY -= request.amount;
             }
             
@@ -503,33 +659,29 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     }
 
     /**
-     * @dev Claims rewards from the LBHooksBaseRewarder for LP positions
+     * @dev Manual function to claim rewards without rebalancing
      */
     function claimRewards(
-        address[] calldata rewardTokens,
         uint256[] calldata binIds,
         address receiver
-    ) external onlyOwner nonReentrant returns (uint256[] memory claimedAmounts) {
+    ) external onlyOwner nonReentrant returns (uint256 claimedAmount) {
         require(rewarder != address(0), "Rewarder not set");
         require(binIds.length > 0, "No bin IDs provided");
         require(receiver != address(0), "Invalid receiver address");
         
-        address lbPair = lbpContract;
-        require(lbPair != address(0), "LBPair not set");
+        // Get balance before claiming
+        uint256 balanceBefore = IERC20Upgradeable(rewardToken).balanceOf(address(this));
         
-        claimedAmounts = ILBHooksBaseRewarder(rewarder).claim(
-            lbPair,
-            address(this),
-            binIds,
-            rewardTokens,
-            receiver
-        );
+        // Call the correct claim function
+        ILBHooksBaseRewarder(rewarder).claim(receiver, binIds);
         
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            emit RewardsClaimed(rewarder, rewardTokens[i], claimedAmounts[i]);
-        }
+        // Calculate how much was actually claimed
+        uint256 balanceAfter = IERC20Upgradeable(rewardToken).balanceOf(address(this));
+        claimedAmount = balanceAfter - balanceBefore;
         
-        return claimedAmounts;
+        emit RewardsClaimed(rewarder, rewardToken, claimedAmount);
+        
+        return claimedAmount;
     }
 
     /**
@@ -546,6 +698,26 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         }
         
         return binIds;
+    }
+
+    /**
+     * @dev Set swap paths for METRO rewards
+     */
+    function setSwapPaths(
+        SwapPath calldata _metroToTokenXPath,
+        SwapPath calldata _metroToTokenYPath,
+        SwapPath calldata _metroToNativePath
+    ) external onlyOwner {
+        metroToTokenXPath = _metroToTokenXPath;
+        metroToTokenYPath = _metroToTokenYPath;
+        metroToNativePath = _metroToNativePath;
+    }
+
+    /**
+     * @dev Set minimum swap amount
+     */
+    function setMinSwapAmount(uint256 _minSwapAmount) external onlyOwner {
+        minSwapAmount = _minSwapAmount;
     }
     
     /**
@@ -571,16 +743,11 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     /**
      * @dev Get user's total shares (for backwards compatibility)
      */
-    function balanceOf(address account) public view override returns (uint256) {
+    function balanceSharesCombined(address account) public view override returns (uint256) {
         return sharesX[account] + sharesY[account];
     }
 
-    /**
-     * @dev Get total supply (for backwards compatibility)
-     */
-    function totalSupply() public view override returns (uint256) {
-        return totalSharesX + totalSharesY;
-    }
+
 
     // View functions for queue management
 
