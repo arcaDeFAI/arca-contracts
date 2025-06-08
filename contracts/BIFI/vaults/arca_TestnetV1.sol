@@ -1,4 +1,4 @@
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.25;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
@@ -8,6 +8,8 @@ import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import "./interfaces/ILBRouter.sol";
 import "./interfaces/ILBHooksBaseRewarder.sol";
 import "./interfaces/ILBPair.sol";
+// import "./interfaces/ILBAMM.sol";  -We have to find the interface for the AMM LP Pools on Metropolis
+
 
 
 
@@ -50,17 +52,19 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         address[] tokenPath;
     }
 
-    // State variables 
-    address public tokenX; // Main token X that the vault will hold
-    address public tokenY; // Main token Y that the vault will hold
-    uint16 public binStep; // The bin step for liquidity positions
-    uint256 public amountXMin; // Minimum amount of token X to add during rebalance
-    uint256 public amountYMin; // Minimum amount of token Y to add during rebalance
-    uint256 public idSlippage; // The number of bins to slip
-    address public lbRouter; // Address of the LB Router contract
-    address public lbpContract; // Address of the LBP contract
-    address public rewarder; // Address of the LBHooksBaseRewarder contract
-    address public rewardToken; // Address of the reward token (METRO)
+    struct VaultConfig {
+        address tokenX;        // Main token X that the vault will hold
+        address tokenY;        // Main token Y that the vault will hold
+        uint16 binStep;        // The bin step for liquidity positions
+        uint256 amountXMin;    // Minimum amount of token X to add during rebalance
+        uint256 amountYMin;    // Minimum amount of token Y to add during rebalance
+        uint256 idSlippage;    // The number of bins to slip
+        address lbRouter;      // Address of the LB Router
+        address lbpAMM;        // Address of the Metro-S AMM LP pair
+        address lbpContract;   // Address of the LBP contract
+        address rewarder;      // Address of the LBHooksBaseRewarder contract
+        address rewardToken;   // Address of the reward token (METRO)
+    }
     
     // Native token address (WAVAX or similar)
     address public nativeToken;
@@ -163,7 +167,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         
         depositQueueStart = 0;
         withdrawQueueStart = 0;
-        minSwapAmount = 1e15; // 0.001 METRO minimum
+        minSwapAmount = 10; // 0.001 METRO minimum
     }
 
     /**
@@ -496,6 +500,63 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         }
     }
 
+
+    /**
+     * @dev Calculates the minimal expected amount of swap tokens for slippage protection.
+     * @param metroAmount Amount of METRO tokens to swap
+     * @param targetToken Address of the token to receive (tokenX for S, tokenY for USDC)
+     * @return expectedOutput Minimal expected amount of target tokens after slippage
+     */
+    function getExpectedSwapOutput(
+        uint metroAmount,
+        address targetToken
+    ) public returns(uint expectedOutput) {
+        
+        routerPair = ILBPair(lbpContract);
+        routerMetro = ILBAMM(lbpAMM);
+        
+        uint decimals;
+        uint metroDecimals = 18; // Assuming METRO has 18 decimals
+        
+        // Set decimals based on target token
+        if(targetToken == tokenX) {
+            decimals = 18; // S token decimals
+        } else {
+            decimals = 6;  // USDC decimals
+        }
+        
+        // Get current active bin ID and price
+        uint activeID = routerPair.getActiveID(); 
+        uint rawPrice = routerPair.getPriceFromID(activeID);
+        
+        // Convert 128.128 fixed-point price to human readable
+        uint256 scale = 2**128;
+        uint256 pricePerUnit; // Price of 1 METRO in terms of target token
+        
+        if(targetToken == tokenX) {
+            // Calculate METRO price in S tokens
+            // rawPrice represents price of tokenY/tokenX, we need METRO/S
+            // Since METRO is being swapped for S, we need the appropriate conversion
+            pricePerUnit = (rawPrice * (10**decimals)) / (scale * (10**(metroDecimals - decimals)));
+        } else {
+            // Calculate METRO price in USDC
+            // For USDC, we can use the inverse since 1 USDC = 1 USD
+            pricePerUnit = (scale * (10**decimals)) / (rawPrice * (10**(metroDecimals - decimals)));
+        }
+        
+        // Calculate expected output before slippage
+        uint grossOutput = (metroAmount * pricePerUnit) / (10**metroDecimals);
+        
+        // Apply slippage protection (e.g., 0.5% slippage tolerance)
+        uint slippageBasisPoints = 50; // 0.5% = 50 basis points
+        uint slippageFactor = 10000 - slippageBasisPoints; // 9950
+        
+        // Calculate minimal expected output with slippage protection
+        expectedOutput = (grossOutput * slippageFactor) / 10000;
+        
+        return expectedOutput;
+    }
+
     /**
      * @dev Swaps METRO to target token using the appropriate path
      */
@@ -511,10 +572,14 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         IERC20Upgradeable(rewardToken).safeApprove(lbRouter, metroAmount);
         
         uint256 balanceBefore = IERC20Upgradeable(targetToken).balanceOf(address(this));
-        
+
+        // Get expected output from price oracle
+        uint256 expectedOut = getExpectedSwapOutput(metroAmount, targetToken);
+        // uint256 minAmountOut = expectedOut * (10000 - maxSlippageBPS) / 10000; - Already calculated in getExpectedSwapOutput?
+
         try ILBRouter(lbRouter).swapExactTokensForTokens(
             metroAmount,
-            0, // Accept any amount of target token
+            minAmountOut, // Proper slippage protection
             swapPath,
             address(this),
             block.timestamp + 300
@@ -732,7 +797,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     /**
      * @dev Rescues random funds stuck that the contract can't handle.
      */
-    function inCaseTokensGetStuck(address _token) external onlyOwner {
+    function inCaseTokensGetStuck(address _token) external onlyOwner nonReentrant {
         require(_token != tokenX && _token != tokenY, "Cannot withdraw vault tokens");
 
         uint256 amount = IERC20Upgradeable(_token).balanceOf(address(this));
