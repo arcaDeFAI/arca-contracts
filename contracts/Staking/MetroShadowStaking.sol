@@ -3,9 +3,9 @@ pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title nMETRO & nShadow Staking Contract
@@ -87,7 +87,7 @@ contract MetroShadowStaking is ReentrancyGuard, Ownable, Pausable {
         address _x33Token,
         address _nMetroToken,
         address _nShadowToken
-    ) {
+    ) Ownable (msg.sender) {
         METRO_TOKEN = IERC20(_metroToken);
         X33_TOKEN = IERC20(_x33Token);
         NMETRO_TOKEN = ERC20(_nMetroToken);

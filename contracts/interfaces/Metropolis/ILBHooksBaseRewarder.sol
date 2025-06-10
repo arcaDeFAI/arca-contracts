@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {ILBHooks} from "@lb-protocol/src/interfaces/ILBHooks.sol";
+import {ILBHooks} from "../../../lib/joe-v2/src/interfaces/ILBHooks.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
