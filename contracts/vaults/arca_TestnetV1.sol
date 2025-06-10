@@ -1,14 +1,14 @@
+// SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.25;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-
-import "./interfaces/ILBRouter.sol";
-import "./interfaces/ILBHooksBaseRewarder.sol";
-import "./interfaces/ILBPair.sol";
-// import "./interfaces/ILBAMM.sol";  -We have to find the interface for the AMM LP Pools on Metropolis
+import { ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
+import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
+import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
+import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 
 
 
@@ -28,7 +28,7 @@ import "./interfaces/ILBPair.sol";
  * Enhanced with METRO reward claiming and automatic compounding functionality.
  */
 contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeERC20 for IERC20;
 
     // Structs for queue management
     struct DepositRequest {
@@ -43,13 +43,6 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256 sharesX;
         uint256 sharesY;
         uint256 timestamp;
-    }
-
-    // Swap path structure for LB Router
-    struct SwapPath {
-        uint256[] pairBinSteps;
-        uint8[] versions;
-        address[] tokenPath;
     }
 
     struct VaultConfig {
@@ -150,7 +143,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         address _nativeToken
     ) public initializer {
         __ERC20_init(_name, _symbol);
-        __Ownable_init();
+        __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         
         tokenX = _tokenX;
@@ -175,7 +168,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * It takes into account the vault contract balance excluding queued tokens.
      */
     function balanceX() public view returns (uint256) {
-        return IERC20Upgradeable(tokenX).balanceOf(address(this)) - queuedTokenX;
+        return IERC20(tokenX).balanceOf(address(this)) - queuedTokenX;
     }
 
     /**
@@ -183,7 +176,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * It takes into account the vault contract balance excluding queued tokens.
      */
     function balanceY() public view returns (uint256) {
-        return IERC20Upgradeable(tokenY).balanceOf(address(this)) - queuedTokenY;
+        return IERC20(tokenY).balanceOf(address(this)) - queuedTokenY;
     }
 
     /**
@@ -191,7 +184,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * We return available tokens excluding queued amounts.
      */
     function availableX() public view returns (uint256) {
-        return IERC20Upgradeable(tokenX).balanceOf(address(this)) - queuedTokenX;
+        return IERC20(tokenX).balanceOf(address(this)) - queuedTokenX;
     }
 
     /**
@@ -199,7 +192,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * We return available tokens excluding queued amounts.
      */
     function availableY() public view returns (uint256) {
-        return IERC20Upgradeable(tokenY).balanceOf(address(this)) - queuedTokenY;
+        return IERC20(tokenY).balanceOf(address(this)) - queuedTokenY;
     }
 
     /**
@@ -238,14 +231,14 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * @dev A helper function to call depositX() with all the sender's funds.
      */
     function depositAllX() external {
-        depositX(IERC20Upgradeable(tokenX).balanceOf(msg.sender));
+        depositX(IERC20(tokenX).balanceOf(msg.sender));
     }
 
     /**
      * @dev A helper function to call depositY() with all the sender's funds.
      */
     function depositAllY() external {
-        depositY(IERC20Upgradeable(tokenY).balanceOf(msg.sender));
+        depositY(IERC20(tokenY).balanceOf(msg.sender));
     }
 
     /**
@@ -255,12 +248,21 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     function depositX(uint256 _amount) public nonReentrant {
         require(_amount > 0, "Amount must be greater than 0");
         
-        uint256 _pool = IERC20Upgradeable(tokenX).balanceOf(address(this));
-        IERC20Upgradeable(tokenX).safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 _after = IERC20Upgradeable(tokenX).balanceOf(address(this));
-        _amount = _after - _pool; // Additional check for deflationary tokens
+        uint256 _pool = IERC20(tokenX).balanceOf(address(this));
+        IERC20(tokenX).safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 _after = IERC20(tokenX).balanceOf(address(this));
+        _amount = _after - _pool;
         
-        // Add to deposit queue
+        // Calculate and collect deposit fee
+        uint256 depositFee = (_amount * feeManager.getDepositFee()) / BASIS_POINTS;
+        uint256 netAmount = _amount - depositFee;
+        
+        if (depositFee > 0) {
+            IERC20(tokenX).safeTransfer(feeManager.getFeeRecipient(), depositFee);
+            emit FeeCollected(feeManager.getFeeRecipient(), depositFee, "deposit");
+        }
+        
+        // Add to deposit queue with net amount
         depositQueue.push(DepositRequest({
             user: msg.sender,
             amount: _amount,
@@ -281,12 +283,21 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     function depositY(uint256 _amount) public nonReentrant {
         require(_amount > 0, "Amount must be greater than 0");
         
-        uint256 _pool = IERC20Upgradeable(tokenY).balanceOf(address(this));
-        IERC20Upgradeable(tokenY).safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 _after = IERC20Upgradeable(tokenY).balanceOf(address(this));
-        _amount = _after - _pool; // Additional check for deflationary tokens
+        uint256 _pool = IERC20(tokenY).balanceOf(address(this));
+        IERC20(tokenY).safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 _after = IERC20(tokenY).balanceOf(address(this));
+        _amount = _after - _pool;
         
-        // Add to deposit queue
+        // Calculate and collect deposit fee
+        uint256 depositFee = (_amount * feeManager.getDepositFee()) / BASIS_POINTS;
+        uint256 netAmount = _amount - depositFee;
+        
+        if (depositFee > 0) {
+            IERC20(tokenY).safeTransfer(feeManager.getFeeRecipient(), depositFee);
+            emit FeeCollected(feeManager.getFeeRecipient(), depositFee, "deposit");
+        }
+        
+        // Add to deposit queue with net amount
         depositQueue.push(DepositRequest({
             user: msg.sender,
             amount: _amount,
@@ -350,52 +361,44 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         withdraw(withdrawSharesX, withdrawSharesY);
     }
 
-    /**
-     * @dev Enhanced rebalance function with METRO claiming and compounding
-     * 1. Remove liquidity first
-     * 2. Claim METRO rewards and compound them
-     * 3. Process withdraw queue (fulfill withdrawals and burn shares)
-     * 4. Process deposit queue (mint shares)
-     * 5. Add liquidity with remaining tokens
-     */
+    struct RebalanceParams {
+        int256[] deltaIds;
+        uint256[] distributionX;
+        uint256[] distributionY;
+        uint256[] ids;
+        uint256[] amounts;
+        uint256 removeAmountXMin;
+        uint256 removeAmountYMin;
+        address to;
+        address refundTo;
+        uint256 deadline;
+        bool forceRebalance;
+    }
+
     function rebalance(
-        // uint256 activeIdDesired,
-        int256[] calldata deltaIds,
-        uint256[] calldata distributionX,
-        uint256[] calldata distributionY,
-        // Remove liquidity params
-        uint256[] calldata ids,
-        uint256[] calldata amounts,
-        uint256 removeAmountXMin,
-        uint256 removeAmountYMin,
-        // Shared params
-        address to,
-        address refundTo,
-        uint256 deadline,
-        // Control param
-        bool forceRebalance
+        RebalanceParams calldata params
     ) external onlyOwner nonReentrant returns (
         uint256 amountXAdded,
         uint256 amountYAdded,
         uint256 amountXRemoved,
         uint256 amountYRemoved
     ) {
-        require(block.timestamp <= deadline, "Transaction expired");
+        require(block.timestamp <= params.deadline, "Transaction expired");
         
-        // Step 1: Remove liquidity if needed
-        if ((forceRebalance || ids.length > 0) && amounts.length > 0) {
-            require(ids.length == amounts.length, "Array lengths must match");
+        // Remove liquidity if needed
+        if ((params.forceRebalance || params.ids.length > 0) && params.amounts.length > 0) {
+            require(params.ids.length == params.amounts.length, "Array lengths must match");
             
             (amountXRemoved, amountYRemoved) = ILBRouter(lbRouter).removeLiquidity(
-                tokenX,
-                tokenY, 
+                IERC20(tokenX),
+                IERC20(tokenY), 
                 binStep,
-                removeAmountXMin,
-                removeAmountYMin,
-                ids,
-                amounts,
+                params.removeAmountXMin,
+                params.removeAmountYMin,
+                params.ids,
+                params.amounts,
                 address(this),
-                deadline
+                params.deadline
             );
         }
         
@@ -415,34 +418,34 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         if (availableTokenX > 0 || availableTokenY > 0) {
             // Approve and add liquidity
             if (availableTokenX > 0) {
-                IERC20Upgradeable(tokenX).safeApprove(lbRouter, 0);
-                IERC20Upgradeable(tokenX).safeApprove(lbRouter, availableTokenX);
+                IERC20(tokenX).approve(lbRouter, 0);
+                IERC20(tokenX).approve(lbRouter, availableTokenX);
             }
             
             if (availableTokenY > 0) {
-                IERC20Upgradeable(tokenY).safeApprove(lbRouter, 0);
-                IERC20Upgradeable(tokenY).safeApprove(lbRouter, availableTokenY);
+                IERC20(tokenY).approve(lbRouter, 0);
+                IERC20(tokenY).approve(lbRouter, availableTokenY);
             }
             
             ILBRouter.LiquidityParameters memory liquidityParams = ILBRouter.LiquidityParameters({
-                tokenX: tokenX,
-                tokenY: tokenY,
+                tokenX: IERC20(tokenX),
+                tokenY: IERC20(tokenY),
                 binStep: binStep,
                 amountX: availableTokenX,
                 amountY: availableTokenY,
                 amountXMin: amountXMin,
                 amountYMin: amountYMin,
-                activeIdDesired: ILBPair(lbpContract).getActiveID(),
+                activeIdDesired: ILBPair(lbpContract).getActiveId(),
                 idSlippage: idSlippage,
-                deltaIds: deltaIds,
-                distributionX: distributionX,
-                distributionY: distributionY,
-                to: to,
-                refundTo: refundTo,
-                deadline: deadline
+                deltaIds: params.deltaIds,
+                distributionX: params.distributionX,
+                distributionY: params.distributionY,
+                to: params.to,
+                refundTo: params.refundTo,
+                deadline: params.deadline
             });
             
-            (amountXAdded, amountYAdded) = ILBRouter(lbRouter).addLiquidity(liquidityParams);
+            (amountXAdded, amountYAdded, , , , ) = ILBRouter(lbRouter).addLiquidity(liquidityParams);
         }
         
         emit Rebalanced(tokenX, tokenY, amountXAdded, amountYAdded, amountXRemoved, amountYRemoved, depositsProcessed, withdrawsProcessed);
@@ -461,19 +464,27 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256[] memory binIds = getVaultBinIds();
         if (binIds.length == 0) return;
         
-        // Get balance before claiming
-        uint256 metroBalanceBefore = IERC20Upgradeable(rewardToken).balanceOf(address(this));
+        uint256 metroBalanceBefore = IERC20(rewardToken).balanceOf(address(this));
         
         // Claim METRO rewards
         try ILBHooksBaseRewarder(rewarder).claim(address(this), binIds) {
-            // Calculate claimed amount
-            uint256 metroBalanceAfter = IERC20Upgradeable(rewardToken).balanceOf(address(this));
+            uint256 metroBalanceAfter = IERC20(rewardToken).balanceOf(address(this));
             uint256 metroClaimed = metroBalanceAfter - metroBalanceBefore;
             
             if (metroClaimed > minSwapAmount) {
-                // Split METRO 50/50 and swap to tokenX and tokenY
-                uint256 metroForTokenX = metroClaimed / 2;
-                uint256 metroForTokenY = metroClaimed - metroForTokenX;
+                // Calculate performance fee on claimed rewards
+                uint256 performanceFee = (metroClaimed * feeManager.getPerformanceFee()) / BASIS_POINTS;
+                uint256 netMetro = metroClaimed - performanceFee;
+                
+                // Send performance fee to fee recipient
+                if (performanceFee > 0) {
+                    IERC20(rewardToken).safeTransfer(feeManager.getFeeRecipient(), performanceFee);
+                    emit FeeCollected(feeManager.getFeeRecipient(), performanceFee, "performance");
+                }
+                
+                // Compound the remaining rewards
+                uint256 metroForTokenX = netMetro / 2;
+                uint256 metroForTokenY = netMetro - metroForTokenX;
                 
                 uint256 tokenXObtained = 0;
                 uint256 tokenYObtained = 0;
@@ -563,15 +574,14 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     function _swapMetroToToken(
         uint256 metroAmount, 
         address targetToken, 
-        SwapPath memory swapPath
+        ILBRouter.Path memory swapPath
     ) internal returns (uint256 amountOut) {
         if (metroAmount == 0 || swapPath.tokenPath.length == 0) return 0;
         
-        // Approve METRO for router
-        IERC20Upgradeable(rewardToken).safeApprove(lbRouter, 0);
-        IERC20Upgradeable(rewardToken).safeApprove(lbRouter, metroAmount);
+        IERC20(rewardToken).approve(lbRouter, 0);
+        IERC20(rewardToken).approve(lbRouter, metroAmount);
         
-        uint256 balanceBefore = IERC20Upgradeable(targetToken).balanceOf(address(this));
+        uint256 balanceBefore = IERC20(targetToken).balanceOf(address(this));
 
         // Get expected output from price oracle
         uint256 expectedOut = getExpectedSwapOutput(metroAmount, targetToken);
@@ -584,8 +594,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             address(this),
             block.timestamp + 300
         ) returns (uint256 amountOutReturned) {
-            // Verify actual received amount
-            uint256 balanceAfter = IERC20Upgradeable(targetToken).balanceOf(address(this));
+            uint256 balanceAfter = IERC20(targetToken).balanceOf(address(this));
             amountOut = balanceAfter - balanceBefore;
         } catch {
             // Swap failed, try native swap if target is not native
@@ -641,6 +650,29 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 }
             }
             
+            // Calculate withdraw fee on total withdrawal amount
+            uint256 totalWithdrawAmount = userAmountX + userAmountY;
+            uint256 withdrawFee = (totalWithdrawAmount * feeManager.getWithdrawFee()) / BASIS_POINTS;
+            
+            // Apply fee proportionally to both tokens
+            if (withdrawFee > 0 && totalWithdrawAmount > 0) {
+                uint256 feeX = (userAmountX * withdrawFee) / totalWithdrawAmount;
+                uint256 feeY = (userAmountY * withdrawFee) / totalWithdrawAmount;
+                
+                userAmountX -= feeX;
+                userAmountY -= feeY;
+                
+                // Send fees to fee recipient
+                if (feeX > 0) {
+                    IERC20(tokenX).safeTransfer(feeManager.getFeeRecipient(), feeX);
+                }
+                if (feeY > 0) {
+                    IERC20(tokenY).safeTransfer(feeManager.getFeeRecipient(), feeY);
+                }
+                
+                emit FeeCollected(feeManager.getFeeRecipient(), withdrawFee, "withdraw");
+            }
+            
             // Burn user's shares
             sharesX[request.user] -= request.sharesX;
             sharesY[request.user] -= request.sharesY;
@@ -649,10 +681,10 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             
             // Transfer tokens to user
             if (userAmountX > 0) {
-                IERC20Upgradeable(tokenX).safeTransfer(request.user, userAmountX);
+                IERC20(tokenX).safeTransfer(request.user, userAmountX);
             }
             if (userAmountY > 0) {
-                IERC20Upgradeable(tokenY).safeTransfer(request.user, userAmountY);
+                IERC20(tokenY).safeTransfer(request.user, userAmountY);
             }
             
             emit WithdrawProcessed(request.user, userAmountX, userAmountY);
@@ -778,9 +810,9 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * @dev Set swap paths for METRO rewards
      */
     function setSwapPaths(
-        SwapPath calldata _metroToTokenXPath,
-        SwapPath calldata _metroToTokenYPath,
-        SwapPath calldata _metroToNativePath
+        ILBRouter.Path calldata _metroToTokenXPath,
+        ILBRouter.Path calldata _metroToTokenYPath,
+        ILBRouter.Path calldata _metroToNativePath
     ) external onlyOwner {
         metroToTokenXPath = _metroToTokenXPath;
         metroToTokenYPath = _metroToTokenYPath;
@@ -799,9 +831,8 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      */
     function inCaseTokensGetStuck(address _token) external onlyOwner nonReentrant {
         require(_token != tokenX && _token != tokenY, "Cannot withdraw vault tokens");
-
-        uint256 amount = IERC20Upgradeable(_token).balanceOf(address(this));
-        IERC20Upgradeable(_token).safeTransfer(msg.sender, amount);
+        uint256 amount = IERC20(_token).balanceOf(address(this));
+        IERC20(_token).safeTransfer(msg.sender, amount);
     }
     
     /**
