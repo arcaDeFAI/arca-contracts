@@ -150,14 +150,6 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         return IERC20(tokenY).balanceOf(address(this)) - queuedTokenY;
     }
 
-    function availableX() public view returns (uint256) {
-        return IERC20(tokenX).balanceOf(address(this)) - queuedTokenX;
-    }
-
-    function availableY() public view returns (uint256) {
-        return IERC20(tokenY).balanceOf(address(this)) - queuedTokenY;
-    }
-
     function totalSupplyX() public view returns (uint256) {
         return totalSharesX;
     }
@@ -329,8 +321,8 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256 depositsProcessed = _processDepositQueue();
         
         // Add liquidity with remaining tokens
-        uint256 availableTokenX = availableX();
-        uint256 availableTokenY = availableY();
+        uint256 availableTokenX = balanceX();
+        uint256 availableTokenY = balanceY();
         
         if (availableTokenX > 0 || availableTokenY > 0) {
             if (availableTokenX > 0) {
@@ -457,7 +449,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             
             if (request.sharesX > 0 && totalSharesX > 0) {
                 userAmountX = (totalXRemoved * request.sharesX) / totalSharesX;
-                uint256 existingX = availableX();
+                uint256 existingX = balanceX();
                 if (existingX > 0) {
                     userAmountX += (existingX * request.sharesX) / totalSharesX;
                 }
@@ -465,7 +457,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             
             if (request.sharesY > 0 && totalSharesY > 0) {
                 userAmountY = (totalYRemoved * request.sharesY) / totalSharesY;
-                uint256 existingY = availableY();
+                uint256 existingY = balanceY();
                 if (existingY > 0) {
                     userAmountY += (existingY * request.sharesY) / totalSharesY;
                 }
@@ -531,7 +523,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 if (totalSharesX == 0) {
                     newShares = request.amount;
                 } else {
-                    uint256 currentBalanceX = availableX();
+                    uint256 currentBalanceX = balanceX();
                     if (currentBalanceX > 0) {
                         newShares = (request.amount * totalSharesX) / currentBalanceX;
                     } else {
@@ -547,7 +539,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 if (totalSharesY == 0) {
                     newShares = request.amount;
                 } else {
-                    uint256 currentBalanceY = availableY();
+                    uint256 currentBalanceY = balanceY();
                     if (currentBalanceY > 0) {
                         newShares = (request.amount * totalSharesY) / currentBalanceY;
                     } else {
