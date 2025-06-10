@@ -1,0 +1,3 @@
+[submodule "lib/joe-v2"]
+	path = lib/joe-v2
+	url = https://github.com/traderjoe-xyz/joe-v2.git
