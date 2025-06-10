@@ -179,25 +179,6 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         return IERC20(tokenY).balanceOf(address(this)) - queuedTokenY;
     }
 
-    /**
-     * @dev Custom logic in here for how much the vault allows to be borrowed.
-     * We return available tokens excluding queued amounts.
-     */
-    function availableX() public view returns (uint256) {
-        return IERC20(tokenX).balanceOf(address(this)) - queuedTokenX;
-    }
-
-    /**
-     * @dev Custom logic in here for how much the vault allows to be borrowed.
-     * We return available tokens excluding queued amounts.
-     */
-    function availableY() public view returns (uint256) {
-        return IERC20(tokenY).balanceOf(address(this)) - queuedTokenY;
-    }
-
-    /**
-     * @dev Get total supply for tokenX Shares (for backwards compatibility)
-     */
     function totalSupplyX() public view returns (uint256) {
         return totalSharesX;
     }
@@ -411,9 +392,9 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         // Step 4: Process deposit queue (mint shares based on current state including compounded rewards)
         uint256 depositsProcessed = _processDepositQueue();
         
-        // Step 5: Add liquidity with remaining available tokens
-        uint256 availableTokenX = availableX();
-        uint256 availableTokenY = availableY();
+        // Add liquidity with remaining tokens
+        uint256 availableTokenX = balanceX();
+        uint256 availableTokenY = balanceY();
         
         if (availableTokenX > 0 || availableTokenY > 0) {
             // Approve and add liquidity
@@ -633,8 +614,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             if (request.sharesX > 0 && totalSharesX > 0) {
                 // Share of removed liquidity
                 userAmountX = (totalXRemoved * request.sharesX) / totalSharesX;
-                // Also include their share of existing tokenX balance (including compounded rewards)
-                uint256 existingX = availableX();
+                uint256 existingX = balanceX();
                 if (existingX > 0) {
                     userAmountX += (existingX * request.sharesX) / totalSharesX;
                 }
@@ -643,8 +623,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             if (request.sharesY > 0 && totalSharesY > 0) {
                 // Share of removed liquidity
                 userAmountY = (totalYRemoved * request.sharesY) / totalSharesY;
-                // Also include their share of existing tokenY balance (including compounded rewards)
-                uint256 existingY = availableY();
+                uint256 existingY = balanceY();
                 if (existingY > 0) {
                     userAmountY += (existingY * request.sharesY) / totalSharesY;
                 }
@@ -716,7 +695,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 if (totalSharesX == 0) {
                     newShares = request.amount;
                 } else {
-                    uint256 currentBalanceX = availableX(); // This includes compounded tokenX
+                    uint256 currentBalanceX = balanceX();
                     if (currentBalanceX > 0) {
                         newShares = (request.amount * totalSharesX) / currentBalanceX;
                     } else {
@@ -736,7 +715,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 if (totalSharesY == 0) {
                     newShares = request.amount;
                 } else {
-                    uint256 currentBalanceY = availableY(); // This includes compounded tokenY
+                    uint256 currentBalanceY = balanceY();
                     if (currentBalanceY > 0) {
                         newShares = (request.amount * totalSharesY) / currentBalanceY;
                     } else {
