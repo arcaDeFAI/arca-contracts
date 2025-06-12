@@ -51,15 +51,15 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     }
 
     VaultConfig private vaultConfig;
-    IarcaFeeManager private feeManager;
+    arcaFeeManager private feeManager;
 
     // Native token address (WAVAX or similar)
     address public nativeToken;
     
     // Swap paths for METRO -> tokenX and METRO -> tokenY
-    ILBRouter.Path public metroToTokenXPath;
-    ILBRouter.Path public metroToTokenYPath;
-    ILBRouter.Path public metroToNativePath;
+    ILBRouter.Path private metroToTokenXPath;
+    ILBRouter.Path private metroToTokenYPath;
+    ILBRouter.Path private metroToNativePath;
     
     // Minimum amounts for swapping (to avoid dust)
     uint256 public minSwapAmount;
@@ -132,6 +132,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         string memory _name,
         string memory _symbol,
         address _lbRouter,
+        address _lbpAMM,
         address _lbpContract,
         address _rewarder,
         address _rewardToken,
@@ -141,7 +142,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         
-        vaultConfig = VaultConfig(_tokenX, _tokenY, _binStep, _amountXMin, _amountYMin, _idSlippage, _lbRouter, _lbpContract, _rewarder, _rewardToken);
+        vaultConfig = VaultConfig(_tokenX, _tokenY, _binStep, _amountXMin, _amountYMin, _idSlippage, _lbRouter, _lbpAMM, _lbpContract, _rewarder, _rewardToken);
         nativeToken = _nativeToken;
         
         feeManager = arcaFeeManager(msg.sender);
@@ -223,7 +224,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         _amount = _after - _pool;
         
         // Calculate and collect deposit fee
-        uint256 depositFee = (_amount * feeManager.getDepositFee()) / arcaFeeManager.BASIS_POINTS;
+        uint256 depositFee = (_amount * feeManager.getDepositFee()) / feeManager.BASIS_POINTS();
         uint256 netAmount = _amount - depositFee;
         
         if (depositFee > 0) {
@@ -258,7 +259,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         _amount = _after - _pool;
         
         // Calculate and collect deposit fee
-        uint256 depositFee = (_amount * feeManager.getDepositFee()) / arcaFeeManager.BASIS_POINTS;
+        uint256 depositFee = (_amount * feeManager.getDepositFee()) / feeManager.BASIS_POINTS();
         uint256 netAmount = _amount - depositFee;
         
         if (depositFee > 0) {
@@ -442,7 +443,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             
             if (metroClaimed > minSwapAmount) {
                 // Calculate performance fee on claimed rewards
-                uint256 performanceFee = (metroClaimed * feeManager.getPerformanceFee()) / arcaFeeManager.BASIS_POINTS;
+                uint256 performanceFee = (metroClaimed * feeManager.getPerformanceFee()) / feeManager.BASIS_POINTS();
                 uint256 netMetro = metroClaimed - performanceFee;
                 
                 // Send performance fee to fee recipient
@@ -488,15 +489,15 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * @return expectedOutput Minimal expected amount of target tokens after slippage
      */
     function getExpectedSwapOutput(
-        uint metroAmount,
+        uint256 metroAmount,
         address targetToken
-    ) public returns(uint expectedOutput) {
+    ) public returns(uint256 expectedOutput, uint256 minimumExpectedOutput) {
         
-        routerPair = ILBPair(vaultConfig.lbpContract);
-        routerMetro = ILBAMM(vaultConfig.lbpAMM);
+        ILBPair routerPair = ILBPair(vaultConfig.lbpContract);
+        //ILBAMM memory routerMetro = ILBAMM(vaultConfig.lbpAMM);
         
-        uint decimals;
-        uint metroDecimals = 18; // Assuming METRO has 18 decimals
+        uint256 decimals;
+        uint256 metroDecimals = 18; // Assuming METRO has 18 decimals
         
         // Set decimals based on target token
         if(targetToken == vaultConfig.tokenX) {
@@ -506,8 +507,8 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         }
         
         // Get current active bin ID and price
-        uint activeID = routerPair.getActiveID(); 
-        uint rawPrice = routerPair.getPriceFromID(activeID);
+        uint24 activeID = routerPair.getActiveId(); 
+        uint256 rawPrice = routerPair.getPriceFromId(activeID);
         
         // Convert 128.128 fixed-point price to human readable
         uint256 scale = 2**128;
@@ -525,16 +526,16 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         }
         
         // Calculate expected output before slippage
-        uint grossOutput = (metroAmount * pricePerUnit) / (10**metroDecimals);
+        expectedOutput = (metroAmount * pricePerUnit) / (10**metroDecimals);
         
         // Apply slippage protection (e.g., 0.5% slippage tolerance)
-        uint slippageBasisPoints = 50; // 0.5% = 50 basis points
-        uint slippageFactor = 10000 - slippageBasisPoints; // 9950
+        uint256 slippageBasisPoints = 50; // 0.5% = 50 basis points
+        uint256 slippageFactor = 10000 - slippageBasisPoints; // 9950
         
         // Calculate minimal expected output with slippage protection
-        expectedOutput = (grossOutput * slippageFactor) / 10000;
+        minimumExpectedOutput = (expectedOutput * slippageFactor) / 10000;
         
-        return expectedOutput;
+        return (expectedOutput, minimumExpectedOutput);
     }
 
     /**
@@ -553,8 +554,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256 balanceBefore = IERC20(targetToken).balanceOf(address(this));
 
         // Get expected output from price oracle
-        uint256 expectedOut = getExpectedSwapOutput(metroAmount, targetToken);
-        uint256 minAmountOut = expectedOut * (10000 - maxSlippageBPS) / 10000; // - Already calculated in getExpectedSwapOutput?
+        ( , uint256 minAmountOut) = getExpectedSwapOutput(metroAmount, targetToken);
 
         try ILBRouter(vaultConfig.lbRouter).swapExactTokensForTokens(
             metroAmount,
@@ -572,7 +572,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                     metroAmount,
                     0,
                     metroToNativePath,
-                    address(this),
+                    payable(address(this)),
                     block.timestamp + 300
                 ) {
                     // Additional logic for native token handling could go here
@@ -619,7 +619,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             
             // Calculate withdraw fee on total withdrawal amount
             uint256 totalWithdrawAmount = userAmountX + userAmountY;
-            uint256 withdrawFee = (totalWithdrawAmount * feeManager.getWithdrawFee()) / arcaFeeManager.BASIS_POINTS;
+            uint256 withdrawFee = (totalWithdrawAmount * feeManager.getWithdrawFee()) / feeManager.BASIS_POINTS();
             
             // Apply fee proportionally to both tokens
             if (withdrawFee > 0 && totalWithdrawAmount > 0) {
@@ -815,7 +815,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     /**
      * @dev Get user's total shares (for backwards compatibility)
      */
-    function balanceSharesCombined(address account) public view override returns (uint256) {
+    function balanceSharesCombined(address account) public view returns (uint256) {
         return sharesX[account] + sharesY[account];
     }
 
