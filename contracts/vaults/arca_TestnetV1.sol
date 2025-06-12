@@ -9,9 +9,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
-
-//Fee manager Interface is missing still
-//Still missing applicable fees
+import { IarcaFeeManager, arcaFeeManager } from "../arcaFeeManager.sol";
 
 /**
  * @dev Implementation of a vault with queued deposits and withdrawals
@@ -53,7 +51,8 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     }
 
     VaultConfig private vaultConfig;
-    
+    IarcaFeeManager private feeManager;
+
     // Native token address (WAVAX or similar)
     address public nativeToken;
     
@@ -144,6 +143,8 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         vaultConfig = VaultConfig(_tokenX, _tokenY, _binStep, _amountXMin, _amountYMin, _idSlippage, _lbRouter, _lbpContract, _rewarder, _rewardToken);
         nativeToken = _nativeToken;
         
+        feeManager = arcaFeeManager(msg.sender);
+        
         depositQueueStart = 0;
         withdrawQueueStart = 0;
         minSwapAmount = 10; // 0.001 METRO minimum
@@ -221,7 +222,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         _amount = _after - _pool;
         
         // Calculate and collect deposit fee
-        uint256 depositFee = (_amount * feeManager.getDepositFee()) / BASIS_POINTS;
+        uint256 depositFee = (_amount * feeManager.getDepositFee()) / arcaFeeManager.BASIS_POINTS;
         uint256 netAmount = _amount - depositFee;
         
         if (depositFee > 0) {
@@ -256,7 +257,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         _amount = _after - _pool;
         
         // Calculate and collect deposit fee
-        uint256 depositFee = (_amount * feeManager.getDepositFee()) / BASIS_POINTS;
+        uint256 depositFee = (_amount * feeManager.getDepositFee()) / arcaFeeManager.BASIS_POINTS;
         uint256 netAmount = _amount - depositFee;
         
         if (depositFee > 0) {
@@ -440,7 +441,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             
             if (metroClaimed > minSwapAmount) {
                 // Calculate performance fee on claimed rewards
-                uint256 performanceFee = (metroClaimed * feeManager.getPerformanceFee()) / BASIS_POINTS;
+                uint256 performanceFee = (metroClaimed * feeManager.getPerformanceFee()) / arcaFeeManager.BASIS_POINTS;
                 uint256 netMetro = metroClaimed - performanceFee;
                 
                 // Send performance fee to fee recipient
@@ -617,7 +618,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             
             // Calculate withdraw fee on total withdrawal amount
             uint256 totalWithdrawAmount = userAmountX + userAmountY;
-            uint256 withdrawFee = (totalWithdrawAmount * feeManager.getWithdrawFee()) / BASIS_POINTS;
+            uint256 withdrawFee = (totalWithdrawAmount * feeManager.getWithdrawFee()) / arcaFeeManager.BASIS_POINTS;
             
             // Apply fee proportionally to both tokens
             if (withdrawFee > 0 && totalWithdrawAmount > 0) {
