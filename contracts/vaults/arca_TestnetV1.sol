@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT 
-pragma solidity ^0.8.25;
+pragma solidity ^0.8.28;
 
 import { ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -10,15 +10,8 @@ import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 
-
-
-
 //Fee manager Interface is missing still
 //Still missing applicable fees
-
-
-
-
 
 /**
  * @dev Implementation of a vault with queued deposits and withdrawals
@@ -58,14 +51,16 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         address rewarder;      // Address of the LBHooksBaseRewarder contract
         address rewardToken;   // Address of the reward token (METRO)
     }
+
+    VaultConfig private vaultConfig;
     
     // Native token address (WAVAX or similar)
     address public nativeToken;
     
     // Swap paths for METRO -> tokenX and METRO -> tokenY
-    SwapPath public metroToTokenXPath;
-    SwapPath public metroToTokenYPath;
-    SwapPath public metroToNativePath;
+    ILBRouter.Path public metroToTokenXPath;
+    ILBRouter.Path public metroToTokenYPath;
+    ILBRouter.Path public metroToNativePath;
     
     // Minimum amounts for swapping (to avoid dust)
     uint256 public minSwapAmount;
@@ -146,16 +141,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         
-        tokenX = _tokenX;
-        tokenY = _tokenY;
-        binStep = _binStep;
-        amountXMin = _amountXMin;
-        amountYMin = _amountYMin;
-        idSlippage = _idSlippage;
-        lbRouter = _lbRouter;
-        lbpContract = _lbpContract;
-        rewarder = _rewarder;
-        rewardToken = _rewardToken;
+        vaultConfig = VaultConfig(_tokenX, _tokenY, _binStep, _amountXMin, _amountYMin, _idSlippage, _lbRouter, _lbpContract, _rewarder, _rewardToken);
         nativeToken = _nativeToken;
         
         depositQueueStart = 0;
@@ -168,7 +154,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * It takes into account the vault contract balance excluding queued tokens.
      */
     function balanceX() public view returns (uint256) {
-        return IERC20(tokenX).balanceOf(address(this)) - queuedTokenX;
+        return IERC20(vaultConfig.tokenX).balanceOf(address(this)) - queuedTokenX;
     }
 
     /**
@@ -176,7 +162,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * It takes into account the vault contract balance excluding queued tokens.
      */
     function balanceY() public view returns (uint256) {
-        return IERC20(tokenY).balanceOf(address(this)) - queuedTokenY;
+        return IERC20(vaultConfig.tokenY).balanceOf(address(this)) - queuedTokenY;
     }
 
     function totalSupplyX() public view returns (uint256) {
@@ -212,14 +198,14 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * @dev A helper function to call depositX() with all the sender's funds.
      */
     function depositAllX() external {
-        depositX(IERC20(tokenX).balanceOf(msg.sender));
+        depositX(IERC20(vaultConfig.tokenX).balanceOf(msg.sender));
     }
 
     /**
      * @dev A helper function to call depositY() with all the sender's funds.
      */
     function depositAllY() external {
-        depositY(IERC20(tokenY).balanceOf(msg.sender));
+        depositY(IERC20(vaultConfig.tokenY).balanceOf(msg.sender));
     }
 
     /**
@@ -229,9 +215,9 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     function depositX(uint256 _amount) public nonReentrant {
         require(_amount > 0, "Amount must be greater than 0");
         
-        uint256 _pool = IERC20(tokenX).balanceOf(address(this));
-        IERC20(tokenX).safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 _after = IERC20(tokenX).balanceOf(address(this));
+        uint256 _pool = IERC20(vaultConfig.tokenX).balanceOf(address(this));
+        IERC20(vaultConfig.tokenX).safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 _after = IERC20(vaultConfig.tokenX).balanceOf(address(this));
         _amount = _after - _pool;
         
         // Calculate and collect deposit fee
@@ -239,7 +225,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256 netAmount = _amount - depositFee;
         
         if (depositFee > 0) {
-            IERC20(tokenX).safeTransfer(feeManager.getFeeRecipient(), depositFee);
+            IERC20(vaultConfig.tokenX).safeTransfer(feeManager.getFeeRecipient(), depositFee);
             emit FeeCollected(feeManager.getFeeRecipient(), depositFee, "deposit");
         }
         
@@ -264,9 +250,9 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     function depositY(uint256 _amount) public nonReentrant {
         require(_amount > 0, "Amount must be greater than 0");
         
-        uint256 _pool = IERC20(tokenY).balanceOf(address(this));
-        IERC20(tokenY).safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 _after = IERC20(tokenY).balanceOf(address(this));
+        uint256 _pool = IERC20(vaultConfig.tokenY).balanceOf(address(this));
+        IERC20(vaultConfig.tokenY).safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 _after = IERC20(vaultConfig.tokenY).balanceOf(address(this));
         _amount = _after - _pool;
         
         // Calculate and collect deposit fee
@@ -274,7 +260,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256 netAmount = _amount - depositFee;
         
         if (depositFee > 0) {
-            IERC20(tokenY).safeTransfer(feeManager.getFeeRecipient(), depositFee);
+            IERC20(vaultConfig.tokenY).safeTransfer(feeManager.getFeeRecipient(), depositFee);
             emit FeeCollected(feeManager.getFeeRecipient(), depositFee, "deposit");
         }
         
@@ -370,10 +356,10 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         if ((params.forceRebalance || params.ids.length > 0) && params.amounts.length > 0) {
             require(params.ids.length == params.amounts.length, "Array lengths must match");
             
-            (amountXRemoved, amountYRemoved) = ILBRouter(lbRouter).removeLiquidity(
-                IERC20(tokenX),
-                IERC20(tokenY), 
-                binStep,
+            (amountXRemoved, amountYRemoved) = ILBRouter(vaultConfig.lbRouter).removeLiquidity(
+                IERC20(vaultConfig.tokenX),
+                IERC20(vaultConfig.tokenY), 
+                vaultConfig.binStep,
                 params.removeAmountXMin,
                 params.removeAmountYMin,
                 params.ids,
@@ -399,25 +385,25 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         if (availableTokenX > 0 || availableTokenY > 0) {
             // Approve and add liquidity
             if (availableTokenX > 0) {
-                IERC20(tokenX).approve(lbRouter, 0);
-                IERC20(tokenX).approve(lbRouter, availableTokenX);
+                IERC20(vaultConfig.tokenX).approve(vaultConfig.lbRouter, 0);
+                IERC20(vaultConfig.tokenX).approve(vaultConfig.lbRouter, availableTokenX);
             }
             
             if (availableTokenY > 0) {
-                IERC20(tokenY).approve(lbRouter, 0);
-                IERC20(tokenY).approve(lbRouter, availableTokenY);
+                IERC20(vaultConfig.tokenY).approve(vaultConfig.lbRouter, 0);
+                IERC20(vaultConfig.tokenY).approve(vaultConfig.lbRouter, availableTokenY);
             }
             
             ILBRouter.LiquidityParameters memory liquidityParams = ILBRouter.LiquidityParameters({
-                tokenX: IERC20(tokenX),
-                tokenY: IERC20(tokenY),
-                binStep: binStep,
+                tokenX: IERC20(vaultConfig.tokenX),
+                tokenY: IERC20(vaultConfig.tokenY),
+                binStep: vaultConfig.binStep,
                 amountX: availableTokenX,
                 amountY: availableTokenY,
-                amountXMin: amountXMin,
-                amountYMin: amountYMin,
-                activeIdDesired: ILBPair(lbpContract).getActiveId(),
-                idSlippage: idSlippage,
+                amountXMin: vaultConfig.amountXMin,
+                amountYMin: vaultConfig.amountYMin,
+                activeIdDesired: ILBPair(vaultConfig.lbpContract).getActiveId(),
+                idSlippage: vaultConfig.idSlippage,
                 deltaIds: params.deltaIds,
                 distributionX: params.distributionX,
                 distributionY: params.distributionY,
@@ -426,10 +412,10 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 deadline: params.deadline
             });
             
-            (amountXAdded, amountYAdded, , , , ) = ILBRouter(lbRouter).addLiquidity(liquidityParams);
+            (amountXAdded, amountYAdded, , , , ) = ILBRouter(vaultConfig.lbRouter).addLiquidity(liquidityParams);
         }
         
-        emit Rebalanced(tokenX, tokenY, amountXAdded, amountYAdded, amountXRemoved, amountYRemoved, depositsProcessed, withdrawsProcessed);
+        emit Rebalanced(vaultConfig.tokenX, vaultConfig.tokenY, amountXAdded, amountYAdded, amountXRemoved, amountYRemoved, depositsProcessed, withdrawsProcessed);
         
         return (amountXAdded, amountYAdded, amountXRemoved, amountYRemoved);
     }
@@ -439,17 +425,17 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * This increases the value of existing shares without minting new ones
      */
     function _claimAndCompoundRewards() internal {
-        if (rewarder == address(0)) return;
+        if (vaultConfig.rewarder == address(0)) return;
         
         // Get bin IDs where we have positions
         uint256[] memory binIds = getVaultBinIds();
         if (binIds.length == 0) return;
         
-        uint256 metroBalanceBefore = IERC20(rewardToken).balanceOf(address(this));
+        uint256 metroBalanceBefore = IERC20(vaultConfig.rewardToken).balanceOf(address(this));
         
         // Claim METRO rewards
-        try ILBHooksBaseRewarder(rewarder).claim(address(this), binIds) {
-            uint256 metroBalanceAfter = IERC20(rewardToken).balanceOf(address(this));
+        try ILBHooksBaseRewarder(vaultConfig.rewarder).claim(address(this), binIds) {
+            uint256 metroBalanceAfter = IERC20(vaultConfig.rewardToken).balanceOf(address(this));
             uint256 metroClaimed = metroBalanceAfter - metroBalanceBefore;
             
             if (metroClaimed > minSwapAmount) {
@@ -459,7 +445,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 
                 // Send performance fee to fee recipient
                 if (performanceFee > 0) {
-                    IERC20(rewardToken).safeTransfer(feeManager.getFeeRecipient(), performanceFee);
+                    IERC20(vaultConfig.rewardToken).safeTransfer(feeManager.getFeeRecipient(), performanceFee);
                     emit FeeCollected(feeManager.getFeeRecipient(), performanceFee, "performance");
                 }
                 
@@ -472,19 +458,19 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 
                 // Swap METRO to tokenX
                 if (metroForTokenX > 0) {
-                    tokenXObtained = _swapMetroToToken(metroForTokenX, tokenX, metroToTokenXPath);
+                    tokenXObtained = _swapMetroToToken(metroForTokenX, vaultConfig.tokenX, metroToTokenXPath);
                 }
                 
                 // Swap METRO to tokenY
                 if (metroForTokenY > 0) {
-                    tokenYObtained = _swapMetroToToken(metroForTokenY, tokenY, metroToTokenYPath);
+                    tokenYObtained = _swapMetroToToken(metroForTokenY, vaultConfig.tokenY, metroToTokenYPath);
                 }
                 
                 // Update compounding totals - these tokens increase share value
                 totalCompoundedX += tokenXObtained;
                 totalCompoundedY += tokenYObtained;
                 
-                emit RewardsClaimed(rewarder, rewardToken, metroClaimed);
+                emit RewardsClaimed(vaultConfig.rewarder, vaultConfig.rewardToken, metroClaimed);
                 emit RewardsCompounded(metroClaimed, tokenXObtained, tokenYObtained);
             }
         } catch {
@@ -504,14 +490,14 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         address targetToken
     ) public returns(uint expectedOutput) {
         
-        routerPair = ILBPair(lbpContract);
-        routerMetro = ILBAMM(lbpAMM);
+        routerPair = ILBPair(vaultConfig.lbpContract);
+        routerMetro = ILBAMM(vaultConfig.lbpAMM);
         
         uint decimals;
         uint metroDecimals = 18; // Assuming METRO has 18 decimals
         
         // Set decimals based on target token
-        if(targetToken == tokenX) {
+        if(targetToken == vaultConfig.tokenX) {
             decimals = 18; // S token decimals
         } else {
             decimals = 6;  // USDC decimals
@@ -525,7 +511,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256 scale = 2**128;
         uint256 pricePerUnit; // Price of 1 METRO in terms of target token
         
-        if(targetToken == tokenX) {
+        if(targetToken == vaultConfig.tokenX) {
             // Calculate METRO price in S tokens
             // rawPrice represents price of tokenY/tokenX, we need METRO/S
             // Since METRO is being swapped for S, we need the appropriate conversion
@@ -559,16 +545,16 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     ) internal returns (uint256 amountOut) {
         if (metroAmount == 0 || swapPath.tokenPath.length == 0) return 0;
         
-        IERC20(rewardToken).approve(lbRouter, 0);
-        IERC20(rewardToken).approve(lbRouter, metroAmount);
+        IERC20(vaultConfig.rewardToken).approve(vaultConfig.lbRouter, 0);
+        IERC20(vaultConfig.rewardToken).approve(vaultConfig.lbRouter, metroAmount);
         
         uint256 balanceBefore = IERC20(targetToken).balanceOf(address(this));
 
         // Get expected output from price oracle
         uint256 expectedOut = getExpectedSwapOutput(metroAmount, targetToken);
-        // uint256 minAmountOut = expectedOut * (10000 - maxSlippageBPS) / 10000; - Already calculated in getExpectedSwapOutput?
+        uint256 minAmountOut = expectedOut * (10000 - maxSlippageBPS) / 10000; // - Already calculated in getExpectedSwapOutput?
 
-        try ILBRouter(lbRouter).swapExactTokensForTokens(
+        try ILBRouter(vaultConfig.lbRouter).swapExactTokensForTokens(
             metroAmount,
             minAmountOut, // Proper slippage protection
             swapPath,
@@ -580,7 +566,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         } catch {
             // Swap failed, try native swap if target is not native
             if (targetToken != nativeToken && metroToNativePath.tokenPath.length > 0) {
-                try ILBRouter(lbRouter).swapExactTokensForNATIVE(
+                try ILBRouter(vaultConfig.lbRouter).swapExactTokensForNATIVE(
                     metroAmount,
                     0,
                     metroToNativePath,
@@ -643,10 +629,10 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
                 
                 // Send fees to fee recipient
                 if (feeX > 0) {
-                    IERC20(tokenX).safeTransfer(feeManager.getFeeRecipient(), feeX);
+                    IERC20(vaultConfig.tokenX).safeTransfer(feeManager.getFeeRecipient(), feeX);
                 }
                 if (feeY > 0) {
-                    IERC20(tokenY).safeTransfer(feeManager.getFeeRecipient(), feeY);
+                    IERC20(vaultConfig.tokenY).safeTransfer(feeManager.getFeeRecipient(), feeY);
                 }
                 
                 emit FeeCollected(feeManager.getFeeRecipient(), withdrawFee, "withdraw");
@@ -660,10 +646,10 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             
             // Transfer tokens to user
             if (userAmountX > 0) {
-                IERC20(tokenX).safeTransfer(request.user, userAmountX);
+                IERC20(vaultConfig.tokenX).safeTransfer(request.user, userAmountX);
             }
             if (userAmountY > 0) {
-                IERC20(tokenY).safeTransfer(request.user, userAmountY);
+                IERC20(vaultConfig.tokenY).safeTransfer(request.user, userAmountY);
             }
             
             emit WithdrawProcessed(request.user, userAmountX, userAmountY);
@@ -750,21 +736,21 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         uint256[] calldata binIds,
         address receiver
     ) external onlyOwner nonReentrant returns (uint256 claimedAmount) {
-        require(rewarder != address(0), "Rewarder not set");
+        require(vaultConfig.rewarder != address(0), "Rewarder not set");
         require(binIds.length > 0, "No bin IDs provided");
         require(receiver != address(0), "Invalid receiver address");
         
         // Get balance before claiming
-        uint256 balanceBefore = IERC20Upgradeable(rewardToken).balanceOf(address(this));
+        uint256 balanceBefore = IERC20(vaultConfig.rewardToken).balanceOf(address(this));
         
         // Call the correct claim function
-        ILBHooksBaseRewarder(rewarder).claim(receiver, binIds);
+        ILBHooksBaseRewarder(vaultConfig.rewarder).claim(receiver, binIds);
         
         // Calculate how much was actually claimed
-        uint256 balanceAfter = IERC20Upgradeable(rewardToken).balanceOf(address(this));
+        uint256 balanceAfter = IERC20(vaultConfig.rewardToken).balanceOf(address(this));
         claimedAmount = balanceAfter - balanceBefore;
         
-        emit RewardsClaimed(rewarder, rewardToken, claimedAmount);
+        emit RewardsClaimed(vaultConfig.rewarder, vaultConfig.rewardToken, claimedAmount);
         
         return claimedAmount;
     }
@@ -773,13 +759,13 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * @dev Returns the bin IDs where the vault has LP positions
      */
     function getVaultBinIds() public view returns (uint256[] memory) {
-        address lbPair = lbpContract;
+        address lbPair = vaultConfig.lbpContract;
         uint256 activeId = ILBPair(lbPair).getActiveId();
         
-        uint256[] memory binIds = new uint256[](2 * idSlippage + 1);
+        uint256[] memory binIds = new uint256[](2 * vaultConfig.idSlippage + 1);
         
-        for (uint256 i = 0; i < 2 * idSlippage + 1; i++) {
-            binIds[i] = activeId - idSlippage + i;
+        for (uint256 i = 0; i < 2 * vaultConfig.idSlippage + 1; i++) {
+            binIds[i] = activeId - vaultConfig.idSlippage + i;
         }
         
         return binIds;
@@ -809,7 +795,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * @dev Rescues random funds stuck that the contract can't handle.
      */
     function inCaseTokensGetStuck(address _token) external onlyOwner nonReentrant {
-        require(_token != tokenX && _token != tokenY, "Cannot withdraw vault tokens");
+        require(_token != vaultConfig.tokenX && _token != vaultConfig.tokenY, "Cannot withdraw vault tokens");
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
@@ -819,7 +805,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      */
     function setRewarder(address _rewarder) external onlyOwner {
         require(_rewarder != address(0), "Invalid rewarder address");
-        rewarder = _rewarder;
+        vaultConfig.rewarder = _rewarder;
     }
 
     // Override functions for backward compatibility with ERC20
