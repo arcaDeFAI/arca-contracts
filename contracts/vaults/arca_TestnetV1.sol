@@ -92,6 +92,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     event WithdrawQueued(address indexed user, uint256 sharesX, uint256 sharesY);
     event SharesMinted(address indexed user, uint256 sharesX, uint256 sharesY);
     event WithdrawProcessed(address indexed user, uint256 amountX, uint256 amountY);
+    event FeeCollected(address indexed recipient, uint256 amount, string feeType);
     
     event Rebalanced(
         address tokenX, 
