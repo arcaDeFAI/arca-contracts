@@ -235,15 +235,15 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         // Add to deposit queue with net amount
         depositQueue.push(DepositRequest({
             user: msg.sender,
-            amount: _amount,
+            amount: netAmount,
             isTokenX: true,
             timestamp: block.timestamp
         }));
         
         // Track queued tokens
-        queuedTokenX += _amount;
+        queuedTokenX += netAmount;
         
-        emit DepositQueued(msg.sender, _amount, true);
+        emit DepositQueued(msg.sender, netAmount, true);
     }
 
     /**
@@ -270,15 +270,15 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         // Add to deposit queue with net amount
         depositQueue.push(DepositRequest({
             user: msg.sender,
-            amount: _amount,
+            amount: netAmount,
             isTokenX: false,
             timestamp: block.timestamp
         }));
         
         // Track queued tokens
-        queuedTokenY += _amount;
+        queuedTokenY += netAmount;
         
-        emit DepositQueued(msg.sender, _amount, false);
+        emit DepositQueued(msg.sender, netAmount, false);
     }
 
     /**
@@ -491,7 +491,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     function getExpectedSwapOutput(
         uint256 metroAmount,
         address targetToken
-    ) public returns(uint256 expectedOutput, uint256 minimumExpectedOutput) {
+    ) public view returns(uint256 expectedOutput, uint256 minimumExpectedOutput) {
         
         ILBPair routerPair = ILBPair(vaultConfig.lbpContract);
         //ILBAMM memory routerMetro = ILBAMM(vaultConfig.lbpAMM);
@@ -562,7 +562,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             swapPath,
             address(this),
             block.timestamp + 300
-        ) returns (uint256 amountOutReturned) {
+        ) returns (uint256) {
             uint256 balanceAfter = IERC20(targetToken).balanceOf(address(this));
             amountOut = balanceAfter - balanceBefore;
         } catch {
