@@ -10,6 +10,7 @@ import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 import { IarcaFeeManager, arcaFeeManager } from "../arcaFeeManager.sol";
+import { arcaQueueHandlerV1, IDepositWithdrawCompatible } from "./arcaQueueHandlerV1.sol";
 
 /**
  * @dev Implementation of a vault with queued deposits and withdrawals
@@ -18,23 +19,9 @@ import { IarcaFeeManager, arcaFeeManager } from "../arcaFeeManager.sol";
  * Rebalancing functionality processes queues and manages liquidity.
  * Enhanced with METRO reward claiming and automatic compounding functionality.
  */
-contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract arcaTestnetV1 is 
+    ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IDepositWithdrawCompatible {
     using SafeERC20 for IERC20;
-
-    // Structs for queue management
-    struct DepositRequest {
-        address user;
-        uint256 amount;
-        bool isTokenX; // true for tokenX, false for tokenY
-        uint256 timestamp;
-    }
-    
-    struct WithdrawRequest {
-        address user;
-        uint256 sharesX;
-        uint256 sharesY;
-        uint256 timestamp;
-    }
 
     struct VaultConfig {
         address tokenX;        // Main token X that the vault will hold
@@ -52,6 +39,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
 
     VaultConfig private vaultConfig;
     arcaFeeManager private feeManager;
+    arcaQueueHandlerV1 private queueHandler;
 
     // Native token address (WAVAX or similar)
     address public nativeToken;
@@ -73,23 +61,11 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     mapping(address => uint256) public sharesX;
     mapping(address => uint256) public sharesY;
     
-    // Queue management
-    DepositRequest[] public depositQueue;
-    WithdrawRequest[] public withdrawQueue;
-    uint256 public depositQueueStart;
-    uint256 public withdrawQueueStart;
-    
-    // Track tokens waiting in queues
-    uint256 public queuedTokenX;
-    uint256 public queuedTokenY;
-    
     // Compounding tracking
     uint256 public totalCompoundedX; // Total tokenX compounded from rewards
     uint256 public totalCompoundedY; // Total tokenY compounded from rewards
     
     // Events
-    event DepositQueued(address indexed user, uint256 amount, bool isTokenX);
-    event WithdrawQueued(address indexed user, uint256 sharesX, uint256 sharesY);
     event SharesMinted(address indexed user, uint256 sharesX, uint256 sharesY);
     event WithdrawProcessed(address indexed user, uint256 amountX, uint256 amountY);
     event FeeCollected(address indexed recipient, uint256 amount, string feeType);
@@ -146,9 +122,8 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         nativeToken = _nativeToken;
         
         feeManager = arcaFeeManager(msg.sender);
+        queueHandler = arcaQueueHandlerV1(msg.sender);
         
-        depositQueueStart = 0;
-        withdrawQueueStart = 0;
         minSwapAmount = 10; // 0.001 METRO minimum
     }
 
@@ -157,7 +132,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * It takes into account the vault contract balance excluding queued tokens.
      */
     function balanceX() public view returns (uint256) {
-        return IERC20(vaultConfig.tokenX).balanceOf(address(this)) - queuedTokenX;
+        return IERC20(vaultConfig.tokenX).balanceOf(address(this)) - queueHandler.queuedTokenX();
     }
 
     /**
@@ -165,7 +140,7 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      * It takes into account the vault contract balance excluding queued tokens.
      */
     function balanceY() public view returns (uint256) {
-        return IERC20(vaultConfig.tokenY).balanceOf(address(this)) - queuedTokenY;
+        return IERC20(vaultConfig.tokenY).balanceOf(address(this)) - queueHandler.queuedTokenY();
     }
 
     function totalSupplyX() public view returns (uint256) {
@@ -232,18 +207,12 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
             emit FeeCollected(feeManager.getFeeRecipient(), depositFee, "deposit");
         }
         
-        // Add to deposit queue with net amount
-        depositQueue.push(DepositRequest({
+        queueHandler.enqueueDepositRequest(DepositRequest({
             user: msg.sender,
             amount: netAmount,
             isTokenX: true,
             timestamp: block.timestamp
         }));
-        
-        // Track queued tokens
-        queuedTokenX += netAmount;
-        
-        emit DepositQueued(msg.sender, netAmount, true);
     }
 
     /**
@@ -268,17 +237,12 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         }
         
         // Add to deposit queue with net amount
-        depositQueue.push(DepositRequest({
+        queueHandler.enqueueDepositRequest(DepositRequest({
             user: msg.sender,
             amount: netAmount,
             isTokenX: false,
             timestamp: block.timestamp
         }));
-        
-        // Track queued tokens
-        queuedTokenY += netAmount;
-        
-        emit DepositQueued(msg.sender, netAmount, false);
     }
 
     /**
@@ -300,14 +264,12 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         require(sharesY[msg.sender] >= _sharesY, "Insufficient sharesY");
         
         // Add to withdraw queue
-        withdrawQueue.push(WithdrawRequest({
+        queueHandler.enqueueWithdrawRequest(WithdrawRequest({
             user: msg.sender,
             sharesX: _sharesX,
             sharesY: _sharesY,
             timestamp: block.timestamp
         }));
-        
-        emit WithdrawQueued(msg.sender, _sharesX, _sharesY);
     }
 
     /**
@@ -481,7 +443,6 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
         }
     }
 
-
     /**
      * @dev Calculates the minimal expected amount of swap tokens for slippage protection.
      * @param metroAmount Amount of METRO tokens to swap
@@ -586,152 +547,6 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
     }
 
     /**
-     * @dev Internal function to process withdraw queue
-     * Calculates each user's share of withdrawn tokens and processes their withdrawal
-     */
-    function _processWithdrawQueue(uint256 totalXRemoved, uint256 totalYRemoved) internal returns (uint256 processed) {
-        uint256 queueLength = withdrawQueue.length;
-        
-        for (uint256 i = withdrawQueueStart; i < queueLength; i++) {
-            WithdrawRequest memory request = withdrawQueue[i];
-            
-            // Calculate user's share of withdrawn tokens
-            uint256 userAmountX = 0;
-            uint256 userAmountY = 0;
-            
-            if (request.sharesX > 0 && totalSharesX > 0) {
-                // Share of removed liquidity
-                userAmountX = (totalXRemoved * request.sharesX) / totalSharesX;
-                uint256 existingX = balanceX();
-                if (existingX > 0) {
-                    userAmountX += (existingX * request.sharesX) / totalSharesX;
-                }
-            }
-            
-            if (request.sharesY > 0 && totalSharesY > 0) {
-                // Share of removed liquidity
-                userAmountY = (totalYRemoved * request.sharesY) / totalSharesY;
-                uint256 existingY = balanceY();
-                if (existingY > 0) {
-                    userAmountY += (existingY * request.sharesY) / totalSharesY;
-                }
-            }
-            
-            // Calculate withdraw fee on total withdrawal amount
-            uint256 totalWithdrawAmount = userAmountX + userAmountY;
-            uint256 withdrawFee = (totalWithdrawAmount * feeManager.getWithdrawFee()) / feeManager.BASIS_POINTS();
-            
-            // Apply fee proportionally to both tokens
-            if (withdrawFee > 0 && totalWithdrawAmount > 0) {
-                uint256 feeX = (userAmountX * withdrawFee) / totalWithdrawAmount;
-                uint256 feeY = (userAmountY * withdrawFee) / totalWithdrawAmount;
-                
-                userAmountX -= feeX;
-                userAmountY -= feeY;
-                
-                // Send fees to fee recipient
-                if (feeX > 0) {
-                    IERC20(vaultConfig.tokenX).safeTransfer(feeManager.getFeeRecipient(), feeX);
-                }
-                if (feeY > 0) {
-                    IERC20(vaultConfig.tokenY).safeTransfer(feeManager.getFeeRecipient(), feeY);
-                }
-                
-                emit FeeCollected(feeManager.getFeeRecipient(), withdrawFee, "withdraw");
-            }
-            
-            // Burn user's shares
-            sharesX[request.user] -= request.sharesX;
-            sharesY[request.user] -= request.sharesY;
-            totalSharesX -= request.sharesX;
-            totalSharesY -= request.sharesY;
-            
-            // Transfer tokens to user
-            if (userAmountX > 0) {
-                IERC20(vaultConfig.tokenX).safeTransfer(request.user, userAmountX);
-            }
-            if (userAmountY > 0) {
-                IERC20(vaultConfig.tokenY).safeTransfer(request.user, userAmountY);
-            }
-            
-            emit WithdrawProcessed(request.user, userAmountX, userAmountY);
-            processed++;
-        }
-        
-        // Clear processed withdrawals
-        if (processed > 0) {
-            withdrawQueueStart = queueLength;
-        }
-        
-        return processed;
-    }
-
-    /**
-     * @dev Internal function to process deposit queue
-     * Mints shares based on current token balances after withdrawals are processed and rewards compounded
-     */
-    function _processDepositQueue() internal returns (uint256 processed) {
-        uint256 queueLength = depositQueue.length;
-            
-        for (uint256 i = depositQueueStart; i < queueLength; i++) {
-            DepositRequest memory request = depositQueue[i];
-            
-            uint256 newShares = 0;
-            
-            if (request.isTokenX) {
-                // Calculate sharesX to mint (benefits from compounded rewards increasing balance)
-                if (totalSharesX == 0) {
-                    newShares = request.amount;
-                } else {
-                    uint256 currentBalanceX = balanceX();
-                    if (currentBalanceX > 0) {
-                        newShares = (request.amount * totalSharesX) / currentBalanceX;
-                    } else {
-                        newShares = request.amount; // Fallback if no balance
-                    }
-                }
-                
-                // Update user shares and totals AFTER calculation
-                sharesX[request.user] += newShares;
-                totalSharesX += newShares;
-                
-                // Remove from queued tokens (this adds to available balance for next person)
-                queuedTokenX -= request.amount;
-                
-            } else {
-                // Calculate sharesY to mint (benefits from compounded rewards increasing balance)
-                if (totalSharesY == 0) {
-                    newShares = request.amount;
-                } else {
-                    uint256 currentBalanceY = balanceY();
-                    if (currentBalanceY > 0) {
-                        newShares = (request.amount * totalSharesY) / currentBalanceY;
-                    } else {
-                        newShares = request.amount; // Fallback if no balance
-                    }
-                }
-                
-                // Update user shares and totals AFTER calculation
-                sharesY[request.user] += newShares;
-                totalSharesY += newShares;
-                
-                // Remove from queued tokens (this adds to available balance for next person)
-                queuedTokenY -= request.amount;
-            }
-            
-            emit SharesMinted(request.user, request.isTokenX ? newShares : 0, request.isTokenX ? 0 : newShares);
-            processed++;
-        }
-        
-        // Clear processed deposits
-        if (processed > 0) {
-            depositQueueStart = queueLength;
-        }
-        
-        return processed;
-    }
-
-    /**
      * @dev Manual function to claim rewards without rebalancing
      */
     function claimRewards(
@@ -817,38 +632,6 @@ contract arcaTestnetV1 is ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardU
      */
     function balanceSharesCombined(address account) public view returns (uint256) {
         return sharesX[account] + sharesY[account];
-    }
-
-
-
-    // View functions for queue management
-
-    /**
-     * @dev Get deposit queue length
-     */
-    function getDepositQueueLength() external view returns (uint256) {
-        return depositQueue.length;
-    }
-
-    /**
-     * @dev Get withdraw queue length
-     */
-    function getWithdrawQueueLength() external view returns (uint256) {
-        return withdrawQueue.length;
-    }
-
-    /**
-     * @dev Get pending deposits count
-     */
-    function getPendingDepositsCount() external view returns (uint256) {
-        return depositQueue.length - depositQueueStart;
-    }
-
-    /**
-     * @dev Get pending withdrawals count
-     */
-    function getPendingWithdrawsCount() external view returns (uint256) {
-        return withdrawQueue.length - withdrawQueueStart;
     }
 
     /**
