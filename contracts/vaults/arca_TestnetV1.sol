@@ -386,6 +386,138 @@ contract arcaTestnetV1 is
     }
 
     /**
+     * @dev Internal function to process withdraw queue
+     * Calculates each user's share of withdrawn tokens and processes their withdrawal
+     */
+    function _processWithdrawQueue(uint256 totalXRemoved, uint256 totalYRemoved) private returns (uint256 processed) {
+        WithdrawRequest[] memory withdrawRequests = queueHandler.getWithdrawQueueTrailingSlice();
+        
+        for (uint256 i = 0; i < withdrawRequests.length; i++) {
+            WithdrawRequest memory request = withdrawRequests[i];
+            
+            // Calculate user's share of withdrawn tokens
+            uint256 userAmountX = 0;
+            uint256 userAmountY = 0;
+            
+            if (request.sharesX > 0 && totalSharesX > 0) {
+                // Share of removed liquidity
+                userAmountX = (totalXRemoved * request.sharesX) / totalSharesX;
+                uint256 existingX = balanceX();
+                if (existingX > 0) {
+                    userAmountX += (existingX * request.sharesX) / totalSharesX;
+                }
+            }
+            
+            if (request.sharesY > 0 && totalSharesY > 0) {
+                // Share of removed liquidity
+                userAmountY = (totalYRemoved * request.sharesY) / totalSharesY;
+                uint256 existingY = balanceY();
+                if (existingY > 0) {
+                    userAmountY += (existingY * request.sharesY) / totalSharesY;
+                }
+            }
+            
+            // Calculate withdraw fee on total withdrawal amount
+            uint256 totalWithdrawAmount = userAmountX + userAmountY;
+            uint256 withdrawFee = (totalWithdrawAmount * feeManager.getWithdrawFee()) / feeManager.BASIS_POINTS();
+            
+            // Apply fee proportionally to both tokens
+            if (withdrawFee > 0 && totalWithdrawAmount > 0) {
+                uint256 feeX = (userAmountX * withdrawFee) / totalWithdrawAmount;
+                uint256 feeY = (userAmountY * withdrawFee) / totalWithdrawAmount;
+                
+                userAmountX -= feeX;
+                userAmountY -= feeY;
+                
+                // Send fees to fee recipient
+                if (feeX > 0) {
+                    IERC20(vaultConfig.tokenX).safeTransfer(feeManager.getFeeRecipient(), feeX);
+                }
+                if (feeY > 0) {
+                    IERC20(vaultConfig.tokenY).safeTransfer(feeManager.getFeeRecipient(), feeY);
+                }
+                
+                emit FeeCollected(feeManager.getFeeRecipient(), withdrawFee, "withdraw");
+            }
+            
+            // Burn user's shares
+            sharesX[request.user] -= request.sharesX;
+            sharesY[request.user] -= request.sharesY;
+            totalSharesX -= request.sharesX;
+            totalSharesY -= request.sharesY;
+            
+            // Transfer tokens to user
+            if (userAmountX > 0) {
+                IERC20(vaultConfig.tokenX).safeTransfer(request.user, userAmountX);
+            }
+            if (userAmountY > 0) {
+                IERC20(vaultConfig.tokenY).safeTransfer(request.user, userAmountY);
+            }
+            
+            emit WithdrawProcessed(request.user, userAmountX, userAmountY);
+            processed++;
+        }
+        
+        return processed;
+    }
+
+    /**
+     * @dev Internal function to process deposit queue
+     * Mints shares based on current token balances after withdrawals are processed and rewards compounded
+     */
+    function _processDepositQueue() private returns (uint256 processed) {
+        DepositRequest[] memory depositRequests = queueHandler.getDepositQueueTrailingSlice();
+            
+        for (uint256 i = 0; i < depositRequests.length; i++) {
+            DepositRequest memory request = depositRequests[i];
+            
+            uint256 newShares = 0;
+            
+            if (request.isTokenX) {
+                // Calculate sharesX to mint (benefits from compounded rewards increasing balance)
+                if (totalSharesX == 0) {
+                    newShares = request.amount;
+                } else {
+                    uint256 currentBalanceX = balanceX();
+                    if (currentBalanceX > 0) {
+                        newShares = (request.amount * totalSharesX) / currentBalanceX;
+                    } else {
+                        newShares = request.amount; // Fallback if no balance
+                    }
+                }
+                
+                // Update user shares and totals AFTER calculation
+                sharesX[request.user] += newShares;
+                totalSharesX += newShares;
+            } else {
+                // Calculate sharesY to mint (benefits from compounded rewards increasing balance)
+                if (totalSharesY == 0) {
+                    newShares = request.amount;
+                } else {
+                    uint256 currentBalanceY = balanceY();
+                    if (currentBalanceY > 0) {
+                        newShares = (request.amount * totalSharesY) / currentBalanceY;
+                    } else {
+                        newShares = request.amount; // Fallback if no balance
+                    }
+                }
+                
+                // Update user shares and totals AFTER calculation
+                sharesY[request.user] += newShares;
+                totalSharesY += newShares;
+            }
+            
+            // Remove from queued tokens (this adds to available balance for next person)
+            queueHandler.reduceQueuedToken(request.amount, request.isTokenX);
+
+            emit SharesMinted(request.user, request.isTokenX ? newShares : 0, request.isTokenX ? 0 : newShares);
+            processed++;
+        }
+        
+        return processed;
+    }
+
+    /**
      * @dev Claims METRO rewards and compounds them into tokenX and tokenY
      * This increases the value of existing shares without minting new ones
      */
