@@ -9,8 +9,9 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
-import { IarcaFeeManager, arcaFeeManager } from "../arcaFeeManager.sol";
-import { arcaQueueHandlerV1, IDepositWithdrawCompatible } from "./arcaQueueHandlerV1.sol";
+import { ArcaFeeManager } from "../ArcaFeeManager.sol";
+import { ArcaQueueHandlerV1, IDepositWithdrawCompatible } from "./ArcaQueueHandlerV1.sol";
+import { TokenValidator } from "../TokenTypes.sol";
 
 /**
  * @dev Implementation of a vault with queued deposits and withdrawals
@@ -19,34 +20,53 @@ import { arcaQueueHandlerV1, IDepositWithdrawCompatible } from "./arcaQueueHandl
  * Rebalancing functionality processes queues and manages liquidity.
  * Enhanced with METRO reward claiming and automatic compounding functionality.
  */
-contract arcaTestnetV1 is 
-    ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IDepositWithdrawCompatible {
+contract ArcaTestnetV1 is 
+    ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IDepositWithdrawCompatible, TokenValidator {
     using SafeERC20 for IERC20;
 
+    uint256 private constant TOKEN_COUNT = 2;
+
+    function getVaultToken(TokenValidator.Type tokenType) private validToken(tokenType) view returns(IERC20) {
+        return vaultConfig.tokens[uint256(tokenType)];
+    }
+
+    function getTokenMinAmount(TokenValidator.Type tokenType) private validToken(tokenType) view returns(uint256) {
+        return vaultConfig.amountMins[uint256(tokenType)];
+    }
+
+    function getMetroToTokenPath(TokenValidator.Type tokenType) private validToken(tokenType) view returns(ILBRouter.Path memory) {
+        return metroToTokenPaths[uint256(tokenType)];
+    }
+
+    function getTokenTotalShares(TokenValidator.Type tokenType) private validToken(tokenType) view returns(uint256) {
+        return totalShares[uint256(tokenType)];
+    }
+
+    function getTotalCompounded(TokenValidator.Type tokenType) private validToken(tokenType) view returns(uint256) {
+        return totalCompounded[uint256(tokenType)];
+    }
+
     struct VaultConfig {
-        address tokenX;        // Main token X that the vault will hold
-        address tokenY;        // Main token Y that the vault will hold
-        uint16 binStep;        // The bin step for liquidity positions
-        uint256 amountXMin;    // Minimum amount of token X to add during rebalance
-        uint256 amountYMin;    // Minimum amount of token Y to add during rebalance
-        uint256 idSlippage;    // The number of bins to slip
-        address lbRouter;      // Address of the LB Router
-        address lbpAMM;        // Address of the Metro-S AMM LP pair
-        address lbpContract;   // Address of the LBP contract
-        address rewarder;      // Address of the LBHooksBaseRewarder contract
-        address rewardToken;   // Address of the reward token (METRO)
+        IERC20[TOKEN_COUNT] tokens;         // Main Tokens (token X and token Y) that the vault will hold
+        uint16 binStep;                     // The bin step for liquidity positions
+        uint256[TOKEN_COUNT] amountMins;    // Minimum amount of token X to add during rebalance
+        uint256 idSlippage;                 // The number of bins to slip
+        address lbRouter;                   // Address of the LB Router
+        address lbpAMM;                     // Address of the Metro-S AMM LP pair
+        address lbpContract;                // Address of the LBP contract
+        address rewarder;                   // Address of the LBHooksBaseRewarder contract
+        address rewardToken;                // Address of the reward token (METRO)
     }
 
     VaultConfig private vaultConfig;
-    arcaFeeManager private feeManager;
-    arcaQueueHandlerV1 private queueHandler;
+    ArcaFeeManager private feeManager;
+    ArcaQueueHandlerV1 private queueHandler;
 
     // Native token address (WAVAX or similar)
     address public nativeToken;
     
     // Swap paths for METRO -> tokenX and METRO -> tokenY
-    ILBRouter.Path private metroToTokenXPath;
-    ILBRouter.Path private metroToTokenYPath;
+    ILBRouter.Path[TOKEN_COUNT] private metroToTokenPaths;
     ILBRouter.Path private metroToNativePath;
     
     // Minimum amounts for swapping (to avoid dust)
@@ -55,15 +75,12 @@ contract arcaTestnetV1 is
     // Store bin IDs from last add liquidity operation
     uint256[] public lastAddLiquidityBinIds;
     
-    // Separate share tracking
-    uint256 public totalSharesX;
-    uint256 public totalSharesY;
-    mapping(address => uint256) public sharesX;
-    mapping(address => uint256) public sharesY;
+    // Share tracking
+    uint256[TOKEN_COUNT] private totalShares;
+    mapping(address => uint256[TOKEN_COUNT]) public shares;
     
     // Compounding tracking
-    uint256 public totalCompoundedX; // Total tokenX compounded from rewards
-    uint256 public totalCompoundedY; // Total tokenY compounded from rewards
+    uint256[TOKEN_COUNT] public totalCompounded; // Total compounded from rewards per token
     
     // Events
     event SharesMinted(address indexed user, uint256 sharesX, uint256 sharesY);
@@ -118,84 +135,61 @@ contract arcaTestnetV1 is
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         
-        vaultConfig = VaultConfig(_tokenX, _tokenY, _binStep, _amountXMin, _amountYMin, _idSlippage, _lbRouter, _lbpAMM, _lbpContract, _rewarder, _rewardToken);
+        IERC20[TOKEN_COUNT] memory tokens;
+        tokens[uint256(TokenValidator.Type.TokenX)] = IERC20(_tokenX);
+        tokens[uint256(TokenValidator.Type.TokenY)] = IERC20(_tokenY);
+        uint256[TOKEN_COUNT] memory amountMins;
+        amountMins[uint256(TokenValidator.Type.TokenX)] = _amountXMin;
+        amountMins[uint256(TokenValidator.Type.TokenY)] = _amountYMin;
+        vaultConfig = VaultConfig(tokens, _binStep, amountMins, _idSlippage, _lbRouter, _lbpAMM, _lbpContract, _rewarder, _rewardToken);
         nativeToken = _nativeToken;
         
-        feeManager = arcaFeeManager(msg.sender);
-        queueHandler = arcaQueueHandlerV1(msg.sender);
+        feeManager = ArcaFeeManager(msg.sender);
+        queueHandler = ArcaQueueHandlerV1(msg.sender);
         
         minSwapAmount = 10; // 0.001 METRO minimum
     }
 
     /**
-     * @dev It calculates the total underlying value of tokenX held by the system.
+     * @dev It calculates the total underlying value of tokenX or tokenY held by the system.
      * It takes into account the vault contract balance excluding queued tokens.
      */
-    function balanceX() public view returns (uint256) {
-        return IERC20(vaultConfig.tokenX).balanceOf(address(this)) - queueHandler.queuedTokenX();
+    function tokenBalance(TokenValidator.Type tokenType) public view validToken(tokenType) returns (uint256) {
+        return getVaultToken(tokenType).balanceOf(address(this)) - queueHandler.getQueuedToken(tokenType);
     }
-
-    /**
-     * @dev It calculates the total underlying value of tokenY held by the system.
-     * It takes into account the vault contract balance excluding queued tokens.
-     */
-    function balanceY() public view returns (uint256) {
-        return IERC20(vaultConfig.tokenY).balanceOf(address(this)) - queueHandler.queuedTokenY();
-    }
-
-    function totalSupplyX() public view returns (uint256) {
-        return totalSharesX;
+    
+    function totalSupply(TokenValidator.Type tokenType) public view validToken(tokenType) returns (uint256) {
+        return totalShares[uint256(tokenType)];
     }
 
     /**
      * @dev Function for various UIs to display the current value of one of our yield tokens.
      * Returns an uint256 with 18 decimals of how much underlying asset one vault share represents.
-     * This is a simplified implementation that considers only tokenX for share value calculation.
+     * This is a simplified implementation that considers only a token type for share value calculation.
      */
-    function getPricePerFullShareX() public view returns (uint256) {
-        return totalSupplyX() == 0 ? 1e18 : balanceX() * 1e18 / totalSupplyX();
+    function getPricePerFullShare(TokenValidator.Type tokenType) public view validToken(tokenType) returns (uint256) {
+        return totalSupply(tokenType) == 0 ? 1e18 : tokenBalance(tokenType) * 1e18 / totalSupply(tokenType);
     }
 
     /**
-     * @dev Get total supply for tokenY shares (for backwards compatibility)
+     * @dev A helper function to call depositToken() with all the sender's funds.
      */
-    function totalSupplyY() public view returns (uint256) {
-        return totalSharesY;
+    function depositAll(TokenValidator.Type tokenType) external validToken(tokenType) {
+        uint256 balance = getVaultToken(tokenType).balanceOf(msg.sender);
+        depositToken(balance, tokenType);
     }
 
     /**
-     * @dev Function for various UIs to display the current value of one of our yield tokens.
-     * Returns an uint256 with 18 decimals of how much underlying asset one vault share represents.
-     * This is a simplified implementation that considers only tokenY for share value calculation.
-     */
-    function getPricePerFullShareY() public view returns (uint256) {
-        return totalSupplyY() == 0 ? 1e18 : balanceY() * 1e18 / totalSupplyY();
-    }
-
-    /**
-     * @dev A helper function to call depositX() with all the sender's funds.
-     */
-    function depositAllX() external {
-        depositX(IERC20(vaultConfig.tokenX).balanceOf(msg.sender));
-    }
-
-    /**
-     * @dev A helper function to call depositY() with all the sender's funds.
-     */
-    function depositAllY() external {
-        depositY(IERC20(vaultConfig.tokenY).balanceOf(msg.sender));
-    }
-
-    /**
-     * @dev Modified deposit function for tokenX - now adds to queue instead of immediate minting
+     * @dev Modified deposit function for a token type - now adds to queue instead of immediate minting
      * Tokens are held in contract until next rebalance. Necessary for the rebalance and will help to calculate Shares.
      */
-    function depositX(uint256 _amount) public nonReentrant {
+    function depositToken(uint256 _amount, TokenValidator.Type _tokenType) public validToken(_tokenType) nonReentrant {
         require(_amount > 0, "Amount must be greater than 0");
         
-        uint256 _pool = IERC20(vaultConfig.tokenX).balanceOf(address(this));
-        IERC20(vaultConfig.tokenX).safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 _after = IERC20(vaultConfig.tokenX).balanceOf(address(this));
+        IERC20 token = getVaultToken(_tokenType);
+        uint256 _pool = token.balanceOf(address(this));
+        token.safeTransferFrom(msg.sender, address(this), _amount);
+        uint256 _after = token.balanceOf(address(this));
         _amount = _after - _pool;
         
         // Calculate and collect deposit fee
@@ -203,44 +197,14 @@ contract arcaTestnetV1 is
         uint256 netAmount = _amount - depositFee;
         
         if (depositFee > 0) {
-            IERC20(vaultConfig.tokenX).safeTransfer(feeManager.getFeeRecipient(), depositFee);
+            token.safeTransfer(feeManager.getFeeRecipient(), depositFee);
             emit FeeCollected(feeManager.getFeeRecipient(), depositFee, "deposit");
         }
         
         queueHandler.enqueueDepositRequest(DepositRequest({
             user: msg.sender,
             amount: netAmount,
-            isTokenX: true,
-            timestamp: block.timestamp
-        }));
-    }
-
-    /**
-     * @dev Modified deposit function for tokenY - now adds to queue instead of immediate minting
-     * Tokens are held in contract until next rebalance
-     */
-    function depositY(uint256 _amount) public nonReentrant {
-        require(_amount > 0, "Amount must be greater than 0");
-        
-        uint256 _pool = IERC20(vaultConfig.tokenY).balanceOf(address(this));
-        IERC20(vaultConfig.tokenY).safeTransferFrom(msg.sender, address(this), _amount);
-        uint256 _after = IERC20(vaultConfig.tokenY).balanceOf(address(this));
-        _amount = _after - _pool;
-        
-        // Calculate and collect deposit fee
-        uint256 depositFee = (_amount * feeManager.getDepositFee()) / feeManager.BASIS_POINTS();
-        uint256 netAmount = _amount - depositFee;
-        
-        if (depositFee > 0) {
-            IERC20(vaultConfig.tokenY).safeTransfer(feeManager.getFeeRecipient(), depositFee);
-            emit FeeCollected(feeManager.getFeeRecipient(), depositFee, "deposit");
-        }
-        
-        // Add to deposit queue with net amount
-        queueHandler.enqueueDepositRequest(DepositRequest({
-            user: msg.sender,
-            amount: netAmount,
-            isTokenX: false,
+            tokenType: _tokenType,
             timestamp: block.timestamp
         }));
     }
@@ -249,25 +213,36 @@ contract arcaTestnetV1 is
      * @dev Helper function to withdraw all shares
      */
     function withdrawAll() external {
-        withdraw(sharesX[msg.sender], sharesY[msg.sender]);
+
+        uint256[TOKEN_COUNT] memory sharesToWithdraw;
+
+        for (uint256 i = 0; i < TOKEN_COUNT; i++) {
+            sharesToWithdraw[i] = shares[msg.sender][i];
+        }
+
+        withdrawTokenShares(sharesToWithdraw);
     }
 
     /**
      * @dev Modified withdraw function - now adds to queue instead of immediate withdrawal
      * User specifies how many sharesX and sharesY they want to withdraw
-     * @param _sharesX Amount of X shares to withdraw
-     * @param _sharesY Amount of Y shares to withdraw
      */
-    function withdraw(uint256 _sharesX, uint256 _sharesY) public nonReentrant {
-        require(_sharesX > 0 || _sharesY > 0, "Must withdraw some shares");
-        require(sharesX[msg.sender] >= _sharesX, "Insufficient sharesX");
-        require(sharesY[msg.sender] >= _sharesY, "Insufficient sharesY");
+    function withdrawTokenShares(uint256[2] memory _shares) public nonReentrant {
+        require (_shares.length == TOKEN_COUNT, "Invalid token share count");
+        
+        uint256 total = 0;
+
+        for (uint256 i = 0; i < TOKEN_COUNT; i++) {
+            total += _shares[i];
+            require(shares[msg.sender][i] >= _shares[i], "Insufficient shares");
+        }
+
+        require(total > 0, "Cannot withdraw 0 shares");
         
         // Add to withdraw queue
         queueHandler.enqueueWithdrawRequest(WithdrawRequest({
             user: msg.sender,
-            sharesX: _sharesX,
-            sharesY: _sharesY,
+            shares: _shares,
             timestamp: block.timestamp
         }));
     }
@@ -276,21 +251,24 @@ contract arcaTestnetV1 is
      * @dev Backward compatibility function - converts to separate share withdrawal
      */
     function withdraw(uint256 _shares) public nonReentrant {
-        uint256 totalUserShares = sharesX[msg.sender] + sharesY[msg.sender];
+        require(_shares > 0, "Cannot withdraw 0 shares");
+
+        uint256 totalUserShares = 0;
+
+        for (uint256 i = 0; i < TOKEN_COUNT; i++) {
+            totalUserShares += shares[msg.sender][i];
+        }
+
         require(totalUserShares >= _shares, "Insufficient shares");
         
         // Proportionally withdraw from both types
-        uint256 withdrawSharesX = 0;
-        uint256 withdrawSharesY = 0;
+        uint256[TOKEN_COUNT] memory sharesToWithdraw;
         
-        if (sharesX[msg.sender] > 0) {
-            withdrawSharesX = (_shares * sharesX[msg.sender]) / totalUserShares;
-        }
-        if (sharesY[msg.sender] > 0) {
-            withdrawSharesY = (_shares * sharesY[msg.sender]) / totalUserShares;
+        for (uint256 i = 0; i < TOKEN_COUNT; i++) {
+            sharesToWithdraw[i] = (_shares * shares[msg.sender][i]) / totalUserShares; 
         }
         
-        withdraw(withdrawSharesX, withdrawSharesY);
+        withdrawTokenShares(sharesToWithdraw);
     }
 
     struct RebalanceParams {
@@ -322,8 +300,8 @@ contract arcaTestnetV1 is
             require(params.ids.length == params.amounts.length, "Array lengths must match");
             
             (amountXRemoved, amountYRemoved) = ILBRouter(vaultConfig.lbRouter).removeLiquidity(
-                IERC20(vaultConfig.tokenX),
-                IERC20(vaultConfig.tokenY), 
+                getVaultToken(TokenValidator.Type.TokenX),
+                getVaultToken(TokenValidator.Type.TokenY), 
                 vaultConfig.binStep,
                 params.removeAmountXMin,
                 params.removeAmountYMin,
@@ -338,35 +316,38 @@ contract arcaTestnetV1 is
         _claimAndCompoundRewards();
         
         // Step 3: Process withdraw queue FIRST (before calculating deposit shares)
-        uint256 withdrawsProcessed = _processWithdrawQueue(amountXRemoved, amountYRemoved);
+        uint256[TOKEN_COUNT] memory totalRemoved = [amountXRemoved, amountYRemoved];
+        uint256 withdrawsProcessed = _processWithdrawQueue(totalRemoved);
         
         // Step 4: Process deposit queue (mint shares based on current state including compounded rewards)
         uint256 depositsProcessed = _processDepositQueue();
         
         // Add liquidity with remaining tokens
-        uint256 availableTokenX = balanceX();
-        uint256 availableTokenY = balanceY();
+        uint256 availableTokenX = tokenBalance(TokenValidator.Type.TokenX);
+        uint256 availableTokenY = tokenBalance(TokenValidator.Type.TokenY);
+        IERC20 _tokenX = getVaultToken(TokenValidator.Type.TokenX);
+        IERC20 _tokenY = getVaultToken(TokenValidator.Type.TokenY);
         
         if (availableTokenX > 0 || availableTokenY > 0) {
             // Approve and add liquidity
             if (availableTokenX > 0) {
-                IERC20(vaultConfig.tokenX).approve(vaultConfig.lbRouter, 0);
-                IERC20(vaultConfig.tokenX).approve(vaultConfig.lbRouter, availableTokenX);
+                _tokenX.approve(vaultConfig.lbRouter, 0);
+                _tokenX.approve(vaultConfig.lbRouter, availableTokenX);
             }
             
             if (availableTokenY > 0) {
-                IERC20(vaultConfig.tokenY).approve(vaultConfig.lbRouter, 0);
-                IERC20(vaultConfig.tokenY).approve(vaultConfig.lbRouter, availableTokenY);
+                _tokenY.approve(vaultConfig.lbRouter, 0);
+                _tokenY.approve(vaultConfig.lbRouter, availableTokenY);
             }
             
             ILBRouter.LiquidityParameters memory liquidityParams = ILBRouter.LiquidityParameters({
-                tokenX: IERC20(vaultConfig.tokenX),
-                tokenY: IERC20(vaultConfig.tokenY),
+                tokenX: _tokenX,
+                tokenY: _tokenY,
                 binStep: vaultConfig.binStep,
                 amountX: availableTokenX,
                 amountY: availableTokenY,
-                amountXMin: vaultConfig.amountXMin,
-                amountYMin: vaultConfig.amountYMin,
+                amountXMin: vaultConfig.amountMins[uint256(TokenValidator.Type.TokenX)],
+                amountYMin: vaultConfig.amountMins[uint256(TokenValidator.Type.TokenY)],
                 activeIdDesired: ILBPair(vaultConfig.lbpContract).getActiveId(),
                 idSlippage: vaultConfig.idSlippage,
                 deltaIds: params.deltaIds,
@@ -380,7 +361,7 @@ contract arcaTestnetV1 is
             (amountXAdded, amountYAdded, , , , ) = ILBRouter(vaultConfig.lbRouter).addLiquidity(liquidityParams);
         }
         
-        emit Rebalanced(vaultConfig.tokenX, vaultConfig.tokenY, amountXAdded, amountYAdded, amountXRemoved, amountYRemoved, depositsProcessed, withdrawsProcessed);
+        emit Rebalanced(address(_tokenX), address(_tokenY), amountXAdded, amountYAdded, amountXRemoved, amountYRemoved, depositsProcessed, withdrawsProcessed);
         
         return (amountXAdded, amountYAdded, amountXRemoved, amountYRemoved);
     }
@@ -389,72 +370,65 @@ contract arcaTestnetV1 is
      * @dev Internal function to process withdraw queue
      * Calculates each user's share of withdrawn tokens and processes their withdrawal
      */
-    function _processWithdrawQueue(uint256 totalXRemoved, uint256 totalYRemoved) private returns (uint256 processed) {
+    function _processWithdrawQueue(uint256[2] memory totalRemoved) private returns (uint256 processed) {
+        require(totalRemoved.length == TOKEN_COUNT, "Invalid array length");
         WithdrawRequest[] memory withdrawRequests = queueHandler.getWithdrawQueueTrailingSlice();
         
         for (uint256 i = 0; i < withdrawRequests.length; i++) {
             WithdrawRequest memory request = withdrawRequests[i];
             
             // Calculate user's share of withdrawn tokens
-            uint256 userAmountX = 0;
-            uint256 userAmountY = 0;
-            
-            if (request.sharesX > 0 && totalSharesX > 0) {
+            uint256[TOKEN_COUNT] memory userAmounts;
+
+            uint256 totalWithdrawAmount = 0;
+
+            for (uint256 tokenIdx = 0; tokenIdx < TOKEN_COUNT; tokenIdx++) {
                 // Share of removed liquidity
-                userAmountX = (totalXRemoved * request.sharesX) / totalSharesX;
-                uint256 existingX = balanceX();
-                if (existingX > 0) {
-                    userAmountX += (existingX * request.sharesX) / totalSharesX;
+                userAmounts[tokenIdx] = totalRemoved[tokenIdx] * request.shares[tokenIdx] / totalShares[tokenIdx];
+
+                uint256 existing = tokenBalance(TokenValidator.Type(tokenIdx));
+
+                if (existing > 0) {
+                    userAmounts[tokenIdx] += (existing * request.shares[tokenIdx]) / totalShares[tokenIdx];
                 }
-            }
-            
-            if (request.sharesY > 0 && totalSharesY > 0) {
-                // Share of removed liquidity
-                userAmountY = (totalYRemoved * request.sharesY) / totalSharesY;
-                uint256 existingY = balanceY();
-                if (existingY > 0) {
-                    userAmountY += (existingY * request.sharesY) / totalSharesY;
-                }
+
+                totalWithdrawAmount += userAmounts[tokenIdx];
             }
             
             // Calculate withdraw fee on total withdrawal amount
-            uint256 totalWithdrawAmount = userAmountX + userAmountY;
             uint256 withdrawFee = (totalWithdrawAmount * feeManager.getWithdrawFee()) / feeManager.BASIS_POINTS();
             
             // Apply fee proportionally to both tokens
             if (withdrawFee > 0 && totalWithdrawAmount > 0) {
-                uint256 feeX = (userAmountX * withdrawFee) / totalWithdrawAmount;
-                uint256 feeY = (userAmountY * withdrawFee) / totalWithdrawAmount;
-                
-                userAmountX -= feeX;
-                userAmountY -= feeY;
-                
-                // Send fees to fee recipient
-                if (feeX > 0) {
-                    IERC20(vaultConfig.tokenX).safeTransfer(feeManager.getFeeRecipient(), feeX);
-                }
-                if (feeY > 0) {
-                    IERC20(vaultConfig.tokenY).safeTransfer(feeManager.getFeeRecipient(), feeY);
+
+                for (uint256 tokenIdx = 0; tokenIdx < TOKEN_COUNT; tokenIdx++) {
+                    uint256 fee = (userAmounts[tokenIdx] * withdrawFee) / totalWithdrawAmount;
+                    userAmounts[tokenIdx] -= fee;
+
+                    // Send fees to fee recipient
+                    if (fee > 0) {
+                        IERC20 token = getVaultToken(TokenValidator.Type(tokenIdx));
+                        token.safeTransfer(feeManager.getFeeRecipient(), fee);
+                    }
                 }
                 
                 emit FeeCollected(feeManager.getFeeRecipient(), withdrawFee, "withdraw");
             }
             
-            // Burn user's shares
-            sharesX[request.user] -= request.sharesX;
-            sharesY[request.user] -= request.sharesY;
-            totalSharesX -= request.sharesX;
-            totalSharesY -= request.sharesY;
-            
-            // Transfer tokens to user
-            if (userAmountX > 0) {
-                IERC20(vaultConfig.tokenX).safeTransfer(request.user, userAmountX);
-            }
-            if (userAmountY > 0) {
-                IERC20(vaultConfig.tokenY).safeTransfer(request.user, userAmountY);
+            for (uint256 tokenIdx = 0; tokenIdx < TOKEN_COUNT; tokenIdx++) {
+                // Burn user's shares
+                shares[request.user][tokenIdx] -= request.shares[tokenIdx];
+                totalShares[tokenIdx] -= request.shares[tokenIdx];
+                
+                // Transfer tokens to user
+                if (userAmounts[tokenIdx] > 0) {
+                    IERC20 token = getVaultToken(TokenValidator.Type(tokenIdx));
+                    token.safeTransfer(request.user, userAmounts[tokenIdx]);
+                }
             }
             
-            emit WithdrawProcessed(request.user, userAmountX, userAmountY);
+            
+            emit WithdrawProcessed(request.user, userAmounts[uint256(TokenValidator.Type.TokenX)], userAmounts[uint256(TokenValidator.Type.TokenY)]);
             processed++;
         }
         
@@ -472,45 +446,29 @@ contract arcaTestnetV1 is
             DepositRequest memory request = depositRequests[i];
             
             uint256 newShares = 0;
-            
-            if (request.isTokenX) {
-                // Calculate sharesX to mint (benefits from compounded rewards increasing balance)
-                if (totalSharesX == 0) {
-                    newShares = request.amount;
-                } else {
-                    uint256 currentBalanceX = balanceX();
-                    if (currentBalanceX > 0) {
-                        newShares = (request.amount * totalSharesX) / currentBalanceX;
-                    } else {
-                        newShares = request.amount; // Fallback if no balance
-                    }
-                }
-                
-                // Update user shares and totals AFTER calculation
-                sharesX[request.user] += newShares;
-                totalSharesX += newShares;
+
+            uint256 tokenIdx = uint256(request.tokenType);
+
+            // Calculate token shares to mint (benefits from compounded rewards increasing balance)
+            if (totalShares[tokenIdx] == 0) {
+                newShares = request.amount;
             } else {
-                // Calculate sharesY to mint (benefits from compounded rewards increasing balance)
-                if (totalSharesY == 0) {
-                    newShares = request.amount;
+                uint256 currentBalance = tokenBalance(request.tokenType);
+                if (currentBalance > 0) {
+                    newShares = (request.amount * totalShares[tokenIdx]) / currentBalance;
                 } else {
-                    uint256 currentBalanceY = balanceY();
-                    if (currentBalanceY > 0) {
-                        newShares = (request.amount * totalSharesY) / currentBalanceY;
-                    } else {
-                        newShares = request.amount; // Fallback if no balance
-                    }
+                    newShares = request.amount; // Fallback if no balance
                 }
-                
-                // Update user shares and totals AFTER calculation
-                sharesY[request.user] += newShares;
-                totalSharesY += newShares;
             }
+
+            // Update user shares and totals AFTER calculation
+            shares[request.user][tokenIdx] += newShares;
+            totalShares[tokenIdx] += newShares;
             
             // Remove from queued tokens (this adds to available balance for next person)
-            queueHandler.reduceQueuedToken(request.amount, request.isTokenX);
-
-            emit SharesMinted(request.user, request.isTokenX ? newShares : 0, request.isTokenX ? 0 : newShares);
+            queueHandler.reduceQueuedToken(request.amount, request.tokenType);
+            bool isTokenX = request.tokenType == TokenValidator.Type.TokenX;
+            emit SharesMinted(request.user, isTokenX ? newShares : 0, isTokenX ? 0 : newShares);
             processed++;
         }
         
@@ -550,25 +508,23 @@ contract arcaTestnetV1 is
                 uint256 metroForTokenX = netMetro / 2;
                 uint256 metroForTokenY = netMetro - metroForTokenX;
                 
-                uint256 tokenXObtained = 0;
-                uint256 tokenYObtained = 0;
-                
-                // Swap METRO to tokenX
-                if (metroForTokenX > 0) {
-                    tokenXObtained = _swapMetroToToken(metroForTokenX, vaultConfig.tokenX, metroToTokenXPath);
+                uint256[TOKEN_COUNT] memory metroForTokens = [metroForTokenX, metroForTokenY];
+                uint256[TOKEN_COUNT] memory tokenObtained;
+
+                for (uint256 i = 0; i < TOKEN_COUNT; i++) {
+                    tokenObtained[i] = 0;
+                    
+                    // Swap METRO to token
+                    if (metroForTokens[i] > 0) {
+                        tokenObtained[i] = _swapMetroToToken(metroForTokens[i], address(getVaultToken(TokenValidator.Type(i))), metroToTokenPaths[i]);
+                    }
+
+                    // Update compounding totals - these tokens increase share value
+                    totalCompounded[i] += tokenObtained[i];
                 }
-                
-                // Swap METRO to tokenY
-                if (metroForTokenY > 0) {
-                    tokenYObtained = _swapMetroToToken(metroForTokenY, vaultConfig.tokenY, metroToTokenYPath);
-                }
-                
-                // Update compounding totals - these tokens increase share value
-                totalCompoundedX += tokenXObtained;
-                totalCompoundedY += tokenYObtained;
                 
                 emit RewardsClaimed(vaultConfig.rewarder, vaultConfig.rewardToken, metroClaimed);
-                emit RewardsCompounded(metroClaimed, tokenXObtained, tokenYObtained);
+                emit RewardsCompounded(metroClaimed, tokenObtained[uint256(TokenValidator.Type.TokenX)], tokenObtained[uint256(TokenValidator.Type.TokenY)]);
             }
         } catch {
             // Claiming failed, continue with rebalance
@@ -592,8 +548,11 @@ contract arcaTestnetV1 is
         uint256 decimals;
         uint256 metroDecimals = 18; // Assuming METRO has 18 decimals
         
+        bool isTokenXY = targetToken == address(getVaultToken(TokenValidator.Type.TokenX)) ||
+            targetToken == address(getVaultToken(TokenValidator.Type.TokenY));
+
         // Set decimals based on target token
-        if(targetToken == vaultConfig.tokenX) {
+        if (isTokenXY) {
             decimals = 18; // S token decimals
         } else {
             decimals = 6;  // USDC decimals
@@ -607,7 +566,7 @@ contract arcaTestnetV1 is
         uint256 scale = 2**128;
         uint256 pricePerUnit; // Price of 1 METRO in terms of target token
         
-        if(targetToken == vaultConfig.tokenX) {
+        if(isTokenXY) {
             // Calculate METRO price in S tokens
             // rawPrice represents price of tokenY/tokenX, we need METRO/S
             // Since METRO is being swapped for S, we need the appropriate conversion
@@ -728,8 +687,7 @@ contract arcaTestnetV1 is
         ILBRouter.Path calldata _metroToTokenYPath,
         ILBRouter.Path calldata _metroToNativePath
     ) external onlyOwner {
-        metroToTokenXPath = _metroToTokenXPath;
-        metroToTokenYPath = _metroToTokenYPath;
+        metroToTokenPaths = [_metroToTokenXPath, _metroToTokenYPath];
         metroToNativePath = _metroToNativePath;
     }
 
@@ -744,7 +702,8 @@ contract arcaTestnetV1 is
      * @dev Rescues random funds stuck that the contract can't handle.
      */
     function inCaseTokensGetStuck(address _token) external onlyOwner nonReentrant {
-        require(_token != vaultConfig.tokenX && _token != vaultConfig.tokenY, "Cannot withdraw vault tokens");
+        require(_token != address(getVaultToken(TokenValidator.Type.TokenX)) 
+                && _token != address(getVaultToken(TokenValidator.Type.TokenY)), "Unknown token type");
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
@@ -763,13 +722,18 @@ contract arcaTestnetV1 is
      * @dev Get user's total shares (for backwards compatibility)
      */
     function balanceSharesCombined(address account) public view returns (uint256) {
-        return sharesX[account] + sharesY[account];
+        uint256 total = 0;
+        for (uint256 i = 0; i < TOKEN_COUNT; i++) {
+            total += shares[account][i];
+        }
+
+        return total;
     }
 
     /**
      * @dev Get user's share breakdown
      */
     function getUserShares(address user) external view returns (uint256 userSharesX, uint256 userSharesY) {
-        return (sharesX[user], sharesY[user]);
+        return (shares[user][uint256(TokenValidator.Type.TokenX)], shares[user][uint256(TokenValidator.Type.TokenY)]);
     }
 }

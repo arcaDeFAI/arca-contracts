@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { TokenValidator } from "../TokenTypes.sol";
 
 // This interface is just so to share some struct definitions between contracts
 interface IDepositWithdrawCompatible {
@@ -9,19 +10,20 @@ interface IDepositWithdrawCompatible {
     struct DepositRequest {
         address user;
         uint256 amount;
-        bool isTokenX; // true for tokenX, false for tokenY
+        TokenValidator.Type tokenType;
         uint256 timestamp;
     }
     
     struct WithdrawRequest {
         address user;
-        uint256 sharesX;
-        uint256 sharesY;
+        uint256[2] shares; 
         uint256 timestamp;
     }
 }
 
-contract arcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible {
+contract ArcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible, TokenValidator {
+    uint256 private constant TOKEN_COUNT = 2; // TODO use common constant instead
+
     // Queue management
     DepositRequest[] private depositQueue;
     WithdrawRequest[] private withdrawQueue;
@@ -29,11 +31,14 @@ contract arcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible {
     uint256 public withdrawQueueStart;
     
     // Track tokens waiting in queues
-    uint256 public queuedTokenX;
-    uint256 public queuedTokenY;
+    uint256[TOKEN_COUNT] private _queuedTokens;
+
+    function getQueuedToken(TokenValidator.Type tokenType) public view validToken(tokenType) returns(uint256) {
+        return _queuedTokens[uint256(tokenType)];
+    }
 
     // Events
-    event DepositQueued(address indexed user, uint256 amount, bool isTokenX);
+    event DepositQueued(address indexed user, uint256 amount, uint256 tokenType);
     event WithdrawQueued(address indexed user, uint256 sharesX, uint256 sharesY);
 
     constructor() Ownable(msg.sender) {
@@ -41,23 +46,18 @@ contract arcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible {
         withdrawQueueStart = 0;
     }
 
-    function reduceQueuedToken(uint256 amount, bool isTokenX) external onlyOwner {
-        if (isTokenX) {
-            require(queuedTokenX >= amount, "Cannot remove more tokens than queued");
-            queuedTokenX -= amount;
-        } else {
-            require(queuedTokenY >= amount, "Cannot remove more tokens than queued");
-            queuedTokenY -= amount;
-        }
+    function reduceQueuedToken(uint256 amount, TokenValidator.Type tokenType) external onlyOwner validToken(tokenType) {
+        require(getQueuedToken(tokenType) >= amount, "Not enough tokens in queue");
+        _queuedTokens[uint256(tokenType)] -= amount;
     }
 
     function getDepositQueueTrailingSlice() external onlyOwner returns(DepositRequest[] memory){
-        uint length = depositQueue.length;
-        require(depositQueueStart <= length, "Deposit queue start out of bounds");
-        uint sliceLength = length - depositQueueStart;
+        uint256 length = depositQueue.length;
+        require(depositQueueStart <= length, "DepositQueue start out of bounds");
+        uint256 sliceLength = length - depositQueueStart;
         DepositRequest[] memory slicedDepositQueue = new DepositRequest[](sliceLength);
 
-        for (uint i = 0; i < sliceLength; i++) {
+        for (uint256 i = 0; i < sliceLength; i++) {
             slicedDepositQueue[i] = depositQueue[i + depositQueueStart];
         }
 
@@ -68,12 +68,12 @@ contract arcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible {
     }
 
     function getWithdrawQueueTrailingSlice() external onlyOwner returns(WithdrawRequest[] memory){
-        uint length = withdrawQueue.length;
+        uint256 length = withdrawQueue.length;
         require(withdrawQueueStart <= length, "Withdraw queue start out of bounds");
-        uint sliceLength = length - withdrawQueueStart;
+        uint256 sliceLength = length - withdrawQueueStart;
         WithdrawRequest[] memory slicedWithdrawQueue = new WithdrawRequest[](sliceLength);
 
-        for (uint i = 0; i < sliceLength; i++) {
+        for (uint256 i = 0; i < sliceLength; i++) {
             slicedWithdrawQueue[i] = withdrawQueue[i + withdrawQueueStart];
         }
 
@@ -83,51 +83,39 @@ contract arcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible {
         return slicedWithdrawQueue;
     }
 
-    function enqueueDepositRequest(DepositRequest memory depositRequest) external onlyOwner {
+    function enqueueDepositRequest(DepositRequest memory depositRequest) 
+        external onlyOwner validToken(depositRequest.tokenType) {
+
         // Add to deposit queue with net amount
         depositQueue.push(depositRequest);
-        
-        // Track queued tokens
-        if (depositRequest.isTokenX) {
-            queuedTokenX += depositRequest.amount;
-        } else {
-            queuedTokenY += depositRequest.amount;
-        }
 
-        emit DepositQueued(msg.sender, depositRequest.amount, depositRequest.isTokenX);
+        // Track queued tokens
+        _queuedTokens[uint256(depositRequest.tokenType)] += depositRequest.amount;
+
+        emit DepositQueued(msg.sender, depositRequest.amount, uint256(depositRequest.tokenType));
     }
 
     function enqueueWithdrawRequest(WithdrawRequest memory withdrawRequest) external onlyOwner {
         // Add to withdraw queue
         withdrawQueue.push(withdrawRequest);
-        emit WithdrawQueued(msg.sender, withdrawRequest.sharesX, withdrawRequest.sharesY);
+        emit WithdrawQueued(msg.sender,
+                            withdrawRequest.shares[uint256(TokenValidator.Type.TokenX)],
+                            withdrawRequest.shares[uint256(TokenValidator.Type.TokenY)]);
     }
 
     // View functions for queue management
-    /**
-     * @dev Get deposit queue length
-     */
     function getDepositQueueLength() external view returns (uint256) {
         return depositQueue.length;
     }
 
-    /**
-     * @dev Get withdraw queue length
-     */
     function getWithdrawQueueLength() external view returns (uint256) {
         return withdrawQueue.length;
     }
 
-    /**
-     * @dev Get pending deposits count
-     */
     function getPendingDepositsCount() external view returns (uint256) {
         return depositQueue.length - depositQueueStart;
     }
 
-    /**
-     * @dev Get pending withdrawals count
-     */
     function getPendingWithdrawsCount() external view returns (uint256) {
         return withdrawQueue.length - withdrawQueueStart;
     }
