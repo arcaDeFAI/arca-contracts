@@ -3,14 +3,14 @@ pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-interface IarcaFeeManager {
+interface IArcaFeeManager {
     function getDepositFee() external view returns (uint256);
     function getWithdrawFee() external view returns (uint256);
     function getPerformanceFee() external view returns (uint256);
     function getFeeRecipient() external view returns (address);
 }
 
-contract arcaFeeManager is Ownable, IarcaFeeManager {
+contract ArcaFeeManager is Ownable, IArcaFeeManager {
     
     uint256 public depositFee = 50;      // 0.5% (50 basis points)
     uint256 public withdrawFee = 50;     // 0.5% (50 basis points)
