@@ -3,27 +3,10 @@ pragma solidity ^0.8.28;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { TokenValidator } from "../TokenTypes.sol";
+import { IArcaQueueHandlerV1 } from "./IArcaQueueHandlerV1.sol";
+import { IDepositWithdrawCompatible } from "./IDepositWithdrawCompatible.sol";
 
-// This interface is just so to share some struct definitions between contracts
-interface IDepositWithdrawCompatible {
-    // Structs for queue management
-    struct DepositRequest {
-        address user;
-        uint256 amount;
-        TokenValidator.Type tokenType;
-        uint256 timestamp;
-    }
-    
-    struct WithdrawRequest {
-        address user;
-        uint256[2] shares; 
-        uint256 timestamp;
-    }
-}
-
-contract ArcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible, TokenValidator {
-    uint256 private constant TOKEN_COUNT = 2; // TODO use common constant instead
-
+contract ArcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible, TokenValidator, IArcaQueueHandlerV1 {
     // Queue management
     DepositRequest[] private depositQueue;
     WithdrawRequest[] private withdrawQueue;
