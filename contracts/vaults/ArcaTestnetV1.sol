@@ -9,7 +9,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
-import { IArcaFeeManager } from "../ArcaFeeManager.sol";
+import { IArcaFeeManagerV1 } from "../interfaces/IArcaFeeManagerV1.sol";
 import { IArcaQueueHandlerV1 } from "../interfaces/IArcaQueueHandlerV1.sol";
 import { TokenValidator } from "../TokenTypes.sol";
 import { IArcaRewardClaimerV1 } from "../interfaces/IArcaRewardClaimerV1.sol";
@@ -44,7 +44,7 @@ contract ArcaTestnetV1 is
     }
 
     VaultConfig private vaultConfig;
-    IArcaFeeManager private feeManager;
+    IArcaFeeManagerV1 private feeManager;
     IArcaQueueHandlerV1 private queueHandler;
     IArcaRewardClaimerV1 public rewardClaimer;
     
@@ -89,7 +89,7 @@ contract ArcaTestnetV1 is
         address _lbpContract,
         IArcaRewardClaimerV1 _rewardClaimer,
         IArcaQueueHandlerV1 _queueHandler,
-        IArcaFeeManager _feeManager
+        IArcaFeeManagerV1 _feeManager
     ) public initializer {
         __ERC20_init(_name, _symbol);
         __Ownable_init(msg.sender);

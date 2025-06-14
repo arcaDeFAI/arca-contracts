@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import { IArcaFeeManager } from "./interfaces/IArcaFeeManager.sol";
+import { IArcaFeeManagerV1 } from "./interfaces/IArcaFeeManagerV1.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ArcaFeeManager is Ownable, IArcaFeeManager {
+contract ArcaFeeManagerV1 is Ownable, IArcaFeeManagerV1 {
     
-    uint256 public depositFee = 50;      // 0.5% (50 basis points)
-    uint256 public withdrawFee = 50;     // 0.5% (50 basis points)
-    uint256 public performanceFee = 1000; // 10% (1000 basis points)
-    address public feeRecipient;
+    uint256 private depositFee = 50;      // 0.5% (50 basis points)
+    uint256 private withdrawFee = 50;     // 0.5% (50 basis points)
+    uint256 private performanceFee = 1000; // 10% (1000 basis points)
+    address private feeRecipient;
     
     uint256 public constant BASIS_POINTS = 10000;
     
