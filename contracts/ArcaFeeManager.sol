@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IArcaFeeManager} from "./IArcaFeeManager.sol";
+import { IArcaFeeManager } from "./interfaces/IArcaFeeManager.sol";
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ArcaFeeManager is Ownable, IArcaFeeManager {

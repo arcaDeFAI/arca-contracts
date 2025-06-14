@@ -10,10 +10,10 @@ import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 import { IArcaFeeManager } from "../ArcaFeeManager.sol";
-import { IArcaQueueHandlerV1 } from "./IArcaQueueHandlerV1.sol";
+import { IArcaQueueHandlerV1 } from "../interfaces/IArcaQueueHandlerV1.sol";
 import { TokenValidator } from "../TokenTypes.sol";
-import { IArcaRewardClaimerV1 } from "./IArcaRewardClaimerV1.sol";
-import { IDepositWithdrawCompatible } from "./IDepositWithdrawCompatible.sol";
+import { IArcaRewardClaimerV1 } from "../interfaces/IArcaRewardClaimerV1.sol";
+import { IDepositWithdrawCompatible } from "../interfaces/IDepositWithdrawCompatible.sol";
 
 /**
  * @dev Implementation of a vault with queued deposits and withdrawals
