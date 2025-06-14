@@ -3,8 +3,8 @@ pragma solidity ^0.8.28;
 
 import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 import { TokenValidator } from "../TokenTypes.sol";
-import { IArcaQueueHandlerV1 } from "./IArcaQueueHandlerV1.sol";
-import { IDepositWithdrawCompatible } from "./IDepositWithdrawCompatible.sol";
+import { IArcaQueueHandlerV1 } from "../interfaces/IArcaQueueHandlerV1.sol";
+import { IDepositWithdrawCompatible } from "../interfaces/IDepositWithdrawCompatible.sol";
 
 contract ArcaQueueHandlerV1 is Ownable, IDepositWithdrawCompatible, TokenValidator, IArcaQueueHandlerV1 {
     // Queue management
