@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-interface IArcaFeeManager {
-    function getDepositFee() external view returns (uint256);
-    function getWithdrawFee() external view returns (uint256);
-    function getPerformanceFee() external view returns (uint256);
-    function getFeeRecipient() external view returns (address);
-}
+import {IArcaFeeManager} from "./IArcaFeeManager.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract ArcaFeeManager is Ownable, IArcaFeeManager {
     
