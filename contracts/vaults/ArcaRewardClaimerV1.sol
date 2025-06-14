@@ -6,7 +6,7 @@ import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
-import { IArcaFeeManager } from "../interfaces/IArcaFeeManager.sol";
+import { IArcaFeeManagerV1 } from "../interfaces/IArcaFeeManagerV1.sol";
 import { TokenValidator } from "../TokenTypes.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -16,7 +16,7 @@ contract ArcaRewardClaimerV1 is Ownable, ReentrancyGuardUpgradeable, TokenValida
     using SafeERC20 for IERC20;
     address private _rewarder;
     address private _rewardToken;
-    IArcaFeeManager private _feeManager;
+    IArcaFeeManagerV1 private _feeManager;
     uint256 public minSwapAmount;       // Minimum amounts for swapping (to avoid dust)
     IERC20[TOKEN_COUNT] private tokens; // Main Tokens (token X and token Y) that the vault will hold
 
@@ -37,7 +37,7 @@ contract ArcaRewardClaimerV1 is Ownable, ReentrancyGuardUpgradeable, TokenValida
     constructor(
         address rewarder,
         address rewardToken,
-        IArcaFeeManager feeManager,
+        IArcaFeeManagerV1 feeManager,
         address _nativeToken,
         address lbpContract,
         address lbRouter,
