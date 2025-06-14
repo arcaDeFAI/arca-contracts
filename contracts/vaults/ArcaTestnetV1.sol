@@ -9,9 +9,11 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
-import { ArcaFeeManager } from "../ArcaFeeManager.sol";
-import { ArcaQueueHandlerV1, IDepositWithdrawCompatible } from "./ArcaQueueHandlerV1.sol";
+import { IArcaFeeManager } from "../ArcaFeeManager.sol";
+import { IArcaQueueHandlerV1 } from "./IArcaQueueHandlerV1.sol";
 import { TokenValidator } from "../TokenTypes.sol";
+import { IArcaRewardClaimerV1 } from "./IArcaRewardClaimerV1.sol";
+import { IDepositWithdrawCompatible } from "./IDepositWithdrawCompatible.sol";
 
 /**
  * @dev Implementation of a vault with queued deposits and withdrawals
@@ -24,63 +26,34 @@ contract ArcaTestnetV1 is
     ERC20Upgradeable, OwnableUpgradeable, ReentrancyGuardUpgradeable, IDepositWithdrawCompatible, TokenValidator {
     using SafeERC20 for IERC20;
 
-    uint256 private constant TOKEN_COUNT = 2;
-
     function getVaultToken(TokenValidator.Type tokenType) private validToken(tokenType) view returns(IERC20) {
         return vaultConfig.tokens[uint256(tokenType)];
-    }
-
-    function getTokenMinAmount(TokenValidator.Type tokenType) private validToken(tokenType) view returns(uint256) {
-        return vaultConfig.amountMins[uint256(tokenType)];
-    }
-
-    function getMetroToTokenPath(TokenValidator.Type tokenType) private validToken(tokenType) view returns(ILBRouter.Path memory) {
-        return metroToTokenPaths[uint256(tokenType)];
     }
 
     function getTokenTotalShares(TokenValidator.Type tokenType) private validToken(tokenType) view returns(uint256) {
         return totalShares[uint256(tokenType)];
     }
 
-    function getTotalCompounded(TokenValidator.Type tokenType) private validToken(tokenType) view returns(uint256) {
-        return totalCompounded[uint256(tokenType)];
-    }
-
     struct VaultConfig {
         IERC20[TOKEN_COUNT] tokens;         // Main Tokens (token X and token Y) that the vault will hold
         uint16 binStep;                     // The bin step for liquidity positions
         uint256[TOKEN_COUNT] amountMins;    // Minimum amount of token X to add during rebalance
-        uint256 idSlippage;                 // The number of bins to slip
         address lbRouter;                   // Address of the LB Router
         address lbpAMM;                     // Address of the Metro-S AMM LP pair
         address lbpContract;                // Address of the LBP contract
-        address rewarder;                   // Address of the LBHooksBaseRewarder contract
-        address rewardToken;                // Address of the reward token (METRO)
     }
 
     VaultConfig private vaultConfig;
-    ArcaFeeManager private feeManager;
-    ArcaQueueHandlerV1 private queueHandler;
-
-    // Native token address (WAVAX or similar)
-    address public nativeToken;
+    IArcaFeeManager private feeManager;
+    IArcaQueueHandlerV1 private queueHandler;
+    IArcaRewardClaimerV1 public rewardClaimer;
     
-    // Swap paths for METRO -> tokenX and METRO -> tokenY
-    ILBRouter.Path[TOKEN_COUNT] private metroToTokenPaths;
-    ILBRouter.Path private metroToNativePath;
-    
-    // Minimum amounts for swapping (to avoid dust)
-    uint256 public minSwapAmount;
-
     // Store bin IDs from last add liquidity operation
-    uint256[] public lastAddLiquidityBinIds;
+    uint256[] private lastAddLiquidityBinIds;
     
     // Share tracking
     uint256[TOKEN_COUNT] private totalShares;
-    mapping(address => uint256[TOKEN_COUNT]) public shares;
-    
-    // Compounding tracking
-    uint256[TOKEN_COUNT] public totalCompounded; // Total compounded from rewards per token
+    mapping(address => uint256[TOKEN_COUNT]) private shares;
     
     // Events
     event SharesMinted(address indexed user, uint256 sharesX, uint256 sharesY);
@@ -98,18 +71,6 @@ contract ArcaTestnetV1 is
         uint256 withdrawsProcessed
     );
     
-    event RewardsClaimed(
-        address rewarder,
-        address token,
-        uint256 amount
-    );
-    
-    event RewardsCompounded(
-        uint256 metroAmount,
-        uint256 tokenXCompounded,
-        uint256 tokenYCompounded
-    );
-
     /**
      * @dev Initializes the vault's own token.
      * These tokens are minted when someone does a deposit. It is burned in order
@@ -121,15 +82,14 @@ contract ArcaTestnetV1 is
         uint16 _binStep,
         uint256 _amountXMin,
         uint256 _amountYMin,
-        uint256 _idSlippage,
         string memory _name,
         string memory _symbol,
         address _lbRouter,
         address _lbpAMM,
         address _lbpContract,
-        address _rewarder,
-        address _rewardToken,
-        address _nativeToken
+        IArcaRewardClaimerV1 _rewardClaimer,
+        IArcaQueueHandlerV1 _queueHandler,
+        IArcaFeeManager _feeManager
     ) public initializer {
         __ERC20_init(_name, _symbol);
         __Ownable_init(msg.sender);
@@ -141,13 +101,11 @@ contract ArcaTestnetV1 is
         uint256[TOKEN_COUNT] memory amountMins;
         amountMins[uint256(TokenValidator.Type.TokenX)] = _amountXMin;
         amountMins[uint256(TokenValidator.Type.TokenY)] = _amountYMin;
-        vaultConfig = VaultConfig(tokens, _binStep, amountMins, _idSlippage, _lbRouter, _lbpAMM, _lbpContract, _rewarder, _rewardToken);
-        nativeToken = _nativeToken;
+        vaultConfig = VaultConfig(tokens, _binStep, amountMins, _lbRouter, _lbpAMM, _lbpContract);
         
-        feeManager = ArcaFeeManager(msg.sender);
-        queueHandler = ArcaQueueHandlerV1(msg.sender);
-        
-        minSwapAmount = 10; // 0.001 METRO minimum
+        feeManager = _feeManager;
+        queueHandler = _queueHandler;
+        rewardClaimer = _rewardClaimer;
     }
 
     /**
@@ -213,7 +171,6 @@ contract ArcaTestnetV1 is
      * @dev Helper function to withdraw all shares
      */
     function withdrawAll() external {
-
         uint256[TOKEN_COUNT] memory sharesToWithdraw;
 
         for (uint256 i = 0; i < TOKEN_COUNT; i++) {
@@ -285,6 +242,14 @@ contract ArcaTestnetV1 is
         bool forceRebalance;
     }
 
+    /**
+     * @dev Updates the rewarder address
+     */
+    function setRewarder(address _rewarder) external onlyOwner {
+        require(_rewarder != address(0), "Invalid rewarder address");
+        rewardClaimer.setRewarder(_rewarder);
+    }
+
     function rebalance(
         RebalanceParams calldata params
     ) external onlyOwner nonReentrant returns (
@@ -313,7 +278,7 @@ contract ArcaTestnetV1 is
         }
         
         // Step 2: Claim and compound METRO rewards BEFORE processing queues
-        _claimAndCompoundRewards();
+        rewardClaimer.claimAndCompoundRewards();
         
         // Step 3: Process withdraw queue FIRST (before calculating deposit shares)
         uint256[TOKEN_COUNT] memory totalRemoved = [amountXRemoved, amountYRemoved];
@@ -349,7 +314,7 @@ contract ArcaTestnetV1 is
                 amountXMin: vaultConfig.amountMins[uint256(TokenValidator.Type.TokenX)],
                 amountYMin: vaultConfig.amountMins[uint256(TokenValidator.Type.TokenY)],
                 activeIdDesired: ILBPair(vaultConfig.lbpContract).getActiveId(),
-                idSlippage: vaultConfig.idSlippage,
+                idSlippage: rewardClaimer.idSlippage(),
                 deltaIds: params.deltaIds,
                 distributionX: params.distributionX,
                 distributionY: params.distributionY,
@@ -474,211 +439,7 @@ contract ArcaTestnetV1 is
         
         return processed;
     }
-
-    /**
-     * @dev Claims METRO rewards and compounds them into tokenX and tokenY
-     * This increases the value of existing shares without minting new ones
-     */
-    function _claimAndCompoundRewards() internal {
-        if (vaultConfig.rewarder == address(0)) return;
-        
-        // Get bin IDs where we have positions
-        uint256[] memory binIds = getVaultBinIds();
-        if (binIds.length == 0) return;
-        
-        uint256 metroBalanceBefore = IERC20(vaultConfig.rewardToken).balanceOf(address(this));
-        
-        // Claim METRO rewards
-        try ILBHooksBaseRewarder(vaultConfig.rewarder).claim(address(this), binIds) {
-            uint256 metroBalanceAfter = IERC20(vaultConfig.rewardToken).balanceOf(address(this));
-            uint256 metroClaimed = metroBalanceAfter - metroBalanceBefore;
-            
-            if (metroClaimed > minSwapAmount) {
-                // Calculate performance fee on claimed rewards
-                uint256 performanceFee = (metroClaimed * feeManager.getPerformanceFee()) / feeManager.BASIS_POINTS();
-                uint256 netMetro = metroClaimed - performanceFee;
-                
-                // Send performance fee to fee recipient
-                if (performanceFee > 0) {
-                    IERC20(vaultConfig.rewardToken).safeTransfer(feeManager.getFeeRecipient(), performanceFee);
-                    emit FeeCollected(feeManager.getFeeRecipient(), performanceFee, "performance");
-                }
-                
-                // Compound the remaining rewards
-                uint256 metroForTokenX = netMetro / 2;
-                uint256 metroForTokenY = netMetro - metroForTokenX;
-                
-                uint256[TOKEN_COUNT] memory metroForTokens = [metroForTokenX, metroForTokenY];
-                uint256[TOKEN_COUNT] memory tokenObtained;
-
-                for (uint256 i = 0; i < TOKEN_COUNT; i++) {
-                    tokenObtained[i] = 0;
-                    
-                    // Swap METRO to token
-                    if (metroForTokens[i] > 0) {
-                        tokenObtained[i] = _swapMetroToToken(metroForTokens[i], address(getVaultToken(TokenValidator.Type(i))), metroToTokenPaths[i]);
-                    }
-
-                    // Update compounding totals - these tokens increase share value
-                    totalCompounded[i] += tokenObtained[i];
-                }
-                
-                emit RewardsClaimed(vaultConfig.rewarder, vaultConfig.rewardToken, metroClaimed);
-                emit RewardsCompounded(metroClaimed, tokenObtained[uint256(TokenValidator.Type.TokenX)], tokenObtained[uint256(TokenValidator.Type.TokenY)]);
-            }
-        } catch {
-            // Claiming failed, continue with rebalance
-        }
-    }
-
-    /**
-     * @dev Calculates the minimal expected amount of swap tokens for slippage protection.
-     * @param metroAmount Amount of METRO tokens to swap
-     * @param targetToken Address of the token to receive (tokenX for S, tokenY for USDC)
-     * @return expectedOutput Minimal expected amount of target tokens after slippage
-     */
-    function getExpectedSwapOutput(
-        uint256 metroAmount,
-        address targetToken
-    ) public view returns(uint256 expectedOutput, uint256 minimumExpectedOutput) {
-        
-        ILBPair routerPair = ILBPair(vaultConfig.lbpContract);
-        //ILBAMM memory routerMetro = ILBAMM(vaultConfig.lbpAMM);
-        
-        uint256 decimals;
-        uint256 metroDecimals = 18; // Assuming METRO has 18 decimals
-        
-        bool isTokenXY = targetToken == address(getVaultToken(TokenValidator.Type.TokenX)) ||
-            targetToken == address(getVaultToken(TokenValidator.Type.TokenY));
-
-        // Set decimals based on target token
-        if (isTokenXY) {
-            decimals = 18; // S token decimals
-        } else {
-            decimals = 6;  // USDC decimals
-        }
-        
-        // Get current active bin ID and price
-        uint24 activeID = routerPair.getActiveId(); 
-        uint256 rawPrice = routerPair.getPriceFromId(activeID);
-        
-        // Convert 128.128 fixed-point price to human readable
-        uint256 scale = 2**128;
-        uint256 pricePerUnit; // Price of 1 METRO in terms of target token
-        
-        if(isTokenXY) {
-            // Calculate METRO price in S tokens
-            // rawPrice represents price of tokenY/tokenX, we need METRO/S
-            // Since METRO is being swapped for S, we need the appropriate conversion
-            pricePerUnit = (rawPrice * (10**decimals)) / (scale * (10**(metroDecimals - decimals)));
-        } else {
-            // Calculate METRO price in USDC
-            // For USDC, we can use the inverse since 1 USDC = 1 USD
-            pricePerUnit = (scale * (10**decimals)) / (rawPrice * (10**(metroDecimals - decimals)));
-        }
-        
-        // Calculate expected output before slippage
-        expectedOutput = (metroAmount * pricePerUnit) / (10**metroDecimals);
-        
-        // Apply slippage protection (e.g., 0.5% slippage tolerance)
-        uint256 slippageBasisPoints = 50; // 0.5% = 50 basis points
-        uint256 slippageFactor = 10000 - slippageBasisPoints; // 9950
-        
-        // Calculate minimal expected output with slippage protection
-        minimumExpectedOutput = (expectedOutput * slippageFactor) / 10000;
-        
-        return (expectedOutput, minimumExpectedOutput);
-    }
-
-    /**
-     * @dev Swaps METRO to target token using the appropriate path
-     */
-    function _swapMetroToToken(
-        uint256 metroAmount, 
-        address targetToken, 
-        ILBRouter.Path memory swapPath
-    ) internal returns (uint256 amountOut) {
-        if (metroAmount == 0 || swapPath.tokenPath.length == 0) return 0;
-        
-        IERC20(vaultConfig.rewardToken).approve(vaultConfig.lbRouter, 0);
-        IERC20(vaultConfig.rewardToken).approve(vaultConfig.lbRouter, metroAmount);
-        
-        uint256 balanceBefore = IERC20(targetToken).balanceOf(address(this));
-
-        // Get expected output from price oracle
-        ( , uint256 minAmountOut) = getExpectedSwapOutput(metroAmount, targetToken);
-
-        try ILBRouter(vaultConfig.lbRouter).swapExactTokensForTokens(
-            metroAmount,
-            minAmountOut, // Proper slippage protection
-            swapPath,
-            address(this),
-            block.timestamp + 300
-        ) returns (uint256) {
-            uint256 balanceAfter = IERC20(targetToken).balanceOf(address(this));
-            amountOut = balanceAfter - balanceBefore;
-        } catch {
-            // Swap failed, try native swap if target is not native
-            if (targetToken != nativeToken && metroToNativePath.tokenPath.length > 0) {
-                try ILBRouter(vaultConfig.lbRouter).swapExactTokensForNATIVE(
-                    metroAmount,
-                    0,
-                    metroToNativePath,
-                    payable(address(this)),
-                    block.timestamp + 300
-                ) {
-                    // Additional logic for native token handling could go here
-                } catch {
-                    // Both swaps failed, keep METRO
-                }
-            }
-        }
-        
-        return amountOut;
-    }
-
-    /**
-     * @dev Manual function to claim rewards without rebalancing
-     */
-    function claimRewards(
-        uint256[] calldata binIds,
-        address receiver
-    ) external onlyOwner nonReentrant returns (uint256 claimedAmount) {
-        require(vaultConfig.rewarder != address(0), "Rewarder not set");
-        require(binIds.length > 0, "No bin IDs provided");
-        require(receiver != address(0), "Invalid receiver address");
-        
-        // Get balance before claiming
-        uint256 balanceBefore = IERC20(vaultConfig.rewardToken).balanceOf(address(this));
-        
-        // Call the correct claim function
-        ILBHooksBaseRewarder(vaultConfig.rewarder).claim(receiver, binIds);
-        
-        // Calculate how much was actually claimed
-        uint256 balanceAfter = IERC20(vaultConfig.rewardToken).balanceOf(address(this));
-        claimedAmount = balanceAfter - balanceBefore;
-        
-        emit RewardsClaimed(vaultConfig.rewarder, vaultConfig.rewardToken, claimedAmount);
-        
-        return claimedAmount;
-    }
-
-    /**
-     * @dev Returns the bin IDs where the vault has LP positions
-     */
-    function getVaultBinIds() public view returns (uint256[] memory) {
-        address lbPair = vaultConfig.lbpContract;
-        uint256 activeId = ILBPair(lbPair).getActiveId();
-        
-        uint256[] memory binIds = new uint256[](2 * vaultConfig.idSlippage + 1);
-        
-        for (uint256 i = 0; i < 2 * vaultConfig.idSlippage + 1; i++) {
-            binIds[i] = activeId - vaultConfig.idSlippage + i;
-        }
-        
-        return binIds;
-    }
-
+    
     /**
      * @dev Set swap paths for METRO rewards
      */
@@ -687,15 +448,14 @@ contract ArcaTestnetV1 is
         ILBRouter.Path calldata _metroToTokenYPath,
         ILBRouter.Path calldata _metroToNativePath
     ) external onlyOwner {
-        metroToTokenPaths = [_metroToTokenXPath, _metroToTokenYPath];
-        metroToNativePath = _metroToNativePath;
+        rewardClaimer.setSwapPaths(_metroToTokenXPath, _metroToTokenYPath, _metroToNativePath);
     }
 
     /**
      * @dev Set minimum swap amount
      */
     function setMinSwapAmount(uint256 _minSwapAmount) external onlyOwner {
-        minSwapAmount = _minSwapAmount;
+        rewardClaimer.setMinSwapAmount(_minSwapAmount);
     }
     
     /**
@@ -707,16 +467,6 @@ contract ArcaTestnetV1 is
         uint256 amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(msg.sender, amount);
     }
-    
-    /**
-     * @dev Updates the rewarder address
-     */
-    function setRewarder(address _rewarder) external onlyOwner {
-        require(_rewarder != address(0), "Invalid rewarder address");
-        vaultConfig.rewarder = _rewarder;
-    }
-
-    // Override functions for backward compatibility with ERC20
     
     /**
      * @dev Get user's total shares (for backwards compatibility)
