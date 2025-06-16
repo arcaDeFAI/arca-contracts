@@ -6,6 +6,7 @@ import { ILBRouter } from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
 import { ILBPair } from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 import { ILBHooksBaseRewarder } from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
+import { IPair } from "../interfaces/Metropolis/IPair.sol"; // AMM V2  Pools
 import { IArcaFeeManagerV1 } from "../interfaces/IArcaFeeManagerV1.sol";
 import { TokenValidator } from "../TokenTypes.sol";
 import { IERC20 } from "@openzeppelin/contracts/interfaces/IERC20.sol";
@@ -31,6 +32,8 @@ contract ArcaRewardClaimerV1 is Ownable, ReentrancyGuardUpgradeable, TokenValida
     uint256[TOKEN_COUNT] private totalCompounded; // Total compounded from rewards per token
 
     address private _lbpContract;
+    address private _lbpContractUSD;  //To fetch the value of USDC/USDT via their DLMM pool
+    address private _lpAMM; // To fetch the value of Metro/USD and Metro/S
     address private _lbRouter;
     uint256 public idSlippage; // The number of bins to slip
 
@@ -40,6 +43,8 @@ contract ArcaRewardClaimerV1 is Ownable, ReentrancyGuardUpgradeable, TokenValida
         IArcaFeeManagerV1 feeManager,
         address _nativeToken,
         address lbpContract,
+        address lpAMM,
+        address lbpContractUSD,
         address lbRouter,
         uint256 _idSlippage,
         address tokenX,
@@ -49,6 +54,8 @@ contract ArcaRewardClaimerV1 is Ownable, ReentrancyGuardUpgradeable, TokenValida
         _feeManager = feeManager;
         nativeToken = _nativeToken;
         _lbpContract = lbpContract;
+        _lpAMM = lpAMM;
+        _lbpContractUSD = lbpContractUSD;
         _lbRouter = lbRouter;
         idSlippage = _idSlippage;
         minSwapAmount = 10; // 0.001 METRO minimum
@@ -185,7 +192,7 @@ contract ArcaRewardClaimerV1 is Ownable, ReentrancyGuardUpgradeable, TokenValida
         address targetToken
     ) public view returns(uint256 expectedOutput, uint256 minimumExpectedOutput) {
         ILBPair routerPair = ILBPair(_lbpContract);
-        //ILBAMM memory routerMetro = ILBAMM(vaultConfig.lbpAMM);
+        IPair routerAMM = IPair(_lpAMM);
         
         uint256 decimals;
         uint256 metroDecimals = 18; // Assuming METRO has 18 decimals
@@ -200,13 +207,19 @@ contract ArcaRewardClaimerV1 is Ownable, ReentrancyGuardUpgradeable, TokenValida
             decimals = 6;  // USDC decimals
         }
         
-        // Get current active bin ID and price
+        // DLMM Pool - Get current active bin ID and price for tokenX (S) 
         uint24 activeID = routerPair.getActiveId(); 
         uint256 rawPrice = routerPair.getPriceFromId(activeID);
+
+        // AMM V2 Pool - Get Reserve0 (S) and Reserve1 (metro) from the LP AMM V2 pool contract function getReserves
+        uint256 reserve0;
+        uint256 reserve1;
+        (reserve0,reserve0, ) = routerAMM.getReserves();
         
         // Convert 128.128 fixed-point price to human readable
         uint256 scale = 2**128;
-        uint256 pricePerUnit; // Price of 1 METRO in terms of target token
+        uint hReadable = 10**12;
+        uint256 realPrice = (rawPrice/scale) * hReadable; // Real tokenX (S) price in USDC value. ex: 0.3314 USDC / S 
         
         if(isTokenXY) {
             // Calculate METRO price in S tokens
