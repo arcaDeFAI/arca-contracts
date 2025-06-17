@@ -3,7 +3,10 @@
   "scripts": {
     "compile": "hardhat compile",
     "test-data:network-config": "hardhat test-data:network-config",
-    "test": "hardhat test --network localhost"
+    "test": "hardhat test --network localhost",
+    "lint": "solhint 'contracts/**/*.sol' --noPoster",
+    "format": "prettier --check 'contracts/**/*.sol'",
+    "format:fix": "prettier --write 'contracts/**/*.sol'"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
@@ -11,7 +14,10 @@
     "@openzeppelin/contracts-upgradeable": "^5.3.0",
     "hardhat": "^2.24.3",
     "hardhat-contract-sizer": "^2.10.0",
-    "hardhat-interface-generator": "^0.0.6"
+    "hardhat-interface-generator": "^0.0.6",
+    "prettier": "^3.5.3",
+    "prettier-plugin-solidity": "^2.0.0",
+    "solhint": "^5.1.0"
   },
   "version": "0.0.1",
   "description": "The arca vault project",

@@ -55,7 +55,9 @@ interface ILBRouter {
      * @return amountYLeft Amount of token Y left (not added)
      * @return activeId Active id of the LBPair
      */
-    function addLiquidity(LiquidityParameters calldata liquidityParameters)
+    function addLiquidity(
+        LiquidityParameters calldata liquidityParameters
+    )
         external
         returns (
             uint256 amountXAdded,
