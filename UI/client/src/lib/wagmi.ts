@@ -22,7 +22,28 @@ const sonic = {
   testnet: false,
 } as const;
 
-const projectId = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || 'your-project-id';
+// Define Sonic Blaze Testnet chain
+const sonicTestnet = {
+  id: 57054,
+  name: 'Sonic Blaze Testnet',
+  network: 'sonic-testnet',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Sonic',
+    symbol: 'S',
+  },
+  rpcUrls: {
+    public: { http: ['https://rpc.blaze.soniclabs.com'] },
+    default: { http: ['https://rpc.blaze.soniclabs.com'] },
+  },
+  blockExplorers: {
+    default: { name: 'Sonic Testnet Explorer', url: 'https://testnet.sonicscan.org' },
+  },
+  testnet: true,
+  faucets: ['https://testnet.soniclabs.com/account'],
+} as const;
+
+const projectId = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || '79b51eb4327450f59778f2454e0d5ab1';
 
 export const config = createConfig({
   chains: [mainnet, polygon, arbitrum, sonic],
