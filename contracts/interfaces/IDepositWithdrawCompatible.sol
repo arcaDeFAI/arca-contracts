@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import { TokenValidator } from "../TokenTypes.sol";
+import {TokenValidator} from "../TokenTypes.sol";
 
 // This interface is just so to share some struct definitions between contracts
 interface IDepositWithdrawCompatible {
@@ -12,10 +12,10 @@ interface IDepositWithdrawCompatible {
         TokenValidator.Type tokenType;
         uint256 timestamp;
     }
-    
+
     struct WithdrawRequest {
         address user;
-        uint256[2] shares; 
+        uint256[2] shares;
         uint256 timestamp;
     }
 }
