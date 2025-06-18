@@ -37,7 +37,9 @@ app.use((req, res, next) => {
   next();
 });
 
-function isErrorWithStatus(err: unknown): err is Error & { status?: number; statusCode?: number } {
+function isErrorWithStatus(
+  err: unknown,
+): err is Error & { status?: number; statusCode?: number } {
   return (
     err instanceof Error &&
     (typeof (err as { status?: unknown }).status === "number" ||
@@ -49,7 +51,7 @@ export function errorHandler(
   err: unknown,
   _req: Request,
   res: Response,
-  _next: NextFunction
+  _next: NextFunction,
 ): void {
   let status = 500;
   let message = "Internal Server Error";
@@ -82,11 +84,14 @@ await (async () => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
+  server.listen(
+    {
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
+    },
+    () => {
+      log(`serving on port ${port}`);
+    },
+  );
 })();
