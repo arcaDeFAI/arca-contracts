@@ -24,10 +24,7 @@ jobs:
 
       # Solidity
       - name: Lint Solidity
-        run: npx solhint 'contracts/**/*.sol' --noPoster
-
-      - name: Check Solidity Format
-        run: npx prettier --check 'contracts/**/*.sol'
+        run: npm run lint:sol
 
       # Hardhat compile & tests
       - name: Compile Contracts
@@ -35,13 +32,6 @@ jobs:
 
       - name: Run Hardhat Tests
         run: npx hardhat test
-
-      # TypeScript for scripts & tests
-      - name: Lint Backend TS
-        run: npx eslint . --ext .ts --ignore-pattern 'UI/**'
-
-      - name: Typecheck Backend TS
-        run: npx tsc --project tsconfig.json --noEmit
 
       # Export artifacts for UI
       - name: Upload contract artifacts
@@ -73,17 +63,9 @@ jobs:
         run: npm ci
 
       # Linting & formatting UI
-      - name: Lint UI TS/JSX
+      - name: Lint UI
         working-directory: UI/
-        run: npx eslint src --ext .ts,.tsx,.js,.jsx
-
-      - name: Check UI Format
-        working-directory: UI/
-        run: npx prettier --check 'src/**/*.{ts,tsx,js,jsx,css,scss,md}'
-
-      - name: Type\u2011check UI
-        working-directory: UI/
-        run: npx tsc --project ./tsconfig.json --noEmit
+        run: npm run lint
 
       - name: Build UI
         working-directory: UI/
