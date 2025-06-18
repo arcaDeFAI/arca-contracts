@@ -8,7 +8,7 @@ on:
 
 jobs:
   # --- A: Contracts / Backend ---
-  contracts:
+  contracts-and-ui:
     name: Contract-lint-compile-test
     runs-on: ubuntu-latest
     steps:
@@ -33,33 +33,14 @@ jobs:
       - name: Run Hardhat Tests
         run: npx hardhat test
 
-      # Export artifacts for UI
-      - name: Upload contract artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: contracts-artifacts
-          path: artifacts/
-
-  # --- B: Frontend / UI ---
-  ui:
-    name: UI-lint-build
-    runs-on: ubuntu-latest
-    needs: contracts
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download contract artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: contracts-artifacts
-
+      # UI part starts here
       - name: Setup Node.js 20.x
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install deps (ui)
-        working-directory: ui/
+      - name: Install deps (UI)
+        working-directory: UI/
         run: npm ci
 
       # Linting & formatting UI
