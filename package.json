@@ -1,6 +1,5 @@
 {
   "name": "arca-proto",
-  "type": "module",
   "scripts": {
     "compile": "hardhat compile",
     "test-data:network-config": "hardhat test-data:network-config",
