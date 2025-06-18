@@ -1,4 +1,4 @@
-import { Vault } from '../types/vault';
+import type { Vault } from '../types/vault';
 import TokenPairIcons from './token-pair-icons';
 import { useState } from 'react';
 

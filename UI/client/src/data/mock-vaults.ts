@@ -1,4 +1,4 @@
-import { Vault } from '../types/vault';
+import type { Vault } from '../types/vault';
 
 export const mockVaults: Vault[] = [
   {

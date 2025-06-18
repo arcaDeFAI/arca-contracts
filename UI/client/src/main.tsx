@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { rainbowkitConfig } from './lib/rainbowkit';
+import { rainbowkitConfig1 } from './lib/rainbowkit';
 import App from "./App";
 import "./index.css";
 import '@rainbow-me/rainbowkit/styles.css';
@@ -10,7 +10,7 @@ import '@rainbow-me/rainbowkit/styles.css';
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
-  <WagmiProvider config={rainbowkitConfig}>
+  <WagmiProvider config={rainbowkitConfig1 as any}>
     <QueryClientProvider client={queryClient}>
       <RainbowKitProvider 
         theme={darkTheme({
@@ -22,6 +22,6 @@ createRoot(document.getElementById("root")!).render(
       >
         <App />
       </RainbowKitProvider>
-    </QueryClientProvider>
+    </QueryClientProvider>  
   </WagmiProvider>
 );

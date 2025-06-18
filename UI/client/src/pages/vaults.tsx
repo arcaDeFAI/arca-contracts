@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Search, ChevronDown } from 'lucide-react';
 import VaultCard from '../components/vault-card';
 import { mockVaults, platforms, chains, sortOptions } from '../data/mock-vaults';
-import { Vault, VaultFilters } from '../types/vault';
+import type { Vault, VaultFilters } from '../types/vault';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -15,7 +15,7 @@ export default function Vaults() {
   });
 
   const filteredAndSortedVaults = useMemo(() => {
-    let filtered = mockVaults.filter(vault => {
+    const filtered = mockVaults.filter(vault => {
       // Platform filter
       if (filters.platform !== 'All Platforms' && vault.platform !== filters.platform) {
         return false;

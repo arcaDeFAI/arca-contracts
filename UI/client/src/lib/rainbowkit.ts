@@ -1,58 +1,62 @@
 import { getDefaultConfig } from '@rainbow-me/rainbowkit';
 import { mainnet, polygon, arbitrum } from 'wagmi/chains';
+import { defineChain } from 'viem';
+import type { Config } from 'wagmi';
 
-// Define Sonic chain
-const sonic = {
-  iconUrl: 
-    'https://res.cloudinary.com/dpnvhlvim/image/upload/sonic_logo_Black_xjdjoi.png',
+// Define Sonic chains
+const sonic = defineChain({
   id: 146,
   name: 'Sonic',
-  network: 'sonic',
   nativeCurrency: {
     decimals: 18,
     name: 'Sonic',
     symbol: 'S',
   },
   rpcUrls: {
-    public: { http: ['https://rpc.soniclabs.com'] },
-    default: { http: ['https://rpc.soniclabs.com'] },
+    default: {
+      http: ['https://rpc.soniclabs.com'],
+    },
   },
   blockExplorers: {
-    default: { name: 'Sonicscan', url: 'https://sonicscan.org' },
+    default: {
+      name: 'Sonic Explorer',
+      url: 'https://explorer.soniclabs.com',
+    },
   },
-  testnet: false,
-} as const;
+  iconUrl: 'https://res.cloudinary.com/dpnvhlvim/image/upload/sonic_logo_Black_xjdjoi.png',
+  testnet: false
+});
 
-
-
-// Define Sonic Blaze Testnet chain
-const sonicTestnet = {
-  iconUrl: 
-    'https://res.cloudinary.com/dpnvhlvim/image/upload/sonic_logo_Black_xjdjoi.png',
+const sonicTestnet = defineChain({
   id: 57054,
-  name: 'Sonic Blaze Testnet',
-  network: 'sonic-testnet',
+  name: 'Sonic Testnet',
   nativeCurrency: {
     decimals: 18,
     name: 'Sonic',
     symbol: 'S',
   },
   rpcUrls: {
-    public: { http: ['https://rpc.blaze.soniclabs.com'] },
-    default: { http: ['https://rpc.blaze.soniclabs.com'] },
+    default: {
+      http: ['https://rpc.blaze.soniclabs.com'],
+    },
   },
   blockExplorers: {
-    default: { name: 'Sonic Testnet Explorer', url: 'https://testnet.sonicscan.org' },
+    default: {
+      name: 'Sonic Testnet Explorer',
+      url: 'https://testnet.sonicscan.org',
+    },
   },
+  iconUrl: 'https://res.cloudinary.com/dpnvhlvim/image/upload/sonic_logo_Black_xjdjoi.png',
   testnet: true,
   faucets: ['https://testnet.soniclabs.com/account'],
-} as const;
+});
 
-const projectId = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || 'your-project-id';
+const projectId: string = import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID || 'your-project-id';
 
-export const rainbowkitConfig = getDefaultConfig({
+// Configure chains and providers
+export const rainbowkitConfig1: Config = getDefaultConfig({
   appName: 'Arca',
-  projectId,
-  chains: [mainnet, polygon, arbitrum, sonic],
-  ssr: false,
+  projectId: projectId, // Get this from WalletConnect Cloud
+  chains: [mainnet, polygon, arbitrum, sonic, sonicTestnet],
+  ssr: false, // Set to true if using Next.js SSR
 });
