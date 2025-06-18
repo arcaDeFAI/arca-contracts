@@ -4,7 +4,7 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules";
 
 const arcaVaultModule = buildModule("ArcaVaultModule", (m) => {
-  const arcaVaultContract = m.contract("arcaTestnetV1");
+  const arcaVaultContract = m.contract("ArcaTestnetV1");
   return { arcaVaultContract };
 });
 

@@ -256,15 +256,17 @@ contract ArcaRewardClaimerV1 is
         uint24 activeID = routerPair.getActiveId();
         uint256 rawPrice = routerPair.getPriceFromId(activeID);
 
+        // TODO: What do we do with "realPrice"?
         // AMM V2 Pool - Get Reserve0 (S) and Reserve1 (metro) from the LP AMM V2 pool contract function getReserves
-        uint256 reserve0;
-        uint256 reserve1;
-        (reserve0, reserve0, ) = routerAMM.getReserves();
+        // uint256 reserve0;
+        // uint256 reserve1;
+        // (reserve0, reserve0, ) = routerAMM.getReserves();
 
-        // Convert 128.128 fixed-point price to human readable
+        // // Convert 128.128 fixed-point price to human readable
         uint256 scale = 2 ** 128;
-        uint hReadable = 10 ** 12;
-        uint256 realPrice = (rawPrice / scale) * hReadable; // Real tokenX (S) price in USDC value. ex: 0.3314 USDC / S
+        // uint hReadable = 10 ** 12;
+        // uint256 realPrice = (rawPrice / scale) * hReadable; // Real tokenX (S) price in USDC value. ex: 0.3314 USDC / S
+        uint256 pricePerUnit;
 
         if (isTokenXY) {
             // Calculate METRO price in S tokens
