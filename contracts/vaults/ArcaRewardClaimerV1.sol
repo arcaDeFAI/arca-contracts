@@ -308,7 +308,10 @@ contract ArcaRewardClaimerV1 is
 
         IERC20(_rewardToken).approve(_lbRouter, 0);
         IERC20(_rewardToken).approve(_lbRouter, metroAmount);
-
+        
+        // TODO: instead of using address(this), shouldn't it be the address of the main vault contract?
+        // aka ArcaTestnetV1? I guess it depends where we want to store the rewards,
+        // I think that it should be main vault contract since the users' shares will grow like this.
         uint256 balanceBefore = IERC20(targetToken).balanceOf(address(this));
 
         // Get expected output from price oracle
