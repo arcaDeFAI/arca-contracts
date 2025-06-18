@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+// TODO: Add maximum exposure limits per user
+// TODO: Add emergency pause functionality  
+// TODO: Add minimum deposit amounts to prevent dust attacks
+// TODO: Add maximum queue sizes to prevent DoS
+// TODO: Add slippage protection for users during rebalancing
+
 import {
     ERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
@@ -216,6 +222,7 @@ contract ArcaTestnetV1 is
             );
         }
 
+        // TODO: here, should I use netAmount or _amount?
         queueHandler.enqueueDepositRequest(
             DepositRequest({
                 user: msg.sender,
