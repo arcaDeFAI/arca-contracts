@@ -1,1 +1,95 @@
+name: Validation Pipeline
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  # --- A: Contracts / Backend ---
+  contracts:
+    name: Contract-lint-compile-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps (root)
+        run: npm ci
+
+      # Solidity
+      - name: Lint Solidity
+        run: npx solhint 'contracts/**/*.sol' --noPoster
+
       - name: Check Solidity Format
+        run: npx prettier --check 'contracts/**/*.sol'
+
+      # Hardhat compile & tests
+      - name: Compile Contracts
+        run: npx hardhat compile
+
+      - name: Run Hardhat Tests
+        run: npx hardhat test
+
+      # TypeScript for scripts & tests
+      - name: Lint Backend TS
+        run: npx eslint . --ext .ts --ignore-pattern 'UI/**'
+
+      - name: Typecheck Backend TS
+        run: npx tsc --project tsconfig.json --noEmit
+
+      # Export artifacts for UI
+      - name: Upload contract artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: contracts-artifacts
+          path: artifacts/
+
+  # --- B: Frontend / UI ---
+  ui:
+    name: UI-lint-build
+    runs-on: ubuntu-latest
+    needs: contracts
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download contract artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: contracts-artifacts
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps (ui)
+        working-directory: ui/
+        run: npm ci
+
+      # Linting & formatting UI
+      - name: Lint UI TS/JSX
+        working-directory: UI/
+        run: npx eslint src --ext .ts,.tsx,.js,.jsx
+
+      - name: Check UI Format
+        working-directory: UI/
+        run: npx prettier --check 'src/**/*.{ts,tsx,js,jsx,css,scss,md}'
+
+      - name: Type\u2011check UI
+        working-directory: UI/
+        run: npx tsc --project ./tsconfig.json --noEmit
+
+      - name: Build UI
+        working-directory: UI/
+        run: npm run build
+
+      # (Optional) Run UI unit tests if we add some
+      #- name: Run UI Tests
+      #   working-directory: UI/
+      #   run: npm test
