@@ -1,14 +1,14 @@
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from 'recharts';
-import { useLocation } from 'wouter';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { useLocation } from "wouter";
 
 const chartData = [
-  { name: 'Jan', deposits: 1000, earnings: 50 },
-  { name: 'Feb', deposits: 1200, earnings: 120 },
-  { name: 'Mar', deposits: 1100, earnings: 180 },
-  { name: 'Apr', deposits: 1400, earnings: 220 },
-  { name: 'May', deposits: 1600, earnings: 280 },
-  { name: 'Jun', deposits: 1800, earnings: 340 },
-  { name: 'Jul', deposits: 1850, earnings: 350 },
+  { name: "Jan", deposits: 1000, earnings: 50 },
+  { name: "Feb", deposits: 1200, earnings: 120 },
+  { name: "Mar", deposits: 1100, earnings: 180 },
+  { name: "Apr", deposits: 1400, earnings: 220 },
+  { name: "May", deposits: 1600, earnings: 280 },
+  { name: "Jun", deposits: 1800, earnings: 340 },
+  { name: "Jul", deposits: 1850, earnings: 350 },
 ];
 
 export default function Dashboard() {
@@ -16,13 +16,17 @@ export default function Dashboard() {
 
   const handlePositionClick = (vaultName: string) => {
     // Navigate to vaults page - the vault card will auto-expand when clicked
-    setLocation('/');
+    setLocation("/");
   };
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">Dashboard</h1>
-        <p className="text-arca-secondary text-sm sm:text-base">View your vault positions and earnings</p>
+        <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">
+          Dashboard
+        </h1>
+        <p className="text-arca-secondary text-sm sm:text-base">
+          View your vault positions and earnings
+        </p>
       </div>
 
       {/* Total Balance Overview */}
@@ -31,33 +35,43 @@ export default function Dashboard() {
           {/* Left side - Balance Info */}
           <div>
             <div className="mb-6">
-              <div className="text-arca-secondary text-sm mb-1">Total Balance</div>
+              <div className="text-arca-secondary text-sm mb-1">
+                Total Balance
+              </div>
               <div className="text-white font-bold text-4xl">$2,200.00</div>
-              
+
               <div className="inline-flex items-center bg-arca-primary text-black px-2 py-1 rounded text-xs font-medium mt-2">
                 <span>+$350.00</span>
               </div>
             </div>
-            
+
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-arca-secondary">Total Deposited:</span>
-                <span className="text-white font-medium text-lg">$1,850.00</span>
+                <span className="text-white font-medium text-lg">
+                  $1,850.00
+                </span>
               </div>
-              
+
               <div className="flex justify-between items-center">
                 <span className="text-arca-secondary">Total Earnings:</span>
-                <span className="arca-primary font-medium text-lg">+$350.00</span>
+                <span className="arca-primary font-medium text-lg">
+                  +$350.00
+                </span>
               </div>
-              
+
               {/* Additional Stats under Total Earnings */}
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-arca-border">
                 <div>
-                  <div className="text-arca-secondary text-sm mb-1">Provided Liquidity</div>
+                  <div className="text-arca-secondary text-sm mb-1">
+                    Provided Liquidity
+                  </div>
                   <div className="text-white font-bold text-xl">$0.00</div>
                 </div>
                 <div>
-                  <div className="text-arca-secondary text-sm mb-1">Total Unclaimed Rewards</div>
+                  <div className="text-arca-secondary text-sm mb-1">
+                    Total Unclaimed Rewards
+                  </div>
                   <div className="text-white font-bold text-xl">$0.00</div>
                 </div>
               </div>
@@ -67,7 +81,9 @@ export default function Dashboard() {
           {/* Right side - Chart */}
           <div>
             <div className="mb-4">
-              <h3 className="text-white font-semibold mb-2">Total Balance (Deposits + Earnings)</h3>
+              <h3 className="text-white font-semibold mb-2">
+                Total Balance (Deposits + Earnings)
+              </h3>
               <div className="flex items-center space-x-4 text-sm">
                 <div className="flex items-center space-x-2">
                   <div className="w-3 h-3 bg-white rounded-full"></div>
@@ -82,32 +98,32 @@ export default function Dashboard() {
             <div className="h-80 bg-arca-bg rounded-lg border border-arca-border p-4">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <XAxis 
-                    dataKey="name" 
+                  <XAxis
+                    dataKey="name"
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#888', fontSize: 12 }}
+                    tick={{ fill: "#888", fontSize: 12 }}
                   />
-                  <YAxis 
+                  <YAxis
                     axisLine={false}
                     tickLine={false}
-                    tick={{ fill: '#888', fontSize: 12 }}
+                    tick={{ fill: "#888", fontSize: 12 }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="deposits" 
-                    stroke="#ffffff" 
+                  <Line
+                    type="monotone"
+                    dataKey="deposits"
+                    stroke="#ffffff"
                     strokeWidth={2}
-                    dot={{ fill: '#ffffff', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, fill: '#ffffff' }}
+                    dot={{ fill: "#ffffff", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: "#ffffff" }}
                   />
-                  <Line 
-                    type="monotone" 
-                    dataKey="earnings" 
-                    stroke="#ef4444" 
+                  <Line
+                    type="monotone"
+                    dataKey="earnings"
+                    stroke="#ef4444"
                     strokeWidth={2}
-                    dot={{ fill: '#ef4444', strokeWidth: 2, r: 4 }}
-                    activeDot={{ r: 6, fill: '#ef4444' }}
+                    dot={{ fill: "#ef4444", strokeWidth: 2, r: 4 }}
+                    activeDot={{ r: 6, fill: "#ef4444" }}
                   />
                 </LineChart>
               </ResponsiveContainer>
@@ -118,13 +134,15 @@ export default function Dashboard() {
 
       {/* Active Positions */}
       <div className="bg-arca-surface rounded-xl border border-arca-border p-6 sm:p-8">
-        <h2 className="text-lg font-semibold text-white mb-6">Active Positions</h2>
-        
+        <h2 className="text-lg font-semibold text-white mb-6">
+          Active Positions
+        </h2>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Position Card 1 */}
-          <div 
+          <div
             className="bg-arca-bg rounded-lg border border-arca-border p-4 cursor-pointer position-card-glow transition-all duration-300 hover:scale-[1.02]"
-            onClick={() => handlePositionClick('ANON-USDC')}
+            onClick={() => handlePositionClick("ANON-USDC")}
           >
             <div className="flex items-center space-x-2 mb-3">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
@@ -155,9 +173,9 @@ export default function Dashboard() {
           </div>
 
           {/* Position Card 2 */}
-          <div 
+          <div
             className="bg-arca-bg rounded-lg border border-arca-border p-4 cursor-pointer position-card-glow transition-all duration-300 hover:scale-[1.02]"
-            onClick={() => handlePositionClick('S-ETH')}
+            onClick={() => handlePositionClick("S-ETH")}
           >
             <div className="flex items-center space-x-2 mb-3">
               <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
@@ -188,9 +206,9 @@ export default function Dashboard() {
           </div>
 
           {/* Position Card 3 */}
-          <div 
+          <div
             className="bg-arca-bg rounded-lg border border-arca-border p-4 cursor-pointer position-card-glow transition-all duration-300 hover:scale-[1.02]"
-            onClick={() => handlePositionClick('WBTC-USDC')}
+            onClick={() => handlePositionClick("WBTC-USDC")}
           >
             <div className="flex items-center space-x-2 mb-3">
               <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center">

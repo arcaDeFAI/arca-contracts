@@ -4,12 +4,12 @@ interface TokenPairIconsProps {
 
 const getTokenColor = (token: string): string => {
   const colors: Record<string, string> = {
-    'ETH': 'bg-blue-500',
-    'USDC': 'bg-blue-600',
-    'ANON': 'bg-purple-500',
-    'S': 'bg-blue-500',
+    ETH: "bg-blue-500",
+    USDC: "bg-blue-600",
+    ANON: "bg-purple-500",
+    S: "bg-blue-500",
   };
-  return colors[token] || 'bg-gray-500';
+  return colors[token] || "bg-gray-500";
 };
 
 const getTokenInitial = (token: string): string => {
@@ -21,11 +21,19 @@ export default function TokenPairIcons({ tokens }: TokenPairIconsProps) {
 
   return (
     <div className="relative flex items-center">
-      <div className={`w-10 h-10 ${getTokenColor(tokens[0])} rounded-full border-2 border-arca-bg flex items-center justify-center z-10`}>
-        <span className="text-white font-bold text-sm">{getTokenInitial(tokens[0])}</span>
+      <div
+        className={`w-10 h-10 ${getTokenColor(tokens[0])} rounded-full border-2 border-arca-bg flex items-center justify-center z-10`}
+      >
+        <span className="text-white font-bold text-sm">
+          {getTokenInitial(tokens[0])}
+        </span>
       </div>
-      <div className={`w-10 h-10 ${getTokenColor(tokens[1])} rounded-full border-2 border-arca-bg flex items-center justify-center -ml-3`}>
-        <span className="text-white font-bold text-sm">{getTokenInitial(tokens[1])}</span>
+      <div
+        className={`w-10 h-10 ${getTokenColor(tokens[1])} rounded-full border-2 border-arca-bg flex items-center justify-center -ml-3`}
+      >
+        <span className="text-white font-bold text-sm">
+          {getTokenInitial(tokens[1])}
+        </span>
       </div>
     </div>
   );
