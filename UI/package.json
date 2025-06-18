@@ -7,8 +7,7 @@
     "dev": "NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
-    "check": "tsc",
-    "lint": "tsc",
+    "lint": "tsc && prettier --check '**/*.{ts,tsx}' && eslint client/ server/ *.ts *.js",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
