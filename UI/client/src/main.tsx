@@ -10,6 +10,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   <WagmiProvider config={rainbowkitConfig1 as any}>
     <QueryClientProvider client={queryClient}>
       <RainbowKitProvider
