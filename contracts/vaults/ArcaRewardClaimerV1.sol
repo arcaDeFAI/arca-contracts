@@ -39,8 +39,8 @@ contract ArcaRewardClaimerV1 is
     ILBRouter.Path[TOKEN_COUNT] private metroToTokenPaths;
     ILBRouter.Path private metroToNativePath;
 
-    // Compounding tracking
-    uint256[TOKEN_COUNT] private totalCompounded; // Total compounded from rewards per token
+    // Compounding tracking for analytics
+    uint256[TOKEN_COUNT] private totalCompounded; // Total compounded from rewards per token (global analytics)
 
     address private _lbpContract;
     address private _lbpContractUSD; //To fetch the value of USDC/USDT via their DLMM pool
@@ -89,9 +89,12 @@ contract ArcaRewardClaimerV1 is
         uint256 tokenYCompounded
     );
 
+    /**
+     * @dev Get total amount compounded from rewards for analytics
+     */
     function getTotalCompounded(
         TokenValidator.Type tokenType
-    ) private view validToken(tokenType) returns (uint256) {
+    ) external view validToken(tokenType) returns (uint256) {
         return totalCompounded[uint256(tokenType)];
     }
 
@@ -189,7 +192,7 @@ contract ArcaRewardClaimerV1 is
                         );
                     }
 
-                    // Update compounding totals - these tokens increase share value
+                    // Update global analytics counter
                     totalCompounded[i] += tokenObtained[i];
                 }
 
@@ -298,6 +301,7 @@ contract ArcaRewardClaimerV1 is
 
     /**
      * @dev Swaps METRO to target token using the appropriate path
+     * Sends swapped tokens directly to the main vault (owner) for proper share value calculation
      */
     function _swapMetroToToken(
         uint256 metroAmount,
@@ -308,11 +312,10 @@ contract ArcaRewardClaimerV1 is
 
         IERC20(_rewardToken).approve(_lbRouter, 0);
         IERC20(_rewardToken).approve(_lbRouter, metroAmount);
-        
-        // TODO: instead of using address(this), shouldn't it be the address of the main vault contract?
-        // aka ArcaTestnetV1? I guess it depends where we want to store the rewards,
-        // I think that it should be main vault contract since the users' shares will grow like this.
-        uint256 balanceBefore = IERC20(targetToken).balanceOf(address(this));
+
+        // Main vault is the owner - tokens go there for automatic share value increase
+        address vaultAddress = owner();
+        uint256 balanceBefore = IERC20(targetToken).balanceOf(vaultAddress);
 
         // Get expected output from price oracle
         (, uint256 minAmountOut) = getExpectedSwapOutput(
@@ -325,11 +328,11 @@ contract ArcaRewardClaimerV1 is
                 metroAmount,
                 minAmountOut, // Proper slippage protection
                 swapPath,
-                address(this),
+                vaultAddress, // Send directly to main vault
                 block.timestamp + 300
             )
         returns (uint256) {
-            uint256 balanceAfter = IERC20(targetToken).balanceOf(address(this));
+            uint256 balanceAfter = IERC20(targetToken).balanceOf(vaultAddress);
             amountOut = balanceAfter - balanceBefore;
         } catch {
             // Swap failed, try native swap if target is not native
@@ -342,7 +345,7 @@ contract ArcaRewardClaimerV1 is
                         metroAmount,
                         0,
                         metroToNativePath,
-                        payable(address(this)),
+                        payable(vaultAddress), // Send to main vault
                         block.timestamp + 300
                     )
                 {
