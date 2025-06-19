@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 // TODO: Add maximum exposure limits per user
-// TODO: Add emergency pause functionality  
+// TODO: Add emergency pause functionality
 // TODO: Add minimum deposit amounts to prevent dust attacks
 // TODO: Add maximum queue sizes to prevent DoS
 // TODO: Add slippage protection for users during rebalancing
@@ -29,6 +29,7 @@ import {IArcaFeeManagerV1} from "../interfaces/IArcaFeeManagerV1.sol";
 import {IArcaQueueHandlerV1} from "../interfaces/IArcaQueueHandlerV1.sol";
 import {TokenValidator} from "../TokenTypes.sol";
 import {IArcaRewardClaimerV1} from "../interfaces/IArcaRewardClaimerV1.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {
     IDepositWithdrawCompatible
 } from "../interfaces/IDepositWithdrawCompatible.sol";
@@ -148,6 +149,9 @@ contract ArcaTestnetV1 is
         feeManager = _feeManager;
         queueHandler = _queueHandler;
         rewardClaimer = _rewardClaimer;
+        
+        // Transfer ownership of reward claimer to this vault for proper token flow
+        Ownable(address(rewardClaimer)).transferOwnership(address(this));
     }
 
     /**
