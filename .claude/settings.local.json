@@ -4,7 +4,9 @@
       "Bash(grep:*)",
       "Bash(rg:*)",
       "Bash(cat:*)",
-      "Bash(npm run compile:*)"
+      "Bash(npm run compile:*)",
+      "Bash(npm test:*)",
+      "Bash(npx hardhat test:*)"
     ],
     "deny": []
   }

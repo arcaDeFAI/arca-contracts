@@ -151,7 +151,8 @@ contract ArcaTestnetV1 is
         rewardClaimer = _rewardClaimer;
         
         // Transfer ownership of reward claimer to this vault for proper token flow
-        Ownable(address(rewardClaimer)).transferOwnership(address(this));
+        // NOTE: For production, this should be done after deployment by the deployer
+        // Ownable(address(rewardClaimer)).transferOwnership(address(this));
     }
 
     /**
