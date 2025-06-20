@@ -8,9 +8,6 @@ pragma solidity ^0.8.28;
 // TODO: Add slippage protection for users during rebalancing
 
 import {
-    ERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
@@ -49,7 +46,6 @@ import {
  */
 contract ArcaTestnetV1 is
     Initializable,
-    ERC20Upgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
     UUPSUpgradeable,
@@ -60,13 +56,13 @@ contract ArcaTestnetV1 is
 
     function getVaultToken(
         TokenValidator.Type tokenType
-    ) private view validToken(tokenType) returns (IERC20) {
+    ) private view returns (IERC20) {
         return vaultConfig.tokens[uint256(tokenType)];
     }
 
     function getTokenTotalShares(
         TokenValidator.Type tokenType
-    ) private view validToken(tokenType) returns (uint256) {
+    ) private view returns (uint256) {
         return totalShares[uint256(tokenType)];
     }
 
@@ -133,8 +129,6 @@ contract ArcaTestnetV1 is
         uint16 _binStep,
         uint256 _amountXMin,
         uint256 _amountYMin,
-        string memory _name,
-        string memory _symbol,
         address _lbRouter,
         address _lbpAMM,
         address _lbpContract,
@@ -142,7 +136,6 @@ contract ArcaTestnetV1 is
         IArcaQueueHandlerV1 _queueHandler,
         IArcaFeeManagerV1 _feeManager
     ) public initializer {
-        __ERC20_init(_name, _symbol);
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
         __UUPSUpgradeable_init();
@@ -176,7 +169,7 @@ contract ArcaTestnetV1 is
      */
     function tokenBalance(
         TokenValidator.Type tokenType
-    ) public view validToken(tokenType) returns (uint256) {
+    ) public view returns (uint256) {
         return
             getVaultToken(tokenType).balanceOf(address(this)) -
             queueHandler.getQueuedToken(tokenType);
@@ -184,7 +177,7 @@ contract ArcaTestnetV1 is
 
     function totalSupply(
         TokenValidator.Type tokenType
-    ) public view validToken(tokenType) returns (uint256) {
+    ) public view returns (uint256) {
         return totalShares[uint256(tokenType)];
     }
 
@@ -195,11 +188,19 @@ contract ArcaTestnetV1 is
      */
     function getPricePerFullShare(
         TokenValidator.Type tokenType
-    ) public view validToken(tokenType) returns (uint256) {
-        return
-            totalSupply(tokenType) == 0
-                ? 1e18
-                : (tokenBalance(tokenType) * 1e18) / totalSupply(tokenType);
+    ) public view returns (uint256) {
+        uint256 balance = tokenBalance(tokenType);
+        uint256 supply = totalSupply(tokenType);
+        
+        if (supply == 0) {
+            return 1e18;
+        }
+        
+        if (balance == 0) {
+            return 0; // No underlying assets per share when balance is zero
+        }
+        
+        return (balance * 1e18) / supply;
     }
 
     /**
@@ -207,7 +208,7 @@ contract ArcaTestnetV1 is
      */
     function depositAll(
         TokenValidator.Type tokenType
-    ) external validToken(tokenType) {
+    ) external {
         uint256 balance = getVaultToken(tokenType).balanceOf(msg.sender);
         depositToken(balance, tokenType);
     }
@@ -219,8 +220,8 @@ contract ArcaTestnetV1 is
     function depositToken(
         uint256 _amount,
         TokenValidator.Type _tokenType
-    ) public validToken(_tokenType) nonReentrant {
-        require(_amount > 0, "Amount must be greater than 0");
+    ) public nonReentrant {
+        require(_amount > 0, "Cannot deposit 0");
 
         IERC20 token = getVaultToken(_tokenType);
         uint256 _pool = token.balanceOf(address(this));
@@ -475,6 +476,18 @@ contract ArcaTestnetV1 is
             uint256 totalWithdrawAmount = 0;
 
             for (uint256 tokenIdx = 0; tokenIdx < TOKEN_COUNT; tokenIdx++) {
+                // Sanity check: user shouldn't have shares if total shares is zero
+                require(
+                    totalShares[tokenIdx] > 0 || request.shares[tokenIdx] == 0,
+                    "Invalid state: user has shares but total shares is zero"
+                );
+
+                // Skip calculation if no total shares (should not happen due to sanity check above)
+                if (totalShares[tokenIdx] == 0) {
+                    userAmounts[tokenIdx] = 0;
+                    continue;
+                }
+
                 // Share of removed liquidity
                 userAmounts[tokenIdx] =
                     (totalRemoved[tokenIdx] * request.shares[tokenIdx]) /
@@ -637,6 +650,16 @@ contract ArcaTestnetV1 is
         }
 
         return total;
+    }
+
+    /**
+     * @dev Get user's shares for a specific token type (replaces ERC20 balanceOf)
+     */
+    function getShares(
+        address user,
+        TokenValidator.Type tokenType
+    ) external view returns (uint256) {
+        return shares[user][uint256(tokenType)];
     }
 
     /**
