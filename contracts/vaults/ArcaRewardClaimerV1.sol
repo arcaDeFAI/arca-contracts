@@ -148,7 +148,7 @@ contract ArcaRewardClaimerV1 is
      * @dev Updates the rewarder address
      */
     function setRewarder(address rewarder) external onlyOwner {
-        require(_rewarder != address(0), "Invalid rewarder address");
+        require(rewarder != address(0), "Invalid rewarder address");
         _rewarder = rewarder;
     }
 
@@ -396,12 +396,17 @@ contract ArcaRewardClaimerV1 is
         // Get balance before claiming
         uint256 balanceBefore = IERC20(_rewardToken).balanceOf(address(this));
 
-        // Call the correct claim function
-        ILBHooksBaseRewarder(_rewarder).claim(receiver, binIds);
+        // Claim rewards to this contract first
+        ILBHooksBaseRewarder(_rewarder).claim(address(this), binIds);
 
         // Calculate how much was actually claimed
         uint256 balanceAfter = IERC20(_rewardToken).balanceOf(address(this));
         claimedAmount = balanceAfter - balanceBefore;
+
+        // Transfer claimed amount to the specified receiver
+        if (claimedAmount > 0) {
+            IERC20(_rewardToken).transfer(receiver, claimedAmount);
+        }
 
         emit RewardsClaimed(_rewarder, _rewardToken, claimedAmount);
 

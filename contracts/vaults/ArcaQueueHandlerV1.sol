@@ -74,9 +74,9 @@ contract ArcaQueueHandlerV1 is
         _queuedTokens[uint256(tokenType)] -= amount;
     }
 
-    function getDepositQueueTrailingSlice()
-        external
-        onlyOwner
+    function _buildPendingDepositSlice()
+        private
+        view
         returns (DepositRequest[] memory)
     {
         uint256 length = depositQueue.length;
@@ -93,15 +93,34 @@ contract ArcaQueueHandlerV1 is
             slicedDepositQueue[i] = depositQueue[i + depositQueueStart];
         }
 
+        return slicedDepositQueue;
+    }
+
+    function getPendingDepositRequests()
+        external
+        view
+        onlyOwner
+        returns (DepositRequest[] memory)
+    {
+        return _buildPendingDepositSlice();
+    }
+
+    function getDepositQueueTrailingSlice()
+        external
+        onlyOwner
+        returns (DepositRequest[] memory)
+    {
+        DepositRequest[] memory slicedDepositQueue = _buildPendingDepositSlice();
+        
         // Clear processed deposits
-        depositQueueStart += sliceLength;
+        depositQueueStart += slicedDepositQueue.length;
 
         return slicedDepositQueue;
     }
 
-    function getWithdrawQueueTrailingSlice()
-        external
-        onlyOwner
+    function _buildPendingWithdrawSlice()
+        private
+        view
         returns (WithdrawRequest[] memory)
     {
         uint256 length = withdrawQueue.length;
@@ -118,8 +137,27 @@ contract ArcaQueueHandlerV1 is
             slicedWithdrawQueue[i] = withdrawQueue[i + withdrawQueueStart];
         }
 
+        return slicedWithdrawQueue;
+    }
+
+    function getPendingWithdrawRequests()
+        external
+        view
+        onlyOwner
+        returns (WithdrawRequest[] memory)
+    {
+        return _buildPendingWithdrawSlice();
+    }
+
+    function getWithdrawQueueTrailingSlice()
+        external
+        onlyOwner
+        returns (WithdrawRequest[] memory)
+    {
+        WithdrawRequest[] memory slicedWithdrawQueue = _buildPendingWithdrawSlice();
+        
         // Clear processed withdrawals
-        withdrawQueueStart += sliceLength;
+        withdrawQueueStart += slicedWithdrawQueue.length;
 
         return slicedWithdrawQueue;
     }
@@ -135,7 +173,7 @@ contract ArcaQueueHandlerV1 is
             .amount;
 
         emit DepositQueued(
-            msg.sender,
+            depositRequest.user,
             depositRequest.amount,
             uint256(depositRequest.tokenType)
         );
@@ -147,7 +185,7 @@ contract ArcaQueueHandlerV1 is
         // Add to withdraw queue
         withdrawQueue.push(withdrawRequest);
         emit WithdrawQueued(
-            msg.sender,
+            withdrawRequest.user,
             withdrawRequest.shares[uint256(TokenValidator.Type.TokenX)],
             withdrawRequest.shares[uint256(TokenValidator.Type.TokenY)]
         );

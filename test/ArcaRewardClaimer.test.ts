@@ -60,6 +60,16 @@ describe("ArcaRewardClaimerV1 - Business Logic", function () {
     
     const rewardClaimer = await deployFreshInstance();
     
+    // Fund the mock rewarder with METRO tokens for testing
+    const mintAmount = hre.ethers.parseEther("1000");
+    await metroToken.mint(mockRewarder.target, mintAmount);
+    
+    // Verify minting worked
+    const rewarderBalance = await metroToken.balanceOf(mockRewarder.target);
+    if (rewarderBalance !== mintAmount) {
+      throw new Error(`Mock rewarder funding failed. Expected: ${mintAmount}, Got: ${rewarderBalance}`);
+    }
+    
     return {
       rewardClaimer,
       feeManager,
