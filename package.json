@@ -3,7 +3,7 @@
   "scripts": {
     "compile": "hardhat compile",
     "test-data:network-config": "hardhat test-data:network-config",
-    "test": "hardhat test --network localhost",
+    "test": "hardhat test",
     "lint:fix": "prettier --write 'contracts/**/*.sol' && cd UI/ && prettier --write .",
     "lint:sol": "prettier --check 'contracts/**/*.sol' && solhint 'contracts/**/*.sol' --noPoster && eslint ignition/ test/ *.ts",
     "lint:ui": "cd UI/ && npm run lint",

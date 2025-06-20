@@ -94,8 +94,8 @@ npx hardhat test-data:network-config
 # Recommended: Script-based UUPS deployment
 npx hardhat run scripts/deployArcaSystem.ts --network <network>
 
-# Hardhat Ignition (for simple deployments)
-npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network <network>
+# Hardhat Ignition (for testing only - no proxies)
+npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network localhost
 ```
 
 **Deployment Strategy**: See `DEPLOYMENT_STRATEGY.md` for comprehensive deployment guidelines.
@@ -220,3 +220,8 @@ import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
 ```
 
 **Solution**: The project uses TypeScript deployment scripts (`scripts/deployArcaSystem.ts`) with OpenZeppelin's upgrades plugin for complex deployments, completely avoiding contract size limits.
+
+## Development Workflow Notes
+
+### Best Practices
+- As a habit, you should run "npm run lint:fix", "npm run compile" and "npm run test" after making major code changes
