@@ -26,7 +26,7 @@ contract MockLBHooksBaseRewarder {
         if (shouldFail) {
             revert("Mock claim failure");
         }
-        
+
         if (claimAmount > 0 && address(rewardToken) != address(0)) {
             // Transfer reward tokens to the claimer
             rewardToken.transfer(user, claimAmount);

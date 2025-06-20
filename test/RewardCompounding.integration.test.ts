@@ -108,8 +108,6 @@ describe("Reward Compounding Integration Tests", function () {
         BIN_STEP,
         MIN_AMOUNTS[0],
         MIN_AMOUNTS[1],
-        "Arca Vault Token",
-        "AVT",
         await mockRouter.getAddress(),
         await mockPair.getAddress(),
         await mockPair.getAddress(),
@@ -122,8 +120,10 @@ describe("Reward Compounding Integration Tests", function () {
     await vaultProxy.waitForDeployment();
     vault = VaultFactory.attach(await vaultProxy.getAddress()) as ArcaTestnetV1;
 
-    // Transfer ownership of modules to vault
+    // Transfer ownership of modules to vault (like production deployment)
     await rewardClaimer.transferOwnership(await vault.getAddress());
+    await queueHandler.transferOwnership(await vault.getAddress());
+    await feeManager.transferOwnership(await vault.getAddress());
 
     // Setup initial token balances
     await tokenX.mint(user1.address, INITIAL_SUPPLY);
@@ -188,17 +188,41 @@ describe("Reward Compounding Integration Tests", function () {
       const initialPricePerShareY = await vault.getPricePerFullShare(1);
 
       // Step 2: Setup mock rewarder to give METRO rewards
+      await mockRewarder.setRewardToken(await metroToken.getAddress());
       await mockRewarder.setClaimAmount(metroRewardAmount);
 
-      // Setup mock router to swap METRO to TokenX/TokenY
-      const halfMetroReward = metroRewardAmount / 2n;
+      // Setup mock router to swap METRO to TokenX/TokenY  
       const swappedTokenXAmount = ethers.parseEther("5"); // Simulated swap output
       const swappedTokenYAmount = ethers.parseEther("5"); // Simulated swap output
 
-      await mockRouter.setSwapOutput(swappedTokenXAmount, swappedTokenYAmount);
+      // Configure swap outputs for specific tokens (modern method)
+      await mockRouter.setSwapOutputForToken(await tokenX.getAddress(), swappedTokenXAmount);
+      await mockRouter.setSwapOutputForToken(await tokenY.getAddress(), swappedTokenYAmount);
 
-      // Ensure vault has METRO tokens to swap (mock rewarder transfers them)
-      await metroToken.mint(await rewardClaimer.getAddress(), metroRewardAmount);
+      // Mint tokens to router so it can perform swaps
+      await tokenX.mint(await mockRouter.getAddress(), ethers.parseEther("1000"));
+      await tokenY.mint(await mockRouter.getAddress(), ethers.parseEther("1000"));
+
+      // Setup swap paths (CRITICAL: required for reward claimer to function)
+      const swapPathX = {
+        tokenPath: [await metroToken.getAddress(), await tokenX.getAddress()],
+        pairBinSteps: [25],
+        versions: [1],
+        pairs: [await mockPair.getAddress()]
+      };
+
+      const swapPathY = {
+        tokenPath: [await metroToken.getAddress(), await tokenY.getAddress()],
+        pairBinSteps: [25],
+        versions: [1],
+        pairs: [await mockPair.getAddress()]
+      };
+
+      // Set minimum swap amount to ensure swaps execute
+      await vault.setMinSwapAmount(1);
+      
+      // Configure swap paths through vault (which owns the reward claimer)
+      await vault.setSwapPaths(swapPathX, swapPathY, swapPathX);
 
       // Step 3: Claim and compound rewards
       await vault.connect(owner).rebalance(rebalanceParams);
@@ -207,9 +231,15 @@ describe("Reward Compounding Integration Tests", function () {
       const finalVaultBalanceX = await vault.tokenBalance(0);
       const finalVaultBalanceY = await vault.tokenBalance(1);
       
-      // CRITICAL TEST: Vault balance should increase (tokens were sent there)
-      expect(finalVaultBalanceX).to.be.gt(initialVaultBalanceX);
-      expect(finalVaultBalanceY).to.be.gt(initialVaultBalanceY);
+      // Calculate exact expected values:
+      // Initial deposit: 100 ether - 0.5% fee = 99.5 ether
+      // Plus compounded rewards: +5 ether each = 104.5 ether total
+      const expectedFinalBalanceX = ethers.parseEther("104.5");
+      const expectedFinalBalanceY = ethers.parseEther("104.5");
+      
+      // CRITICAL TEST: Vault balance should increase by exact amount (tokens were sent there)
+      expect(finalVaultBalanceX).to.equal(expectedFinalBalanceX);
+      expect(finalVaultBalanceY).to.equal(expectedFinalBalanceY);
 
       // CRITICAL TEST: Reward claimer should NOT have the swapped tokens
       const rewardClaimerBalanceX = await tokenX.balanceOf(await rewardClaimer.getAddress());
@@ -269,9 +299,33 @@ describe("Reward Compounding Integration Tests", function () {
       const user2InitialValue = (user2SharesX * initialPricePerShare) / ethers.parseEther("1");
 
       // Setup and execute reward compounding
+      await mockRewarder.setRewardToken(await metroToken.getAddress());
       await mockRewarder.setClaimAmount(metroRewardAmount);
-      await mockRouter.setSwapOutput(ethers.parseEther("10"), 0);
-      await metroToken.mint(await rewardClaimer.getAddress(), metroRewardAmount);
+      
+      // Configure swap to benefit TokenX only (testing proportional benefit)
+      await mockRouter.setSwapOutputForToken(await tokenX.getAddress(), ethers.parseEther("10"));
+      await mockRouter.setSwapOutputForToken(await tokenY.getAddress(), 0);
+      
+      // Mint tokens to router so it can perform swaps
+      await tokenX.mint(await mockRouter.getAddress(), ethers.parseEther("1000"));
+      
+      // Setup swap paths
+      const swapPathX = {
+        tokenPath: [await metroToken.getAddress(), await tokenX.getAddress()],
+        pairBinSteps: [25],
+        versions: [1],
+        pairs: [await mockPair.getAddress()]
+      };
+
+      const swapPathY = {
+        tokenPath: [await metroToken.getAddress(), await tokenY.getAddress()],
+        pairBinSteps: [25],
+        versions: [1],
+        pairs: [await mockPair.getAddress()]
+      };
+
+      await vault.setMinSwapAmount(1);
+      await vault.setSwapPaths(swapPathX, swapPathY, swapPathX);
 
       await vault.connect(owner).rebalance(rebalanceParams);
 

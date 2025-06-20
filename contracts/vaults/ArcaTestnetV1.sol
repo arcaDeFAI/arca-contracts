@@ -191,24 +191,22 @@ contract ArcaTestnetV1 is
     ) public view returns (uint256) {
         uint256 balance = tokenBalance(tokenType);
         uint256 supply = totalSupply(tokenType);
-        
+
         if (supply == 0) {
             return 1e18;
         }
-        
+
         if (balance == 0) {
             return 0; // No underlying assets per share when balance is zero
         }
-        
+
         return (balance * 1e18) / supply;
     }
 
     /**
      * @dev A helper function to call depositToken() with all the sender's funds.
      */
-    function depositAll(
-        TokenValidator.Type tokenType
-    ) external {
+    function depositAll(TokenValidator.Type tokenType) external {
         uint256 balance = getVaultToken(tokenType).balanceOf(msg.sender);
         depositToken(balance, tokenType);
     }
