@@ -57,8 +57,8 @@ describe("ArcaRewardClaimerV1 Precise Tests", function () {
 
     // Deploy fee manager with known fee rates using beacon proxy
     const FeeManagerFactory = await ethers.getContractFactory("ArcaFeeManagerV1");
-    const feeManagerBeacon = await ethers.upgrades.deployBeacon(FeeManagerFactory);
-    const feeManagerProxy = await ethers.upgrades.deployBeaconProxy(
+    const feeManagerBeacon = await hre.upgrades.deployBeacon(FeeManagerFactory);
+    const feeManagerProxy = await hre.upgrades.deployBeaconProxy(
       feeManagerBeacon,
       FeeManagerFactory,
       [feeRecipient.address]
@@ -68,7 +68,7 @@ describe("ArcaRewardClaimerV1 Precise Tests", function () {
 
     // Deploy reward claimer using UUPS proxy
     const RewardClaimerFactory = await ethers.getContractFactory("ArcaRewardClaimerV1");
-    const rewardClaimerProxy = await ethers.upgrades.deployProxy(
+    const rewardClaimerProxy = await hre.upgrades.deployProxy(
       RewardClaimerFactory,
       [
         await mockRewarder.getAddress(),
