@@ -6,7 +6,14 @@
       "Bash(cat:*)",
       "Bash(npm run compile:*)",
       "Bash(npm test:*)",
-      "Bash(npx hardhat test:*)"
+      "Bash(npx hardhat test:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(find:*)",
+      "Bash(npm run test:*)",
+      "Bash(npx hardhat compile:*)",
+      "Bash(mv:*)",
+      "WebFetch(domain:docs.openzeppelin.com)",
+      "Bash(npx hardhat run:*)"
     ],
     "deny": []
   }
