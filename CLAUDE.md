@@ -6,15 +6,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Arca is a decentralized vault system for automated liquidity provision on the Sonic blockchain. It provides intelligent vault management for Metropolis DLMM (Dynamic Liquidity Market Maker) pools with automated reward compounding and yield optimization through Python bot rebalancing.
 
-**Project Status**: Active development - expect frequent changes, TODOs, and evolving architecture.
-
 ## Repository Structure
 
 This is a full-stack DeFi project with:
 - **Smart Contracts** (`/contracts/`) - Solidity vault system
 - **Frontend dApp** (`/UI/`) - React-based user interface  
 - **Testing Suite** (`/test/`) - Comprehensive test coverage
-- **Deployment System** (`/contracts/deployment/`, `/ignition/`) - Atomic deployment infrastructure
+- **Deployment System** (`/scripts/`, `/ignition/`) - TypeScript deployment infrastructure
 - **External Dependencies** (`/lib/`) - Git submodules (joe-v2)
 
 ## Core Architecture
@@ -24,14 +22,12 @@ This is a full-stack DeFi project with:
 - **ArcaQueueHandlerV1**: Manages deposit/withdrawal queues for batched processing
 - **ArcaRewardClaimerV1**: Handles METRO reward claiming and automatic compounding
 - **ArcaFeeManagerV1**: Manages fee configuration and collection (0.5% deposit/withdraw, 10% performance)
-- **VaultDeployer**: Atomic deployment system for coordinated contract initialization
 
 ### Key Design Patterns
 - **Upgradeable Proxy Pattern**: All contracts use OpenZeppelin's upgradeable contracts
 - **Queue-Based Processing**: Deposits and withdrawals are queued and processed during rebalance operations
 - **Dual Token Shares**: Separate share tracking for TokenX and TokenY with proportional ownership
 - **Modular Architecture**: Fee management, queue handling, and reward claiming are separated into dedicated contracts
-- **Atomic Deployment**: VaultDeployer ensures all contracts are deployed and configured together
 
 ## Development Commands
 
@@ -90,13 +86,19 @@ npx hardhat test-data:network-config
 ```
 
 ### Deployment
-```bash
-# Deploy using Hardhat Ignition
-npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts
 
-# Deploy using VaultDeployer (atomic deployment)
-npx hardhat run scripts/deployVaultSystem.js --network <network>
+**CRITICAL: Contract Size Limits**
+⚠️ Always use script-based deployment, not factory contracts. Factory contracts that import multiple concrete contracts will exceed the 24.5KB contract size limit and fail to deploy on mainnet.
+
+```bash
+# Recommended: Script-based UUPS deployment
+npx hardhat run scripts/deployArcaSystem.ts --network <network>
+
+# Hardhat Ignition (for simple deployments)
+npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network <network>
 ```
+
+**Deployment Strategy**: See `DEPLOYMENT_STRATEGY.md` for comprehensive deployment guidelines.
 
 ## Code Conventions
 
@@ -124,30 +126,6 @@ npx hardhat run scripts/deployVaultSystem.js --network <network>
 - TanStack Query for async state management
 - ESLint with React and TypeScript rules
 
-## Development Environment
-
-### DevContainer Setup (Optional)
-The repository includes a complete DevContainer configuration for consistent development:
-- **Base Image**: Node.js 22 with TypeScript toolbox
-- **Pre-installed Extensions**: ESLint, Solidity support
-- **Automatic Setup**: Dependencies installed via `setup.sh`
-- **Bash Aliases**: Convenient shortcuts (`c` for clear, `ll` for detailed listing)
-
-**Note**: DevContainer is optional - the project works fine in regular environments.
-
-### CI/CD Pipeline
-GitHub Actions workflow (`.github/workflows/pipeline.yml`) runs on:
-- **Triggers**: PRs and pushes to `main`, `dev`, `production`, `releases/**`
-- **Smart Contract Pipeline**:
-  1. Git submodule checkout (joe-v2)
-  2. Solidity linting via Solhint
-  3. Contract compilation
-  4. Full test suite execution
-- **Frontend Pipeline**:
-  1. UI dependency installation
-  2. Frontend linting
-  3. Production build verification
-
 ## External Dependencies
 
 ### Blockchain Integrations
@@ -160,109 +138,6 @@ GitHub Actions workflow (`.github/workflows/pipeline.yml`) runs on:
 - Hardhat with TypeScript toolbox
 - Custom interface generator for ABI exports
 - Contract size analyzer for optimization
-
-## Deployment Strategy
-
-### VaultDeployer System
-The project uses `VaultDeployer.sol` for atomic deployment of the entire vault ecosystem:
-
-**Deployment Process**:
-1. Deploy all components with deployer as initial owner
-2. Initialize vault with all component addresses
-3. Transfer ownership of all components to vault in correct order
-4. Verify ownership transfers completed successfully
-
-**Benefits**:
-- Atomic deployment prevents partial system states
-- Proper ownership hierarchy established automatically
-- Emergency ownership transfer functions for recovery
-
-### Deployment Commands
-```bash
-# Traditional individual deployment
-npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts
-
-# Atomic system deployment (recommended)
-npx hardhat run scripts/deployVaultSystem.js --network <network>
-```
-
-## Active Development Notes
-
-### Project Status
-**Current Phase**: Active development with frequent architecture changes
-
-### Known TODOs and Development Areas
-- **Security Features**: Emergency pause mechanisms, exposure limits
-- **Test Coverage**: Some test files contain placeholder TODOs
-- **Two-Step Ownership**: VaultDeployer has commented two-step ownership logic
-- **Performance Optimization**: Gas optimization opportunities in queue processing
-
-### Development Workflow
-1. **Before Making Changes**: Always run `npm run test` to ensure system integrity
-2. **Code Quality**: Run `npm run lint` and fix issues before commits
-3. **Integration Testing**: Focus on `*.integration.test.ts` for complex flows
-4. **Precision Testing**: Use `*.precise.test.ts` for mathematical accuracy verification
-
-### Working with TODOs
-When encountering TODOs in code:
-- **Contract TODOs**: Often indicate security or optimization improvements needed
-- **Test TODOs**: Usually mark incomplete test coverage areas
-- **Comment TODOs**: May indicate uncertain implementation decisions
-
-Always discuss TODO resolution with the development team before implementation.
-
-## Important Notes
-
-### Security Considerations
-- All user-facing functions use ReentrancyGuard
-- Fee collection happens before share calculations
-- Emergency functions for stuck token recovery
-- Owner-only functions for critical operations
-
-### Operational Flow
-1. Users deposit tokens → added to deposit queue
-2. Rebalance operation processes queues in order:
-   - Remove existing liquidity if needed
-   - Claim and compound METRO rewards
-   - Process withdrawal queue (calculate shares, apply fees)
-   - Process deposit queue (mint shares based on current balance)
-   - Add new liquidity with remaining tokens
-3. Python bot triggers rebalance based on external oracle data
-
-### Queue Management
-- Deposits are queued until next rebalance to optimize gas costs
-- Withdrawals are processed proportionally based on current liquidity
-- Queue processing is atomic - either all succeed or revert
-
-### Contract Size Considerations ⚠️
-**CRITICAL**: Several contracts may exceed the 24576 byte limit (Spurious Dragon limit) when compiled.
-
-**Known Issues**:
-- `ArcaVaultFactory.sol` currently exceeds limit (~54KB)
-- Complex contracts with many functions are at risk
-
-**Solutions (DO NOT modify optimizer settings)**:
-1. **Use Interfaces** - Replace direct contract imports with interface imports where possible
-2. **Library Pattern** - Extract common functionality into libraries
-3. **Factory Splitting** - Break large factory contracts into smaller specialized contracts
-4. **Function Reduction** - Remove or simplify non-essential functions
-5. **External Function Calls** - Move complex logic to external contracts
-
-**Example Interface Usage**:
-```solidity
-// Instead of:
-import {ArcaFeeManagerV1} from "./ArcaFeeManagerV1.sol";
-
-// Use:
-import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
-```
-
-**Warning Signs**:
-- Compilation warnings about contract size
-- Functions failing to deploy on mainnet
-- Gas estimation failures
-
-**Testing**: Always test deployment on testnets before mainnet to catch size issues early.
 
 ## Testing Strategy
 
@@ -300,4 +175,48 @@ Comprehensive mocking infrastructure for isolated testing:
 - **Edge case coverage**: Test boundary conditions and error states
 - **Gas optimization**: Monitor gas usage in tests
 
-**Critical**: Run the full test suite before making changes to ensure system integrity.
+Run the full test suite before making changes to ensure system integrity.
+
+## Important Notes
+
+### Security Considerations
+- All user-facing functions use ReentrancyGuard
+- Fee collection happens before share calculations
+- Emergency functions for stuck token recovery
+- Owner-only functions for critical operations
+
+### Operational Flow
+1. Users deposit tokens → added to deposit queue
+2. Rebalance operation processes queues in order:
+   - Remove existing liquidity if needed
+   - Claim and compound METRO rewards
+   - Process withdrawal queue (calculate shares, apply fees)
+   - Process deposit queue (mint shares based on current balance)
+   - Add new liquidity with remaining tokens
+3. Python bot triggers rebalance based on external oracle data
+
+### Queue Management
+- Deposits are queued until next rebalance to optimize gas costs
+- Withdrawals are processed proportionally based on current liquidity
+- Queue processing is atomic - either all succeed or revert
+
+### Contract Size Management ⚠️
+
+**CRITICAL WARNING**: Never create factory contracts that import multiple concrete contracts. They will exceed the 24.5KB Spurious Dragon limit.
+
+**Best Practices**:
+1. **Use Script-Based Deployment**: Logic in TypeScript scripts, not Solidity contracts
+2. **Interface Over Concrete**: Import interfaces instead of full contracts where possible
+3. **OpenZeppelin Upgrades Plugin**: Use for UUPS proxy deployment
+4. **Contract Size Monitoring**: Run `npm run compile` to check for size warnings
+
+**Example Interface Usage**:
+```solidity
+// Instead of:
+import {ArcaFeeManagerV1} from "./ArcaFeeManagerV1.sol";
+
+// Use:
+import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
+```
+
+**Solution**: The project uses TypeScript deployment scripts (`scripts/deployArcaSystem.ts`) with OpenZeppelin's upgrades plugin for complex deployments, completely avoiding contract size limits.

@@ -13,7 +13,10 @@
       "Bash(npx hardhat compile:*)",
       "Bash(mv:*)",
       "WebFetch(domain:docs.openzeppelin.com)",
-      "Bash(npx hardhat run:*)"
+      "Bash(npx hardhat run:*)",
+      "Bash(npx hardhat:*)",
+      "Bash(npx tsc:*)",
+      "WebFetch(domain:hardhat.org)"
     ],
     "deny": []
   }
