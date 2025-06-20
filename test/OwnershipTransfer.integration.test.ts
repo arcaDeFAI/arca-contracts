@@ -102,8 +102,6 @@ describe("Ownership Transfer Integration Test", function () {
         25, // binStep
         ethers.parseEther("0.001"),
         ethers.parseEther("0.001"),
-        "Arca Vault Token",
-        "AVT",
         await mockRouter.getAddress(),
         await mockPair.getAddress(),
         await mockPair.getAddress(),
@@ -130,23 +128,6 @@ describe("Ownership Transfer Integration Test", function () {
     });
 
     it("Should ensure vault can call reward claimer functions after ownership transfer", async function () {
-      // Initialize vault
-      await vault.initialize(
-        await tokenX.getAddress(),
-        await tokenY.getAddress(),
-        25,
-        ethers.parseEther("0.001"),
-        ethers.parseEther("0.001"),
-        "Arca Vault Token",
-        "AVT",
-        await mockRouter.getAddress(),
-        await mockPair.getAddress(),
-        await mockPair.getAddress(),
-        await rewardClaimer.getAddress(),
-        await queueHandler.getAddress(),
-        await feeManager.getAddress()
-      );
-
       // Transfer ownership to vault
       await rewardClaimer.transferOwnership(await vault.getAddress());
 

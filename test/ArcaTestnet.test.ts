@@ -453,13 +453,97 @@ describe("ArcaTestnetV1 - Business Logic", function () {
 
       it("Should reject withdrawAll when user has no shares", async function () {
         // Unit test - withdrawAll should revert when user has no shares (correct behavior)
-        // TODO: Add integration test for withdrawAll after user has shares from deposit→rebalance flow
         const { vault, user1 } = await loadFixture(deployVaultFixture);
 
         // withdrawAll with 0 shares should revert
         await expect(
           vault.connect(user1).withdrawAll()
         ).to.be.revertedWith("Cannot withdraw 0 shares");
+      });
+
+      it("Should allow withdrawAll after user has shares from deposit→rebalance flow", async function () {
+        // === ARRANGE ===
+        const { vault, tokenX, tokenY, user1, TokenX, TokenY, feeManager } = await loadFixture(deployVaultFixture);
+
+        const depositAmountX = hre.ethers.parseEther("12");
+        const depositAmountY = hre.ethers.parseEther("8");
+        
+        await tokenX.mint(user1.address, depositAmountX);
+        await tokenY.mint(user1.address, depositAmountY);
+        await tokenX.connect(user1).approve(vault.target, depositAmountX);
+        await tokenY.connect(user1).approve(vault.target, depositAmountY);
+
+        // Calculate expected values after deposit fees
+        const depositFee = await feeManager.getDepositFee();
+        const withdrawFee = await feeManager.getWithdrawFee();
+        const basisPoints = await feeManager.BASIS_POINTS();
+        const expectedNetAmountX = depositAmountX - (depositAmountX * depositFee / basisPoints);
+        const expectedNetAmountY = depositAmountY - (depositAmountY * depositFee / basisPoints);
+
+        const rebalanceParams = {
+          deltaIds: [],
+          distributionX: [],
+          distributionY: [],
+          ids: [],
+          amounts: [],
+          removeAmountXMin: 0,
+          removeAmountYMin: 0,
+          to: vault.target,
+          refundTo: vault.target,
+          deadline: Math.floor(Date.now() / 1000) + 3600,
+          forceRebalance: true
+        };
+
+        // === ACT 1: Deposit and get shares ===
+        await vault.connect(user1).depositToken(depositAmountX, TokenX);
+        await vault.connect(user1).depositToken(depositAmountY, TokenY);
+        await vault.rebalance(rebalanceParams);
+
+        // Verify exact shares received
+        const userSharesX = await vault.getShares(user1.address, TokenX);
+        const userSharesY = await vault.getShares(user1.address, TokenY);
+        expect(userSharesX).to.equal(expectedNetAmountX);
+        expect(userSharesY).to.equal(expectedNetAmountY);
+
+        // === ACT 2: WithdrawAll ===
+        const initialTokenXBalance = await tokenX.balanceOf(user1.address);
+        const initialTokenYBalance = await tokenY.balanceOf(user1.address);
+
+        await vault.connect(user1).withdrawAll();
+
+        // Process withdrawal with rebalance
+        const secondRebalanceParams = {
+          ...rebalanceParams,
+          deadline: Math.floor(Date.now() / 1000) + 3600
+        };
+        await vault.rebalance(secondRebalanceParams);
+
+        // === ASSERT ===
+        // User should have no shares left
+        expect(await vault.getShares(user1.address, TokenX)).to.equal(0);
+        expect(await vault.getShares(user1.address, TokenY)).to.equal(0);
+
+        // Calculate exact expected tokens received after withdrawal fees
+        const totalWithdrawAmountX = expectedNetAmountX;
+        const totalWithdrawAmountY = expectedNetAmountY;
+        const totalWithdrawAmount = totalWithdrawAmountX + totalWithdrawAmountY;
+        const totalWithdrawFee = (totalWithdrawAmount * withdrawFee) / basisPoints;
+        
+        const feeAmountX = (totalWithdrawAmountX * totalWithdrawFee) / totalWithdrawAmount;
+        const feeAmountY = (totalWithdrawAmountY * totalWithdrawFee) / totalWithdrawAmount;
+        
+        const expectedReceivedX = totalWithdrawAmountX - feeAmountX;
+        const expectedReceivedY = totalWithdrawAmountY - feeAmountY;
+
+        // Verify exact token amounts received
+        const finalTokenXBalance = await tokenX.balanceOf(user1.address);
+        const finalTokenYBalance = await tokenY.balanceOf(user1.address);
+        
+        const actualReceivedX = finalTokenXBalance - initialTokenXBalance;
+        const actualReceivedY = finalTokenYBalance - initialTokenYBalance;
+
+        expect(actualReceivedX).to.equal(expectedReceivedX);
+        expect(actualReceivedY).to.equal(expectedReceivedY);
       });
 
       it("Should support backward compatibility withdraw function (queue behavior)", async function () {
