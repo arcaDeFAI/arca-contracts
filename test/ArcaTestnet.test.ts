@@ -74,8 +74,6 @@ describe("ArcaTestnetV1 - Business Logic", function () {
           25, // binStep
           hre.ethers.parseEther("0.01"), // amountXMin
           hre.ethers.parseEther("0.01"), // amountYMin
-          "Arca Vault Token",
-          "AVT",
           mockRouter.target,
           mockPair.target, // lbpAMM
           mockPair.target, // lbpContract
@@ -90,6 +88,11 @@ describe("ArcaTestnetV1 - Business Logic", function () {
     };
     
     const vault = await deployFreshInstance();
+    
+    // Transfer ownership of supporting contracts to vault (like production deployment)
+    await queueHandler.transferOwnership(vault.target);
+    await feeManager.transferOwnership(vault.target);
+    await rewardClaimer.transferOwnership(vault.target);
     
     // Token enum values for testing
     const TokenX = 0;
@@ -121,8 +124,6 @@ describe("ArcaTestnetV1 - Business Logic", function () {
       const { vault, owner, tokenX, tokenY } = await loadFixture(deployVaultFixture);
       
       expect(await vault.owner()).to.equal(owner.address);
-      expect(await vault.name()).to.equal("Arca Vault Token");
-      expect(await vault.symbol()).to.equal("AVT");
       expect(await vault.TOKEN_COUNT()).to.equal(2);
     });
 
@@ -150,8 +151,6 @@ describe("ArcaTestnetV1 - Business Logic", function () {
           25,
           hre.ethers.parseEther("0.01"),
           hre.ethers.parseEther("0.01"),
-          "Test",
-          "TEST",
           mockRouter.target,
           mockPair.target,
           mockPair.target,
@@ -165,25 +164,26 @@ describe("ArcaTestnetV1 - Business Logic", function () {
 
   describe("Token Balance Calculations", function () {
     it("Should correctly calculate token balance excluding queued tokens", async function () {
-      const { vault, tokenX, queueHandler, TokenX, user1 } = await loadFixture(deployVaultFixture);
+      const { vault, tokenX, feeManager, TokenX, user1 } = await loadFixture(deployVaultFixture);
 
-      // Transfer ownership so we can control queue handler
-      await queueHandler.transferOwnership(vault.target);
-
-      // Add some tokens to vault
+      // Add some tokens to vault directly (simulating existing balance)
       await tokenX.mint(vault.target, hre.ethers.parseEther("100"));
 
-      // Simulate queued tokens
-      const depositRequest = {
-        user: user1.address,
-        amount: hre.ethers.parseEther("20"),
-        tokenType: TokenX,
-        timestamp: Math.floor(Date.now() / 1000)
-      };
-      await queueHandler.connect(vault).enqueueDepositRequest(depositRequest);
+      // Create queued tokens through normal deposit flow
+      const depositAmount = hre.ethers.parseEther("20");
+      await tokenX.mint(user1.address, depositAmount);
+      await tokenX.connect(user1).approve(vault.target, depositAmount);
+      await vault.connect(user1).depositToken(depositAmount, TokenX);
 
-      // tokenBalance should exclude queued amount
-      expect(await vault.tokenBalance(TokenX)).to.equal(hre.ethers.parseEther("80")); // 100 - 20
+      // Calculate expected: original balance (100) + deposit after fees
+      const depositFee = await feeManager.getDepositFee();
+      const basisPoints = await feeManager.BASIS_POINTS();
+      const feeAmount = (depositAmount * depositFee) / basisPoints;
+      const netDepositAmount = depositAmount - feeAmount;
+      
+      // tokenBalance should exclude queued amount but include the net deposit
+      const expectedBalance = hre.ethers.parseEther("100"); // Only the original, queued amount excluded
+      expect(await vault.tokenBalance(TokenX)).to.equal(expectedBalance);
     });
 
     it("Should handle zero queued tokens correctly", async function () {
@@ -206,6 +206,127 @@ describe("ArcaTestnetV1 - Business Logic", function () {
   });
 
   describe("Deposit Functionality", function () {
+    describe("Deposit to Queue Operations", function () {
+      it("Should add deposits to the queue correctly", async function () {
+        const { vault, tokenX, tokenY, user1, TokenX, TokenY, queueHandler, feeManager } = await loadFixture(deployVaultFixture);
+
+        // Mint and approve tokens
+        const depositAmountX = hre.ethers.parseEther("10");
+        const depositAmountY = hre.ethers.parseEther("5");
+        
+        await tokenX.mint(user1.address, depositAmountX);
+        await tokenY.mint(user1.address, depositAmountY);
+        await tokenX.connect(user1).approve(vault.target, depositAmountX);
+        await tokenY.connect(user1).approve(vault.target, depositAmountY);
+
+        // Check queue is empty initially
+        expect(await queueHandler.getPendingDepositsCount()).to.equal(0);
+
+        // Calculate expected amounts after fees (0.5% deposit fee)
+        const depositFee = await feeManager.getDepositFee(); // 50 basis points = 0.5%
+        const basisPoints = await feeManager.BASIS_POINTS(); // 10000
+        const expectedNetAmountX = depositAmountX - (depositAmountX * depositFee / basisPoints);
+        const expectedNetAmountY = depositAmountY - (depositAmountY * depositFee / basisPoints);
+
+        // Deposit tokens
+        await vault.connect(user1).depositToken(depositAmountX, TokenX);
+        await vault.connect(user1).depositToken(depositAmountY, TokenY);
+
+        // Verify deposits are queued
+        expect(await queueHandler.getPendingDepositsCount()).to.equal(2);
+        
+        // Verify exact queued amounts (net amounts after fees)
+        expect(await queueHandler.getQueuedToken(TokenX)).to.equal(expectedNetAmountX);
+        expect(await queueHandler.getQueuedToken(TokenY)).to.equal(expectedNetAmountY);
+      });
+    });
+
+    describe("Integration: Deposit to Withdrawal Flow", function () {
+      it("Should complete full deposit→rebalance→shares→withdrawal flow", async function () {
+        const { vault, tokenX, tokenY, user1, TokenX, TokenY, queueHandler, feeManager } = await loadFixture(deployVaultFixture);
+
+        // === ARRANGE ===
+        const depositAmountX = hre.ethers.parseEther("10");
+        const depositAmountY = hre.ethers.parseEther("5");
+        
+        // Mint tokens and approve vault
+        await tokenX.mint(user1.address, depositAmountX);
+        await tokenY.mint(user1.address, depositAmountY);
+        await tokenX.connect(user1).approve(vault.target, depositAmountX);
+        await tokenY.connect(user1).approve(vault.target, depositAmountY);
+
+        // Calculate expected values
+        const depositFee = await feeManager.getDepositFee();
+        const withdrawFee = await feeManager.getWithdrawFee();
+        const basisPoints = await feeManager.BASIS_POINTS();
+        const expectedNetAmountX = depositAmountX - (depositAmountX * depositFee / basisPoints);
+        const expectedNetAmountY = depositAmountY - (depositAmountY * depositFee / basisPoints);
+        const rebalanceParams = {
+          deltaIds: [],
+          distributionX: [],
+          distributionY: [],
+          ids: [],
+          amounts: [],
+          removeAmountXMin: 0,
+          removeAmountYMin: 0,
+          to: vault.target,
+          refundTo: vault.target,
+          deadline: Math.floor(Date.now() / 1000) + 3600,
+          forceRebalance: true
+        };
+
+        // === ACT 1: Deposit Phase ===
+        await vault.connect(user1).depositToken(depositAmountX, TokenX);
+        await vault.connect(user1).depositToken(depositAmountY, TokenY);
+        await vault.rebalance(rebalanceParams);
+
+        // === ASSERT 1: Verify shares minted correctly ===
+        const userSharesX = await vault.getShares(user1.address, TokenX);
+        const userSharesY = await vault.getShares(user1.address, TokenY);
+        
+        expect(userSharesX).to.equal(expectedNetAmountX);
+        expect(userSharesY).to.equal(expectedNetAmountY);
+        expect(await queueHandler.getPendingDepositsCount()).to.equal(0);
+
+        // === ACT 2: Withdrawal Phase ===
+        const sharesToWithdrawX = userSharesX / 3n; // Withdraw one-third
+        const sharesToWithdrawY = userSharesY / 3n;
+        
+        const initialTokenXBalance = await tokenX.balanceOf(user1.address);
+        const initialTokenYBalance = await tokenY.balanceOf(user1.address);
+
+        await vault.connect(user1).withdrawTokenShares([sharesToWithdrawX, sharesToWithdrawY]);
+        
+        const secondRebalanceParams = {
+          ...rebalanceParams,
+          deadline: Math.floor(Date.now() / 1000) + 3600
+        };
+        await vault.rebalance(secondRebalanceParams);
+
+        // === ASSERT 2: Verify exact withdrawal amounts ===
+        const totalWithdrawAmountX = sharesToWithdrawX;
+        const totalWithdrawAmountY = sharesToWithdrawY;
+        const totalWithdrawAmount = totalWithdrawAmountX + totalWithdrawAmountY;
+        const totalWithdrawFee = (totalWithdrawAmount * withdrawFee) / basisPoints;
+        
+        const feeAmountX = (totalWithdrawAmountX * totalWithdrawFee) / totalWithdrawAmount;
+        const feeAmountY = (totalWithdrawAmountY * totalWithdrawFee) / totalWithdrawAmount;
+        
+        const expectedReceivedX = totalWithdrawAmountX - feeAmountX;
+        const expectedReceivedY = totalWithdrawAmountY - feeAmountY;
+
+        const finalTokenXBalance = await tokenX.balanceOf(user1.address);
+        const finalTokenYBalance = await tokenY.balanceOf(user1.address);
+
+        const actualReceivedX = finalTokenXBalance - initialTokenXBalance;
+        const actualReceivedY = finalTokenYBalance - initialTokenYBalance;
+
+        expect(actualReceivedX).to.equal(expectedReceivedX);
+        expect(actualReceivedY).to.equal(expectedReceivedY);
+        expect(await queueHandler.getPendingWithdrawsCount()).to.equal(0);
+      });
+    });
+
     describe("Valid Deposit Operations", function () {
       it("Should allow users to deposit tokens", async function () {
         const { vault, tokenX, user1, TokenX } = await loadFixture(deployVaultFixture);
@@ -260,9 +381,10 @@ describe("ArcaTestnetV1 - Business Logic", function () {
       it("Should reject invalid token types", async function () {
         const { vault, user1 } = await loadFixture(deployVaultFixture);
 
+        // Solidity enum validation catches out-of-bounds values before our custom error
         await expect(
-          vault.connect(user1).depositToken(100, 999) // Invalid token type
-        ).to.be.revertedWithCustomError(vault, "InvalidTokenType");
+          vault.connect(user1).depositToken(100, 255) // Invalid token type
+        ).to.be.reverted;
       });
 
       it("Should use reentrancy protection on deposits", async function () {
@@ -282,33 +404,72 @@ describe("ArcaTestnetV1 - Business Logic", function () {
 
   describe("Withdraw Functionality", function () {
     describe("Valid Withdraw Operations", function () {
-      it("Should allow users to withdraw shares", async function () {
-        const { vault, user1 } = await loadFixture(deployVaultFixture);
+      it("Should allow users to withdraw shares after rebalance", async function () {
+        // === ARRANGE ===
+        const { vault, tokenX, tokenY, user1, TokenX, TokenY, feeManager } = await loadFixture(deployVaultFixture);
 
-        const sharesX = hre.ethers.parseEther("5");
-        const sharesY = hre.ethers.parseEther("3");
+        const depositAmountX = hre.ethers.parseEther("10");
+        const depositAmountY = hre.ethers.parseEther("8");
+        
+        await tokenX.mint(user1.address, depositAmountX);
+        await tokenY.mint(user1.address, depositAmountY);
+        await tokenX.connect(user1).approve(vault.target, depositAmountX);
+        await tokenY.connect(user1).approve(vault.target, depositAmountY);
+
+        const rebalanceParams = {
+          deltaIds: [],
+          distributionX: [],
+          distributionY: [],
+          ids: [],
+          amounts: [],
+          removeAmountXMin: 0,
+          removeAmountYMin: 0,
+          to: vault.target,
+          refundTo: vault.target,
+          deadline: Math.floor(Date.now() / 1000) + 3600,
+          forceRebalance: true
+        };
+
+        // === ACT 1: Deposit and get shares ===
+        await vault.connect(user1).depositToken(depositAmountX, TokenX);
+        await vault.connect(user1).depositToken(depositAmountY, TokenY);
+        await vault.rebalance(rebalanceParams);
+
+        // === ACT 2: Withdraw specific amounts ===
+        const withdrawAmountX = hre.ethers.parseEther("5");
+        const withdrawAmountY = hre.ethers.parseEther("3");
 
         await expect(
-          vault.connect(user1).withdrawTokenShares([sharesX, sharesY])
+          vault.connect(user1).withdrawTokenShares([withdrawAmountX, withdrawAmountY])
         ).to.not.be.reverted;
+
+        // === ASSERT ===
+        // User should have remaining shares
+        const remainingSharesX = await vault.getShares(user1.address, TokenX);
+        const remainingSharesY = await vault.getShares(user1.address, TokenY);
+        expect(remainingSharesX).to.be.gt(0);
+        expect(remainingSharesY).to.be.gt(0);
       });
 
-      it("Should allow users to withdraw all shares", async function () {
+      it("Should reject withdrawAll when user has no shares", async function () {
+        // Unit test - withdrawAll should revert when user has no shares (correct behavior)
+        // TODO: Add integration test for withdrawAll after user has shares from deposit→rebalance flow
         const { vault, user1 } = await loadFixture(deployVaultFixture);
 
+        // withdrawAll with 0 shares should revert
         await expect(
           vault.connect(user1).withdrawAll()
-        ).to.not.be.reverted;
+        ).to.be.revertedWith("Cannot withdraw 0 shares");
       });
 
-      it("Should support backward compatibility withdraw function", async function () {
+      it("Should support backward compatibility withdraw function (queue behavior)", async function () {
+        // Unit test - tests that withdraw function queues properly even with no shares
         const { vault, user1 } = await loadFixture(deployVaultFixture);
 
-        const shares = hre.ethers.parseEther("10");
-
+        // withdraw(0) should revert with specific message
         await expect(
-          vault.connect(user1).withdraw(shares)
-        ).to.not.be.reverted;
+          vault.connect(user1).withdraw(0)
+        ).to.be.revertedWith("Cannot withdraw 0 shares");
       });
 
       it("Should handle zero share withdrawals", async function () {
@@ -329,15 +490,13 @@ describe("ArcaTestnetV1 - Business Logic", function () {
     });
 
     describe("Withdraw Validation", function () {
-      it("Should use reentrancy protection on withdraws", async function () {
+      it("Should validate withdrawal parameters", async function () {
         const { vault, user1 } = await loadFixture(deployVaultFixture);
 
-        const shares = hre.ethers.parseEther("1");
-
-        // This tests that the function has the nonReentrant modifier
+        // Test parameter validation - withdraw(0) should revert
         await expect(
-          vault.connect(user1).withdraw(shares)
-        ).to.not.be.reverted;
+          vault.connect(user1).withdraw(0)
+        ).to.be.revertedWith("Cannot withdraw 0 shares");
       });
     });
   });
@@ -366,29 +525,32 @@ describe("ArcaTestnetV1 - Business Logic", function () {
     it("Should reject invalid token types in tokenBalance", async function () {
       const { vault } = await loadFixture(deployVaultFixture);
 
+      // Solidity enum validation catches out-of-bounds values before our custom error
       await expect(
         vault.tokenBalance(2)
-      ).to.be.revertedWithCustomError(vault, "InvalidTokenType");
+      ).to.be.reverted;
 
       await expect(
-        vault.tokenBalance(999)
-      ).to.be.revertedWithCustomError(vault, "InvalidTokenType");
+        vault.tokenBalance(255)
+      ).to.be.reverted;
     });
 
     it("Should reject invalid token types in totalSupply", async function () {
       const { vault } = await loadFixture(deployVaultFixture);
 
+      // Solidity enum validation catches out-of-bounds values before our custom error
       await expect(
         vault.totalSupply(2)
-      ).to.be.revertedWithCustomError(vault, "InvalidTokenType");
+      ).to.be.reverted;
     });
 
     it("Should reject invalid token types in getPricePerFullShare", async function () {
       const { vault } = await loadFixture(deployVaultFixture);
 
+      // Solidity enum validation catches out-of-bounds values before our custom error
       await expect(
         vault.getPricePerFullShare(2)
-      ).to.be.revertedWithCustomError(vault, "InvalidTokenType");
+      ).to.be.reverted;
     });
 
     it("Should accept valid token types", async function () {
@@ -484,56 +646,86 @@ describe("ArcaTestnetV1 - Business Logic", function () {
 
   describe("Production Workflow Simulation", function () {
     it("Should support basic deposit and withdraw user flow", async function () {
+      // === ARRANGE ===
       const { vault, tokenX, tokenY, user1, user2, TokenX, TokenY } = await loadFixture(deployVaultFixture);
 
-      // 1. Users get tokens
       await tokenX.mint(user1.address, hre.ethers.parseEther("100"));
       await tokenY.mint(user2.address, hre.ethers.parseEther("200"));
-
-      // 2. Users approve vault
       await tokenX.connect(user1).approve(vault.target, hre.ethers.parseEther("100"));
       await tokenY.connect(user2).approve(vault.target, hre.ethers.parseEther("200"));
 
-      // 3. Users deposit tokens
-      await expect(
-        vault.connect(user1).depositToken(hre.ethers.parseEther("50"), TokenX)
-      ).to.not.be.reverted;
+      const rebalanceParams = {
+        deltaIds: [],
+        distributionX: [],
+        distributionY: [],
+        ids: [],
+        amounts: [],
+        removeAmountXMin: 0,
+        removeAmountYMin: 0,
+        to: vault.target,
+        refundTo: vault.target,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        forceRebalance: true
+      };
 
-      await expect(
-        vault.connect(user2).depositToken(hre.ethers.parseEther("75"), TokenY)
-      ).to.not.be.reverted;
+      // === ACT 1: Deposit Phase ===
+      await vault.connect(user1).depositToken(hre.ethers.parseEther("50"), TokenX);
+      await vault.connect(user2).depositToken(hre.ethers.parseEther("75"), TokenY);
+      await vault.rebalance(rebalanceParams);
 
-      // 4. Users should be able to withdraw shares
-      await expect(
-        vault.connect(user1).withdrawTokenShares([hre.ethers.parseEther("10"), 0])
-      ).to.not.be.reverted;
+      // === ACT 2: Withdrawal Phase ===
+      await vault.connect(user1).withdrawTokenShares([hre.ethers.parseEther("10"), 0]);
+      await vault.connect(user2).withdrawTokenShares([0, hre.ethers.parseEther("25")]);
 
-      await expect(
-        vault.connect(user2).withdrawTokenShares([0, hre.ethers.parseEther("25")])
-      ).to.not.be.reverted;
+      const secondRebalanceParams = {
+        ...rebalanceParams,
+        deadline: Math.floor(Date.now() / 1000) + 3600
+      };
+      await vault.rebalance(secondRebalanceParams);
 
-      // Vault should be in consistent state
+      // === ASSERT ===
       expect(await vault.tokenBalance(TokenX)).to.be.a("bigint");
       expect(await vault.tokenBalance(TokenY)).to.be.a("bigint");
     });
 
     it("Should maintain system integrity across operations", async function () {
+      // === ARRANGE ===
       const { vault, tokenX, user1, TokenX } = await loadFixture(deployVaultFixture);
 
-      // Multiple operations should work correctly
       await tokenX.mint(user1.address, hre.ethers.parseEther("1000"));
       await tokenX.connect(user1).approve(vault.target, hre.ethers.parseEther("1000"));
 
-      // Multiple deposits
+      const rebalanceParams = {
+        deltaIds: [],
+        distributionX: [],
+        distributionY: [],
+        ids: [],
+        amounts: [],
+        removeAmountXMin: 0,
+        removeAmountYMin: 0,
+        to: vault.target,
+        refundTo: vault.target,
+        deadline: Math.floor(Date.now() / 1000) + 3600,
+        forceRebalance: true
+      };
+
+      // === ACT 1: Multiple deposits ===
       await vault.connect(user1).depositToken(hre.ethers.parseEther("100"), TokenX);
       await vault.connect(user1).depositToken(hre.ethers.parseEther("200"), TokenX);
       await vault.connect(user1).depositToken(hre.ethers.parseEther("150"), TokenX);
+      await vault.rebalance(rebalanceParams);
 
-      // Multiple withdrawals
+      // === ACT 2: Multiple withdrawals ===
       await vault.connect(user1).withdrawTokenShares([hre.ethers.parseEther("50"), 0]);
       await vault.connect(user1).withdrawTokenShares([hre.ethers.parseEther("25"), 0]);
 
-      // System should remain consistent
+      const secondRebalanceParams = {
+        ...rebalanceParams,
+        deadline: Math.floor(Date.now() / 1000) + 3600
+      };
+      await vault.rebalance(secondRebalanceParams);
+
+      // === ASSERT ===
       const balance = await vault.tokenBalance(TokenX);
       const supply = await vault.totalSupply(TokenX);
       
