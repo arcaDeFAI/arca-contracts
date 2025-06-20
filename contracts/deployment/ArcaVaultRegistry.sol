@@ -2,7 +2,6 @@
 pragma solidity ^0.8.28;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {ArcaTestnetV1} from "../vaults/ArcaTestnetV1.sol";
 
 /**
  * @title ArcaVaultRegistry

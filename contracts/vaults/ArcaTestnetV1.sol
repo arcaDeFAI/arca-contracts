@@ -24,15 +24,11 @@ import {
     Initializable
 } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ILBRouter} from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
-import {
-    ILBHooksBaseRewarder
-} from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
 import {ILBPair} from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 import {IArcaFeeManagerV1} from "../interfaces/IArcaFeeManagerV1.sol";
 import {IArcaQueueHandlerV1} from "../interfaces/IArcaQueueHandlerV1.sol";
 import {TokenValidator} from "../TokenTypes.sol";
 import {IArcaRewardClaimerV1} from "../interfaces/IArcaRewardClaimerV1.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {
     IDepositWithdrawCompatible
 } from "../interfaces/IDepositWithdrawCompatible.sol";
