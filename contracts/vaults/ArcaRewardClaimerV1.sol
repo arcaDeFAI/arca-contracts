@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ILBRouter} from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ILBPair} from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 import {
     ILBHooksBaseRewarder
@@ -20,8 +28,10 @@ import {
 import {IArcaRewardClaimerV1} from "../interfaces/IArcaRewardClaimerV1.sol";
 
 contract ArcaRewardClaimerV1 is
-    Ownable,
+    Initializable,
+    OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
+    UUPSUpgradeable,
     TokenValidator,
     IArcaRewardClaimerV1
 {
@@ -39,8 +49,8 @@ contract ArcaRewardClaimerV1 is
     ILBRouter.Path[TOKEN_COUNT] private metroToTokenPaths;
     ILBRouter.Path private metroToNativePath;
 
-    // Compounding tracking
-    uint256[TOKEN_COUNT] private totalCompounded; // Total compounded from rewards per token
+    // Compounding tracking for analytics
+    uint256[TOKEN_COUNT] private totalCompounded; // Total compounded from rewards per token (global analytics)
 
     address private _lbpContract;
     address private _lbpContractUSD; //To fetch the value of USDC/USDT via their DLMM pool
@@ -48,7 +58,17 @@ contract ArcaRewardClaimerV1 is
     address private _lbRouter;
     uint256 public idSlippage; // The number of bins to slip
 
-    constructor(
+    /**
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initialize the reward claimer
+     */
+    function initialize(
         address rewarder,
         address rewardToken,
         IArcaFeeManagerV1 feeManager,
@@ -60,7 +80,11 @@ contract ArcaRewardClaimerV1 is
         uint256 _idSlippage,
         address tokenX,
         address tokenY
-    ) Ownable(msg.sender) {
+    ) public initializer {
+        __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
+
         _rewarder = rewarder;
         _rewardToken = rewardToken;
         _feeManager = feeManager;
@@ -89,9 +113,12 @@ contract ArcaRewardClaimerV1 is
         uint256 tokenYCompounded
     );
 
+    /**
+     * @dev Get total amount compounded from rewards for analytics
+     */
     function getTotalCompounded(
         TokenValidator.Type tokenType
-    ) private view validToken(tokenType) returns (uint256) {
+    ) external view returns (uint256) {
         return totalCompounded[uint256(tokenType)];
     }
 
@@ -101,7 +128,7 @@ contract ArcaRewardClaimerV1 is
 
     function getVaultToken(
         TokenValidator.Type tokenType
-    ) private view validToken(tokenType) returns (IERC20) {
+    ) private view returns (IERC20) {
         return tokens[uint256(tokenType)];
     }
 
@@ -121,7 +148,7 @@ contract ArcaRewardClaimerV1 is
      * @dev Updates the rewarder address
      */
     function setRewarder(address rewarder) external onlyOwner {
-        require(_rewarder != address(0), "Invalid rewarder address");
+        require(rewarder != address(0), "Invalid rewarder address");
         _rewarder = rewarder;
     }
 
@@ -147,8 +174,8 @@ contract ArcaRewardClaimerV1 is
             );
             uint256 metroClaimed = metroBalanceAfter - metroBalanceBefore;
 
-            if (metroClaimed > minSwapAmount) {
-                // Calculate performance fee on claimed rewards
+            if (metroClaimed > 0) {
+                // Calculate performance fee on claimed rewards (always collected for consistency)
                 uint256 performanceFee = (metroClaimed *
                     _feeManager.getPerformanceFee()) /
                     _feeManager.BASIS_POINTS();
@@ -167,38 +194,42 @@ contract ArcaRewardClaimerV1 is
                     );
                 }
 
-                // Compound the remaining rewards
-                uint256 metroForTokenX = netMetro / 2;
-                uint256 metroForTokenY = netMetro - metroForTokenX;
+                // Only swap if net metro is above minimum swap amount
+                if (netMetro > minSwapAmount) {
+                    // Compound the remaining rewards
+                    uint256 metroForTokenX = netMetro / 2;
+                    uint256 metroForTokenY = netMetro - metroForTokenX;
 
-                uint256[TOKEN_COUNT] memory metroForTokens = [
-                    metroForTokenX,
-                    metroForTokenY
-                ];
-                uint256[TOKEN_COUNT] memory tokenObtained;
+                    uint256[TOKEN_COUNT] memory metroForTokens = [
+                        metroForTokenX,
+                        metroForTokenY
+                    ];
+                    uint256[TOKEN_COUNT] memory tokenObtained;
 
-                for (uint256 i = 0; i < TOKEN_COUNT; i++) {
-                    tokenObtained[i] = 0;
+                    for (uint256 i = 0; i < TOKEN_COUNT; i++) {
+                        tokenObtained[i] = 0;
 
-                    // Swap METRO to token
-                    if (metroForTokens[i] > 0) {
-                        tokenObtained[i] = _swapMetroToToken(
-                            metroForTokens[i],
-                            address(getVaultToken(TokenValidator.Type(i))),
-                            metroToTokenPaths[i]
-                        );
+                        // Swap METRO to token
+                        if (metroForTokens[i] > 0) {
+                            tokenObtained[i] = _swapMetroToToken(
+                                metroForTokens[i],
+                                address(getVaultToken(TokenValidator.Type(i))),
+                                metroToTokenPaths[i]
+                            );
+                        }
+
+                        // Update global analytics counter
+                        totalCompounded[i] += tokenObtained[i];
                     }
 
-                    // Update compounding totals - these tokens increase share value
-                    totalCompounded[i] += tokenObtained[i];
+                    emit RewardsCompounded(
+                        metroClaimed,
+                        tokenObtained[uint256(TokenValidator.Type.TokenX)],
+                        tokenObtained[uint256(TokenValidator.Type.TokenY)]
+                    );
                 }
 
                 emit RewardsClaimed(_rewarder, _rewardToken, metroClaimed);
-                emit RewardsCompounded(
-                    metroClaimed,
-                    tokenObtained[uint256(TokenValidator.Type.TokenX)],
-                    tokenObtained[uint256(TokenValidator.Type.TokenY)]
-                );
             }
         } catch {
             // Claiming failed, continue with rebalance
@@ -298,6 +329,7 @@ contract ArcaRewardClaimerV1 is
 
     /**
      * @dev Swaps METRO to target token using the appropriate path
+     * Sends swapped tokens directly to the main vault (owner) for proper share value calculation
      */
     function _swapMetroToToken(
         uint256 metroAmount,
@@ -309,7 +341,9 @@ contract ArcaRewardClaimerV1 is
         IERC20(_rewardToken).approve(_lbRouter, 0);
         IERC20(_rewardToken).approve(_lbRouter, metroAmount);
 
-        uint256 balanceBefore = IERC20(targetToken).balanceOf(address(this));
+        // Main vault is the owner - tokens go there for automatic share value increase
+        address vaultAddress = owner();
+        uint256 balanceBefore = IERC20(targetToken).balanceOf(vaultAddress);
 
         // Get expected output from price oracle
         (, uint256 minAmountOut) = getExpectedSwapOutput(
@@ -322,11 +356,11 @@ contract ArcaRewardClaimerV1 is
                 metroAmount,
                 minAmountOut, // Proper slippage protection
                 swapPath,
-                address(this),
+                vaultAddress, // Send directly to main vault
                 block.timestamp + 300
             )
         returns (uint256) {
-            uint256 balanceAfter = IERC20(targetToken).balanceOf(address(this));
+            uint256 balanceAfter = IERC20(targetToken).balanceOf(vaultAddress);
             amountOut = balanceAfter - balanceBefore;
         } catch {
             // Swap failed, try native swap if target is not native
@@ -339,7 +373,7 @@ contract ArcaRewardClaimerV1 is
                         metroAmount,
                         0,
                         metroToNativePath,
-                        payable(address(this)),
+                        payable(vaultAddress), // Send to main vault
                         block.timestamp + 300
                     )
                 {
@@ -366,15 +400,36 @@ contract ArcaRewardClaimerV1 is
         // Get balance before claiming
         uint256 balanceBefore = IERC20(_rewardToken).balanceOf(address(this));
 
-        // Call the correct claim function
-        ILBHooksBaseRewarder(_rewarder).claim(receiver, binIds);
+        // Claim rewards to this contract first
+        ILBHooksBaseRewarder(_rewarder).claim(address(this), binIds);
 
         // Calculate how much was actually claimed
         uint256 balanceAfter = IERC20(_rewardToken).balanceOf(address(this));
         claimedAmount = balanceAfter - balanceBefore;
 
+        // Transfer claimed amount to the specified receiver
+        if (claimedAmount > 0) {
+            IERC20(_rewardToken).transfer(receiver, claimedAmount);
+        }
+
         emit RewardsClaimed(_rewarder, _rewardToken, claimedAmount);
 
         return claimedAmount;
     }
+
+    /**
+     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
+     * Called by {upgradeTo} and {upgradeToAndCall}.
+     */
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+
+    /**
+     * @dev Storage gap for future upgrades
+     * This gap allows us to add new storage variables in future versions
+     * Current storage slots used: ~20 (estimated)
+     * Gap size: 50 - 20 = 30 slots reserved
+     */
+    uint256[30] private __gap;
 }

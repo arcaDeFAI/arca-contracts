@@ -16,7 +16,15 @@ interface IArcaQueueHandlerV1 {
     function getDepositQueueTrailingSlice()
         external
         returns (IDepositWithdrawCompatible.DepositRequest[] memory);
+    function getPendingDepositRequests()
+        external
+        view
+        returns (IDepositWithdrawCompatible.DepositRequest[] memory);
     function getPendingDepositsCount() external view returns (uint256);
+    function getPendingWithdrawRequests()
+        external
+        view
+        returns (IDepositWithdrawCompatible.WithdrawRequest[] memory);
     function getPendingWithdrawsCount() external view returns (uint256);
     function getQueuedToken(
         TokenValidator.Type tokenType

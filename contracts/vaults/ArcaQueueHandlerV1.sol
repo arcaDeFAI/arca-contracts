@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {TokenValidator} from "../TokenTypes.sol";
 import {IArcaQueueHandlerV1} from "../interfaces/IArcaQueueHandlerV1.sol";
 import {
@@ -9,7 +14,8 @@ import {
 } from "../interfaces/IDepositWithdrawCompatible.sol";
 
 contract ArcaQueueHandlerV1 is
-    Ownable,
+    Initializable,
+    OwnableUpgradeable,
     IDepositWithdrawCompatible,
     TokenValidator,
     IArcaQueueHandlerV1
@@ -25,7 +31,7 @@ contract ArcaQueueHandlerV1 is
 
     function getQueuedToken(
         TokenValidator.Type tokenType
-    ) public view validToken(tokenType) returns (uint256) {
+    ) public view returns (uint256) {
         return _queuedTokens[uint256(tokenType)];
     }
 
@@ -41,7 +47,18 @@ contract ArcaQueueHandlerV1 is
         uint256 sharesY
     );
 
-    constructor() Ownable(msg.sender) {
+    /**
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initialize the queue handler
+     */
+    function initialize() public initializer {
+        __Ownable_init(msg.sender);
         depositQueueStart = 0;
         withdrawQueueStart = 0;
     }
@@ -49,7 +66,7 @@ contract ArcaQueueHandlerV1 is
     function reduceQueuedToken(
         uint256 amount,
         TokenValidator.Type tokenType
-    ) external onlyOwner validToken(tokenType) {
+    ) external onlyOwner {
         require(
             getQueuedToken(tokenType) >= amount,
             "Not enough tokens in queue"
@@ -57,9 +74,9 @@ contract ArcaQueueHandlerV1 is
         _queuedTokens[uint256(tokenType)] -= amount;
     }
 
-    function getDepositQueueTrailingSlice()
-        external
-        onlyOwner
+    function _buildPendingDepositSlice()
+        private
+        view
         returns (DepositRequest[] memory)
     {
         uint256 length = depositQueue.length;
@@ -76,15 +93,35 @@ contract ArcaQueueHandlerV1 is
             slicedDepositQueue[i] = depositQueue[i + depositQueueStart];
         }
 
+        return slicedDepositQueue;
+    }
+
+    function getPendingDepositRequests()
+        external
+        view
+        onlyOwner
+        returns (DepositRequest[] memory)
+    {
+        return _buildPendingDepositSlice();
+    }
+
+    function getDepositQueueTrailingSlice()
+        external
+        onlyOwner
+        returns (DepositRequest[] memory)
+    {
+        DepositRequest[]
+            memory slicedDepositQueue = _buildPendingDepositSlice();
+
         // Clear processed deposits
-        depositQueueStart += sliceLength;
+        depositQueueStart += slicedDepositQueue.length;
 
         return slicedDepositQueue;
     }
 
-    function getWithdrawQueueTrailingSlice()
-        external
-        onlyOwner
+    function _buildPendingWithdrawSlice()
+        private
+        view
         returns (WithdrawRequest[] memory)
     {
         uint256 length = withdrawQueue.length;
@@ -101,15 +138,35 @@ contract ArcaQueueHandlerV1 is
             slicedWithdrawQueue[i] = withdrawQueue[i + withdrawQueueStart];
         }
 
+        return slicedWithdrawQueue;
+    }
+
+    function getPendingWithdrawRequests()
+        external
+        view
+        onlyOwner
+        returns (WithdrawRequest[] memory)
+    {
+        return _buildPendingWithdrawSlice();
+    }
+
+    function getWithdrawQueueTrailingSlice()
+        external
+        onlyOwner
+        returns (WithdrawRequest[] memory)
+    {
+        WithdrawRequest[]
+            memory slicedWithdrawQueue = _buildPendingWithdrawSlice();
+
         // Clear processed withdrawals
-        withdrawQueueStart += sliceLength;
+        withdrawQueueStart += slicedWithdrawQueue.length;
 
         return slicedWithdrawQueue;
     }
 
     function enqueueDepositRequest(
         DepositRequest memory depositRequest
-    ) external onlyOwner validToken(depositRequest.tokenType) {
+    ) external onlyOwner {
         // Add to deposit queue with net amount
         depositQueue.push(depositRequest);
 
@@ -118,7 +175,7 @@ contract ArcaQueueHandlerV1 is
             .amount;
 
         emit DepositQueued(
-            msg.sender,
+            depositRequest.user,
             depositRequest.amount,
             uint256(depositRequest.tokenType)
         );
@@ -130,7 +187,7 @@ contract ArcaQueueHandlerV1 is
         // Add to withdraw queue
         withdrawQueue.push(withdrawRequest);
         emit WithdrawQueued(
-            msg.sender,
+            withdrawRequest.user,
             withdrawRequest.shares[uint256(TokenValidator.Type.TokenX)],
             withdrawRequest.shares[uint256(TokenValidator.Type.TokenY)]
         );
@@ -152,4 +209,12 @@ contract ArcaQueueHandlerV1 is
     function getPendingWithdrawsCount() external view returns (uint256) {
         return withdrawQueue.length - withdrawQueueStart;
     }
+
+    /**
+     * @dev Storage gap for future upgrades
+     * This gap allows us to add new storage variables in future versions
+     * Current storage slots used: ~10 (estimated)
+     * Gap size: 50 - 10 = 40 slots reserved
+     */
+    uint256[40] private __gap;
 }

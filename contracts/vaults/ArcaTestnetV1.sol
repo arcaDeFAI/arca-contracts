@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {
-    ERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+// TODO: Add maximum exposure limits per user
+// TODO: Add emergency pause functionality
+// TODO: Add minimum deposit amounts to prevent dust attacks
+// TODO: Add maximum queue sizes to prevent DoS
+// TODO: Add slippage protection for users during rebalancing
+
 import {
     SafeERC20
 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -14,10 +17,13 @@ import {
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
-import {ILBRouter} from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import {
-    ILBHooksBaseRewarder
-} from "../interfaces/Metropolis/ILBHooksBaseRewarder.sol";
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ILBRouter} from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import {ILBPair} from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 import {IArcaFeeManagerV1} from "../interfaces/IArcaFeeManagerV1.sol";
 import {IArcaQueueHandlerV1} from "../interfaces/IArcaQueueHandlerV1.sol";
@@ -35,9 +41,10 @@ import {
  * Enhanced with METRO reward claiming and automatic compounding functionality.
  */
 contract ArcaTestnetV1 is
-    ERC20Upgradeable,
+    Initializable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
+    UUPSUpgradeable,
     IDepositWithdrawCompatible,
     TokenValidator
 {
@@ -45,13 +52,13 @@ contract ArcaTestnetV1 is
 
     function getVaultToken(
         TokenValidator.Type tokenType
-    ) private view validToken(tokenType) returns (IERC20) {
+    ) private view returns (IERC20) {
         return vaultConfig.tokens[uint256(tokenType)];
     }
 
     function getTokenTotalShares(
         TokenValidator.Type tokenType
-    ) private view validToken(tokenType) returns (uint256) {
+    ) private view returns (uint256) {
         return totalShares[uint256(tokenType)];
     }
 
@@ -101,6 +108,13 @@ contract ArcaTestnetV1 is
     );
 
     /**
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
      * @dev Initializes the vault's own token.
      * These tokens are minted when someone does a deposit. It is burned in order
      * to withdraw the corresponding portion of the underlying assets.
@@ -111,8 +125,6 @@ contract ArcaTestnetV1 is
         uint16 _binStep,
         uint256 _amountXMin,
         uint256 _amountYMin,
-        string memory _name,
-        string memory _symbol,
         address _lbRouter,
         address _lbpAMM,
         address _lbpContract,
@@ -120,9 +132,9 @@ contract ArcaTestnetV1 is
         IArcaQueueHandlerV1 _queueHandler,
         IArcaFeeManagerV1 _feeManager
     ) public initializer {
-        __ERC20_init(_name, _symbol);
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
 
         IERC20[TOKEN_COUNT] memory tokens;
         tokens[uint256(TokenValidator.Type.TokenX)] = IERC20(_tokenX);
@@ -142,6 +154,9 @@ contract ArcaTestnetV1 is
         feeManager = _feeManager;
         queueHandler = _queueHandler;
         rewardClaimer = _rewardClaimer;
+
+        // Note: Ownership transfer is handled by VaultDeployer for atomic deployment
+        // or manually by deployer for controlled deployment
     }
 
     /**
@@ -150,7 +165,7 @@ contract ArcaTestnetV1 is
      */
     function tokenBalance(
         TokenValidator.Type tokenType
-    ) public view validToken(tokenType) returns (uint256) {
+    ) public view returns (uint256) {
         return
             getVaultToken(tokenType).balanceOf(address(this)) -
             queueHandler.getQueuedToken(tokenType);
@@ -158,7 +173,7 @@ contract ArcaTestnetV1 is
 
     function totalSupply(
         TokenValidator.Type tokenType
-    ) public view validToken(tokenType) returns (uint256) {
+    ) public view returns (uint256) {
         return totalShares[uint256(tokenType)];
     }
 
@@ -169,19 +184,25 @@ contract ArcaTestnetV1 is
      */
     function getPricePerFullShare(
         TokenValidator.Type tokenType
-    ) public view validToken(tokenType) returns (uint256) {
-        return
-            totalSupply(tokenType) == 0
-                ? 1e18
-                : (tokenBalance(tokenType) * 1e18) / totalSupply(tokenType);
+    ) public view returns (uint256) {
+        uint256 balance = tokenBalance(tokenType);
+        uint256 supply = totalSupply(tokenType);
+
+        if (supply == 0) {
+            return 1e18;
+        }
+
+        if (balance == 0) {
+            return 0; // No underlying assets per share when balance is zero
+        }
+
+        return (balance * 1e18) / supply;
     }
 
     /**
      * @dev A helper function to call depositToken() with all the sender's funds.
      */
-    function depositAll(
-        TokenValidator.Type tokenType
-    ) external validToken(tokenType) {
+    function depositAll(TokenValidator.Type tokenType) external {
         uint256 balance = getVaultToken(tokenType).balanceOf(msg.sender);
         depositToken(balance, tokenType);
     }
@@ -193,8 +214,8 @@ contract ArcaTestnetV1 is
     function depositToken(
         uint256 _amount,
         TokenValidator.Type _tokenType
-    ) public validToken(_tokenType) nonReentrant {
-        require(_amount > 0, "Amount must be greater than 0");
+    ) public nonReentrant {
+        require(_amount > 0, "Cannot deposit 0");
 
         IERC20 token = getVaultToken(_tokenType);
         uint256 _pool = token.balanceOf(address(this));
@@ -216,6 +237,7 @@ contract ArcaTestnetV1 is
             );
         }
 
+        // TODO: here, should I use netAmount or _amount?
         queueHandler.enqueueDepositRequest(
             DepositRequest({
                 user: msg.sender,
@@ -448,6 +470,18 @@ contract ArcaTestnetV1 is
             uint256 totalWithdrawAmount = 0;
 
             for (uint256 tokenIdx = 0; tokenIdx < TOKEN_COUNT; tokenIdx++) {
+                // Sanity check: user shouldn't have shares if total shares is zero
+                require(
+                    totalShares[tokenIdx] > 0 || request.shares[tokenIdx] == 0,
+                    "Invalid state: user has shares but total shares is zero"
+                );
+
+                // Skip calculation if no total shares (should not happen due to sanity check above)
+                if (totalShares[tokenIdx] == 0) {
+                    userAmounts[tokenIdx] = 0;
+                    continue;
+                }
+
                 // Share of removed liquidity
                 userAmounts[tokenIdx] =
                     (totalRemoved[tokenIdx] * request.shares[tokenIdx]) /
@@ -613,6 +647,16 @@ contract ArcaTestnetV1 is
     }
 
     /**
+     * @dev Get user's shares for a specific token type (replaces ERC20 balanceOf)
+     */
+    function getShares(
+        address user,
+        TokenValidator.Type tokenType
+    ) external view returns (uint256) {
+        return shares[user][uint256(tokenType)];
+    }
+
+    /**
      * @dev Get user's share breakdown
      */
     function getUserShares(
@@ -623,4 +667,20 @@ contract ArcaTestnetV1 is
             shares[user][uint256(TokenValidator.Type.TokenY)]
         );
     }
+
+    /**
+     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
+     * Called by {upgradeTo} and {upgradeToAndCall}.
+     */
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+
+    /**
+     * @dev Storage gap for future upgrades
+     * This gap allows us to add new storage variables in future versions
+     * Current storage slots used: ~15 (estimated)
+     * Gap size: 50 - 15 = 35 slots reserved
+     */
+    uint256[35] private __gap;
 }
