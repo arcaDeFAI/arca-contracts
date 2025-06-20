@@ -6,53 +6,33 @@ This document outlines the comprehensive deployment strategy for the Arca Vault 
 
 ## Key Principles
 
-1. **Hardhat Ignition First**: Use Hardhat Ignition modules for declarative deployment
-2. **TypeScript Only**: All deployment scripts and modules use TypeScript
+1. **Script-Based Deployment**: Use TypeScript scripts with OpenZeppelin upgrades plugin for production
+2. **TypeScript Only**: All deployment scripts use TypeScript for type safety
 3. **UUPS Upgrade Support**: Maintain upgradeability through OpenZeppelin patterns
 4. **Contract Size Awareness**: Avoid factory patterns that exceed 24.5KB limit
 5. **Atomic Deployment**: Ensure complete system deployment or rollback
 
 ## Deployment Architecture
 
-### Three-Tier Deployment Strategy
+### Two-Tier Deployment Strategy
 
-#### Tier 1: Simple Deployment (Hardhat Ignition)
-- **Purpose**: Quick testing, development, simple deployments
-- **Method**: Hardhat Ignition modules
-- **Use Cases**: Local development, basic contract testing
-- **Files**: `ignition/modules/*.ts`
-
-#### Tier 2: UUPS Proxy Deployment (Scripts)
-- **Purpose**: Production deployments with upgradeability
+#### Tier 1: Production Deployment (Scripts)
+- **Purpose**: Production deployments with full UUPS + Beacon proxy support
 - **Method**: TypeScript scripts with OpenZeppelin upgrades plugin
-- **Use Cases**: Testnet, mainnet, complex proxy deployments
+- **Use Cases**: Testnet, mainnet, all proxy deployments
 - **Files**: `scripts/deployArcaSystem.ts`
+- **Benefits**: Full OpenZeppelin integration, complex deployment logic, ownership transfers
 
-#### Tier 3: Advanced Ignition (Planned)
-- **Purpose**: Production-grade declarative deployment with UUPS support
-- **Method**: Advanced Hardhat Ignition modules with proxy support
-- **Use Cases**: Future production deployments when Ignition proxy support matures
-- **Files**: `ignition/modules/ArcaProxySystem.ts` (to be created)
+#### Tier 2: Simple Testing (Hardhat Ignition)
+- **Purpose**: Quick testing of individual contracts (no proxies)
+- **Method**: Basic Hardhat Ignition modules
+- **Use Cases**: Local development, simple contract testing only
+- **Files**: `ignition/modules/ArcaVault.ts`
+- **Limitations**: No proxy support, testing only
 
 ## Current Implementation
 
-### Tier 1: Basic Ignition Module
-```typescript
-// ignition/modules/ArcaVault.ts
-const arcaVaultModule = buildModule("ArcaVaultModule", (m) => {
-  const arcaVaultContract = m.contract("ArcaTestnetV1");
-  return { arcaVaultContract };
-});
-```
-
-**Usage**: `npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts`
-
-**Limitations**:
-- No proxy support
-- No complex initialization
-- Not suitable for production
-
-### Tier 2: UUPS Script Deployment
+### Tier 1: Production Script Deployment
 ```typescript
 // scripts/deployArcaSystem.ts
 export async function deployArcaSystem(config: DeploymentConfig): Promise<DeploymentAddresses>
@@ -66,6 +46,22 @@ export async function deployArcaSystem(config: DeploymentConfig): Promise<Deploy
 - Type safety with interfaces
 
 **Usage**: `npx hardhat run scripts/deployArcaSystem.ts --network <network>`
+
+### Tier 2: Simple Ignition Module (Testing Only)
+```typescript
+// ignition/modules/ArcaVault.ts
+const arcaVaultModule = buildModule("ArcaVaultModule", (m) => {
+  const arcaVaultContract = m.contract("ArcaTestnetV1");
+  return { arcaVaultContract };
+});
+```
+
+**Usage**: `npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network localhost`
+
+**Limitations**:
+- No proxy support
+- No complex initialization
+- Testing and development only
 
 ## Deployment Flow
 
@@ -159,26 +155,9 @@ interface DeploymentConfig {
    - Document rollback procedures
    - Keep previous implementation addresses
 
-## Future Enhancements
+## Future Considerations
 
-### Hardhat Ignition Integration
-Once Hardhat Ignition supports OpenZeppelin proxy patterns:
-
-```typescript
-// Future: ignition/modules/ArcaProxySystem.ts
-const arcaProxyModule = buildModule("ArcaProxyModule", (m) => {
-  const queueBeacon = m.deployBeacon("ArcaQueueHandlerV1");
-  const feeBeacon = m.deployBeacon("ArcaFeeManagerV1");
-  
-  const queueProxy = m.deployBeaconProxy(queueBeacon, "ArcaQueueHandlerV1", []);
-  const feeProxy = m.deployBeaconProxy(feeBeacon, "ArcaFeeManagerV1", [feeRecipient]);
-  
-  const rewardProxy = m.deployProxy("ArcaRewardClaimerV1", [...params], { kind: 'uups' });
-  const vaultProxy = m.deployProxy("ArcaTestnetV1", [...params], { kind: 'uups' });
-  
-  return { vaultProxy, rewardProxy, queueProxy, feeProxy };
-});
-```
+**Note**: Hardhat Ignition currently lacks native OpenZeppelin proxy support. For this project's requirements (mixed UUPS + Beacon proxies, complex ownership transfers, registry integration), TypeScript scripts with the OpenZeppelin upgrades plugin remain the optimal solution.
 
 ### CI/CD Integration
 - Automated deployment verification

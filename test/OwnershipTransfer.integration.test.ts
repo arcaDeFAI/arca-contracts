@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import hre from "hardhat";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import {
   ArcaTestnetV1,
@@ -47,42 +48,55 @@ describe("Ownership Transfer Integration Test", function () {
     const MockRewarderFactory = await ethers.getContractFactory("MockLBHooksBaseRewarder");
     mockRewarder = await MockRewarderFactory.deploy();
 
-    // Deploy fee manager
+    // Deploy fee manager using beacon proxy
     const FeeManagerFactory = await ethers.getContractFactory("ArcaFeeManagerV1");
-    feeManager = await FeeManagerFactory.deploy(feeRecipient.address);
-
-    // Deploy queue handler
-    const QueueHandlerFactory = await ethers.getContractFactory("ArcaQueueHandlerV1");
-    queueHandler = await QueueHandlerFactory.deploy();
-
-    // Deploy reward claimer
-    const RewardClaimerFactory = await ethers.getContractFactory("ArcaRewardClaimerV1");
-    rewardClaimer = await RewardClaimerFactory.deploy(
-      await mockRewarder.getAddress(),
-      await metroToken.getAddress(),
-      await feeManager.getAddress(),
-      await tokenX.getAddress(),
-      await mockPair.getAddress(),
-      await mockPair.getAddress(),
-      await mockPair.getAddress(),
-      await mockRouter.getAddress(),
-      5,
-      await tokenX.getAddress(),
-      await tokenY.getAddress()
+    const feeManagerBeacon = await hre.upgrades.deployBeacon(FeeManagerFactory);
+    const feeManagerProxy = await hre.upgrades.deployBeaconProxy(
+      feeManagerBeacon,
+      FeeManagerFactory,
+      [feeRecipient.address]
     );
+    await feeManagerProxy.waitForDeployment();
+    feeManager = FeeManagerFactory.attach(await feeManagerProxy.getAddress()) as ArcaFeeManagerV1;
 
-    // Deploy main vault
+    // Deploy queue handler using beacon proxy
+    const QueueHandlerFactory = await ethers.getContractFactory("ArcaQueueHandlerV1");
+    const queueHandlerBeacon = await hre.upgrades.deployBeacon(QueueHandlerFactory);
+    const queueHandlerProxy = await hre.upgrades.deployBeaconProxy(
+      queueHandlerBeacon,
+      QueueHandlerFactory,
+      []
+    );
+    await queueHandlerProxy.waitForDeployment();
+    queueHandler = QueueHandlerFactory.attach(await queueHandlerProxy.getAddress()) as ArcaQueueHandlerV1;
+
+    // Deploy reward claimer using UUPS proxy
+    const RewardClaimerFactory = await ethers.getContractFactory("ArcaRewardClaimerV1");
+    const rewardClaimerProxy = await hre.upgrades.deployProxy(
+      RewardClaimerFactory,
+      [
+        await mockRewarder.getAddress(),
+        await metroToken.getAddress(),
+        await feeManager.getAddress(),
+        await tokenX.getAddress(),
+        await mockPair.getAddress(),
+        await mockPair.getAddress(),
+        await mockPair.getAddress(),
+        await mockRouter.getAddress(),
+        5,
+        await tokenX.getAddress(),
+        await tokenY.getAddress()
+      ],
+      { kind: 'uups' }
+    );
+    await rewardClaimerProxy.waitForDeployment();
+    rewardClaimer = RewardClaimerFactory.attach(await rewardClaimerProxy.getAddress()) as ArcaRewardClaimerV1;
+
+    // Deploy main vault using UUPS proxy
     const VaultFactory = await ethers.getContractFactory("ArcaTestnetV1");
-    vault = await VaultFactory.deploy();
-  });
-
-  describe("Manual Ownership Transfer Test", function () {
-    it("Should successfully transfer ownership step by step", async function () {
-      // Step 1: Verify initial ownership
-      expect(await rewardClaimer.owner()).to.equal(owner.address);
-
-      // Step 2: Initialize vault (without automatic ownership transfer for now)
-      await vault.initialize(
+    const vaultProxy = await hre.upgrades.deployProxy(
+      VaultFactory,
+      [
         await tokenX.getAddress(),
         await tokenY.getAddress(),
         25, // binStep
@@ -96,7 +110,17 @@ describe("Ownership Transfer Integration Test", function () {
         await rewardClaimer.getAddress(),
         await queueHandler.getAddress(),
         await feeManager.getAddress()
-      );
+      ],
+      { kind: 'uups' }
+    );
+    await vaultProxy.waitForDeployment();
+    vault = VaultFactory.attach(await vaultProxy.getAddress()) as ArcaTestnetV1;
+  });
+
+  describe("Manual Ownership Transfer Test", function () {
+    it("Should successfully transfer ownership step by step", async function () {
+      // Step 1: Verify initial ownership
+      expect(await rewardClaimer.owner()).to.equal(owner.address);
 
       // Step 3: Manually transfer ownership to vault (as deployer would do)
       await rewardClaimer.transferOwnership(await vault.getAddress());

@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import hre from "hardhat";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import {
   ArcaTestnetV1,
@@ -53,57 +54,76 @@ describe("Reward Compounding Integration Tests", function () {
     const MockRewarderFactory = await ethers.getContractFactory("MockLBHooksBaseRewarder");
     mockRewarder = await MockRewarderFactory.deploy();
 
-    // Deploy fee manager
+    // Deploy fee manager using beacon proxy
     const FeeManagerFactory = await ethers.getContractFactory("ArcaFeeManagerV1");
-    feeManager = await FeeManagerFactory.deploy(feeRecipient.address);
+    const feeManagerBeacon = await hre.upgrades.deployBeacon(FeeManagerFactory);
+    const feeManagerProxy = await hre.upgrades.deployBeaconProxy(
+      feeManagerBeacon,
+      FeeManagerFactory,
+      [feeRecipient.address]
+    );
+    await feeManagerProxy.waitForDeployment();
+    feeManager = FeeManagerFactory.attach(await feeManagerProxy.getAddress()) as ArcaFeeManagerV1;
 
-    // Deploy queue handler
+    // Deploy queue handler using beacon proxy
     const QueueHandlerFactory = await ethers.getContractFactory("ArcaQueueHandlerV1");
-    queueHandler = await QueueHandlerFactory.deploy();
+    const queueHandlerBeacon = await hre.upgrades.deployBeacon(QueueHandlerFactory);
+    const queueHandlerProxy = await hre.upgrades.deployBeaconProxy(
+      queueHandlerBeacon,
+      QueueHandlerFactory,
+      []
+    );
+    await queueHandlerProxy.waitForDeployment();
+    queueHandler = QueueHandlerFactory.attach(await queueHandlerProxy.getAddress()) as ArcaQueueHandlerV1;
 
-    // Deploy reward claimer
+    // Deploy reward claimer using UUPS proxy
     const RewardClaimerFactory = await ethers.getContractFactory("ArcaRewardClaimerV1");
-    rewardClaimer = await RewardClaimerFactory.deploy(
-      await mockRewarder.getAddress(),
-      await metroToken.getAddress(),
-      await feeManager.getAddress(),
-      await tokenX.getAddress(), // Using tokenX as native token for simplicity
-      await mockPair.getAddress(),
-      await mockPair.getAddress(), // Using same pair for AMM
-      await mockPair.getAddress(), // Using same pair for USD
-      await mockRouter.getAddress(),
-      5, // idSlippage
-      await tokenX.getAddress(),
-      await tokenY.getAddress()
+    const rewardClaimerProxy = await hre.upgrades.deployProxy(
+      RewardClaimerFactory,
+      [
+        await mockRewarder.getAddress(),
+        await metroToken.getAddress(),
+        await feeManager.getAddress(),
+        await tokenX.getAddress(), // Using tokenX as native token for simplicity
+        await mockPair.getAddress(),
+        await mockPair.getAddress(), // Using same pair for AMM
+        await mockPair.getAddress(), // Using same pair for USD
+        await mockRouter.getAddress(),
+        5, // idSlippage
+        await tokenX.getAddress(),
+        await tokenY.getAddress()
+      ],
+      { kind: 'uups' }
     );
+    await rewardClaimerProxy.waitForDeployment();
+    rewardClaimer = RewardClaimerFactory.attach(await rewardClaimerProxy.getAddress()) as ArcaRewardClaimerV1;
 
-    // Deploy main vault
+    // Deploy main vault using UUPS proxy
     const VaultFactory = await ethers.getContractFactory("ArcaTestnetV1");
-    vault = await VaultFactory.deploy();
-
-    // Transfer ownership of modules to owner first (so vault can take control)
-    await queueHandler.transferOwnership(owner.address);
-    await feeManager.transferOwnership(owner.address);
-    
-    await vault.initialize(
-      await tokenX.getAddress(),
-      await tokenY.getAddress(),
-      BIN_STEP,
-      MIN_AMOUNTS[0],
-      MIN_AMOUNTS[1],
-      "Arca Vault Token",
-      "AVT",
-      await mockRouter.getAddress(),
-      await mockPair.getAddress(),
-      await mockPair.getAddress(),
-      await rewardClaimer.getAddress(),
-      await queueHandler.getAddress(),
-      await feeManager.getAddress()
+    const vaultProxy = await hre.upgrades.deployProxy(
+      VaultFactory,
+      [
+        await tokenX.getAddress(),
+        await tokenY.getAddress(),
+        BIN_STEP,
+        MIN_AMOUNTS[0],
+        MIN_AMOUNTS[1],
+        "Arca Vault Token",
+        "AVT",
+        await mockRouter.getAddress(),
+        await mockPair.getAddress(),
+        await mockPair.getAddress(),
+        await rewardClaimer.getAddress(),
+        await queueHandler.getAddress(),
+        await feeManager.getAddress()
+      ],
+      { kind: 'uups' }
     );
+    await vaultProxy.waitForDeployment();
+    vault = VaultFactory.attach(await vaultProxy.getAddress()) as ArcaTestnetV1;
 
-    // Transfer ownership of other modules to vault after initialization
-    await queueHandler.transferOwnership(await vault.getAddress());
-    await feeManager.transferOwnership(await vault.getAddress());
+    // Transfer ownership of modules to vault
+    await rewardClaimer.transferOwnership(await vault.getAddress());
 
     // Setup initial token balances
     await tokenX.mint(user1.address, INITIAL_SUPPLY);

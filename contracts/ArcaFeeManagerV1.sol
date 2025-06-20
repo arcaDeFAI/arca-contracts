@@ -14,9 +14,9 @@ contract ArcaFeeManagerV1 is
     OwnableUpgradeable,
     IArcaFeeManagerV1
 {
-    uint256 private depositFee = 50; // 0.5% (50 basis points)
-    uint256 private withdrawFee = 50; // 0.5% (50 basis points)
-    uint256 private performanceFee = 1000; // 10% (1000 basis points)
+    uint256 private depositFee; // 0.5% (50 basis points) - set in initializer
+    uint256 private withdrawFee; // 0.5% (50 basis points) - set in initializer
+    uint256 private performanceFee; // 10% (1000 basis points) - set in initializer
     address private feeRecipient;
 
     uint256 public constant BASIS_POINTS = 10000;
@@ -42,6 +42,11 @@ contract ArcaFeeManagerV1 is
         __Ownable_init(msg.sender);
         require(_feeRecipient != address(0), "Invalid fee recipient");
         feeRecipient = _feeRecipient;
+        
+        // Set default fee values
+        depositFee = 50;    // 0.5%
+        withdrawFee = 50;   // 0.5%
+        performanceFee = 1000; // 10%
     }
 
     function setFees(
