@@ -2,6 +2,29 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Test-Driven Development (TDD) Methodology
+
+**ALWAYS follow TDD principles when working on this codebase.** This is the primary development methodology and has proven essential for this project's success.
+
+### TDD Workflow (MANDATORY)
+1. **Requirements First**: Understand what the code should do based on business logic
+2. **Tests Define Behavior**: Write or examine tests to understand expected behavior  
+3. **Code Follows Tests**: Implement code to satisfy test requirements
+4. **Never Hack Tests**: Fix code to meet test expectations, not the reverse
+
+### Why TDD is Critical for This Project
+- **Prevented Production Bugs**: TDD caught a critical fee initialization bug that would have caused complete fee revenue loss
+- **Better Design Decisions**: Led to the elegant hybrid queue design (view + processing functions)
+- **Accurate Implementation**: Tests define the real-world contract behavior, ensuring correctness
+- **Upgradeable Contract Safety**: OpenZeppelin upgrade validation integrated into test suite catches breaking changes
+
+### TDD Success Examples from This Project
+- **ArcaFeeManagerV1**: TDD revealed fee initialization wasn't happening in proxy deployment
+- **ArcaQueueHandlerV1**: Tests demanded clean separation of view vs state-changing functions
+- **ArcaRewardClaimerV1**: Test expectations revealed business logic bug in reward claiming flow
+
+**Remember**: When tests fail, ask "What should the code do?" not "How can I make the test pass?"
+
 ## Project Overview
 
 Arca is a decentralized vault system for automated liquidity provision on the Sonic blockchain. It provides intelligent vault management for Metropolis DLMM (Dynamic Liquidity Market Maker) pools with automated reward compounding and yield optimization through Python bot rebalancing.
@@ -109,8 +132,10 @@ npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network localhost
 - Implement comprehensive validation with custom modifiers (`validToken`, etc.)
 
 ### Testing Standards
+- **FOLLOW TDD**: Tests define requirements, code implements them
 - Use Hardhat's testing framework with TypeScript
 - Test files located in `test/` directory with pattern `*.test.ts`
+- Production-accurate proxy deployment in all tests (catches upgrade safety issues)
 - Mock external dependencies for isolated unit testing
 
 ### Code Quality
@@ -224,4 +249,6 @@ import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
 ## Development Workflow Notes
 
 ### Best Practices
+- **TDD FIRST**: Always understand requirements through tests before changing code
 - As a habit, you should run "npm run lint:fix", "npm run compile" and "npm run test" after making major code changes
+- When debugging failures, ask "What should this code do?" based on business logic and test expectations
