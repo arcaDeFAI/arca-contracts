@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import hre from "hardhat";
-import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import {
+import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import type {
   ArcaRewardClaimerV1,
   ArcaFeeManagerV1,  
   MockERC20,
