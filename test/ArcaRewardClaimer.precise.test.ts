@@ -1,9 +1,10 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import hre from "hardhat";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import {
   ArcaRewardClaimerV1,
-  ArcaFeeManagerV1,
+  ArcaFeeManagerV1,  
   MockERC20,
   MockLBRouter,
   MockLBPair,
@@ -54,25 +55,38 @@ describe("ArcaRewardClaimerV1 Precise Tests", function () {
     const MockRewarderFactory = await ethers.getContractFactory("MockLBHooksBaseRewarder");
     mockRewarder = await MockRewarderFactory.deploy();
 
-    // Deploy fee manager with known fee rates
+    // Deploy fee manager with known fee rates using beacon proxy
     const FeeManagerFactory = await ethers.getContractFactory("ArcaFeeManagerV1");
-    feeManager = await FeeManagerFactory.deploy(feeRecipient.address);
-
-    // Deploy reward claimer
-    const RewardClaimerFactory = await ethers.getContractFactory("ArcaRewardClaimerV1");
-    rewardClaimer = await RewardClaimerFactory.deploy(
-      await mockRewarder.getAddress(),
-      await metroToken.getAddress(),
-      await feeManager.getAddress(),
-      await tokenX.getAddress(), // native token
-      await mockPair.getAddress(),
-      await mockPair.getAddress(),
-      await mockPair.getAddress(),
-      await mockRouter.getAddress(),
-      5, // idSlippage
-      await tokenX.getAddress(),
-      await tokenY.getAddress()
+    const feeManagerBeacon = await ethers.upgrades.deployBeacon(FeeManagerFactory);
+    const feeManagerProxy = await ethers.upgrades.deployBeaconProxy(
+      feeManagerBeacon,
+      FeeManagerFactory,
+      [feeRecipient.address]
     );
+    await feeManagerProxy.waitForDeployment();
+    feeManager = FeeManagerFactory.attach(await feeManagerProxy.getAddress()) as ArcaFeeManagerV1;
+
+    // Deploy reward claimer using UUPS proxy
+    const RewardClaimerFactory = await ethers.getContractFactory("ArcaRewardClaimerV1");
+    const rewardClaimerProxy = await ethers.upgrades.deployProxy(
+      RewardClaimerFactory,
+      [
+        await mockRewarder.getAddress(),
+        await metroToken.getAddress(),
+        await feeManager.getAddress(),
+        await tokenX.getAddress(), // native token
+        await mockPair.getAddress(),
+        await mockPair.getAddress(),
+        await mockPair.getAddress(),
+        await mockRouter.getAddress(),
+        5, // idSlippage
+        await tokenX.getAddress(),
+        await tokenY.getAddress()
+      ],
+      { kind: 'uups' }
+    );
+    await rewardClaimerProxy.waitForDeployment();
+    rewardClaimer = RewardClaimerFactory.attach(await rewardClaimerProxy.getAddress()) as ArcaRewardClaimerV1;
 
     // Transfer ownership to vault for testing
     await rewardClaimer.transferOwnership(vault.address);
