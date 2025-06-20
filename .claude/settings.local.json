@@ -21,7 +21,8 @@
       "Bash(for file in contracts/vaults/ArcaTestnetV1.sol contracts/vaults/ArcaRewardClaimerV1.sol contracts/ArcaFeeManagerV1.sol contracts/vaults/ArcaQueueHandlerV1.sol)",
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(ls:*)"
     ],
     "deny": []
   }

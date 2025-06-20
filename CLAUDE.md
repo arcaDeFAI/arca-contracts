@@ -22,6 +22,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **ArcaFeeManagerV1**: TDD revealed fee initialization wasn't happening in proxy deployment
 - **ArcaQueueHandlerV1**: Tests demanded clean separation of view vs state-changing functions
 - **ArcaRewardClaimerV1**: Test expectations revealed business logic bug in reward claiming flow
+- **ArcaTestnetV1 Division by Zero**: Production workflow test revealed critical division by zero bugs in `getPricePerFullShare` and withdrawal processing when token balances hit edge cases
+
+### Critical TDD Lesson: Failing Tests Reveal Production Bugs
+
+**Never rush to "fix" a failing test by changing test data** - investigate the root cause first. A systematic production workflow test revealed multiple division by zero vulnerabilities:
+
+1. **Bug 1**: `getPricePerFullShare()` division by zero when `tokenBalance == 0` but `totalSupply > 0`
+2. **Bug 2**: Withdrawal processing division by zero when `totalShares[tokenIdx] == 0`
+
+**The Fix**: Added proper edge case handling and sanity checks rather than changing test numbers.
+
+**The Lesson**: Complex integration tests that simulate real user workflows often catch edge cases that unit tests miss. These bugs could have caused catastrophic failures in production.
 
 **Remember**: When tests fail, ask "What should the code do?" not "How can I make the test pass?"
 
