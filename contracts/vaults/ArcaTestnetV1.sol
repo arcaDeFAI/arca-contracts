@@ -20,6 +20,12 @@ import {
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ILBRouter} from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import {
     ILBHooksBaseRewarder
@@ -42,9 +48,11 @@ import {
  * Enhanced with METRO reward claiming and automatic compounding functionality.
  */
 contract ArcaTestnetV1 is
+    Initializable,
     ERC20Upgradeable,
     OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
+    UUPSUpgradeable,
     IDepositWithdrawCompatible,
     TokenValidator
 {
@@ -108,6 +116,13 @@ contract ArcaTestnetV1 is
     );
 
     /**
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
      * @dev Initializes the vault's own token.
      * These tokens are minted when someone does a deposit. It is burned in order
      * to withdraw the corresponding portion of the underlying assets.
@@ -130,6 +145,7 @@ contract ArcaTestnetV1 is
         __ERC20_init(_name, _symbol);
         __Ownable_init(msg.sender);
         __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
 
         IERC20[TOKEN_COUNT] memory tokens;
         tokens[uint256(TokenValidator.Type.TokenX)] = IERC20(_tokenX);
@@ -149,10 +165,9 @@ contract ArcaTestnetV1 is
         feeManager = _feeManager;
         queueHandler = _queueHandler;
         rewardClaimer = _rewardClaimer;
-        
-        // Transfer ownership of reward claimer to this vault for proper token flow
-        // NOTE: For production, this should be done after deployment by the deployer
-        // Ownable(address(rewardClaimer)).transferOwnership(address(this));
+
+        // Note: Ownership transfer is handled by VaultDeployer for atomic deployment
+        // or manually by deployer for controlled deployment
     }
 
     /**
@@ -635,4 +650,20 @@ contract ArcaTestnetV1 is
             shares[user][uint256(TokenValidator.Type.TokenY)]
         );
     }
+
+    /**
+     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
+     * Called by {upgradeTo} and {upgradeToAndCall}.
+     */
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+
+    /**
+     * @dev Storage gap for future upgrades
+     * This gap allows us to add new storage variables in future versions
+     * Current storage slots used: ~15 (estimated)
+     * Gap size: 50 - 15 = 35 slots reserved
+     */
+    uint256[35] private __gap;
 }

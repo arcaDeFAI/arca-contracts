@@ -25,7 +25,10 @@ contract MockLBHooksBaseRewarder {
     }
 
     // Additional functions that might be needed
-    function pendingRewards(address user, uint256[] calldata binIds) external view returns (uint256) {
+    function pendingRewards(
+        address user,
+        uint256[] calldata binIds
+    ) external view returns (uint256) {
         return claimAmount;
     }
 }

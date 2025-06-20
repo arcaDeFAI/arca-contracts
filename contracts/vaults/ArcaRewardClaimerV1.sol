@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import {ILBRouter} from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/utils/ReentrancyGuardUpgradeable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ILBPair} from "../../lib/joe-v2/src/interfaces/ILBPair.sol";
 import {
     ILBHooksBaseRewarder
@@ -20,8 +28,10 @@ import {
 import {IArcaRewardClaimerV1} from "../interfaces/IArcaRewardClaimerV1.sol";
 
 contract ArcaRewardClaimerV1 is
-    Ownable,
+    Initializable,
+    OwnableUpgradeable,
     ReentrancyGuardUpgradeable,
+    UUPSUpgradeable,
     TokenValidator,
     IArcaRewardClaimerV1
 {
@@ -48,7 +58,17 @@ contract ArcaRewardClaimerV1 is
     address private _lbRouter;
     uint256 public idSlippage; // The number of bins to slip
 
-    constructor(
+    /**
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initialize the reward claimer
+     */
+    function initialize(
         address rewarder,
         address rewardToken,
         IArcaFeeManagerV1 feeManager,
@@ -60,7 +80,11 @@ contract ArcaRewardClaimerV1 is
         uint256 _idSlippage,
         address tokenX,
         address tokenY
-    ) Ownable(msg.sender) {
+    ) public initializer {
+        __Ownable_init(msg.sender);
+        __ReentrancyGuard_init();
+        __UUPSUpgradeable_init();
+
         _rewarder = rewarder;
         _rewardToken = rewardToken;
         _feeManager = feeManager;
@@ -383,4 +407,20 @@ contract ArcaRewardClaimerV1 is
 
         return claimedAmount;
     }
+
+    /**
+     * @dev Function that should revert when `msg.sender` is not authorized to upgrade the contract.
+     * Called by {upgradeTo} and {upgradeToAndCall}.
+     */
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {}
+
+    /**
+     * @dev Storage gap for future upgrades
+     * This gap allows us to add new storage variables in future versions
+     * Current storage slots used: ~20 (estimated)
+     * Gap size: 50 - 20 = 30 slots reserved
+     */
+    uint256[30] private __gap;
 }
