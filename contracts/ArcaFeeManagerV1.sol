@@ -2,9 +2,18 @@
 pragma solidity ^0.8.28;
 
 import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-contract ArcaFeeManagerV1 is Ownable, IArcaFeeManagerV1 {
+contract ArcaFeeManagerV1 is
+    Initializable,
+    OwnableUpgradeable,
+    IArcaFeeManagerV1
+{
     uint256 private depositFee = 50; // 0.5% (50 basis points)
     uint256 private withdrawFee = 50; // 0.5% (50 basis points)
     uint256 private performanceFee = 1000; // 10% (1000 basis points)
@@ -19,7 +28,18 @@ contract ArcaFeeManagerV1 is Ownable, IArcaFeeManagerV1 {
     );
     event FeeRecipientUpdated(address newRecipient);
 
-    constructor(address _feeRecipient) Ownable(msg.sender) {
+    /**
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initialize the fee manager
+     */
+    function initialize(address _feeRecipient) public initializer {
+        __Ownable_init(msg.sender);
         require(_feeRecipient != address(0), "Invalid fee recipient");
         feeRecipient = _feeRecipient;
     }
@@ -61,4 +81,12 @@ contract ArcaFeeManagerV1 is Ownable, IArcaFeeManagerV1 {
     function getFeeRecipient() external view override returns (address) {
         return feeRecipient;
     }
+
+    /**
+     * @dev Storage gap for future upgrades
+     * This gap allows us to add new storage variables in future versions
+     * Current storage slots used: ~5 (estimated)
+     * Gap size: 50 - 5 = 45 slots reserved
+     */
+    uint256[45] private __gap;
 }

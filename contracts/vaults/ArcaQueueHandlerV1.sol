@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {
+    OwnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {TokenValidator} from "../TokenTypes.sol";
 import {IArcaQueueHandlerV1} from "../interfaces/IArcaQueueHandlerV1.sol";
 import {
@@ -9,7 +14,8 @@ import {
 } from "../interfaces/IDepositWithdrawCompatible.sol";
 
 contract ArcaQueueHandlerV1 is
-    Ownable,
+    Initializable,
+    OwnableUpgradeable,
     IDepositWithdrawCompatible,
     TokenValidator,
     IArcaQueueHandlerV1
@@ -41,7 +47,18 @@ contract ArcaQueueHandlerV1 is
         uint256 sharesY
     );
 
-    constructor() Ownable(msg.sender) {
+    /**
+     * @custom:oz-upgrades-unsafe-allow constructor
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @dev Initialize the queue handler
+     */
+    function initialize() public initializer {
+        __Ownable_init(msg.sender);
         depositQueueStart = 0;
         withdrawQueueStart = 0;
     }
@@ -152,4 +169,12 @@ contract ArcaQueueHandlerV1 is
     function getPendingWithdrawsCount() external view returns (uint256) {
         return withdrawQueue.length - withdrawQueueStart;
     }
+
+    /**
+     * @dev Storage gap for future upgrades
+     * This gap allows us to add new storage variables in future versions
+     * Current storage slots used: ~10 (estimated)
+     * Gap size: 50 - 10 = 40 slots reserved
+     */
+    uint256[40] private __gap;
 }

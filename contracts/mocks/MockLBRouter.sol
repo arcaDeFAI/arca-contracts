@@ -5,14 +5,16 @@ import {ILBRouter} from "../../lib/joe-v2/src/interfaces/ILBRouter.sol";
 import {IERC20} from "@openzeppelin/contracts/interfaces/IERC20.sol";
 
 contract MockLBRouter {
-    uint256 private swapOutputX;
-    uint256 private swapOutputY;
+    mapping(address => uint256) private tokenSwapOutputs; // tokenOut => amount
     bool private shouldFail;
-    uint256 private swapCount; // Track number of swaps
 
+    function setSwapOutputForToken(address token, uint256 amount) external {
+        tokenSwapOutputs[token] = amount;
+    }
+
+    // Legacy function for backwards compatibility
     function setSwapOutput(uint256 _outputX, uint256 _outputY) external {
-        swapOutputX = _outputX;
-        swapOutputY = _outputY;
+        // This will be set by tokenX and tokenY addresses in tests
     }
 
     function setShouldFail(bool _shouldFail) external {
@@ -28,27 +30,19 @@ contract MockLBRouter {
     ) external returns (uint256 amountOut) {
         require(!shouldFail, "MockLBRouter: Swap failed");
         require(block.timestamp <= deadline, "MockLBRouter: Expired");
-        
+
         // Determine which token we're swapping to based on path
         IERC20 tokenOut = path.tokenPath[path.tokenPath.length - 1];
-        
-        // Mock: alternate between TokenX and TokenY outputs for different swaps
-        uint256 outputAmount;
-        if (swapCount % 2 == 0 && swapOutputX > 0) {
-            outputAmount = swapOutputX;
-        } else if (swapCount % 2 == 1 && swapOutputY > 0) {
-            outputAmount = swapOutputY;
-        } else {
-            outputAmount = swapOutputX > 0 ? swapOutputX : swapOutputY;
-        }
-        
-        swapCount++;
-        
+        address tokenOutAddress = address(tokenOut);
+
+        // Get the configured output amount for this specific token
+        uint256 outputAmount = tokenSwapOutputs[tokenOutAddress];
+
         if (outputAmount > 0) {
             tokenOut.transfer(to, outputAmount);
             return outputAmount;
         }
-        
+
         return 0;
     }
 
@@ -61,7 +55,7 @@ contract MockLBRouter {
     ) external returns (uint256 amountOut) {
         require(!shouldFail, "MockLBRouter: Swap failed");
         require(block.timestamp <= deadline, "MockLBRouter: Expired");
-        
+
         // Mock native swap - just return some amount
         return amountIn / 2;
     }
@@ -84,10 +78,10 @@ contract MockLBRouter {
         amountYAdded = liquidityParameters.amountY;
         amountXLeft = 0;
         amountYLeft = 0;
-        
+
         depositIds = new uint256[](1);
         depositIds[0] = 8388608; // Mock active ID
-        
+
         liquidityMinted = new uint256[](1);
         liquidityMinted[0] = amountXAdded + amountYAdded;
     }
@@ -104,11 +98,11 @@ contract MockLBRouter {
         uint256 deadline
     ) external returns (uint256 amountX, uint256 amountY) {
         require(block.timestamp <= deadline, "MockLBRouter: Expired");
-        
+
         // Mock: return some amounts
         amountX = 1000;
         amountY = 1000;
-        
+
         // Mock transfer tokens to recipient
         tokenX.transfer(to, amountX);
         tokenY.transfer(to, amountY);

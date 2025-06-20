@@ -15,10 +15,14 @@ contract MockLBPair {
     function getPriceFromId(uint24 id) external pure returns (uint256) {
         // Mock price calculation - return a fixed price for testing
         // In real LB pairs, this would be (1 + binStep/10000)^(id - 2^23)
-        return 2**128; // 1.0 in 128.128 fixed point
+        return 2 ** 128; // 1.0 in 128.128 fixed point
     }
 
-    function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast) {
+    function getReserves()
+        external
+        view
+        returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)
+    {
         // Mock reserves for AMM V2 style interface
         reserve0 = 1000000;
         reserve1 = 1000000;
