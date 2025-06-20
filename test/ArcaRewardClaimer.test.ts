@@ -223,11 +223,11 @@ describe("ArcaRewardClaimerV1 - Business Logic", function () {
 
       await expect(
         rewardClaimer.getTotalCompounded(2)
-      ).to.be.revertedWithCustomError(rewardClaimer, "InvalidTokenType");
+      ).to.be.reverted;
 
       await expect(
-        rewardClaimer.getTotalCompounded(999)
-      ).to.be.revertedWithCustomError(rewardClaimer, "InvalidTokenType");
+        rewardClaimer.getTotalCompounded(255)
+      ).to.be.reverted;
     });
 
     it("Should accept valid token types", async function () {

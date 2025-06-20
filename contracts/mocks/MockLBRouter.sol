@@ -12,11 +12,6 @@ contract MockLBRouter {
         tokenSwapOutputs[token] = amount;
     }
 
-    // Legacy function for backwards compatibility
-    function setSwapOutput(uint256 _outputX, uint256 _outputY) external {
-        // This will be set by tokenX and tokenY addresses in tests
-    }
-
     function setShouldFail(bool _shouldFail) external {
         shouldFail = _shouldFail;
     }

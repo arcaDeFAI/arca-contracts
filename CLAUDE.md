@@ -141,10 +141,11 @@ npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network localhost
 - Solidity version: 0.8.28
 - Use OpenZeppelin contracts for standard functionality
 - Follow upgradeable proxy patterns with proper initialization
-- Implement comprehensive validation with custom modifiers (`validToken`, etc.)
+- Implement comprehensive validation with custom modifiers
 
 ### Testing Standards
 - **FOLLOW TDD**: Tests define requirements, code implements them
+- **PRECISION IS MANDATORY**: Always test exact values, never use vague assertions like `gt(0)` or `to.be.a("bigint")`. Calculate and verify specific expected amounts based on business logic
 - Use Hardhat's testing framework with TypeScript
 - Test files located in `test/` directory with pattern `*.test.ts`
 - Production-accurate proxy deployment in all tests (catches upgrade safety issues)

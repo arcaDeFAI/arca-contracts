@@ -31,7 +31,7 @@ contract ArcaQueueHandlerV1 is
 
     function getQueuedToken(
         TokenValidator.Type tokenType
-    ) public view validToken(tokenType) returns (uint256) {
+    ) public view returns (uint256) {
         return _queuedTokens[uint256(tokenType)];
     }
 
@@ -66,7 +66,7 @@ contract ArcaQueueHandlerV1 is
     function reduceQueuedToken(
         uint256 amount,
         TokenValidator.Type tokenType
-    ) external onlyOwner validToken(tokenType) {
+    ) external onlyOwner {
         require(
             getQueuedToken(tokenType) >= amount,
             "Not enough tokens in queue"
@@ -110,8 +110,9 @@ contract ArcaQueueHandlerV1 is
         onlyOwner
         returns (DepositRequest[] memory)
     {
-        DepositRequest[] memory slicedDepositQueue = _buildPendingDepositSlice();
-        
+        DepositRequest[]
+            memory slicedDepositQueue = _buildPendingDepositSlice();
+
         // Clear processed deposits
         depositQueueStart += slicedDepositQueue.length;
 
@@ -154,8 +155,9 @@ contract ArcaQueueHandlerV1 is
         onlyOwner
         returns (WithdrawRequest[] memory)
     {
-        WithdrawRequest[] memory slicedWithdrawQueue = _buildPendingWithdrawSlice();
-        
+        WithdrawRequest[]
+            memory slicedWithdrawQueue = _buildPendingWithdrawSlice();
+
         // Clear processed withdrawals
         withdrawQueueStart += slicedWithdrawQueue.length;
 
@@ -164,7 +166,7 @@ contract ArcaQueueHandlerV1 is
 
     function enqueueDepositRequest(
         DepositRequest memory depositRequest
-    ) external onlyOwner validToken(depositRequest.tokenType) {
+    ) external onlyOwner {
         // Add to deposit queue with net amount
         depositQueue.push(depositRequest);
 

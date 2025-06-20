@@ -118,7 +118,7 @@ contract ArcaRewardClaimerV1 is
      */
     function getTotalCompounded(
         TokenValidator.Type tokenType
-    ) external view validToken(tokenType) returns (uint256) {
+    ) external view returns (uint256) {
         return totalCompounded[uint256(tokenType)];
     }
 
@@ -128,7 +128,7 @@ contract ArcaRewardClaimerV1 is
 
     function getVaultToken(
         TokenValidator.Type tokenType
-    ) private view validToken(tokenType) returns (IERC20) {
+    ) private view returns (IERC20) {
         return tokens[uint256(tokenType)];
     }
 
@@ -174,8 +174,8 @@ contract ArcaRewardClaimerV1 is
             );
             uint256 metroClaimed = metroBalanceAfter - metroBalanceBefore;
 
-            if (metroClaimed > minSwapAmount) {
-                // Calculate performance fee on claimed rewards
+            if (metroClaimed > 0) {
+                // Calculate performance fee on claimed rewards (always collected for consistency)
                 uint256 performanceFee = (metroClaimed *
                     _feeManager.getPerformanceFee()) /
                     _feeManager.BASIS_POINTS();
@@ -194,38 +194,42 @@ contract ArcaRewardClaimerV1 is
                     );
                 }
 
-                // Compound the remaining rewards
-                uint256 metroForTokenX = netMetro / 2;
-                uint256 metroForTokenY = netMetro - metroForTokenX;
+                // Only swap if net metro is above minimum swap amount
+                if (netMetro > minSwapAmount) {
+                    // Compound the remaining rewards
+                    uint256 metroForTokenX = netMetro / 2;
+                    uint256 metroForTokenY = netMetro - metroForTokenX;
 
-                uint256[TOKEN_COUNT] memory metroForTokens = [
-                    metroForTokenX,
-                    metroForTokenY
-                ];
-                uint256[TOKEN_COUNT] memory tokenObtained;
+                    uint256[TOKEN_COUNT] memory metroForTokens = [
+                        metroForTokenX,
+                        metroForTokenY
+                    ];
+                    uint256[TOKEN_COUNT] memory tokenObtained;
 
-                for (uint256 i = 0; i < TOKEN_COUNT; i++) {
-                    tokenObtained[i] = 0;
+                    for (uint256 i = 0; i < TOKEN_COUNT; i++) {
+                        tokenObtained[i] = 0;
 
-                    // Swap METRO to token
-                    if (metroForTokens[i] > 0) {
-                        tokenObtained[i] = _swapMetroToToken(
-                            metroForTokens[i],
-                            address(getVaultToken(TokenValidator.Type(i))),
-                            metroToTokenPaths[i]
-                        );
+                        // Swap METRO to token
+                        if (metroForTokens[i] > 0) {
+                            tokenObtained[i] = _swapMetroToToken(
+                                metroForTokens[i],
+                                address(getVaultToken(TokenValidator.Type(i))),
+                                metroToTokenPaths[i]
+                            );
+                        }
+
+                        // Update global analytics counter
+                        totalCompounded[i] += tokenObtained[i];
                     }
 
-                    // Update global analytics counter
-                    totalCompounded[i] += tokenObtained[i];
+                    emit RewardsCompounded(
+                        metroClaimed,
+                        tokenObtained[uint256(TokenValidator.Type.TokenX)],
+                        tokenObtained[uint256(TokenValidator.Type.TokenY)]
+                    );
                 }
 
                 emit RewardsClaimed(_rewarder, _rewardToken, metroClaimed);
-                emit RewardsCompounded(
-                    metroClaimed,
-                    tokenObtained[uint256(TokenValidator.Type.TokenX)],
-                    tokenObtained[uint256(TokenValidator.Type.TokenY)]
-                );
             }
         } catch {
             // Claiming failed, continue with rebalance

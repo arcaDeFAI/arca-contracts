@@ -42,10 +42,10 @@ contract ArcaFeeManagerV1 is
         __Ownable_init(msg.sender);
         require(_feeRecipient != address(0), "Invalid fee recipient");
         feeRecipient = _feeRecipient;
-        
+
         // Set default fee values
-        depositFee = 50;    // 0.5%
-        withdrawFee = 50;   // 0.5%
+        depositFee = 50; // 0.5%
+        withdrawFee = 50; // 0.5%
         performanceFee = 1000; // 10%
     }
 
