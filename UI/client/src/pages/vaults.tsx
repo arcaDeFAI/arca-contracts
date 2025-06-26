@@ -1,13 +1,9 @@
 import { useState, useMemo } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search } from "lucide-react";
 import VaultCard from "../components/vault-card";
-import {
-  mockVaults,
-  platforms,
-  chains,
-  sortOptions,
-} from "../data/mock-vaults";
-import type { Vault, VaultFilters } from "../types/vault";
+import { platforms, chains, sortOptions } from "../data/mock-vaults";
+import type { VaultFilters } from "../types/vault";
+import { useRealVaults } from "../hooks/use-real-vaults";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -25,8 +21,10 @@ export default function Vaults() {
     search: "",
   });
 
+  const { vaults: realVaults, isLoading, error } = useRealVaults();
+
   const filteredAndSortedVaults = useMemo(() => {
-    const filtered = mockVaults.filter((vault) => {
+    const filtered = realVaults.filter((vault) => {
       // Platform filter
       if (
         filters.platform !== "All Platforms" &&
@@ -59,20 +57,21 @@ export default function Vaults() {
         case "APR ↑":
           return a.apr - b.apr;
         case "TVL ↓":
-          return b.poolTvl - a.poolTvl;
+          return b.totalTvl - a.totalTvl;
         case "TVL ↑":
-          return a.poolTvl - b.poolTvl;
+          return a.totalTvl - b.totalTvl;
         default:
           return 0;
       }
     });
 
     return filtered;
-  }, [filters]);
+  }, [filters, realVaults]);
 
-  const handleVaultClick = (vault: Vault) => {
-    console.log("Vault selected:", vault);
+  const handleVaultClick = (vault: (typeof realVaults)[0]) => {
     // Future: Navigate to vault details or open deposit modal
+    // eslint-disable-next-line no-console
+    console.log("Vault selected:", vault);
   };
 
   return (
@@ -217,19 +216,27 @@ export default function Vaults() {
         <div className="hidden sm:grid grid-cols-5 gap-6 px-10 py-4 mb-4">
           <div className="text-arca-secondary font-medium text-sm">POOL</div>
           <div className="text-arca-secondary font-medium text-sm">
-            EARNINGS
+            USER BALANCE
           </div>
           <div className="text-arca-secondary font-medium text-sm">
-            POOL TVL
+            TOTAL TVL
           </div>
           <div className="text-arca-secondary font-medium text-sm">
-            FARM TVL
+            QUEUE STATUS
           </div>
           <div className="text-arca-secondary font-medium text-sm">REWARDS</div>
         </div>
 
         {/* Vault Rows */}
-        {filteredAndSortedVaults.length > 0 ? (
+        {isLoading ? (
+          <div className="px-6 py-12 text-center bg-arca-surface rounded-xl border border-arca-border mx-4">
+            <p className="text-arca-secondary">Loading vaults...</p>
+          </div>
+        ) : error ? (
+          <div className="px-6 py-12 text-center bg-arca-surface rounded-xl border border-arca-border mx-4">
+            <p className="text-red-500">Error loading vaults: {error}</p>
+          </div>
+        ) : filteredAndSortedVaults.length > 0 ? (
           filteredAndSortedVaults.map((vault) => (
             <VaultCard
               key={vault.id}
