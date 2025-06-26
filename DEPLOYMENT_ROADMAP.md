@@ -42,63 +42,66 @@ All contracts use **OpenZeppelin's UUPS upgradeable proxy pattern** for future u
 - Division by zero in withdrawal processing when `totalShares[tokenIdx] == 0`
 - Performance fee collection consistency (now collected on all rewards regardless of swap threshold)
 
-## 🎯 UPCOMING PHASES
+## 🔄 IN PROGRESS PHASES
 
 ### Phase 4: Deployment Infrastructure
-**Status**: Ready to Start  
+**Status**: 75% Complete  
 **Priority**: High
 
-#### 4.1 Hardhat Ignition Deployment Modules
-- [ ] Create deployment modules for UUPS proxy system
-- [ ] Handle complex initialization parameters
-- [ ] Implement proper dependency injection (contracts reference each other)
-- [ ] Set up deployment parameter management
+#### 4.1 Script-Based Deployment (Replaced Ignition) 
+- [x] ~~Create deployment modules for UUPS proxy system~~ **ABANDONED: Hardhat Ignition lacks proxy support**
+- [x] **Handle complex initialization parameters** (via TypeScript scripts)
+- [x] **Implement proper dependency injection** (contracts reference each other correctly)
+- [x] **Set up deployment parameter management** (network config files)
 
-#### 4.2 Network Configuration
-- [ ] Configure deployment networks (localhost, Sonic testnet, Sonic mainnet)
-- [ ] Set up environment variables and secrets management
-- [ ] Configure gas settings and deployment optimization
-- [ ] Set up contract verification settings
+#### 4.2 Network Configuration ✅
+- [x] **Configure deployment networks** (localhost, Sonic Blaze testnet, Sonic mainnet)
+- [x] **Set up environment variables and secrets management** (.env support)
+- [x] **Configure gas settings and deployment optimization** (per-network settings)
+- [x] **Set up contract verification settings** (Sonic block explorer integration)
 
 #### 4.3 UUPS Proxy Deployment Strategy
-- [ ] Implement OpenZeppelin's deployment best practices
-- [ ] Handle proxy initialization and implementation deployment
-- [ ] Set up upgrade authorization flow
-- [ ] Document upgrade procedures
+- [x] **Implement OpenZeppelin's deployment best practices** (mixed UUPS + Beacon proxies)
+- [x] **Handle proxy initialization and implementation deployment** (atomic deployment)
+- [x] **Set up upgrade authorization flow** (owner-only UUPS upgrades)
+- [ ] **Document upgrade procedures** (create upgrade scripts and documentation)
 
 #### 4.4 Deployment Scripts & Automation
-- [ ] Create comprehensive deployment scripts
-- [ ] Implement deployment validation checks
-- [ ] Set up post-deployment configuration
-- [ ] Create deployment rollback procedures
+- [x] **Create comprehensive deployment scripts** (`deployArcaSystem.ts`, `deploy-local.ts`, `deploy-testnet.ts`)
+- [x] **Implement deployment validation checks** (37-check verification system)
+- [x] **Set up post-deployment configuration** (ownership transfers, registry integration)
+- [ ] **Create deployment rollback procedures** (emergency rollback scripts)
 
-### Phase 5: Local Development Environment
-**Dependencies**: Phase 4  
+### Phase 5: Local Development Environment  
+**Status**: 70% Complete
+**Dependencies**: Phase 4 (mostly complete)
 **Priority**: High
 
 #### 5.1 Local Hardhat Node Setup
-- [ ] Configure local node with appropriate settings
-- [ ] Set up persistent local blockchain state
-- [ ] Create local development reset scripts
-- [ ] Configure local account management
+- [x] **Configure local node with appropriate settings** (hardhat.config.ts)
+- [ ] **Set up persistent local blockchain state** (state persistence between restarts)
+- [x] **Create local development reset scripts** (`npm run local:reset`)
+- [x] **Configure local account management** (pre-funded test accounts)
 
 #### 5.2 Complete System Deployment
-- [ ] Deploy full vault system to local network
-- [ ] Validate all contract interactions locally
-- [ ] Test upgrade scenarios locally
-- [ ] Verify ownership transfer flows
+- [x] **Deploy full vault system to local network** (`npm run deploy:local`)
+- [x] **Validate all contract interactions locally** (37-check verification system)
+- [ ] **Test upgrade scenarios locally** (create upgrade testing scripts)
+- [x] **Verify ownership transfer flows** (part of comprehensive verification)
 
 #### 5.3 Development Workflow Scripts
-- [ ] Create developer onboarding scripts
-- [ ] Set up automated testing against deployed contracts
-- [ ] Create contract interaction utilities
-- [ ] Document development workflows
+- [x] **Create developer onboarding scripts** (automated local deployment)
+- [ ] **Set up automated testing against deployed contracts** (script to run tests against live contracts)
+- [x] **Create contract interaction utilities** (verification, export scripts)
+- [x] **Document development workflows** (DEPLOYMENT_GUIDE.md)
 
 #### 5.4 Local Testing & Validation
-- [ ] End-to-end testing on local deployment
-- [ ] Performance testing and gas optimization
-- [ ] Security validation on deployed contracts
-- [ ] User flow testing
+- [x] **End-to-end testing on local deployment** (verification covers integration)
+- [ ] **Performance testing and gas optimization** (gas analysis scripts)
+- [x] **Security validation on deployed contracts** (ownership, access control verification)
+- [ ] **User flow testing** (actual deposit/withdraw/rebalance flow testing)
+
+## 🎯 UPCOMING PHASES
 
 ### Phase 6: Testnet Deployment
 **Dependencies**: Phase 5  
