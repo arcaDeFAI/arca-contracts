@@ -22,7 +22,10 @@
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
       "WebFetch(domain:github.com)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm run deploy:local:*)",
+      "Bash(npm run deploy:verify:*)",
+      "WebFetch(domain:docs.soniclabs.com)"
     ],
     "deny": []
   }

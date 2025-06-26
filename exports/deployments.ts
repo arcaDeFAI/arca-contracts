@@ -1,0 +1,18 @@
+// Auto-generated deployment addresses
+// Generated at: 2025-06-26T15:13:00.965Z
+
+export const deployments = {
+  "localhost": {
+    "vault": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
+    "registry": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726",
+    "deploymentTime": "2025-06-26T15:11:28.635Z",
+    "config": {
+      "name": "Arca Local Test Vault",
+      "symbol": "ARCA-LOCAL",
+      "tokenX": "0xb7278A61aa25c888815aFC32Ad3cC52fF24fE575",
+      "tokenY": "0xCD8a1C3ba11CF5ECfa6267617243239504a98d90"
+    }
+  }
+} as const;
+
+export type DeploymentNetwork = keyof typeof deployments;
