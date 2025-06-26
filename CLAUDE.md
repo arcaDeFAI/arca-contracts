@@ -47,7 +47,7 @@ This is a full-stack DeFi project with:
 - **Smart Contracts** (`/contracts/`) - Solidity vault system
 - **Frontend dApp** (`/UI/`) - React-based user interface  
 - **Testing Suite** (`/test/`) - Comprehensive test coverage
-- **Deployment System** (`/scripts/`, `/ignition/`) - TypeScript deployment infrastructure
+- **Deployment System** (`/scripts/`) - TypeScript deployment infrastructure
 - **External Dependencies** (`/lib/`) - Git submodules (joe-v2)
 
 ## Core Architecture
@@ -129,8 +129,9 @@ npx hardhat test-data:network-config
 # Recommended: Script-based UUPS deployment
 npx hardhat run scripts/deployArcaSystem.ts --network <network>
 
-# Hardhat Ignition (for testing only - no proxies)
-npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network localhost
+# Or use the convenience scripts:
+npm run deploy:local     # For local development with mocks
+npm run deploy:testnet   # For Sonic testnet deployment
 ```
 
 **Deployment Strategy**: See `DEPLOYMENT_STRATEGY.md` for comprehensive deployment guidelines.
