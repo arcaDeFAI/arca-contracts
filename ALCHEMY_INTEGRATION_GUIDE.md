@@ -58,17 +58,6 @@
 
 ## 🚀 **Deployment Commands with Alchemy**
 
-### Using Alchemy for Testnet
-```bash
-# Set your API key in .env first
-echo "ALCHEMY_API_KEY=your_key_here" >> .env
-
-# Deploy using Alchemy testnet endpoint
-npm run deploy:testnet:alchemy
-
-# Verify deployment
-npm run deploy:verify:testnet:alchemy
-```
 
 ### Using Alchemy for Mainnet
 ```bash
@@ -81,8 +70,7 @@ npm run deploy:verify:mainnet:alchemy
 
 ### Fallback to Public RPC
 ```bash
-# These commands use public RPC (fallback if Alchemy fails)
-npm run deploy:testnet
+# This command uses public RPC (fallback if Alchemy fails)
 npm run deploy:mainnet
 ```
 
@@ -264,17 +252,17 @@ testAlchemy().catch(console.error);
 EOF
 
 # Run test
-npx hardhat run test-alchemy.js --network sonic-testnet-alchemy
+npx hardhat run test-alchemy.js --network sonic-mainnet-alchemy
 ```
 
 ### Performance Comparison
 ```bash
 # Benchmark deployment times
 echo "Testing public RPC..."
-time npm run deploy:testnet > public_deploy.log 2>&1
+time npm run deploy:mainnet > public_deploy.log 2>&1
 
 echo "Testing Alchemy RPC..."  
-time npm run deploy:testnet:alchemy > alchemy_deploy.log 2>&1
+time npm run deploy:mainnet:alchemy > alchemy_deploy.log 2>&1
 
 # Compare results
 echo "Public RPC deployment time:" && grep "real" public_deploy.log
@@ -300,7 +288,7 @@ echo "Alchemy RPC deployment time:" && grep "real" alchemy_deploy.log
 
 ---
 
-**Quick Start**: Get API key → Add to `.env` → Run `npm run deploy:testnet:alchemy`
+**Quick Start**: Get API key → Add to `.env` → Run `npm run deploy:mainnet:alchemy`
 
 **Status**: ✅ Ready for use with Sonic blockchain  
 **Last Updated**: December 2024
