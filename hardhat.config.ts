@@ -33,17 +33,51 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
+      // Use default hardhat accounts for localhost
+      accounts: "remote",
     },
     "sonic-testnet": {
       url: process.env.SONIC_TESTNET_RPC_URL || "https://rpc.blaze.soniclabs.com",
       chainId: 57054,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length === 64) ? [process.env.PRIVATE_KEY] : [],
+      timeout: 120000, // 2 minutes timeout for Alchemy
+    },
+    "sonic-testnet-alchemy": {
+      url: process.env.ALCHEMY_API_KEY 
+        ? `https://sonic-testnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+        : "https://rpc.blaze.soniclabs.com",
+      chainId: 57054,
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length === 64) ? [process.env.PRIVATE_KEY] : [],
+      timeout: 120000,
     },
     "sonic-mainnet": {
       url: process.env.SONIC_MAINNET_RPC_URL || "https://rpc.soniclabs.com",
       chainId: 146,
-      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length === 64) ? [process.env.PRIVATE_KEY] : [],
       gasPrice: "auto",
+      timeout: 120000,
+    },
+    "sonic-fork": {
+      url: "http://127.0.0.1:8545",
+      chainId: 31337,
+      forking: {
+        url: process.env.SONIC_MAINNET_RPC_URL || "https://rpc.soniclabs.com",
+        // Use a specific recent block instead of latest to avoid hardfork issues
+        blockNumber: 36000000,
+      },
+      accounts: "remote",
+      timeout: 120000,
+      // Override hardfork to handle Sonic's custom chain
+      hardfork: "cancun",
+    },
+    "sonic-mainnet-alchemy": {
+      url: process.env.ALCHEMY_API_KEY 
+        ? `https://sonic-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
+        : "https://rpc.soniclabs.com",
+      chainId: 146,
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length === 64) ? [process.env.PRIVATE_KEY] : [],
+      gasPrice: "auto",
+      timeout: 120000,
     },
   },
   etherscan: {

@@ -2,11 +2,11 @@
 
 ## Overview
 
-This document outlines the comprehensive deployment strategy for the Arca Vault system, aligned with Hardhat and OpenZeppelin best practices. The strategy supports UUPS upgrades, follows industry standards, and provides multiple deployment paths for different use cases.
+This document outlines the comprehensive deployment strategy for the Arca Vault system, aligned with Hardhat and OpenZeppelin best practices. The strategy supports UUPS upgrades, follows industry standards, and uses TypeScript-based deployment scripts exclusively.
 
 ## Key Principles
 
-1. **Script-Based Deployment**: Use TypeScript scripts with OpenZeppelin upgrades plugin for production
+1. **Script-Based Deployment**: Use TypeScript scripts with OpenZeppelin upgrades plugin for all deployments
 2. **TypeScript Only**: All deployment scripts use TypeScript for type safety
 3. **UUPS Upgrade Support**: Maintain upgradeability through OpenZeppelin patterns
 4. **Contract Size Awareness**: Avoid factory patterns that exceed 24.5KB limit
@@ -14,54 +14,43 @@ This document outlines the comprehensive deployment strategy for the Arca Vault 
 
 ## Deployment Architecture
 
-### Two-Tier Deployment Strategy
+### Production-Grade Script Deployment
 
-#### Tier 1: Production Deployment (Scripts)
-- **Purpose**: Production deployments with full UUPS + Beacon proxy support
+- **Purpose**: All deployments (local, testnet, mainnet) with full UUPS + Beacon proxy support
 - **Method**: TypeScript scripts with OpenZeppelin upgrades plugin
-- **Use Cases**: Testnet, mainnet, all proxy deployments
-- **Files**: `scripts/deployArcaSystem.ts`
-- **Benefits**: Full OpenZeppelin integration, complex deployment logic, ownership transfers
-
-#### Tier 2: Simple Testing (Hardhat Ignition)
-- **Purpose**: Quick testing of individual contracts (no proxies)
-- **Method**: Basic Hardhat Ignition modules
-- **Use Cases**: Local development, simple contract testing only
-- **Files**: `ignition/modules/ArcaVault.ts`
-- **Limitations**: No proxy support, testing only
+- **Use Cases**: Local development, testnet deployment, mainnet deployment
+- **Files**: `scripts/deployArcaSystem.ts`, `scripts/deploy-local.ts`, `scripts/deploy-testnet.ts`
+- **Benefits**: Full OpenZeppelin integration, complex deployment logic, ownership transfers, upgrade support
 
 ## Current Implementation
 
-### Tier 1: Production Script Deployment
+### Production Script Deployment
 ```typescript
 // scripts/deployArcaSystem.ts
 export async function deployArcaSystem(config: DeploymentConfig): Promise<DeploymentAddresses>
 ```
 
 **Features**:
-- UUPS proxy deployment
-- Beacon proxy deployment
+- UUPS proxy deployment for core contracts
+- Beacon proxy deployment for supporting contracts
 - Proper ownership transfers
 - Registry integration
 - Type safety with interfaces
+- Mock contract deployment for local testing
+- Network-specific configuration loading
+- Deployment artifact saving
 
-**Usage**: `npx hardhat run scripts/deployArcaSystem.ts --network <network>`
+**Usage**: 
+```bash
+# Local deployment with mocks
+npm run deploy:local
 
-### Tier 2: Simple Ignition Module (Testing Only)
-```typescript
-// ignition/modules/ArcaVault.ts
-const arcaVaultModule = buildModule("ArcaVaultModule", (m) => {
-  const arcaVaultContract = m.contract("ArcaTestnetV1");
-  return { arcaVaultContract };
-});
+# Testnet deployment
+npm run deploy:testnet
+
+# Direct script execution
+npx hardhat run scripts/deployArcaSystem.ts --network <network>
 ```
-
-**Usage**: `npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network localhost`
-
-**Limitations**:
-- No proxy support
-- No complex initialization
-- Testing and development only
 
 ## Deployment Flow
 
@@ -157,13 +146,17 @@ interface DeploymentConfig {
 
 ## Future Considerations
 
-**Note**: Hardhat Ignition currently lacks native OpenZeppelin proxy support. For this project's requirements (mixed UUPS + Beacon proxies, complex ownership transfers, registry integration), TypeScript scripts with the OpenZeppelin upgrades plugin remain the optimal solution.
-
 ### CI/CD Integration
 - Automated deployment verification
 - Gas cost tracking
 - Contract size monitoring
 - Upgrade compatibility checks
+
+### Advanced Features
+- Multi-signature deployment support
+- Timelock integration for upgrades
+- Automated contract verification on block explorers
+- Gas optimization analysis
 
 ## Commands Reference
 
@@ -181,11 +174,19 @@ npx hardhat size-contracts
 
 ### Deployment
 ```bash
-# Simple deployment (development)
-npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network localhost
+# Local deployment with mocks
+npm run deploy:local
 
-# UUPS deployment (production)
+# Testnet deployment
+npm run deploy:testnet
+
+# Direct deployment script
 npx hardhat run scripts/deployArcaSystem.ts --network <network>
+
+# Verify deployment
+npm run deploy:verify:local
+npm run deploy:verify:testnet
+npm run deploy:verify:mainnet
 ```
 
 ### Verification
