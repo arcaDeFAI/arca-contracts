@@ -10,18 +10,18 @@
     "vaultName": "Arca Vault",
     "vaultSymbol": "ARCA",
     "idSlippage": "5",
-    "feeRecipient": "TODO_SET_FEE_RECIPIENT_MULTISIG"
+    "feeRecipient": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98"
   },
   "contracts": {
-    "tokenX": "TODO_SET_TOKEN_X_ADDRESS",
-    "tokenY": "TODO_SET_TOKEN_Y_ADDRESS",
-    "lbRouter": "TODO_SET_LB_ROUTER_ADDRESS",
-    "lbpAMM": "TODO_SET_LBP_AMM_ADDRESS",
-    "lbpContract": "TODO_SET_LBP_CONTRACT_ADDRESS",
-    "rewarder": "TODO_SET_REWARDER_ADDRESS",
-    "rewardToken": "TODO_SET_METRO_TOKEN_ADDRESS",
-    "nativeToken": "TODO_SET_NATIVE_TOKEN_ADDRESS",
-    "lbpContractUSD": "TODO_SET_LBP_CONTRACT_USD_ADDRESS"
+    "tokenX": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "tokenY": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
+    "lbRouter": "0x67803fe6d76409640efDC9b7ABcD2c6c2E7cBa48",
+    "lbpAMM": "0x39D966c1BaFe7D3F1F53dA4845805E15f7D6EE43",
+    "lbpContract": "0x11d899dec22fb03a0047212b1a20a7ad8d699420",
+    "rewarder": "0x0000000000000000000000000000000000000000",
+    "rewardToken": "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321",
+    "nativeToken": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "lbpContractUSD": "0x11d899dec22fb03a0047212b1a20a7ad8d699420"
   },
   "gasSettings": {
     "gasPrice": "auto",

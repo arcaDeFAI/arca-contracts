@@ -48,9 +48,9 @@ All contracts use **OpenZeppelin's UUPS upgradeable proxy pattern** for future u
 **Status**: 75% Complete  
 **Priority**: High
 
-#### 4.1 Script-Based Deployment (Replaced Ignition) 
-- [x] ~~Create deployment modules for UUPS proxy system~~ **ABANDONED: Hardhat Ignition lacks proxy support**
-- [x] **Handle complex initialization parameters** (via TypeScript scripts)
+#### 4.1 Script-Based Deployment 
+- [x] **Create TypeScript deployment scripts for UUPS proxy system**
+- [x] **Handle complex initialization parameters** (via deployment config)
 - [x] **Implement proper dependency injection** (contracts reference each other correctly)
 - [x] **Set up deployment parameter management** (network config files)
 
@@ -213,23 +213,23 @@ All contracts use **OpenZeppelin's UUPS upgradeable proxy pattern** for future u
 ### Documentation
 - [Hardhat Deployment Guide](https://hardhat.org/hardhat-runner/docs/getting-started#overview)
 - [OpenZeppelin Upgrades Plugin](https://docs.openzeppelin.com/upgrades-plugins/1.x/)
-- [Hardhat Ignition](https://hardhat.org/ignition/docs/getting-started)
+- [Sonic Labs Documentation](https://docs.soniclabs.com/)
 
 ### Current Infrastructure
 - Deployment scripts: `/scripts/deployArcaSystem.ts`
-- Ignition modules: `/ignition/modules/`
+- Network configurations: `/config/networks/`
 - Test infrastructure: `/test/` (151 tests, 100% passing)
 - Configuration: `hardhat.config.ts`
 
 ## 🚀 Next Immediate Action
 
-**Start with Phase 4.1**: Create Hardhat Ignition deployment modules for the UUPS proxy system.
+**Complete Phase 4**: Finish deployment infrastructure and upgrade procedures.
 
 This involves:
-1. Analyzing existing deployment infrastructure in `/scripts/` and `/ignition/`
-2. Creating comprehensive Ignition modules for all contracts
-3. Handling the complex initialization parameter flow
-4. Testing deployment process on local network
+1. Creating upgrade scripts and documentation
+2. Implementing deployment rollback procedures
+3. Setting up persistent local blockchain state
+4. Testing upgrade scenarios locally
 
 ---
 

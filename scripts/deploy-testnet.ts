@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import hre from "hardhat";
 
 async function main() {
