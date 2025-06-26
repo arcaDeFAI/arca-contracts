@@ -1,0 +1,35 @@
+{
+  "name": "sonic-mainnet",
+  "chainId": 146,
+  "rpcUrl": "https://rpc.soniclabs.com",
+  "blockExplorer": "https://sonicscan.org",
+  "deployment": {
+    "binStep": 25,
+    "amountXMin": "1000000000000000",
+    "amountYMin": "1000000000000000",
+    "vaultName": "Arca Vault",
+    "vaultSymbol": "ARCA",
+    "idSlippage": "5",
+    "feeRecipient": "TODO_SET_FEE_RECIPIENT_MULTISIG"
+  },
+  "contracts": {
+    "tokenX": "TODO_SET_TOKEN_X_ADDRESS",
+    "tokenY": "TODO_SET_TOKEN_Y_ADDRESS",
+    "lbRouter": "TODO_SET_LB_ROUTER_ADDRESS",
+    "lbpAMM": "TODO_SET_LBP_AMM_ADDRESS",
+    "lbpContract": "TODO_SET_LBP_CONTRACT_ADDRESS",
+    "rewarder": "TODO_SET_REWARDER_ADDRESS",
+    "rewardToken": "TODO_SET_METRO_TOKEN_ADDRESS",
+    "nativeToken": "TODO_SET_NATIVE_TOKEN_ADDRESS",
+    "lbpContractUSD": "TODO_SET_LBP_CONTRACT_USD_ADDRESS"
+  },
+  "gasSettings": {
+    "gasPrice": "auto",
+    "gasLimit": 5000000
+  },
+  "security": {
+    "requireMultisig": true,
+    "timelockDelay": 172800,
+    "upgradeDelay": 604800
+  }
+}
