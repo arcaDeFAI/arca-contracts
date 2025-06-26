@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import hre from "hardhat";
 
 async function main() {
@@ -7,6 +8,8 @@ async function main() {
   if (hre.network.name !== "localhost" && hre.network.name !== "hardhat") {
     throw new Error(`This script is for localhost only. Current network: ${hre.network.name}`);
   }
+  
+  // Note: No private key required for localhost - uses Hardhat's built-in accounts
   
   // Import required functions
   const { deployArcaSystem } = await import("./deployArcaSystem");

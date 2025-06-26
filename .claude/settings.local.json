@@ -25,7 +25,11 @@
       "Bash(ls:*)",
       "Bash(npm run deploy:local:*)",
       "Bash(npm run deploy:verify:*)",
-      "WebFetch(domain:docs.soniclabs.com)"
+      "WebFetch(domain:docs.soniclabs.com)",
+      "WebFetch(domain:www.alchemy.com)",
+      "WebFetch(domain:docs.metropolis.exchange)",
+      "WebFetch(domain:www.geckoterminal.com)",
+      "WebFetch(domain:sonicscan.org)"
     ],
     "deny": []
   }

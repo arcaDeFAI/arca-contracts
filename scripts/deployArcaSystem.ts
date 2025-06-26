@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import hre from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import * as fs from "fs";

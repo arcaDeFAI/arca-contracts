@@ -10,7 +10,7 @@
     "vaultName": "Arca Sonic Testnet Vault",
     "vaultSymbol": "ARCA-TEST",
     "idSlippage": "5",
-    "feeRecipient": "TODO_SET_FEE_RECIPIENT_ADDRESS"
+    "feeRecipient": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98"
   },
   "contracts": {
     "tokenX": "TODO_SET_TOKEN_X_ADDRESS",
