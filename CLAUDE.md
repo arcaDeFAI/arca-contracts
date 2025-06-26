@@ -259,6 +259,14 @@ import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
 
 **Solution**: The project uses TypeScript deployment scripts (`scripts/deployArcaSystem.ts`) with OpenZeppelin's upgrades plugin for complex deployments, completely avoiding contract size limits.
 
+## Strategic Documentation
+
+For deeper context on specific aspects:
+- **SECURITY_ACTION_PLAN.md** - Audit preparation and security improvements roadmap
+- **TESTING_STRATEGY.md** - Comprehensive testing approach and coverage goals
+- **DEPLOYMENT_STRATEGY.md** - Production deployment guidelines and best practices
+- **DEPLOYMENT_ROADMAP.md** - Phased deployment plan and milestones
+
 ## Development Workflow Notes
 
 ### Best Practices
