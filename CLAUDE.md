@@ -116,6 +116,10 @@ npx hardhat test test/*.integration.test.ts
 # Run precision tests
 npx hardhat test test/*.precise.test.ts
 
+# Test on mainnet fork
+npm run fork:deploy
+npm run fork:verify
+
 # Generate test data
 npx hardhat test-data:network-config
 ```
@@ -130,11 +134,12 @@ npx hardhat test-data:network-config
 npx hardhat run scripts/deployArcaSystem.ts --network <network>
 
 # Or use the convenience scripts:
-npm run deploy:local     # For local development with mocks
-npm run deploy:testnet   # For Sonic testnet deployment
+npm run deploy:local        # For local development with mocks
+npm run deploy:mainnet       # For Sonic mainnet deployment
+npm run fork:deploy          # For mainnet fork testing
 ```
 
-**Deployment Strategy**: See `DEPLOYMENT_STRATEGY.md` for comprehensive deployment guidelines.
+**Deployment Strategy**: See `DEPLOYMENT_APPROACH.md` for our two-tier testing approach (localhost + mainnet fork → mainnet).
 
 ## Code Conventions
 

@@ -9,27 +9,27 @@ interface ReadinessCheck {
   severity: "error" | "warning" | "info";
 }
 
-async function checkTestnetReadiness(): Promise<void> {
-  console.log("🔍 Checking Sonic Testnet Deployment Readiness...\n");
+async function checkMainnetReadiness(): Promise<void> {
+  console.log("🔍 Checking Sonic Mainnet Deployment Readiness...\n");
   
   const checks: ReadinessCheck[] = [];
   
   // Check 1: Network configuration exists and loads
   try {
-    const config = loadNetworkConfig("sonic-testnet");
+    const config = loadNetworkConfig("sonic-mainnet");
     checks.push({
       name: "Network Config",
       passed: true,
-      message: "sonic-testnet.json loads successfully",
+      message: "sonic-mainnet.json loads successfully",
       severity: "info"
     });
     
     // Check 2: Environment variables
     const envChecks = [
       { key: "PRIVATE_KEY", name: "Private Key" },
-      { key: "TESTNET_FEE_RECIPIENT", name: "Fee Recipient" },
+      { key: "MAINNET_FEE_RECIPIENT", name: "Fee Recipient" },
       { key: "SONIC_SCAN_API_KEY", name: "Block Explorer API Key", optional: true },
-      { key: "ALCHEMY_API_KEY", name: "Alchemy API Key", optional: true }
+      { key: "ALCHEMY_API_KEY", name: "Alchemy API Key", recommended: true }
     ];
     
     for (const envCheck of envChecks) {
@@ -125,7 +125,7 @@ async function checkTestnetReadiness(): Promise<void> {
     
     // Check 6: Deployment validation
     try {
-      validateDeploymentConfig(deploymentConfig, "sonic-testnet");
+      validateDeploymentConfig(deploymentConfig, "sonic-mainnet");
       checks.push({
         name: "Config Validation",
         passed: true,
@@ -145,7 +145,7 @@ async function checkTestnetReadiness(): Promise<void> {
     checks.push({
       name: "Network Config",
       passed: false,
-      message: `Failed to load sonic-testnet.json: ${error}`,
+      message: `Failed to load sonic-mainnet.json: ${error}`,
       severity: "error"
     });
   }
@@ -170,26 +170,28 @@ async function checkTestnetReadiness(): Promise<void> {
   
   if (hasErrors) {
     console.log("❌ NOT READY FOR DEPLOYMENT");
-    console.log("🚨 Critical errors must be resolved before deploying to testnet");
+    console.log("🚨 Critical errors must be resolved before deploying to mainnet");
     console.log("\n📋 Next steps:");
-    console.log("1. Review TESTNET_DEPLOYMENT_CHECKLIST.md");
-    console.log("2. Obtain Metropolis DLMM contract addresses");
-    console.log("3. Set up .env file with private key and fee recipient");
-    console.log("4. Fund deployment wallet with Sonic testnet tokens");
+    console.log("1. Review DEPLOYMENT_APPROACH.md");
+    console.log("2. Set up .env file with private key and fee recipient");
+    console.log("3. Fund deployment wallet with Sonic mainnet tokens");
+    console.log("4. Consider testing on mainnet fork first (npm run fork:deploy)");
     process.exit(1);
   } else if (hasWarnings) {
     console.log("⚠️  READY WITH WARNINGS");
     console.log("✅ No critical errors, but some optional items missing");
+    console.log("💡 Consider using Alchemy for better reliability");
   } else {
-    console.log("🎉 READY FOR DEPLOYMENT!");
-    console.log("✅ All checks passed - you can deploy to testnet");
+    console.log("🎉 READY FOR MAINNET DEPLOYMENT!");
+    console.log("✅ All checks passed - you can deploy to mainnet");
+    console.log("🚀 Use: npm run deploy:mainnet:alchemy");
   }
   
   console.log("=".repeat(60));
 }
 
 async function main() {
-  await checkTestnetReadiness();
+  await checkMainnetReadiness();
 }
 
 main().catch((error) => {
