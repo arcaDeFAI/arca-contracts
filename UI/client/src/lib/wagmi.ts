@@ -22,28 +22,24 @@ const sonic = {
   testnet: false,
 } as const;
 
-// Define Sonic Blaze Testnet chain
-const sonicTestnet = {
-  id: 57054,
-  name: "Sonic Blaze Testnet",
-  network: "sonic-testnet",
+// Define local fork for testing
+const sonicFork = {
+  id: 31337,
+  name: "Sonic Fork",
+  network: "sonic-fork",
   nativeCurrency: {
     decimals: 18,
     name: "Sonic",
     symbol: "S",
   },
   rpcUrls: {
-    public: { http: ["https://rpc.blaze.soniclabs.com"] },
-    default: { http: ["https://rpc.blaze.soniclabs.com"] },
+    public: { http: ["http://127.0.0.1:8545"] },
+    default: { http: ["http://127.0.0.1:8545"] },
   },
   blockExplorers: {
-    default: {
-      name: "Sonic Testnet Explorer",
-      url: "https://testnet.sonicscan.org",
-    },
+    default: { name: "Local Fork", url: "http://localhost:8545" },
   },
   testnet: true,
-  faucets: ["https://testnet.soniclabs.com/account"],
 } as const;
 
 const projectId =
@@ -51,13 +47,14 @@ const projectId =
   "79b51eb4327450f59778f2454e0d5ab1";
 
 export const config = createConfig({
-  chains: [mainnet, polygon, arbitrum, sonic],
+  chains: [mainnet, polygon, arbitrum, sonic, sonicFork],
   connectors: [injected(), metaMask(), safe(), walletConnect({ projectId })],
   transports: {
     [mainnet.id]: http(),
     [polygon.id]: http(),
     [arbitrum.id]: http(),
     [sonic.id]: http(),
+    [sonicFork.id]: http(),
   },
 });
 

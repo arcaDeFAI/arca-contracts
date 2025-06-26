@@ -29,7 +29,9 @@
       "WebFetch(domain:www.alchemy.com)",
       "WebFetch(domain:docs.metropolis.exchange)",
       "WebFetch(domain:www.geckoterminal.com)",
-      "WebFetch(domain:sonicscan.org)"
+      "WebFetch(domain:sonicscan.org)",
+      "Bash(node:*)",
+      "Bash(npx prettier:*)"
     ],
     "deny": []
   }
