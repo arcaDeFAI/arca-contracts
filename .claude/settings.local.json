@@ -31,7 +31,8 @@
       "WebFetch(domain:www.geckoterminal.com)",
       "WebFetch(domain:sonicscan.org)",
       "Bash(node:*)",
-      "Bash(npx prettier:*)"
+      "Bash(npx prettier:*)",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }
