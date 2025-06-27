@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAccount } from "wagmi";
 
 export interface TokenPrices {
-  wS: number; // Price in USD
-  usdce: number; // Price in USD (should be ~1.0 for USDC.e)
+  [tokenSymbol: string]: number; // Dynamic token prices in USD
   lastUpdated: number;
 }
 
@@ -16,10 +15,12 @@ export interface TokenPricesHook {
 
 // Mock token price data for development
 // In production, this would connect to a price oracle or API
-const MOCK_PRICES: TokenPrices = {
-  wS: 0.85, // Mock price for wrapped Sonic
-  usdce: 1.0, // USDC.e should be pegged to ~$1
-  lastUpdated: Date.now(),
+const MOCK_TOKEN_PRICES: Record<string, number> = {
+  ws: 0.85, // Mock price for wrapped Sonic
+  'usdc.e': 1.0, // USDC.e should be pegged to ~$1
+  usdc: 1.0, // USDC should be pegged to ~$1
+  metro: 2.50, // Mock price for METRO token
+  // Add more tokens as needed
 };
 
 // Price cache to avoid excessive API calls
@@ -27,13 +28,30 @@ let priceCache: TokenPrices | null = null;
 let lastFetchTime = 0;
 const CACHE_DURATION = 30000; // 30 seconds
 
-export function useTokenPrices(): TokenPricesHook {
+// For testing: clear cache function
+export function clearCache() {
+  priceCache = null;
+  lastFetchTime = 0;
+}
+
+export function useTokenPrices(tokenSymbols: string[] = []): TokenPricesHook {
   const { chainId } = useAccount();
   const [prices, setPrices] = useState<TokenPrices | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Use ref to store current tokens and avoid dependency cycles
+  const tokensRef = useRef<string>('');
+  const currentTokens = tokenSymbols.sort().join(',');
+  
+  // Only update ref when tokens actually change
+  if (tokensRef.current !== currentTokens) {
+    tokensRef.current = currentTokens;
+  }
+
   const fetchPrices = useCallback(async () => {
+    const tokens = tokensRef.current;
+    
     // Check cache first
     const now = Date.now();
     if (priceCache && now - lastFetchTime < CACHE_DURATION) {
@@ -51,14 +69,24 @@ export function useTokenPrices(): TokenPricesHook {
         // Simulate API delay
         await new Promise<void>((resolve) => setTimeout(resolve, 500));
 
-        const newPrices = {
-          ...MOCK_PRICES,
+        // Build price object for requested tokens
+        const tokenPrices: TokenPrices = {
           lastUpdated: now,
         };
 
-        priceCache = newPrices;
+        // Add prices for requested tokens (case-insensitive)
+        const requestedTokens = tokens ? tokens.split(',') : [];
+        
+        requestedTokens.forEach(symbol => {
+          const normalizedSymbol = symbol.toLowerCase();
+          if (MOCK_TOKEN_PRICES[normalizedSymbol] !== undefined) {
+            tokenPrices[normalizedSymbol] = MOCK_TOKEN_PRICES[normalizedSymbol];
+          }
+        });
+
+        priceCache = tokenPrices;
         lastFetchTime = now;
-        setPrices(newPrices);
+        setPrices(tokenPrices);
       } else {
         throw new Error("Unsupported network for price fetching");
       }
@@ -90,7 +118,7 @@ export function useTokenPrices(): TokenPricesHook {
     if (chainId) {
       void fetchPrices();
     }
-  }, [chainId, fetchPrices]);
+  }, [chainId, fetchPrices, currentTokens]); // Depend on currentTokens string value
 
   // Set up periodic price updates
   useEffect(() => {
@@ -114,7 +142,7 @@ export function useTokenPrices(): TokenPricesHook {
 // Utility function to get USD value of token amount
 export function getTokenUSDValue(
   tokenAmount: string,
-  tokenType: "wS" | "usdce",
+  tokenSymbol: string,
   prices: TokenPrices | null,
 ): number {
   if (!prices || !tokenAmount) return 0;
@@ -122,18 +150,22 @@ export function getTokenUSDValue(
   const amount = parseFloat(tokenAmount);
   if (isNaN(amount)) return 0;
 
-  const price = tokenType === "wS" ? prices.wS : prices.usdce;
+  // Look up price using case-insensitive token symbol
+  const normalizedSymbol = tokenSymbol.toLowerCase();
+  const price = prices[normalizedSymbol] || 0;
   return amount * price;
 }
 
 // Utility function to format price display
 export function formatTokenPrice(
-  tokenType: "wS" | "usdce",
+  tokenSymbol: string,
   prices: TokenPrices | null,
 ): string {
   if (!prices) return "$0.00";
 
-  const price = tokenType === "wS" ? prices.wS : prices.usdce;
+  // Look up price using case-insensitive token symbol
+  const normalizedSymbol = tokenSymbol.toLowerCase();
+  const price = prices[normalizedSymbol] || 0;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",

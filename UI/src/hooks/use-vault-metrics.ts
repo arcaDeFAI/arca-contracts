@@ -82,49 +82,61 @@ function calculateUserROI(earnings: number, totalDeposited: number): number {
   return (earnings / totalDeposited) * 100;
 }
 
-export function useVaultMetrics(): VaultMetricsHook {
-  const vault = useVault();
+export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
+  const vault = useVault(vaultAddress);
+  
+  // Get token symbols from vault for price fetching
+  const tokenSymbols = vault.tokenXSymbol && vault.tokenYSymbol 
+    ? [vault.tokenXSymbol, vault.tokenYSymbol] 
+    : [];
+    
   const {
     prices,
     isLoading: pricesLoading,
     error: pricesError,
     refetch: refetchPrices,
-  } = useTokenPrices();
+  } = useTokenPrices(tokenSymbols);
   const { getTransactionSummary } = useTransactionHistory();
 
   const metrics = useMemo((): VaultMetrics | null => {
     if (!prices || pricesLoading) return null;
+
+    // Get dynamic token symbols from vault configuration
+    const tokenXSymbol = vault.tokenXSymbol;
+    const tokenYSymbol = vault.tokenYSymbol;
+    
+    if (!tokenXSymbol || !tokenYSymbol) return null;
 
     // Vault balances are already formatted as strings by useVault
     const vaultBalanceXStr = vault.vaultBalanceX;
     const vaultBalanceYStr = vault.vaultBalanceY;
     const userSharesXStr = vault.userSharesX;
     const userSharesYStr = vault.userSharesY;
-    const userBalanceXStr = vault.userBalanceWS;
-    const userBalanceYStr = vault.userBalanceUSDC;
+    const userBalanceXStr = vault.userBalanceX;
+    const userBalanceYStr = vault.userBalanceY;
 
-    // Calculate USD values
-    const vaultBalanceXUSD = getTokenUSDValue(vaultBalanceXStr, "wS", prices);
-    const vaultBalanceYUSD = getTokenUSDValue(
-      vaultBalanceYStr,
-      "usdce",
-      prices,
-    );
+    // Calculate USD values using dynamic token symbols
+    const vaultBalanceXUSD = getTokenUSDValue(vaultBalanceXStr, tokenXSymbol, prices);
+    const vaultBalanceYUSD = getTokenUSDValue(vaultBalanceYStr, tokenYSymbol, prices);
     const totalTvlUSD = vaultBalanceXUSD + vaultBalanceYUSD;
 
     // User token balances in USD
-    const userBalanceXUSD = getTokenUSDValue(userBalanceXStr, "wS", prices);
-    const userBalanceYUSD = getTokenUSDValue(userBalanceYStr, "usdce", prices);
+    const userBalanceXUSD = getTokenUSDValue(userBalanceXStr, tokenXSymbol, prices);
+    const userBalanceYUSD = getTokenUSDValue(userBalanceYStr, tokenYSymbol, prices);
 
     // Use price per share from vault contract (already formatted as strings)
     const pricePerShareX = parseFloat(vault.pricePerShareX) || 1;
     const pricePerShareY = parseFloat(vault.pricePerShareY) || 1;
 
+    // Get token prices dynamically
+    const tokenXPrice = prices[tokenXSymbol.toLowerCase()] || 0;
+    const tokenYPrice = prices[tokenYSymbol.toLowerCase()] || 0;
+
     // User shares value in USD
     const userSharesXUSD =
-      parseFloat(userSharesXStr) * pricePerShareX * prices.wS;
+      parseFloat(userSharesXStr) * pricePerShareX * tokenXPrice;
     const userSharesYUSD =
-      parseFloat(userSharesYStr) * pricePerShareY * prices.usdce;
+      parseFloat(userSharesYStr) * pricePerShareY * tokenYPrice;
     const userTotalUSD = userSharesXUSD + userSharesYUSD;
 
     // Transaction history analysis
@@ -179,10 +191,12 @@ export function useVaultMetrics(): VaultMetricsHook {
     vault.vaultBalanceY,
     vault.userSharesX,
     vault.userSharesY,
-    vault.userBalanceWS,
-    vault.userBalanceUSDC,
+    vault.userBalanceX,
+    vault.userBalanceY,
     vault.pricePerShareX,
     vault.pricePerShareY,
+    vault.tokenXSymbol,
+    vault.tokenYSymbol,
     prices,
     pricesLoading,
     getTransactionSummary,
