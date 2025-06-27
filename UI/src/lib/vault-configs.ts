@@ -30,57 +30,13 @@ import { getContracts } from "./contracts";
 /**
  * Vault Configurations for Different Networks
  *
- * Each entry represents a deployed vault contract with its token pair configuration.
- * This makes it easy to support multiple vaults with different token pairs.
+ * NOTE: This is now deprecated in favor of getVaultConfigsForChain()
+ * which dynamically loads configurations based on the current chain.
+ *
+ * This static array is kept for backward compatibility but will be empty.
  */
-
-// Get current network contracts (this will be dynamic based on chainId)
-const contracts = getContracts(31337); // Default to fork for now
-
 export const VAULT_CONFIGS: VaultConfig[] = [
-  {
-    address: contracts?.vault || "0x0000000000000000000000000000000000000000",
-    tokenX: {
-      symbol: "wS",
-      address:
-        contracts?.tokens.wS || "0x0000000000000000000000000000000000000000",
-      decimals: 18,
-      coingeckoId: "sonic", // Hypothetical - replace with actual if available
-    },
-    tokenY: {
-      symbol: "USDC.e",
-      address:
-        contracts?.tokens.usdce || "0x0000000000000000000000000000000000000000",
-      decimals: 6,
-      coingeckoId: "usd-coin",
-    },
-    name: "wS-USDC.e",
-    platform: "Arca DLMM",
-    chain: "Sonic Fork", // Will be dynamic based on chainId
-    isActive: true,
-    description:
-      "Automated liquidity provision for wS-USDC.e pair with Metro reward compounding",
-  },
-
-  // Future vault configurations can be added here:
-  // {
-  //   address: "0x...", // wS-METRO vault
-  //   tokenX: { symbol: "wS", address: "0x...", decimals: 18 },
-  //   tokenY: { symbol: "METRO", address: "0x...", decimals: 18 },
-  //   name: "wS-METRO",
-  //   platform: "Arca DLMM",
-  //   chain: "Sonic",
-  //   isActive: true
-  // },
-  // {
-  //   address: "0x...", // METRO-USDC vault
-  //   tokenX: { symbol: "METRO", address: "0x...", decimals: 18 },
-  //   tokenY: { symbol: "USDC", address: "0x...", decimals: 6 },
-  //   name: "METRO-USDC",
-  //   platform: "Arca DLMM",
-  //   chain: "Sonic",
-  //   isActive: true
-  // }
+  // Static configurations removed - use getVaultConfigsForChain() instead
 ];
 
 /**
@@ -93,10 +49,15 @@ export const getVaultConfig = (address: string): VaultConfig | undefined => {
 };
 
 /**
- * Get all active vault configurations
+ * Get all active vault configurations - now uses dynamic loading
+ *
+ * @param chainId - The chain ID to get configurations for. If not provided,
+ *                  will attempt to use a reasonable default.
  */
-export const getActiveVaultConfigs = (): VaultConfig[] => {
-  return VAULT_CONFIGS.filter((config) => config.isActive);
+export const getActiveVaultConfigs = (chainId?: number): VaultConfig[] => {
+  // Default to localhost for development
+  const targetChainId = chainId || 31337;
+  return getVaultConfigsForChain(targetChainId);
 };
 
 /**
@@ -132,10 +93,25 @@ export const getVaultConfigsForChain = (chainId: number): VaultConfig[] => {
   const networkContracts = getContracts(chainId);
 
   if (!networkContracts) {
+    console.warn(`No contracts available for chain ${chainId}`);
     return [];
   }
 
-  const chainName = chainId === 146 ? "Sonic" : "Sonic Fork";
+  // Get chain-specific names and settings
+  const getChainInfo = (chainId: number) => {
+    switch (chainId) {
+      case 31337:
+        return { name: "Localhost", testnet: true };
+      case 31338:
+        return { name: "Sonic Fork", testnet: true };
+      case 146:
+        return { name: "Sonic", testnet: false };
+      default:
+        return { name: "Unknown", testnet: true };
+    }
+  };
+
+  const chainInfo = getChainInfo(chainId);
 
   return [
     {
@@ -154,12 +130,12 @@ export const getVaultConfigsForChain = (chainId: number): VaultConfig[] => {
       },
       name: "wS-USDC.e",
       platform: "Arca DLMM",
-      chain: chainName,
+      chain: chainInfo.name,
       isActive: true,
-      description:
-        "Automated liquidity provision for wS-USDC.e pair with Metro reward compounding",
+      description: `Automated liquidity provision for wS-USDC.e pair with Metro reward compounding${chainInfo.testnet ? " (Test Network)" : ""}`,
     },
     // Future: Auto-discover additional vaults from on-chain registry
+    // Future: Add METRO-USDC vault when available
   ];
 };
 
