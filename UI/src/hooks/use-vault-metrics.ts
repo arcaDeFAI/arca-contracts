@@ -45,13 +45,16 @@ export interface VaultMetricsHook {
   refetch: () => void;
 }
 
-// Calculate APR based on historical performance and current rates
+// 🚨 WARNING: APR CALCULATION IS COMPLETELY FAKE 🚨
+// This shows FAKE 45% APR to users - DO NOT USE IN PRODUCTION
+// Users will expect these yields and be disappointed/lose money
+// TODO: Replace with real METRO rewards + DLMM fee calculations
 function calculateEstimatedAPR(
   totalTvlUSD: number,
   userTransactionHistory: unknown[],
   prices: TokenPrices | null,
 ): number {
-  // For development: use mock APR calculation
+  // ❌ FAKE APR calculation - promises yields that don't exist
   // In production, this would use:
   // 1. Historical Metro rewards data
   // 2. Current DLMM trading fees
@@ -60,10 +63,10 @@ function calculateEstimatedAPR(
 
   if (!prices || totalTvlUSD === 0) return 0;
 
-  // Mock APR calculation based on TVL size (larger pools = lower APR due to dilution)
-  const baseAPR = 45; // Base 45% APR
-  const tvlFactor = Math.max(0.5, Math.min(1.0, 100000 / totalTvlUSD)); // Scale based on TVL
-  const seasonalBonus = 1.2; // 20% bonus for early participation
+  // ❌ FAKE calculation - DO NOT SHOW TO REAL USERS
+  const baseAPR = 45; // ❌ FAKE 45% APR promise
+  const tvlFactor = Math.max(0.5, Math.min(1.0, 100000 / totalTvlUSD)); // ❌ FAKE scaling
+  const seasonalBonus = 1.2; // ❌ FAKE 20% bonus
 
   return baseAPR * tvlFactor * seasonalBonus;
 }
