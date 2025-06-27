@@ -32,7 +32,9 @@
       "WebFetch(domain:sonicscan.org)",
       "Bash(node:*)",
       "Bash(npx prettier:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(sed:*)",
+      "Bash(timeout 10s npm run dev)"
     ],
     "deny": []
   }
