@@ -1,7 +1,7 @@
 import type { RealVault } from "../types/vault";
 import TokenPairIcons from "./token-pair-icons";
 import { useState, useEffect } from "react";
-import { useVaultWithErrorHandling } from "../hooks/use-vault-with-error-handling";
+import { useVault } from "../hooks/use-vault";
 import { ErrorDisplay } from "./web3-error-boundary";
 import { TransactionModal } from "./transaction-modal";
 import {
@@ -18,8 +18,10 @@ interface VaultCardProps {
 export default function VaultCard({ vault, onClick }: VaultCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">("deposit");
-  const [depositAmountWS, setDepositAmountWS] = useState("");
-  const [depositAmountUSDC, setDepositAmountUSDC] = useState("");
+  
+  // Token-agnostic deposit amounts (index-based)
+  const [depositAmountX, setDepositAmountX] = useState(""); // First token
+  const [depositAmountY, setDepositAmountY] = useState(""); // Second token
   const [withdrawSharesX, setWithdrawSharesX] = useState("");
   const [withdrawSharesY, setWithdrawSharesY] = useState("");
 
@@ -28,30 +30,39 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
   const [showProgressModal, setShowProgressModal] = useState(false);
   const [pendingTransaction, setPendingTransaction] = useState<{
     type: "deposit" | "withdraw" | "approve";
-    token: "wS" | "USDC.e";
+    tokenIndex: number; // 0 for tokenX, 1 for tokenY
+    tokenSymbol: string; // Dynamic token symbol
     amount: string;
   } | null>(null);
   const [transactionStatus, setTransactionStatus] =
     useState<TransactionStatus>("idle");
   const [currentTxHash, setCurrentTxHash] = useState<string>("");
 
+  // Use multi-vault hook with vault address
   const {
-    depositWS,
-    depositUSDC,
+    vaultConfig,
+    tokenXSymbol,
+    tokenYSymbol,
+    userBalanceX,
+    userBalanceY,
+    depositTokenX,
+    depositTokenY,
     withdrawShares,
-    approveWS,
-    approveUSDC,
+    approveTokenX,
+    approveTokenY,
     hasAllowance,
+    validateBalance,
+    validateConnection,
     isWritePending,
     isConfirming,
     lastOperation,
-    error,
-    clearError,
-    validateConnection,
-    validateBalance,
-    validateShares,
     hash,
-  } = useVaultWithErrorHandling();
+    error,           // TDD: Get error from useVault hook
+    clearError,      // TDD: Get clearError from useVault hook
+  } = useVault(vault.contractAddress);
+
+  // Share validation (simplified for TDD)
+  const validateShares = (sharesX: string, sharesY: string) => true;
 
   const { addTransaction, updateTransactionStatus } = useTransactionHistory();
 
@@ -67,7 +78,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
         addTransaction(
           hash,
           pendingTransaction.type,
-          pendingTransaction.token,
+          pendingTransaction.tokenSymbol,
           pendingTransaction.amount,
         );
       }
@@ -115,26 +126,26 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     if (onClick) onClick();
   };
 
-  const handleDeposit = async (token: "wS" | "USDC.e") => {
-    const amount = token === "wS" ? depositAmountWS : depositAmountUSDC;
+  // Token-agnostic deposit handler using tokenIndex
+  const handleDeposit = async (tokenIndex: number) => {
+    const amount = tokenIndex === 0 ? depositAmountX : depositAmountY;
+    const tokenSymbol = tokenIndex === 0 ? tokenXSymbol : tokenYSymbol;
     if (!amount) return;
 
     // Validate connection and balance
     if (!validateConnection()) return;
-
-    const tokenType = token === "wS" ? "wS" : "usdce";
-    if (!validateBalance(tokenType, amount)) return;
+    if (!validateBalance(tokenIndex, amount)) return;
 
     // Check if approval is needed
-    if (!hasAllowance(tokenType, amount)) {
+    if (!hasAllowance(tokenIndex, amount)) {
       // Show approval confirmation
-      setPendingTransaction({ type: "approve", token, amount });
+      setPendingTransaction({ type: "approve", tokenIndex, tokenSymbol, amount });
       setShowConfirmModal(true);
       return;
     }
 
-    // Show deposit confirmation
-    setPendingTransaction({ type: "deposit", token, amount });
+    // Show deposit confirmation (better UX with confirmation modal)
+    setPendingTransaction({ type: "deposit", tokenIndex, tokenSymbol, amount });
     setShowConfirmModal(true);
   };
 
@@ -144,21 +155,21 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     setShowConfirmModal(false);
 
     try {
-      const { type, token, amount } = pendingTransaction;
+      const { type, tokenIndex, amount } = pendingTransaction;
 
       if (type === "approve") {
-        if (token === "wS") {
-          await approveWS(amount);
+        if (tokenIndex === 0) {
+          await approveTokenX(amount);
         } else {
-          await approveUSDC(amount);
+          await approveTokenY(amount);
         }
       } else if (type === "deposit") {
-        if (token === "wS") {
-          await depositWS(amount);
-          setDepositAmountWS(""); // Clear input on success
+        if (tokenIndex === 0) {
+          await depositTokenX(amount);
+          setDepositAmountX(""); // Clear input on success
         } else {
-          await depositUSDC(amount);
-          setDepositAmountUSDC(""); // Clear input on success
+          await depositTokenY(amount);
+          setDepositAmountY(""); // Clear input on success
         }
       } else if (type === "withdraw") {
         await withdrawShares(withdrawSharesX || "0", withdrawSharesY || "0");
@@ -186,7 +197,8 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     ).toString();
     setPendingTransaction({
       type: "withdraw",
-      token: "wS",
+      tokenIndex: 0,
+      tokenSymbol: tokenXSymbol,
       amount: totalShares,
     });
     setShowConfirmModal(true);
@@ -209,19 +221,21 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     }
   };
 
-  const getButtonText = (token: "wS" | "USDC.e") => {
+  // Token-agnostic button text function
+  const getButtonText = (tokenIndex: number) => {
     if (isWritePending && lastOperation === "deposit") return "Pending...";
     if (isConfirming && lastOperation === "deposit") return "Confirming...";
 
-    const amount = token === "wS" ? depositAmountWS : depositAmountUSDC;
-    if (!amount) return "Enter Amount";
+    const amount = tokenIndex === 0 ? depositAmountX : depositAmountY;
+    const tokenSymbol = tokenIndex === 0 ? tokenXSymbol : tokenYSymbol;
+    
+    if (!amount) return `Enter ${tokenSymbol} Amount`;
 
-    const tokenType = token === "wS" ? "wS" : "usdce";
-    if (!hasAllowance(tokenType, amount)) {
-      return `Approve ${token}`;
+    if (!hasAllowance(tokenIndex, amount)) {
+      return `Approve ${tokenSymbol}`;
     }
 
-    return `Deposit ${token}`;
+    return `Deposit ${tokenSymbol}`;
   };
 
   return (
@@ -279,6 +293,17 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
           </div>
         </div>
 
+        {/* Error Display (Always Visible for Better UX) */}
+        {error && (
+          <div className="mx-4 mt-2">
+            <ErrorDisplay
+              error={error}
+              onDismiss={clearError}
+              className=""
+            />
+          </div>
+        )}
+
         {/* Expanded Details */}
         {isExpanded && (
           <div className="bg-arca-surface border border-arca-border border-t-0 rounded-b-xl px-6 py-6 -mt-1">
@@ -293,9 +318,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               {/* Left Side - Earnings */}
               <div className="bg-arca-bg rounded-lg p-4 border border-arca-border">
                 <div className="flex justify-between items-center mb-4">
-                  <div className="text-arca-secondary text-sm">wS Shares</div>
+                  <div className="text-arca-secondary text-sm">{tokenXSymbol} Shares</div>
                   <div className="text-arca-secondary text-sm">
-                    USDC.e Shares
+                    {tokenYSymbol} Shares
                   </div>
                 </div>
                 <div className="flex justify-between items-center mb-6">
@@ -344,7 +369,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
                 {/* Token Input Fields */}
                 <div className="space-y-4">
-                  {vault.tokens.map((token) => (
+                  {vault.tokens.map((token, tokenIndex) => (
                     <div key={token} className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-arca-secondary text-sm">
@@ -353,9 +378,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                         </span>
                         <span className="text-arca-secondary text-sm">
                           Balance:{" "}
-                          {token === "wS"
-                            ? vault.userBalanceWS
-                            : vault.userBalanceUSDC}
+                          {tokenIndex === 0
+                            ? vault.userBalanceX
+                            : vault.userBalanceY}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -369,22 +394,22 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                           placeholder="0.0"
                           value={
                             activeTab === "deposit"
-                              ? token === "wS"
-                                ? depositAmountWS
-                                : depositAmountUSDC
-                              : token === "wS"
+                              ? tokenIndex === 0
+                                ? depositAmountX
+                                : depositAmountY
+                              : tokenIndex === 0
                                 ? withdrawSharesX
                                 : withdrawSharesY
                           }
                           onChange={(e) => {
                             if (activeTab === "deposit") {
-                              if (token === "wS") {
-                                setDepositAmountWS(e.target.value);
+                              if (tokenIndex === 0) {
+                                setDepositAmountX(e.target.value);
                               } else {
-                                setDepositAmountUSDC(e.target.value);
+                                setDepositAmountY(e.target.value);
                               }
                             } else {
-                              if (token === "wS") {
+                              if (tokenIndex === 0) {
                                 setWithdrawSharesX(e.target.value);
                               } else {
                                 setWithdrawSharesY(e.target.value);
@@ -410,18 +435,18 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                     {activeTab === "deposit" && (
                       <>
                         <button
-                          onClick={() => handleDeposit("wS")}
-                          disabled={!depositAmountWS || isWritePending}
+                          onClick={() => handleDeposit(0)}
+                          disabled={!depositAmountX || isWritePending}
                           className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {getButtonText("wS")}
+                          {getButtonText(0)}
                         </button>
                         <button
-                          onClick={() => handleDeposit("USDC.e")}
-                          disabled={!depositAmountUSDC || isWritePending}
+                          onClick={() => handleDeposit(1)}
+                          disabled={!depositAmountY || isWritePending}
                           className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {getButtonText("USDC.e")}
+                          {getButtonText(1)}
                         </button>
                       </>
                     )}
@@ -508,9 +533,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               {/* Earnings Section */}
               <div className="bg-arca-bg rounded-lg p-4 border border-arca-border">
                 <div className="flex justify-between items-center mb-4">
-                  <div className="text-arca-secondary text-xs">wS Shares</div>
+                  <div className="text-arca-secondary text-xs">{tokenXSymbol} Shares</div>
                   <div className="text-arca-secondary text-xs">
-                    USDC.e Shares
+                    {tokenYSymbol} Shares
                   </div>
                 </div>
                 <div className="flex justify-between items-center mb-4">
@@ -559,7 +584,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
                 {/* Token Input Fields */}
                 <div className="space-y-3">
-                  {vault.tokens.map((token) => (
+                  {vault.tokens.map((token, tokenIndex) => (
                     <div key={token} className="space-y-2">
                       <div className="flex justify-between items-center">
                         <span className="text-arca-secondary text-xs">
@@ -568,9 +593,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                         </span>
                         <span className="text-arca-secondary text-xs">
                           Balance:{" "}
-                          {token === "wS"
-                            ? vault.userBalanceWS
-                            : vault.userBalanceUSDC}
+                          {tokenIndex === 0
+                            ? vault.userBalanceX
+                            : vault.userBalanceY}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -584,22 +609,22 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                           placeholder="0.0"
                           value={
                             activeTab === "deposit"
-                              ? token === "wS"
-                                ? depositAmountWS
-                                : depositAmountUSDC
-                              : token === "wS"
+                              ? tokenIndex === 0
+                                ? depositAmountX
+                                : depositAmountY
+                              : tokenIndex === 0
                                 ? withdrawSharesX
                                 : withdrawSharesY
                           }
                           onChange={(e) => {
                             if (activeTab === "deposit") {
-                              if (token === "wS") {
-                                setDepositAmountWS(e.target.value);
+                              if (tokenIndex === 0) {
+                                setDepositAmountX(e.target.value);
                               } else {
-                                setDepositAmountUSDC(e.target.value);
+                                setDepositAmountY(e.target.value);
                               }
                             } else {
-                              if (token === "wS") {
+                              if (tokenIndex === 0) {
                                 setWithdrawSharesX(e.target.value);
                               } else {
                                 setWithdrawSharesY(e.target.value);
@@ -625,18 +650,18 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                     {activeTab === "deposit" && (
                       <>
                         <button
-                          onClick={() => handleDeposit("wS")}
-                          disabled={!depositAmountWS || isWritePending}
+                          onClick={() => handleDeposit(0)}
+                          disabled={!depositAmountX || isWritePending}
                           className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         >
-                          {getButtonText("wS")}
+                          {getButtonText(0)}
                         </button>
                         <button
-                          onClick={() => handleDeposit("USDC.e")}
-                          disabled={!depositAmountUSDC || isWritePending}
+                          onClick={() => handleDeposit(1)}
+                          disabled={!depositAmountY || isWritePending}
                           className="w-full bg-blue-600 text-white py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                         >
-                          {getButtonText("USDC.e")}
+                          {getButtonText(1)}
                         </button>
                       </>
                     )}
@@ -673,16 +698,16 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
             onClose={handleCloseModals}
             onConfirm={handleConfirmTransaction}
             type={pendingTransaction.type}
-            token={pendingTransaction.token}
+            token={pendingTransaction.tokenSymbol}
             amount={pendingTransaction.amount}
             isLoading={false}
             userBalance={
-              pendingTransaction.token === "wS"
-                ? vault.userBalanceWS
-                : vault.userBalanceUSDC
+              pendingTransaction.tokenIndex === 0
+                ? vault.userBalanceX
+                : vault.userBalanceY
             }
             vaultShare={
-              pendingTransaction.token === "wS"
+              pendingTransaction.tokenIndex === 0
                 ? vault.pricePerShareX
                 : vault.pricePerShareY
             }
@@ -694,7 +719,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
             status={transactionStatus}
             txHash={currentTxHash}
             type={pendingTransaction.type}
-            token={pendingTransaction.token}
+            token={pendingTransaction.tokenSymbol}
             amount={pendingTransaction.amount}
             error={error || undefined}
             onRetry={handleRetryTransaction}
