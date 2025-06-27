@@ -84,12 +84,13 @@ function calculateUserROI(earnings: number, totalDeposited: number): number {
 
 export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
   const vault = useVault(vaultAddress);
-  
+
   // Get token symbols from vault for price fetching
-  const tokenSymbols = vault.tokenXSymbol && vault.tokenYSymbol 
-    ? [vault.tokenXSymbol, vault.tokenYSymbol] 
-    : [];
-    
+  const tokenSymbols =
+    vault.tokenXSymbol && vault.tokenYSymbol
+      ? [vault.tokenXSymbol, vault.tokenYSymbol]
+      : [];
+
   const {
     prices,
     isLoading: pricesLoading,
@@ -104,7 +105,7 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     // Get dynamic token symbols from vault configuration
     const tokenXSymbol = vault.tokenXSymbol;
     const tokenYSymbol = vault.tokenYSymbol;
-    
+
     if (!tokenXSymbol || !tokenYSymbol) return null;
 
     // Vault balances are already formatted as strings by useVault
@@ -116,13 +117,29 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     const userBalanceYStr = vault.userBalanceY;
 
     // Calculate USD values using dynamic token symbols
-    const vaultBalanceXUSD = getTokenUSDValue(vaultBalanceXStr, tokenXSymbol, prices);
-    const vaultBalanceYUSD = getTokenUSDValue(vaultBalanceYStr, tokenYSymbol, prices);
+    const vaultBalanceXUSD = getTokenUSDValue(
+      vaultBalanceXStr,
+      tokenXSymbol,
+      prices,
+    );
+    const vaultBalanceYUSD = getTokenUSDValue(
+      vaultBalanceYStr,
+      tokenYSymbol,
+      prices,
+    );
     const totalTvlUSD = vaultBalanceXUSD + vaultBalanceYUSD;
 
     // User token balances in USD
-    const userBalanceXUSD = getTokenUSDValue(userBalanceXStr, tokenXSymbol, prices);
-    const userBalanceYUSD = getTokenUSDValue(userBalanceYStr, tokenYSymbol, prices);
+    const userBalanceXUSD = getTokenUSDValue(
+      userBalanceXStr,
+      tokenXSymbol,
+      prices,
+    );
+    const userBalanceYUSD = getTokenUSDValue(
+      userBalanceYStr,
+      tokenYSymbol,
+      prices,
+    );
 
     // Use price per share from vault contract (already formatted as strings)
     const pricePerShareX = parseFloat(vault.pricePerShareX) || 1;
