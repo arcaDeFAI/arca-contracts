@@ -1,23 +1,86 @@
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { useLocation } from "wouter";
+import { useAccount } from "wagmi";
+import { useDashboardData } from "../hooks/use-dashboard-data";
+import { formatCurrency } from "../lib/utils";
 
-const chartData = [
-  { name: "Jan", deposits: 1000, earnings: 50 },
-  { name: "Feb", deposits: 1200, earnings: 120 },
-  { name: "Mar", deposits: 1100, earnings: 180 },
-  { name: "Apr", deposits: 1400, earnings: 220 },
-  { name: "May", deposits: 1600, earnings: 280 },
-  { name: "Jun", deposits: 1800, earnings: 340 },
-  { name: "Jul", deposits: 1850, earnings: 350 },
-];
+// Generate some sample historical data for now
+// TODO: Replace with real transaction history data
+const generateChartData = (
+  totalBalance: number,
+  totalDeposited: number,
+  totalEarnings: number,
+) => {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul"];
+  const depositsGrowth = totalDeposited / months.length;
+  const earningsGrowth = totalEarnings / months.length;
+
+  return months.map((month, index) => ({
+    name: month,
+    deposits: Math.floor(depositsGrowth * (index + 1)),
+    earnings: Math.floor(earningsGrowth * (index + 1)),
+  }));
+};
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
+  const { address: userAddress, isConnected } = useAccount();
 
-  const handlePositionClick = (vaultName: string) => {
-    // Navigate to vaults page - the vault card will auto-expand when clicked
-    setLocation("/");
+  // Use the dashboard data hook for all calculations
+  const {
+    totalPortfolioValue,
+    totalDeposited,
+    totalEarnings,
+    totalROI,
+    vaultPositions,
+    isLoading,
+    error,
+  } = useDashboardData();
+
+  const handlePositionClick = (vaultAddress: string) => {
+    // Navigate to vaults page with specific vault
+    setLocation(`/?vault=${vaultAddress}`);
   };
+
+  // If user is not connected, show connection prompt
+  if (!isConnected) {
+    return (
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold text-white mb-2">
+            Dashboard
+          </h1>
+          <p className="text-arca-secondary text-sm sm:text-base">
+            View your vault positions and earnings
+          </p>
+        </div>
+
+        <div className="bg-arca-surface rounded-xl border border-arca-border p-8 text-center">
+          <div className="max-w-md mx-auto">
+            <h3 className="text-xl font-semibold text-white mb-4">
+              Connect Your Wallet
+            </h3>
+            <p className="text-arca-secondary mb-6">
+              Connect your wallet to view your vault positions and track your
+              earnings.
+            </p>
+            <button
+              onClick={() => setLocation("/")}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              Connect Wallet
+            </button>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  const chartData = generateChartData(
+    totalPortfolioValue,
+    totalDeposited,
+    totalEarnings,
+  );
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-6 sm:mb-8">
@@ -38,25 +101,32 @@ export default function Dashboard() {
               <div className="text-arca-secondary text-sm mb-1">
                 Total Balance
               </div>
-              <div className="text-white font-bold text-4xl">$2,200.00</div>
-
-              <div className="inline-flex items-center bg-arca-primary text-black px-2 py-1 rounded text-xs font-medium mt-2">
-                <span>+$350.00</span>
+              <div className="text-white font-bold text-4xl">
+                {isLoading ? "Loading..." : formatCurrency(totalPortfolioValue)}
               </div>
+
+              {totalEarnings > 0 && (
+                <div className="inline-flex items-center bg-arca-primary text-black px-2 py-1 rounded text-xs font-medium mt-2">
+                  <span>+{formatCurrency(totalEarnings)}</span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-arca-secondary">Total Deposited:</span>
                 <span className="text-white font-medium text-lg">
-                  $1,850.00
+                  {isLoading ? "..." : formatCurrency(totalDeposited)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
                 <span className="text-arca-secondary">Total Earnings:</span>
-                <span className="arca-primary font-medium text-lg">
-                  +$350.00
+                <span
+                  className={`font-medium text-lg ${totalEarnings >= 0 ? "text-arca-primary" : "text-red-500"}`}
+                >
+                  {totalEarnings >= 0 ? "+" : ""}
+                  {isLoading ? "..." : formatCurrency(totalEarnings)}
                 </span>
               </div>
 
@@ -64,15 +134,19 @@ export default function Dashboard() {
               <div className="grid grid-cols-2 gap-4 pt-4 border-t border-arca-border">
                 <div>
                   <div className="text-arca-secondary text-sm mb-1">
-                    Provided Liquidity
+                    Active Vaults
                   </div>
-                  <div className="text-white font-bold text-xl">$0.00</div>
+                  <div className="text-white font-bold text-xl">
+                    {isLoading ? "..." : vaultPositions.length}
+                  </div>
                 </div>
                 <div>
                   <div className="text-arca-secondary text-sm mb-1">
                     Total Unclaimed Rewards
                   </div>
-                  <div className="text-white font-bold text-xl">$0.00</div>
+                  <div className="text-white font-bold text-xl">
+                    {isLoading ? "..." : "$0.00"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -138,106 +212,166 @@ export default function Dashboard() {
           Active Positions
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Position Card 1 */}
-          <div
-            className="bg-arca-bg rounded-lg border border-arca-border p-4 cursor-pointer position-card-glow transition-all duration-300 hover:scale-[1.02]"
-            onClick={() => handlePositionClick("ANON-USDC")}
-          >
-            <div className="flex items-center space-x-2 mb-3">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">A</span>
-              </div>
-              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center -ml-2">
-                <span className="text-white text-xs font-bold">U</span>
-              </div>
-              <div>
-                <div className="text-white font-medium">ANON-USDC</div>
-                <div className="text-arca-secondary text-xs">DLMM</div>
-              </div>
+        {isLoading ? (
+          // Loading state
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-arca-primary mx-auto mb-4"></div>
+            <p className="text-arca-secondary">Loading your positions...</p>
+          </div>
+        ) : error ? (
+          // Error state
+          <div className="text-center py-12">
+            <div className="text-red-500 mb-4">
+              Error loading positions: {error}
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">Deposited:</span>
-                <span className="text-white text-sm">$850.00</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        ) : vaultPositions.length === 0 ? (
+          // No positions state
+          <div className="text-center py-12">
+            <div className="max-w-md mx-auto">
+              <div className="w-16 h-16 bg-arca-bg rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  className="w-8 h-8 text-arca-secondary"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
               </div>
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">Earnings:</span>
-                <span className="arca-primary text-sm">+$156.30</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">APR:</span>
-                <span className="arca-primary text-sm font-medium">73.18%</span>
-              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                No Active Positions
+              </h3>
+              <p className="text-arca-secondary mb-6">
+                You haven't deposited into any vaults yet. Start earning yield
+                by depositing into our automated liquidity pools.
+              </p>
+              <button
+                onClick={() => setLocation("/")}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                View Available Vaults
+              </button>
             </div>
           </div>
+        ) : (
+          // Show actual positions
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {vaultPositions.map((position) => {
+              // Generate token initials for display
+              const tokenXInitial = position.tokenX.symbol
+                .charAt(0)
+                .toUpperCase();
+              const tokenYInitial = position.tokenY.symbol
+                .charAt(0)
+                .toUpperCase();
 
-          {/* Position Card 2 */}
-          <div
-            className="bg-arca-bg rounded-lg border border-arca-border p-4 cursor-pointer position-card-glow transition-all duration-300 hover:scale-[1.02]"
-            onClick={() => handlePositionClick("S-ETH")}
-          >
-            <div className="flex items-center space-x-2 mb-3">
-              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">S</span>
-              </div>
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center -ml-2">
-                <span className="text-white text-xs font-bold">E</span>
-              </div>
-              <div>
-                <div className="text-white font-medium">S-ETH</div>
-                <div className="text-arca-secondary text-xs">Uniswap</div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">Deposited:</span>
-                <span className="text-white text-sm">$650.00</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">Earnings:</span>
-                <span className="arca-primary text-sm">+$89.45</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">APR:</span>
-                <span className="arca-primary text-sm font-medium">42.5%</span>
-              </div>
-            </div>
-          </div>
+              // Color mapping for tokens
+              const getTokenColor = (symbol: string) => {
+                const colors: Record<string, string> = {
+                  wS: "bg-purple-600",
+                  USDC: "bg-green-600",
+                  "USDC.e": "bg-green-600",
+                  METRO: "bg-orange-600",
+                  ETH: "bg-blue-600",
+                  BTC: "bg-orange-500",
+                };
+                return colors[symbol] || "bg-gray-600";
+              };
 
-          {/* Position Card 3 */}
-          <div
-            className="bg-arca-bg rounded-lg border border-arca-border p-4 cursor-pointer position-card-glow transition-all duration-300 hover:scale-[1.02]"
-            onClick={() => handlePositionClick("WBTC-USDC")}
-          >
-            <div className="flex items-center space-x-2 mb-3">
-              <div className="w-8 h-8 bg-orange-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">W</span>
-              </div>
-              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center -ml-2">
-                <span className="text-white text-xs font-bold">U</span>
-              </div>
-              <div>
-                <div className="text-white font-medium">WBTC-USDC</div>
-                <div className="text-arca-secondary text-xs">SushiSwap</div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">Deposited:</span>
-                <span className="text-white text-sm">$350.00</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">Earnings:</span>
-                <span className="arca-primary text-sm">+$104.25</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-arca-secondary text-sm">APR:</span>
-                <span className="arca-primary text-sm font-medium">89.2%</span>
-              </div>
-            </div>
+              // Calculate individual earnings (for now, we don't have per-vault earnings)
+              const positionEarnings = 0; // TODO: Add per-vault earnings calculation
+
+              return (
+                <div
+                  key={position.vaultAddress}
+                  className="bg-arca-bg rounded-lg border border-arca-border p-4 cursor-pointer position-card-glow transition-all duration-300 hover:scale-[1.02]"
+                  onClick={() => handlePositionClick(position.vaultAddress)}
+                >
+                  <div className="flex items-center space-x-2 mb-3">
+                    <div
+                      className={`w-8 h-8 ${getTokenColor(position.tokenX.symbol)} rounded-full flex items-center justify-center`}
+                    >
+                      <span className="text-white text-xs font-bold">
+                        {tokenXInitial}
+                      </span>
+                    </div>
+                    <div
+                      className={`w-8 h-8 ${getTokenColor(position.tokenY.symbol)} rounded-full flex items-center justify-center -ml-2`}
+                    >
+                      <span className="text-white text-xs font-bold">
+                        {tokenYInitial}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">
+                        {position.vaultName}
+                      </div>
+                      <div className="text-arca-secondary text-xs">
+                        Arca DLMM
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-arca-secondary text-sm">
+                        Position Value:
+                      </span>
+                      <span className="text-white text-sm">
+                        {formatCurrency(position.value)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-arca-secondary text-sm">
+                        Earnings:
+                      </span>
+                      <span className="arca-primary text-sm">
+                        +{formatCurrency(positionEarnings)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-arca-secondary text-sm">APY:</span>
+                      <span className="arca-primary text-sm font-medium">
+                        {position.apy ? `${position.apy.toFixed(1)}%` : "0.0%"}
+                      </span>
+                    </div>
+
+                    {/* Show share breakdown */}
+                    <div className="pt-2 border-t border-arca-border/50">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-arca-secondary">
+                          {position.tokenX.symbol} Shares:
+                        </span>
+                        <span className="text-arca-secondary">
+                          {parseFloat(position.tokenX.shares).toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-xs">
+                        <span className="text-arca-secondary">
+                          {position.tokenY.symbol} Shares:
+                        </span>
+                        <span className="text-arca-secondary">
+                          {parseFloat(position.tokenY.shares).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
+        )}
       </div>
     </main>
   );

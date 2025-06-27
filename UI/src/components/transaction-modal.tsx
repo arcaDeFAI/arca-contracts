@@ -20,7 +20,7 @@ export interface TransactionModalProps {
   onClose: () => void;
   onConfirm: () => void;
   type: "deposit" | "withdraw" | "approve";
-  token: "wS" | "USDC.e";
+  token: string; // TDD: Token-agnostic for multi-vault support (wS, USDC.e, METRO, etc.)
   amount: string;
   fees?: TransactionFees;
   isLoading?: boolean;
