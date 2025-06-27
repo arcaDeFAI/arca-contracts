@@ -37,6 +37,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Remember**: When tests fail, ask "What should the code do?" not "How can I make the test pass?"
 
+### Critical TDD Lesson: Tests Define Business Requirements, Not Implementation Constraints
+
+**When your implementation reveals better business practices than what tests expect, update the TESTS to reflect the improved requirements.**
+
+**Example from Multi-Vault VaultCard Refactoring**:
+- **Initial Tests**: Expected direct function calls when clicking deposit button
+- **Better Implementation**: Added confirmation modals for transaction safety
+- **Correct TDD Response**: Updated tests to expect modal → confirm → function call flow
+- **Wrong TDD Response**: ❌ Removing modals to make poor tests pass
+
+**The Principle**: Tests should enforce good business requirements. If implementation demonstrates better practices (UX, security, efficiency, maintainability), those practices should become the new business requirements, and tests should be updated accordingly.
+
+**Common Scenarios Where This Applies**:
+- **Security**: Implementation adds input validation → Update tests to expect validation
+- **UX**: Implementation adds confirmation flows → Update tests to expect confirmations  
+- **Gas Efficiency**: Implementation batches operations → Update tests to expect batching
+- **Error Handling**: Implementation adds graceful fallbacks → Update tests to expect fallbacks
+- **Performance**: Implementation adds caching → Update tests to expect cached behavior
+
+**Key Questions When Tests Conflict with Implementation**:
+1. "Does this implementation demonstrate better business practices?"
+2. "Should this improvement become our standard requirement?"
+3. If yes → Update tests to enforce the better pattern
+4. If no → Fix implementation to meet existing requirements
+
 ## Project Overview
 
 Arca is a decentralized vault system for automated liquidity provision on the Sonic blockchain. It provides intelligent vault management for Metropolis DLMM (Dynamic Liquidity Market Maker) pools with automated reward compounding and yield optimization through Python bot rebalancing.
