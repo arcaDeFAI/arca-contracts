@@ -13,13 +13,15 @@ export interface TokenPricesHook {
   refetch: () => void;
 }
 
-// Mock token price data for development
-// In production, this would connect to a price oracle or API
+// 🚨 WARNING: ALL PRICES ARE FAKE - DO NOT USE IN PRODUCTION 🚨
+// This shows FAKE prices to users and MUST be replaced before launch
+// Users will see wrong portfolio values and make decisions on false data
+// TODO: Replace with real CoinGecko/DEX price feeds
 const MOCK_TOKEN_PRICES: Record<string, number> = {
-  ws: 0.85, // Mock price for wrapped Sonic
-  "usdc.e": 1.0, // USDC.e should be pegged to ~$1
-  usdc: 1.0, // USDC should be pegged to ~$1
-  metro: 2.5, // Mock price for METRO token
+  ws: 0.85, // ❌ FAKE price for wrapped Sonic
+  "usdc.e": 1.0, // ❌ FAKE price (should be real peg check)
+  usdc: 1.0, // ❌ FAKE price (should be real peg check)
+  metro: 2.5, // ❌ FAKE price for METRO token
   // Add more tokens as needed
 };
 
