@@ -1,10 +1,10 @@
-import React, { ReactElement } from 'react'
-import { render } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { WagmiProvider, createConfig, http } from 'wagmi'
-import { mainnet, hardhat } from 'wagmi/chains'
-import { mock } from 'wagmi/connectors'
-import { type Config } from 'wagmi'
+import React, { ReactElement } from "react";
+import { render } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { WagmiProvider, createConfig, http } from "wagmi";
+import { mainnet, hardhat } from "wagmi/chains";
+import { mock } from "wagmi/connectors";
+import { type Config } from "wagmi";
 
 // Create a mock wagmi config for testing
 export const mockConfig = createConfig({
@@ -16,12 +16,12 @@ export const mockConfig = createConfig({
   connectors: [
     mock({
       accounts: [
-        '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', // Default test account
-        '0x70997970C51812dc3A010C7d01b50e0d17dc79C8', // Second test account
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Default test account
+        "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // Second test account
       ],
     }),
   ],
-})
+});
 
 // Create a new query client for each test
 const createTestQueryClient = () =>
@@ -31,18 +31,18 @@ const createTestQueryClient = () =>
         retry: false,
       },
     },
-  })
+  });
 
 interface TestProvidersProps {
-  children: React.ReactNode
-  wagmiConfig?: Config
+  children: React.ReactNode;
+  wagmiConfig?: Config;
 }
 
-export function TestProviders({ 
-  children, 
-  wagmiConfig = mockConfig 
+export function TestProviders({
+  children,
+  wagmiConfig = mockConfig,
 }: TestProvidersProps) {
-  const testQueryClient = createTestQueryClient()
+  const testQueryClient = createTestQueryClient();
 
   return (
     <WagmiProvider config={wagmiConfig}>
@@ -50,7 +50,7 @@ export function TestProviders({
         {children}
       </QueryClientProvider>
     </WagmiProvider>
-  )
+  );
 }
 
 // Utility function to render with providers
@@ -59,9 +59,9 @@ export function renderWithProviders(ui: ReactElement) {
     ...render(ui, {
       wrapper: ({ children }) => <TestProviders>{children}</TestProviders>,
     }),
-  }
+  };
 }
 
 // Re-export everything
-export * from '@testing-library/react'
-export { default as userEvent } from '@testing-library/user-event'
+export * from "@testing-library/react";
+export { default as userEvent } from "@testing-library/user-event";

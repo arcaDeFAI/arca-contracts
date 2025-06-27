@@ -20,6 +20,7 @@ export function useVault(vaultAddress?: string) {
     writeContract,
     data: hash,
     isPending: isWritePending,
+    error: writeError,
   } = useWriteContract();
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({ hash });
@@ -27,6 +28,18 @@ export function useVault(vaultAddress?: string) {
   const [lastOperation, setLastOperation] = useState<
     "deposit" | "withdraw" | null
   >(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Update error state when write error occurs
+  useState(() => {
+    if (writeError) {
+      setError(writeError.message || "Transaction failed");
+    }
+  });
+
+  const clearError = () => {
+    setError(null);
+  };
 
   // Get vault configuration - fallback to default vault if none provided
   const contracts = getContracts(chainId || 31337);
@@ -82,6 +95,10 @@ export function useVault(vaultAddress?: string) {
 
       // Utils
       formatBalance: (balance: bigint | unknown) => "0.0",
+
+      // Error handling
+      error: null,
+      clearError: () => {},
     };
   }
 
@@ -279,8 +296,8 @@ export function useVault(vaultAddress?: string) {
 
   const validateBalance = (tokenIndex: number, amount: string) => {
     const balance = tokenIndex === 0 ? userBalanceX : userBalanceY;
-    if (!balance) return false;
-    return parseFloat(amount) <= parseFloat(balance);
+    if (!balance || typeof balance !== "bigint") return false;
+    return parseFloat(amount) <= parseFloat(formatEther(balance));
   };
 
   const validateConnection = () => {
@@ -332,6 +349,10 @@ export function useVault(vaultAddress?: string) {
 
     // Utils
     formatBalance,
+
+    // Error handling
+    error,
+    clearError,
 
     // Legacy compatibility (for backward compatibility during transition)
     userBalanceWS: formatBalance(userBalanceX), // Deprecated: use userBalanceX

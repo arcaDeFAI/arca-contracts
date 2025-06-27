@@ -17,9 +17,9 @@ export interface TokenPricesHook {
 // In production, this would connect to a price oracle or API
 const MOCK_TOKEN_PRICES: Record<string, number> = {
   ws: 0.85, // Mock price for wrapped Sonic
-  'usdc.e': 1.0, // USDC.e should be pegged to ~$1
+  "usdc.e": 1.0, // USDC.e should be pegged to ~$1
   usdc: 1.0, // USDC should be pegged to ~$1
-  metro: 2.50, // Mock price for METRO token
+  metro: 2.5, // Mock price for METRO token
   // Add more tokens as needed
 };
 
@@ -41,9 +41,9 @@ export function useTokenPrices(tokenSymbols: string[] = []): TokenPricesHook {
   const [error, setError] = useState<string | null>(null);
 
   // Use ref to store current tokens and avoid dependency cycles
-  const tokensRef = useRef<string>('');
-  const currentTokens = tokenSymbols.sort().join(',');
-  
+  const tokensRef = useRef<string>("");
+  const currentTokens = tokenSymbols.sort().join(",");
+
   // Only update ref when tokens actually change
   if (tokensRef.current !== currentTokens) {
     tokensRef.current = currentTokens;
@@ -51,7 +51,7 @@ export function useTokenPrices(tokenSymbols: string[] = []): TokenPricesHook {
 
   const fetchPrices = useCallback(async () => {
     const tokens = tokensRef.current;
-    
+
     // Check cache first
     const now = Date.now();
     if (priceCache && now - lastFetchTime < CACHE_DURATION) {
@@ -75,9 +75,9 @@ export function useTokenPrices(tokenSymbols: string[] = []): TokenPricesHook {
         };
 
         // Add prices for requested tokens (case-insensitive)
-        const requestedTokens = tokens ? tokens.split(',') : [];
-        
-        requestedTokens.forEach(symbol => {
+        const requestedTokens = tokens ? tokens.split(",") : [];
+
+        requestedTokens.forEach((symbol) => {
           const normalizedSymbol = symbol.toLowerCase();
           if (MOCK_TOKEN_PRICES[normalizedSymbol] !== undefined) {
             tokenPrices[normalizedSymbol] = MOCK_TOKEN_PRICES[normalizedSymbol];

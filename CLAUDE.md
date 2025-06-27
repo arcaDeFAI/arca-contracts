@@ -290,17 +290,46 @@ import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
 
 **Solution**: The project uses TypeScript deployment scripts (`scripts/deployArcaSystem.ts`) with OpenZeppelin's upgrades plugin for complex deployments, completely avoiding contract size limits.
 
-## Strategic Documentation
-
-For deeper context on specific aspects:
-- **SECURITY_ACTION_PLAN.md** - Audit preparation and security improvements roadmap
-- **TESTING_STRATEGY.md** - Comprehensive testing approach and coverage goals
-- **DEPLOYMENT_STRATEGY.md** - Production deployment guidelines and best practices
-- **DEPLOYMENT_ROADMAP.md** - Phased deployment plan and milestones
-
 ## Development Workflow Notes
 
 ### Best Practices
 - **TDD FIRST**: Always understand requirements through tests before changing code
 - As a habit, you should run "npm run lint:fix", "npm run compile" and "npm run test" after making major code changes
 - When debugging failures, ask "What should this code do?" based on business logic and test expectations
+
+## Working with BRIEF.md
+
+The `BRIEF.md` file is a **working document** that tracks current project status and provides practical instructions for continuing work. It should be updated after major work sessions.
+
+### When to Update BRIEF.md
+- After completing a major phase or feature
+- When discovering new blockers or technical debt
+- When work plans change significantly
+- After architectural decisions or breakthroughs
+
+### How to Update BRIEF.md
+1. **Update Status Section** - Current progress, what's working vs broken
+2. **Revise Work Plan** - Move completed items to "Working", add new blockers to "Needs Work"
+3. **Update Time Estimates** - Based on actual work completed
+4. **Add New Patterns/Instructions** - If you discover better ways to do things
+5. **Keep It Practical** - Focus on what the next person needs to know, not celebration
+
+### BRIEF.md Principles
+- **Honest Assessment** - What actually works vs what needs work
+- **Clear Instructions** - Specific patterns, commands, file locations
+- **Practical Focus** - Enable someone to pick up and continue work
+- **No Celebration** - Facts about status, not achievements
+
+### Example Update Pattern
+```
+## What Changed This Session
+- Fixed dashboard architecture (2-phase loading)
+- 1/11 dashboard tests now passing
+- Added position detection hook (8/8 tests passing)
+
+## New Blockers Found
+- 10 dashboard tests need systematic mock updates
+- Dashboard UI still uses manual calculations
+```
+
+Keep BRIEF.md as the **single source of truth** for project status and next actions.

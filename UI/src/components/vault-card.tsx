@@ -18,7 +18,7 @@ interface VaultCardProps {
 export default function VaultCard({ vault, onClick }: VaultCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">("deposit");
-  
+
   // Token-agnostic deposit amounts (index-based)
   const [depositAmountX, setDepositAmountX] = useState(""); // First token
   const [depositAmountY, setDepositAmountY] = useState(""); // Second token
@@ -45,6 +45,8 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     tokenYSymbol,
     userBalanceX,
     userBalanceY,
+    userSharesX,
+    userSharesY,
     depositTokenX,
     depositTokenY,
     withdrawShares,
@@ -57,12 +59,32 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     isConfirming,
     lastOperation,
     hash,
-    error,           // TDD: Get error from useVault hook
-    clearError,      // TDD: Get clearError from useVault hook
+    error, // TDD: Get error from useVault hook
+    clearError, // TDD: Get clearError from useVault hook
   } = useVault(vault.contractAddress);
 
-  // Share validation (simplified for TDD)
-  const validateShares = (sharesX: string, sharesY: string) => true;
+  // Share validation - ensure user has enough shares to withdraw
+  const validateShares = (sharesX: string, sharesY: string) => {
+    // Check if at least one share amount is provided
+    if (!sharesX && !sharesY) return false;
+
+    // Parse share amounts
+    const shareXAmount = parseFloat(sharesX || "0");
+    const shareYAmount = parseFloat(sharesY || "0");
+
+    // Check if both are zero
+    if (shareXAmount === 0 && shareYAmount === 0) return false;
+
+    // Validate against user's available shares
+    const availableSharesX = parseFloat(userSharesX || "0");
+    const availableSharesY = parseFloat(userSharesY || "0");
+
+    // Check if user has enough shares
+    if (shareXAmount > availableSharesX) return false;
+    if (shareYAmount > availableSharesY) return false;
+
+    return true;
+  };
 
   const { addTransaction, updateTransactionStatus } = useTransactionHistory();
 
@@ -139,7 +161,12 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     // Check if approval is needed
     if (!hasAllowance(tokenIndex, amount)) {
       // Show approval confirmation
-      setPendingTransaction({ type: "approve", tokenIndex, tokenSymbol, amount });
+      setPendingTransaction({
+        type: "approve",
+        tokenIndex,
+        tokenSymbol,
+        amount,
+      });
       setShowConfirmModal(true);
       return;
     }
@@ -228,7 +255,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
     const amount = tokenIndex === 0 ? depositAmountX : depositAmountY;
     const tokenSymbol = tokenIndex === 0 ? tokenXSymbol : tokenYSymbol;
-    
+
     if (!amount) return `Enter ${tokenSymbol} Amount`;
 
     if (!hasAllowance(tokenIndex, amount)) {
@@ -296,11 +323,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
         {/* Error Display (Always Visible for Better UX) */}
         {error && (
           <div className="mx-4 mt-2">
-            <ErrorDisplay
-              error={error}
-              onDismiss={clearError}
-              className=""
-            />
+            <ErrorDisplay error={error} onDismiss={clearError} className="" />
           </div>
         )}
 
@@ -318,7 +341,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               {/* Left Side - Earnings */}
               <div className="bg-arca-bg rounded-lg p-4 border border-arca-border">
                 <div className="flex justify-between items-center mb-4">
-                  <div className="text-arca-secondary text-sm">{tokenXSymbol} Shares</div>
+                  <div className="text-arca-secondary text-sm">
+                    {tokenXSymbol} Shares
+                  </div>
                   <div className="text-arca-secondary text-sm">
                     {tokenYSymbol} Shares
                   </div>
@@ -455,7 +480,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                       <button
                         onClick={handleWithdraw}
                         disabled={
-                          (!withdrawSharesX && !withdrawSharesY) ||
+                          !validateShares(withdrawSharesX, withdrawSharesY) ||
                           isWritePending
                         }
                         className="w-full bg-red-600 text-white py-2 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -533,7 +558,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               {/* Earnings Section */}
               <div className="bg-arca-bg rounded-lg p-4 border border-arca-border">
                 <div className="flex justify-between items-center mb-4">
-                  <div className="text-arca-secondary text-xs">{tokenXSymbol} Shares</div>
+                  <div className="text-arca-secondary text-xs">
+                    {tokenXSymbol} Shares
+                  </div>
                   <div className="text-arca-secondary text-xs">
                     {tokenYSymbol} Shares
                   </div>
@@ -670,7 +697,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                       <button
                         onClick={handleWithdraw}
                         disabled={
-                          (!withdrawSharesX && !withdrawSharesY) ||
+                          !validateShares(withdrawSharesX, withdrawSharesY) ||
                           isWritePending
                         }
                         className="w-full bg-red-600 text-white py-2 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
