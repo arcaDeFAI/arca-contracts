@@ -40,9 +40,9 @@ async function runManualTests(): Promise<void> {
     console.log("📅 Testing deployment from:", deployment.timestamp);
     
     // Connect to contracts
-    const vault = await hre.ethers.getContractAt("ArcaTestnetV1", deployment.addresses.vault);
-    const feeManager = await hre.ethers.getContractAt("ArcaFeeManagerV1", deployment.addresses.feeManager);
-    const queueHandler = await hre.ethers.getContractAt("ArcaQueueHandlerV1", deployment.addresses.queueHandler);
+    const vault = await hre.ethers.getContractAt("ArcaTestnetV1", deployment.contracts.vault);
+    const feeManager = await hre.ethers.getContractAt("ArcaFeeManagerV1", deployment.contracts.feeManager);
+    const queueHandler = await hre.ethers.getContractAt("ArcaQueueHandlerV1", deployment.contracts.queueHandler);
     const tokenX = await hre.ethers.getContractAt("MockERC20", deployment.config.tokenX);
     const tokenY = await hre.ethers.getContractAt("MockERC20", deployment.config.tokenY);
     

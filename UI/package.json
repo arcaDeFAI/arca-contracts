@@ -8,8 +8,9 @@
     "build": "vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
     "lint": "tsc --project tsconfig.json && prettier --check '**/*.{ts,tsx,css,scss}' && eslint src/ server/ *.ts *.js",
+    "lint:fix": "prettier --write . && eslint --fix src/ server/ *.ts *.js",
     "db:push": "drizzle-kit push",
-    "test": "vitest",
+    "test": "vitest --run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage"
   },

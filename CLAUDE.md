@@ -120,11 +120,8 @@ npm run dev
 # Build production
 npm run build
 
-# Lint frontend code
-npm run lint
-
-# TypeScript type checking
-npm run type-check
+# Fix linting frontend code issues
+npm run lint:fix
 ```
 
 ### Testing
@@ -155,16 +152,26 @@ npx hardhat test-data:network-config
 ⚠️ Always use script-based deployment, not factory contracts. Factory contracts that import multiple concrete contracts will exceed the 24.5KB contract size limit and fail to deploy on mainnet.
 
 ```bash
-# Recommended: Script-based UUPS deployment
-npx hardhat run scripts/deployArcaSystem.ts --network <network>
+# Unified deployment command (auto-detects network)
+npm run deploy --network <network>
 
-# Or use the convenience scripts:
-npm run deploy:local        # For local development with mocks
-npm run deploy:mainnet       # For Sonic mainnet deployment
-npm run fork:deploy          # For mainnet fork testing
+# Or use specific shortcuts:
+npm run deploy:local        # Local development with mocks
+npm run deploy:fork         # Mainnet fork testing  
+npm run deploy:mainnet      # Sonic mainnet deployment
+
+# Post-deployment
+npm run deploy:verify       # Verify deployment (requires --network flag)
+npm run deploy:test         # Integration testing (requires --network flag)
+npm run deploy:export       # Export addresses for UI
+
+# Development utilities
+npm run dev:reset           # Reset local blockchain
+npm run dev:check           # Check mainnet readiness
+npm run dev:discover        # Discover rewarder addresses
 ```
 
-**Deployment Strategy**: See `DEPLOYMENT_APPROACH.md` for our two-tier testing approach (localhost + mainnet fork → mainnet).
+**Deployment Strategy**: See `DEPLOYMENT.md` for complete deployment guide and our two-tier testing approach (localhost + mainnet fork → mainnet).
 
 ## Code Conventions
 
