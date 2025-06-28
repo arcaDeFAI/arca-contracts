@@ -33,7 +33,8 @@ export function useTransactionHistory() {
   const { address: userAddress, chainId } = useAccount();
   const publicClient = usePublicClient();
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
-  const [isLoadingBlockchainHistory, setIsLoadingBlockchainHistory] = useState(false);
+  const [isLoadingBlockchainHistory, setIsLoadingBlockchainHistory] =
+    useState(false);
   const [blockchainHistoryLoaded, setBlockchainHistoryLoaded] = useState(false);
 
   // Load blockchain transaction history
@@ -48,18 +49,18 @@ export function useTransactionHistory() {
     }
 
     setIsLoadingBlockchainHistory(true);
-    
+
     try {
       // Get contract deployment block to limit search range
       const fromBlock = BigInt(0); // In production, use deployment block
       const toBlock = "latest" as const;
-      
+
       // Fetch deposit events
       const depositLogs = await publicClient.getLogs({
         address: contracts.vault as `0x${string}`,
         event: {
           type: "event",
-          name: "Deposit", 
+          name: "Deposit",
           inputs: [
             { type: "address", indexed: true, name: "user" },
             { type: "uint8", indexed: true, name: "tokenType" },
@@ -74,7 +75,7 @@ export function useTransactionHistory() {
         toBlock,
       });
 
-      // Fetch withdraw events  
+      // Fetch withdraw events
       const withdrawLogs = await publicClient.getLogs({
         address: contracts.vault as `0x${string}`,
         event: {
@@ -96,10 +97,15 @@ export function useTransactionHistory() {
 
       // Convert logs to transaction records
       const blockchainTransactions: TransactionRecord[] = [];
-      
+
       // Process deposit events
       for (const log of depositLogs) {
-        const args = log.args as { user: string; tokenType: number; amount: bigint; shares: bigint };
+        const args = log.args as {
+          user: string;
+          tokenType: number;
+          amount: bigint;
+          shares: bigint;
+        };
         blockchainTransactions.push({
           id: `${log.transactionHash}_${log.logIndex}`,
           hash: log.transactionHash,
@@ -117,10 +123,15 @@ export function useTransactionHistory() {
           shares: (Number(args.shares) / 1e18).toString(),
         });
       }
-      
+
       // Process withdraw events
       for (const log of withdrawLogs) {
-        const args = log.args as { user: string; tokenType: number; amount: bigint; shares: bigint };
+        const args = log.args as {
+          user: string;
+          tokenType: number;
+          amount: bigint;
+          shares: bigint;
+        };
         blockchainTransactions.push({
           id: `${log.transactionHash}_${log.logIndex}`,
           hash: log.transactionHash,
@@ -138,21 +149,29 @@ export function useTransactionHistory() {
           shares: (Number(args.shares) / 1e18).toString(),
         });
       }
-      
+
       // Sort by block number (newest first)
-      blockchainTransactions.sort((a, b) => (b.blockNumber || 0) - (a.blockNumber || 0));
-      
+      blockchainTransactions.sort(
+        (a, b) => (b.blockNumber || 0) - (a.blockNumber || 0),
+      );
+
       // Merge with existing localStorage transactions
-      setTransactions(prev => {
-        const localStorageTransactions = prev.filter(tx => tx.source === "localStorage");
-        const combined = [...blockchainTransactions, ...localStorageTransactions];
+      setTransactions((prev) => {
+        const localStorageTransactions = prev.filter(
+          (tx) => tx.source === "localStorage",
+        );
+        const combined = [
+          ...blockchainTransactions,
+          ...localStorageTransactions,
+        ];
         // Remove duplicates (prefer blockchain data)
-        const unique = combined.filter((tx, index) => 
-          combined.findIndex(t => t.hash === tx.hash) === index
+        const unique = combined.filter(
+          (tx, index) =>
+            combined.findIndex((t) => t.hash === tx.hash) === index,
         );
         return unique.sort((a, b) => b.timestamp - a.timestamp);
       });
-      
+
       setBlockchainHistoryLoaded(true);
     } catch (error) {
       console.error("Failed to load blockchain transaction history:", error);
@@ -169,17 +188,19 @@ export function useTransactionHistory() {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         try {
-          const parsedTransactions = JSON.parse(stored).map((tx: TransactionRecord) => ({
-            ...tx,
-            source: tx.source || "localStorage", // Ensure source is set
-          }));
+          const parsedTransactions = JSON.parse(stored).map(
+            (tx: TransactionRecord) => ({
+              ...tx,
+              source: tx.source || "localStorage", // Ensure source is set
+            }),
+          );
           setTransactions(parsedTransactions);
         } catch (error) {
           console.error("Failed to parse stored transactions:", error);
           setTransactions([]);
         }
       }
-      
+
       // Load blockchain history
       loadBlockchainHistory();
     }
@@ -323,7 +344,7 @@ export function useTransactionHistory() {
     const failedTransactions = transactions.filter(
       (tx) => tx.status === "failed",
     );
-    
+
     const blockchainTransactions = transactions.filter(
       (tx) => tx.source === "blockchain",
     );

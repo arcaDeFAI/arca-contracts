@@ -32,9 +32,11 @@ export function useRealVaults(): {
     console.log("🔍 [useRealVaults] useMemo execution");
     console.log("🔍 [useRealVaults] vault.contracts check:", !!vault.contracts);
     console.log("🔍 [useRealVaults] metrics check:", !!metrics);
-    
+
     if (!vault.contracts || !metrics) {
-      console.log("🔍 [useRealVaults] Returning empty array - missing contracts or metrics");
+      console.log(
+        "🔍 [useRealVaults] Returning empty array - missing contracts or metrics",
+      );
       return [];
     }
 
@@ -89,8 +91,11 @@ export function useRealVaults(): {
     };
 
     console.log("🔍 [useRealVaults] Created realVault:", realVault);
-    console.log("🔍 [useRealVaults] Returning vault array with length:", [realVault].length);
-    
+    console.log(
+      "🔍 [useRealVaults] Returning vault array with length:",
+      [realVault].length,
+    );
+
     return [realVault];
   }, [
     vault.contracts,

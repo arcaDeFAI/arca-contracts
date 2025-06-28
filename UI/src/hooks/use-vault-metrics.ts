@@ -54,29 +54,31 @@ function calculateEstimatedAPR(
   if (!prices || totalTvlUSD === 0) return 0;
 
   // Check if we have real reward data from contracts
-  const hasRealRewardData = vaultData?.totalMetroRewardsCompounded && 
-                           vaultData?.totalDLMMFeesEarned && 
-                           vaultData?.timeWindowDays;
+  const hasRealRewardData =
+    vaultData?.totalMetroRewardsCompounded &&
+    vaultData?.totalDLMMFeesEarned &&
+    vaultData?.timeWindowDays;
 
   if (hasRealRewardData) {
     // ✅ REAL APR calculation from blockchain data
-    const metroRewardsUSD = parseFloat(vaultData.totalMetroRewardsCompounded) * (prices.metro || 0);
+    const metroRewardsUSD =
+      parseFloat(vaultData.totalMetroRewardsCompounded) * (prices.metro || 0);
     const dlmmFeesUSD = parseFloat(vaultData.totalDLMMFeesEarned);
     const totalRewardsUSD = metroRewardsUSD + dlmmFeesUSD;
     const timeWindowDays = vaultData.timeWindowDays;
-    
+
     // Annualize the rewards
     const annualizedRewardsUSD = totalRewardsUSD * (365 / timeWindowDays);
-    
+
     // Calculate APR = (Annual Rewards / TVL) × 100
     const apr = (annualizedRewardsUSD / totalTvlUSD) * 100;
-    
+
     return apr;
   }
 
   // ❌ FALLBACK: Fake APR calculation - clearly marked as demo data
   // This shows FAKE 45% APR to users but is clearly marked with warnings
-  const baseAPR = 45; // ❌ FAKE 45% APR promise  
+  const baseAPR = 45; // ❌ FAKE 45% APR promise
   const tvlFactor = Math.max(0.5, Math.min(1.0, 100000 / totalTvlUSD)); // ❌ FAKE scaling
   const seasonalBonus = 1.2; // ❌ FAKE 20% bonus
 
@@ -101,11 +103,12 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
   const vault = useVault(vaultAddress);
 
   // Get token symbols from vault for price fetching - memoize to prevent infinite renders
-  const tokenSymbols = useMemo(() => 
-    vault.tokenXSymbol && vault.tokenYSymbol
-      ? [vault.tokenXSymbol, vault.tokenYSymbol]
-      : [],
-    [vault.tokenXSymbol, vault.tokenYSymbol]
+  const tokenSymbols = useMemo(
+    () =>
+      vault.tokenXSymbol && vault.tokenYSymbol
+        ? [vault.tokenXSymbol, vault.tokenYSymbol]
+        : [],
+    [vault.tokenXSymbol, vault.tokenYSymbol],
   );
 
   const {
@@ -238,7 +241,8 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
         : false, // Stale after 1 minute
 
       // Debug info for real data migration
-      isRealData: isRealData || (vault?.totalMetroRewardsCompounded ? true : false),
+      isRealData:
+        isRealData || (vault?.totalMetroRewardsCompounded ? true : false),
     };
   }, [
     vault.vaultBalanceX,
