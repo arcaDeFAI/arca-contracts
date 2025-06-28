@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useAccount } from "wagmi";
 import { useVault } from "./use-vault";
 import { useVaultMetrics } from "./use-vault-metrics";
+import { useVaultRegistry } from "./use-vault-registry";
 import type { RealVault } from "../types/vault";
 
 // Hook to provide real vault data from contracts
@@ -11,25 +12,35 @@ export function useRealVaults(): {
   error: string | null;
 } {
   const { chainId } = useAccount();
-  const vault = useVault();
+  
+  // Use registry to discover vaults
+  const { 
+    vaults: registryVaults, 
+    isLoading: registryLoading, 
+    error: registryError 
+  } = useVaultRegistry();
+  
+  // For now, use the first vault from registry (single vault support)
+  const firstVault = registryVaults[0];
+  const vault = useVault(firstVault?.vault);
   const {
     metrics,
     isLoading: metricsLoading,
     error: metricsError,
   } = useVaultMetrics();
 
-  // For now we have one vault - wS/USDC.e on Sonic
+  // Create vault data from registry info + contract data
   const realVaults: RealVault[] = useMemo(() => {
-    if (!vault.contracts || !metrics) {
+    if (!firstVault || !vault.vaultConfig || !metrics) {
       return [];
     }
 
     const realVault: RealVault = {
-      id: vault.contracts.vault,
-      name: "wS-USDC.e",
-      tokens: ["wS", "USDC.e"],
+      id: firstVault.vault,
+      name: firstVault.name || `${vault.tokenXSymbol}-${vault.tokenYSymbol}`,
+      tokens: [vault.tokenXSymbol, vault.tokenYSymbol],
       platform: "Arca DLMM",
-      chain: chainId === 31337 ? "Sonic Fork" : "Sonic",
+      chain: chainId === 31337 ? "Localhost" : chainId === 31338 ? "Sonic Fork" : "Sonic",
 
       // Real-time contract data
       vaultBalanceX: vault.vaultBalanceX,
@@ -56,7 +67,7 @@ export function useRealVaults(): {
       userSharesXUSD: metrics.userSharesXUSD,
       userSharesYUSD: metrics.userSharesYUSD,
 
-      contractAddress: vault.contracts.vault,
+      contractAddress: firstVault.vault,
       isActive: true,
       description:
         "Automated liquidity provision for wS/USDC.e on Metropolis DLMM with Metro reward compounding",
@@ -76,54 +87,46 @@ export function useRealVaults(): {
 
     return [realVault];
   }, [
-    vault.contracts,
+    firstVault,
+    vault.vaultConfig,
     vault.vaultBalanceX,
     vault.vaultBalanceY,
     vault.userSharesX,
     vault.userSharesY,
     vault.pricePerShareX,
     vault.pricePerShareY,
-    vault.userBalanceWS,
-    vault.userBalanceUSDC,
+    vault.userBalanceX,
+    vault.userBalanceY,
     vault.pendingDeposits,
     vault.pendingWithdraws,
     metrics,
     chainId,
   ]);
 
-  // Loading state - only show loading when wallet is connected and data is being fetched
-  const isLoading = !!chainId && (!vault.contracts || metricsLoading);
+  // Loading state - show loading when discovering vaults or fetching data
+  const isLoading = !!chainId && (registryLoading || !firstVault || !vault.vaultConfig || metricsLoading);
 
-  // Add error handling for contract data loading
+  // Add error handling for registry and contract data loading
   const error = useMemo(() => {
+    if (registryError) {
+      return `Registry error: ${registryError}`;
+    }
+    
     if (metricsError) {
       return `Metrics error: ${metricsError}`;
     }
 
-    if (!vault.contracts && chainId) {
-      return "Contracts not available for this network";
-    }
-
-    // Check if we're getting contract read errors
-    // This is a simplified check - in production we'd track individual query errors
-    if (
-      vault.contracts &&
-      vault.vaultBalanceX === "0" &&
-      vault.vaultBalanceY === "0" &&
-      !isLoading
-    ) {
-      // This might be normal for an empty vault, so no error
-      return null;
+    if (!firstVault && chainId && !registryLoading) {
+      return "No vaults found in registry";
     }
 
     return null;
   }, [
-    vault.contracts,
-    chainId,
-    vault.vaultBalanceX,
-    vault.vaultBalanceY,
-    isLoading,
+    registryError,
     metricsError,
+    firstVault,
+    chainId,
+    registryLoading,
   ]);
 
   return {
