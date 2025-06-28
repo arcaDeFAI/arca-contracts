@@ -344,9 +344,7 @@ export default function Dashboard() {
                       <div className="text-white font-medium">
                         {position.vaultName}
                       </div>
-                      <div className="text-arca-secondary text-xs">
-                        Arca DLMM
-                      </div>
+                      <div className="text-arca-secondary text-xs">DLMM</div>
                     </div>
                   </div>
                   <div className="space-y-2">

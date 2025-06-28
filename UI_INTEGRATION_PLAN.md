@@ -85,7 +85,7 @@ interface RealVault {
   id: string; // Contract address
   name: string; // "wS-USDC.e" 
   tokens: ["wS", "USDC.e"];
-  platform: "Arca DLMM";
+  platform: "DLMM";
   chain: "Sonic";
   
   // Real-time contract data
@@ -423,7 +423,7 @@ export const VAULT_CONFIGS: VaultConfig[] = [
     tokenX: { symbol: "wS", address: "0x...", decimals: 18 },
     tokenY: { symbol: "USDC.e", address: "0x...", decimals: 6 },
     name: "wS-USDC.e",
-    platform: "Arca DLMM"
+    platform: "DLMM"
   },
   // Future vaults will be added here
 ];

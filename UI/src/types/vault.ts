@@ -19,7 +19,7 @@ export interface RealVault {
   id: string; // Vault contract address
   name: string; // "wS-USDC.e", "wS-METRO", "METRO-USDC", etc.
   tokens: [string, string]; // ["wS", "USDC.e"] - any token pair
-  platform: string; // "Arca DLMM", future: "Shadow Exchange", etc.
+  platform: string; // "DLMM", future: "Shadow Exchange", etc.
   chain: string; // "Sonic", "Sonic Fork", etc.
 
   // Real-time contract data (token-agnostic) - Always available
