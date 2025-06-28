@@ -9,6 +9,7 @@ import {
   DemoDataWrapper,
   InlineWarning,
 } from "../components/demo-warnings";
+import { CoinGeckoAttributionFull } from "../components/coingecko-attribution";
 
 // Generate some sample historical data for now
 // TODO: Replace with real transaction history data
@@ -127,6 +128,10 @@ export default function Dashboard() {
                   <span>+{formatCurrency(totalEarnings)}</span>
                 </div>
               )}
+
+              <div className="mt-3">
+                <CoinGeckoAttributionFull />
+              </div>
             </div>
 
             <div className="space-y-4">

@@ -357,6 +357,62 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
   });
 
   describe("🎯 TDD: Token-Agnostic APR Calculations", () => {
+    it("should calculate real APR from METRO rewards and DLMM fees", () => {
+      // BUSINESS REQUIREMENT: Real APR = (METRO rewards + DLMM fees) / TVL × 100 
+      // This test defines how real APR should be calculated from blockchain data
+      mockUseVault.mockReturnValue({
+        vaultBalanceX: "10000.0", // $8,500 TVL
+        vaultBalanceY: "20000.0", // $20,000 TVL = $28,500 total
+        userSharesX: "100.0",
+        userSharesY: "200.0",
+        userBalanceX: "50.0",
+        userBalanceY: "100.0",
+        pricePerShareX: "1.0",
+        pricePerShareY: "1.0",
+        tokenXSymbol: "wS",
+        tokenYSymbol: "USDC.e",
+        // Mock reward data from contracts
+        totalMetroRewardsCompounded: "1000.0", // $2,500 in METRO rewards over time period
+        totalDLMMFeesEarned: "500.0", // $500 in DLMM trading fees 
+        timeWindowDays: 30, // Over 30 days
+      });
+
+      mockUseHybridTokenPrices.mockReturnValue({
+        prices: {
+          ws: 0.85, // $0.85 per wS
+          "usdc.e": 1.0, // $1.00 per USDC.e
+          metro: 2.5, // $2.50 per METRO
+        },
+        isLoading: false,
+        error: null,
+        refresh: vi.fn(),
+        isUsingRealPrices: true, // Real price data
+      });
+
+      mockUseTransactionHistory.mockReturnValue({
+        getTransactionSummary: vi.fn().mockReturnValue({
+          totalDeposited: 1000,
+        }),
+      });
+
+      const { result } = renderHook(() => useVaultMetrics());
+
+      expect(result.current.metrics).toBeDefined();
+      const metrics = result.current.metrics as VaultMetrics;
+
+      // TVL = (10,000 × $0.85) + (20,000 × $1.00) = $8,500 + $20,000 = $28,500
+      expect(metrics.totalTvlUSD).toBe(28500);
+
+      // Real APR calculation:
+      // METRO rewards = 1,000 × $2.50 = $2,500
+      // DLMM fees = $500
+      // Total rewards = $3,000 over 30 days
+      // Annualized = $3,000 × (365/30) = $36,500
+      // APR = $36,500 / $28,500 × 100 = 128.07%
+      expect(metrics.estimatedApr).toBeCloseTo(128.07, 1);
+      expect(metrics.isRealData).toBe(true);
+    });
+
     it("should calculate estimated APR based on TVL size regardless of token composition", () => {
       // BUSINESS REQUIREMENT: APR calculation should work with any vault size/tokens
       mockUseVault.mockReturnValue({
