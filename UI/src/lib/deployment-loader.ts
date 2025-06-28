@@ -81,11 +81,18 @@ function getLocalhostAddresses(): DeploymentAddresses | null {
     } catch {
       // Fallback to basic export data
       console.warn("Using basic deployment data - some features may not work");
+      // Validate that all required addresses are present
+      if (!deployment.vault || !deployment.registry || !deployment.feeManager || 
+          !deployment.queueHandler || !deployment.rewardClaimer) {
+        console.error("Missing required contract addresses in deployment export");
+        return null;
+      }
+      
       return {
         vault: deployment.vault,
-        feeManager: "0x0000000000000000000000000000000000000000", // Not in basic export
-        queueHandler: "0x0000000000000000000000000000000000000000",
-        rewardClaimer: "0x0000000000000000000000000000000000000000",
+        feeManager: deployment.feeManager,
+        queueHandler: deployment.queueHandler,
+        rewardClaimer: deployment.rewardClaimer,
         registry: deployment.registry,
         tokens: {
           wS: deployment.config.tokenX,
@@ -121,18 +128,12 @@ function getForkAddresses(): DeploymentAddresses {
 }
 
 /**
- * Load mainnet addresses (contracts not deployed yet, use placeholders)
+ * Load mainnet addresses (contracts not deployed yet)
  */
-function getMainnetAddresses(): DeploymentAddresses {
-  return {
-    vault: "0x0000000000000000000000000000000000000000", // TODO: Update when deployed
-    feeManager: "0x0000000000000000000000000000000000000000",
-    queueHandler: "0x0000000000000000000000000000000000000000",
-    rewardClaimer: "0x0000000000000000000000000000000000000000",
-    registry: "0x0000000000000000000000000000000000000000",
-    tokens: MAINNET_TOKENS,
-    metropolis: MAINNET_METROPOLIS,
-  };
+function getMainnetAddresses(): DeploymentAddresses | null {
+  // Return null instead of zero addresses until mainnet deployment exists
+  console.warn("Mainnet contracts not yet deployed");
+  return null;
 }
 
 /**
@@ -144,25 +145,27 @@ function loadFromDeploymentFile(network: string): DeploymentAddresses {
   // For now, we'll implement a basic version and can enhance later
 
   if (network === "localhost") {
-    // These are the actual addresses from the latest deployment
-    // TODO: Make this truly dynamic by reading the file system
-    return {
-      vault: "0x4A679253410272dd5232B3Ff7cF5dbB88f295319",
-      feeManager: "0x59b670e9fA9D0A427751Af201D676719a970857b",
-      queueHandler: "0xc6e7DF5E7b4f2A278906862b61205850344D4e7d",
-      rewardClaimer: "0x322813Fd9A801c5507c9de605d63CEA4f2CE6c44",
-      registry: "0x67d269191c92Caf3cD7723F116c85e6E9bf55933",
-      tokens: {
-        wS: "0x5FbDB2315678afecb367f032d93F642f64180aa3", // tokenX from deployment
-        usdce: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", // tokenY from deployment
-        metro: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", // rewardToken from deployment
-      },
-      metropolis: {
-        lbRouter: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
-        lbFactory: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9", // lbpAMM
-        pool: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9", // lbpContract
-      },
-    };
+    // Use the actual addresses from the latest deployment (from exports/deployments.ts)
+    if (deployments.localhost) {
+      const deployment = deployments.localhost;
+      return {
+        vault: deployment.vault,
+        feeManager: deployment.feeManager,
+        queueHandler: deployment.queueHandler,
+        rewardClaimer: deployment.rewardClaimer,
+        registry: deployment.registry,
+        tokens: {
+          wS: deployment.config.tokenX, // Use actual deployed tokenX
+          usdce: deployment.config.tokenY, // Use actual deployed tokenY
+          metro: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", // rewardToken from deployment
+        },
+        metropolis: {
+          lbRouter: "0xCf7Ed3AccA5a467e9e704C703E8D87F634fB0Fc9",
+          lbFactory: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9", // lbpAMM
+          pool: "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9", // lbpContract
+        },
+      };
+    }
   }
 
   throw new Error(`No deployment file found for network: ${network}`);

@@ -63,3 +63,10 @@ export const QUEUE_HANDLER_ABI = [
   "function getPendingWithdrawsCount() external view returns (uint256)",
   "function getQueuedToken(uint8 tokenType) external view returns (uint256)",
 ] as const;
+
+export const REGISTRY_ABI = [
+  "function getActiveVaults() external view returns (address[] memory)",
+  "function getVaultInfo(address vault) external view returns (tuple(address vault, address rewardClaimer, address queueHandler, address feeManager, address tokenX, address tokenY, string name, string symbol, uint256 deploymentTimestamp, address deployer, bool isActive, bool isProxy))",
+  "function getVaultDetails(address vault) external view returns (string memory name, string memory symbol, address tokenX, address tokenY, bool isActive, bool isProxy)",
+  "function isActiveVault(address vault) external view returns (bool)",
+] as const;

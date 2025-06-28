@@ -42,8 +42,13 @@ export const VAULT_CONFIGS: VaultConfig[] = [
 /**
  * Get vault configuration by address
  */
-export const getVaultConfig = (address: string): VaultConfig | undefined => {
-  return VAULT_CONFIGS.find(
+export const getVaultConfig = (address: string, chainId: number): VaultConfig | undefined => {
+  if (!chainId) {
+    console.warn("No chainId provided to getVaultConfig");
+    return undefined;
+  }
+  const configs = getVaultConfigsForChain(chainId);
+  return configs.find(
     (config) => config.address.toLowerCase() === address.toLowerCase(),
   );
 };
@@ -54,10 +59,12 @@ export const getVaultConfig = (address: string): VaultConfig | undefined => {
  * @param chainId - The chain ID to get configurations for. If not provided,
  *                  will attempt to use a reasonable default.
  */
-export const getActiveVaultConfigs = (chainId?: number): VaultConfig[] => {
-  // Default to localhost for development
-  const targetChainId = chainId || 31337;
-  return getVaultConfigsForChain(targetChainId);
+export const getActiveVaultConfigs = (chainId: number): VaultConfig[] => {
+  if (!chainId) {
+    console.warn("No chainId provided to getActiveVaultConfigs");
+    return [];
+  }
+  return getVaultConfigsForChain(chainId);
 };
 
 /**
