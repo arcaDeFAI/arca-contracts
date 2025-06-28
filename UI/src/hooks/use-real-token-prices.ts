@@ -88,7 +88,7 @@ export function useRealTokenPrices(
     // Clear cache to force fresh fetch
     priceFeedService.clearCache();
     await fetchPrices();
-  }, [fetchPrices]);
+  }, [tokens, enabled]); // Remove circular dependency by using same deps as fetchPrices
 
   /**
    * Check if prices are stale (older than refresh interval)

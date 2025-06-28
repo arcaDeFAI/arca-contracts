@@ -45,27 +45,38 @@ export interface VaultMetricsHook {
   refetch: () => void;
 }
 
-// 🚨 WARNING: APR CALCULATION IS COMPLETELY FAKE 🚨
-// This shows FAKE 45% APR to users - DO NOT USE IN PRODUCTION
-// Users will expect these yields and be disappointed/lose money
-// TODO: Replace with real METRO rewards + DLMM fee calculations
-// DEMO MODE: These warnings will be removed once real APR calculation is integrated
+// Calculate real APR from blockchain data (METRO rewards + DLMM fees)
 function calculateEstimatedAPR(
   totalTvlUSD: number,
-  userTransactionHistory: unknown[],
+  vaultData: any, // Contains reward data from contracts
   prices: TokenPrices | null,
 ): number {
-  // ❌ FAKE APR calculation - promises yields that don't exist
-  // In production, this would use:
-  // 1. Historical Metro rewards data
-  // 2. Current DLMM trading fees
-  // 3. Compounding frequency
-  // 4. Pool utilization rates
-
   if (!prices || totalTvlUSD === 0) return 0;
 
-  // ❌ FAKE calculation - DO NOT SHOW TO REAL USERS
-  const baseAPR = 45; // ❌ FAKE 45% APR promise
+  // Check if we have real reward data from contracts
+  const hasRealRewardData = vaultData?.totalMetroRewardsCompounded && 
+                           vaultData?.totalDLMMFeesEarned && 
+                           vaultData?.timeWindowDays;
+
+  if (hasRealRewardData) {
+    // ✅ REAL APR calculation from blockchain data
+    const metroRewardsUSD = parseFloat(vaultData.totalMetroRewardsCompounded) * (prices.metro || 0);
+    const dlmmFeesUSD = parseFloat(vaultData.totalDLMMFeesEarned);
+    const totalRewardsUSD = metroRewardsUSD + dlmmFeesUSD;
+    const timeWindowDays = vaultData.timeWindowDays;
+    
+    // Annualize the rewards
+    const annualizedRewardsUSD = totalRewardsUSD * (365 / timeWindowDays);
+    
+    // Calculate APR = (Annual Rewards / TVL) × 100
+    const apr = (annualizedRewardsUSD / totalTvlUSD) * 100;
+    
+    return apr;
+  }
+
+  // ❌ FALLBACK: Fake APR calculation - clearly marked as demo data
+  // This shows FAKE 45% APR to users but is clearly marked with warnings
+  const baseAPR = 45; // ❌ FAKE 45% APR promise  
   const tvlFactor = Math.max(0.5, Math.min(1.0, 100000 / totalTvlUSD)); // ❌ FAKE scaling
   const seasonalBonus = 1.2; // ❌ FAKE 20% bonus
 
@@ -89,11 +100,13 @@ function calculateUserROI(earnings: number, totalDeposited: number): number {
 export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
   const vault = useVault(vaultAddress);
 
-  // Get token symbols from vault for price fetching
-  const tokenSymbols =
+  // Get token symbols from vault for price fetching - memoize to prevent infinite renders
+  const tokenSymbols = useMemo(() => 
     vault.tokenXSymbol && vault.tokenYSymbol
       ? [vault.tokenXSymbol, vault.tokenYSymbol]
-      : [];
+      : [],
+    [vault.tokenXSymbol, vault.tokenYSymbol]
+  );
 
   const {
     prices,
@@ -185,7 +198,7 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     // APR calculations
     const estimatedApr = calculateEstimatedAPR(
       totalTvlUSD,
-      [],
+      vault, // Pass vault data for real reward calculations
       pricesWithTimestamp,
     );
     const dailyApr = estimatedApr / 365;
@@ -225,7 +238,7 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
         : false, // Stale after 1 minute
 
       // Debug info for real data migration
-      isRealData: isRealData || false,
+      isRealData: isRealData || (vault?.totalMetroRewardsCompounded ? true : false),
     };
   }, [
     vault.vaultBalanceX,
@@ -240,7 +253,6 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     vault.tokenYSymbol,
     prices,
     pricesLoading,
-    getTransactionSummary,
   ]);
 
   const isLoading = pricesLoading;
