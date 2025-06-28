@@ -305,19 +305,37 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
           {/* User Balance */}
           <div className="flex items-center">
-            <span className="text-white font-medium">
-              {formatCurrency(vault.userBalance)}
-            </span>
+            {vault.metricsLoading ? (
+              <div className="h-5 w-20 bg-arca-border rounded animate-pulse"></div>
+            ) : vault.metricsError ? (
+              <span className="text-arca-secondary text-sm">
+                Price unavailable
+              </span>
+            ) : (
+              <span className="text-white font-medium">
+                {formatCurrency(vault.userBalance)}
+              </span>
+            )}
           </div>
 
           {/* Total TVL */}
           <div className="flex flex-col">
-            <DemoDataWrapper type="portfolio" className="inline-block">
-              <span className="text-white font-medium">
-                {formatCurrency(vault.totalTvl)}
+            {vault.metricsLoading ? (
+              <div className="h-5 w-24 bg-arca-border rounded animate-pulse"></div>
+            ) : vault.metricsError ? (
+              <span className="text-arca-secondary text-sm">
+                Price unavailable
               </span>
-            </DemoDataWrapper>
-            <CoinGeckoAttributionMinimal className="mt-1" />
+            ) : (
+              <>
+                <DemoDataWrapper type="portfolio" className="inline-block">
+                  <span className="text-white font-medium">
+                    {formatCurrency(vault.totalTvl)}
+                  </span>
+                </DemoDataWrapper>
+                <CoinGeckoAttributionMinimal className="mt-1" />
+              </>
+            )}
           </div>
 
           {/* Queue Status */}
@@ -330,17 +348,37 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
           {/* Rewards */}
           <div className="flex items-center">
             <div>
-              <DemoDataWrapper type="apr" className="inline-block">
-                <div className="arca-primary font-bold text-lg">
-                  {vault.apr}%
+              {vault.metricsLoading ? (
+                <div>
+                  <div className="h-6 w-16 bg-arca-border rounded animate-pulse mb-1"></div>
+                  <div className="h-4 w-20 bg-arca-border rounded animate-pulse"></div>
                 </div>
-              </DemoDataWrapper>
-              <div className="text-arca-secondary text-sm">
-                <DemoDataWrapper type="apr" className="inline-block">
-                  ({vault.aprDaily}% daily)
-                </DemoDataWrapper>
-              </div>
-              <InlineWarning type="apr" compact />
+              ) : vault.metricsError ? (
+                <div>
+                  <div className="text-arca-secondary text-sm">
+                    Price unavailable
+                  </div>
+                  <div className="text-arca-secondary text-xs">
+                    (APR requires price data)
+                  </div>
+                </div>
+              ) : vault.apr !== undefined ? (
+                <>
+                  <DemoDataWrapper type="apr" className="inline-block">
+                    <div className="arca-primary font-bold text-lg">
+                      {vault.apr.toFixed(2)}%
+                    </div>
+                  </DemoDataWrapper>
+                  <div className="text-arca-secondary text-sm">
+                    <DemoDataWrapper type="apr" className="inline-block">
+                      ({vault.aprDaily?.toFixed(3) || "--"}% daily)
+                    </DemoDataWrapper>
+                  </div>
+                  <InlineWarning type="apr" compact />
+                </>
+              ) : (
+                <div className="text-arca-secondary">--</div>
+              )}
             </div>
           </div>
         </div>
@@ -546,20 +584,39 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               </div>
             </div>
             <div className="text-right">
-              <div className="arca-primary font-bold text-lg">{vault.apr}%</div>
-              <div className="text-arca-secondary text-xs">
-                ({vault.aprDaily}% daily)
-              </div>
+              {vault.metricsLoading ? (
+                <div>
+                  <div className="h-5 w-12 bg-arca-border rounded animate-pulse mb-1 ml-auto"></div>
+                  <div className="h-3 w-16 bg-arca-border rounded animate-pulse ml-auto"></div>
+                </div>
+              ) : vault.apr !== undefined ? (
+                <>
+                  <div className="arca-primary font-bold text-lg">
+                    {vault.apr.toFixed(2)}%
+                  </div>
+                  <div className="text-arca-secondary text-xs">
+                    ({vault.aprDaily?.toFixed(3) || "--"}% daily)
+                  </div>
+                </>
+              ) : (
+                <div className="text-arca-secondary">--</div>
+              )}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
               <div className="text-arca-secondary text-xs">TOTAL TVL</div>
-              <div className="text-white font-medium">
-                {formatCurrency(vault.totalTvl)}
-              </div>
-              <CoinGeckoAttributionMinimal className="mt-1" />
+              {vault.metricsLoading ? (
+                <div className="h-5 w-20 bg-arca-border rounded animate-pulse mt-1"></div>
+              ) : (
+                <>
+                  <div className="text-white font-medium">
+                    {formatCurrency(vault.totalTvl)}
+                  </div>
+                  <CoinGeckoAttributionMinimal className="mt-1" />
+                </>
+              )}
             </div>
             <div>
               <div className="text-arca-secondary text-xs">QUEUE STATUS</div>

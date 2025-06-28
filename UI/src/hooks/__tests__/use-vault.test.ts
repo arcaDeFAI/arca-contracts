@@ -6,6 +6,7 @@ import * as contractsModule from "../../lib/contracts";
 import * as vaultConfigsModule from "../../lib/vault-configs";
 import { useVault } from "../use-vault";
 import { TestProviders } from "../../test-utils/test-providers";
+import { SUPPORTED_CHAINS } from "../../config/chains";
 import {
   MOCK_SYSTEM_CONTRACTS,
   MOCK_CONTRACTS,
@@ -95,15 +96,24 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     );
     currentMockData = createMockVaultData(currentVaultConfig);
 
-    // Mock the getContracts function
-    vi.mocked(contractsModule.getContracts).mockReturnValue({
-      ...MOCK_SYSTEM_CONTRACTS,
-      vault: currentVaultConfig.address,
-      tokens: {
-        [currentVaultConfig.tokenX.symbol]: currentVaultConfig.tokenX.address,
-        [currentVaultConfig.tokenY.symbol]: currentVaultConfig.tokenY.address,
-      },
-    } as any);
+    // Mock the getContracts function to handle supported/unsupported chains
+    vi.mocked(contractsModule.getContracts).mockImplementation((chainId: number) => {
+      // Business Requirement: Return null for unsupported chains (graceful failure)
+      const supportedChainIds = Object.values(SUPPORTED_CHAINS).map(chain => chain.id);
+      if (!supportedChainIds.includes(chainId)) {
+        return null;
+      }
+      
+      // Return contracts for supported chains
+      return {
+        ...MOCK_SYSTEM_CONTRACTS,
+        vault: currentVaultConfig.address,
+        tokens: {
+          [currentVaultConfig.tokenX.symbol]: currentVaultConfig.tokenX.address,
+          [currentVaultConfig.tokenY.symbol]: currentVaultConfig.tokenY.address,
+        },
+      } as any;
+    });
 
     // Mock the vault config lookup to return current test config
     vi.mocked(vaultConfigsModule.getVaultConfig).mockReturnValue(
@@ -623,7 +633,7 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         },
       );
 
-      expect(result.current.contracts).toBeUndefined();
+      expect(result.current.contracts).toBeNull();
     });
 
     it("should format balance with various bigint values", () => {

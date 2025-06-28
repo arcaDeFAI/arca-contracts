@@ -5,28 +5,33 @@ import { getTokenUSDValue, type TokenPrices } from "./use-token-prices";
 import { useTransactionHistory } from "./use-transaction-history";
 
 export interface VaultMetrics {
-  // TVL calculations
-  totalTvlUSD: number;
-  vaultBalanceXUSD: number;
-  vaultBalanceYUSD: number;
+  // Progressive enhancement indicators
+  isDataAvailable: boolean;
+  priceDataLoading: boolean;
+  priceDataError: string | null;
 
-  // User position calculations
-  userTotalUSD: number;
-  userBalanceXUSD: number;
-  userBalanceYUSD: number;
-  userSharesXUSD: number;
-  userSharesYUSD: number;
+  // TVL calculations (optional - undefined when prices unavailable)
+  totalTvlUSD?: number;
+  vaultBalanceXUSD?: number;
+  vaultBalanceYUSD?: number;
 
-  // APR calculations
-  estimatedApr: number;
-  dailyApr: number;
+  // User position calculations (optional - undefined when prices unavailable)
+  userTotalUSD?: number;
+  userBalanceXUSD?: number;
+  userBalanceYUSD?: number;
+  userSharesXUSD?: number;
+  userSharesYUSD?: number;
 
-  // User-specific metrics
-  userEarnings: number;
-  userTotalDeposited: number;
-  userROI: number; // Return on Investment %
+  // APR calculations (optional - undefined when prices unavailable)
+  estimatedApr?: number;
+  dailyApr?: number;
 
-  // Additional metrics
+  // User-specific metrics (optional - undefined when prices unavailable)
+  userEarnings?: number;
+  userTotalDeposited?: number;
+  userROI?: number; // Return on Investment %
+
+  // Additional metrics (always available from vault contract)
   pricePerShareX: number;
   pricePerShareY: number;
 
@@ -121,21 +126,46 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
   const { getTransactionSummary } = useTransactionHistory();
 
   const metrics = useMemo((): VaultMetrics | null => {
-    if (
-      !prices ||
-      pricesLoading ||
-      pricesError ||
-      Object.keys(prices).length === 0
-    )
-      return null;
-
     // Get dynamic token symbols from vault configuration
     const tokenXSymbol = vault.tokenXSymbol;
     const tokenYSymbol = vault.tokenYSymbol;
 
+    // Return null only if we don't have basic vault data
     if (!tokenXSymbol || !tokenYSymbol) return null;
 
-    // Vault balances are already formatted as strings by useVault
+    // Progressive enhancement: Return partial data even when prices unavailable
+    const hasPriceData = !!(
+      prices &&
+      !pricesLoading &&
+      !pricesError &&
+      Object.keys(prices).length > 0
+    );
+
+    // Always available metrics from vault contract (non-price-dependent)
+    const pricePerShareX = parseFloat(vault.pricePerShareX) || 1;
+    const pricePerShareY = parseFloat(vault.pricePerShareY) || 1;
+    const now = Date.now();
+
+    // Base metrics object with always-available data
+    const baseMetrics: VaultMetrics = {
+      // Progressive enhancement indicators
+      isDataAvailable: true,
+      priceDataLoading: pricesLoading,
+      priceDataError: pricesError,
+
+      // Always available metrics (from vault contract)
+      pricePerShareX,
+      pricePerShareY,
+      lastUpdated: now,
+      isStale: false, // Price staleness only matters when we have prices
+    };
+
+    // If we don't have price data, return partial metrics
+    if (!hasPriceData) {
+      return baseMetrics;
+    }
+
+    // We have price data - calculate USD values
     const vaultBalanceXStr = vault.vaultBalanceX;
     const vaultBalanceYStr = vault.vaultBalanceY;
     const userSharesXStr = vault.userSharesX;
@@ -143,11 +173,10 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     const userBalanceXStr = vault.userBalanceX;
     const userBalanceYStr = vault.userBalanceY;
 
-    // Calculate USD values using dynamic token symbols
     // Convert hybrid prices to TokenPrices format for compatibility
-    const pricesWithTimestamp = prices
-      ? { ...prices, lastUpdated: Date.now() }
-      : null;
+    const pricesWithTimestamp = { ...prices, lastUpdated: Date.now() };
+
+    // Calculate USD values using dynamic token symbols
     const vaultBalanceXUSD = getTokenUSDValue(
       vaultBalanceXStr,
       tokenXSymbol,
@@ -171,10 +200,6 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
       tokenYSymbol,
       pricesWithTimestamp,
     );
-
-    // Use price per share from vault contract (already formatted as strings)
-    const pricePerShareX = parseFloat(vault.pricePerShareX) || 1;
-    const pricePerShareY = parseFloat(vault.pricePerShareY) || 1;
 
     // Get token prices dynamically
     const tokenXPrice = prices[tokenXSymbol.toLowerCase()] || 0;
@@ -206,39 +231,33 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     );
     const dailyApr = estimatedApr / 365;
 
-    const now = Date.now();
-
+    // Return complete metrics with price data
     return {
-      // TVL calculations
+      ...baseMetrics,
+
+      // TVL calculations (now available)
       totalTvlUSD,
       vaultBalanceXUSD,
       vaultBalanceYUSD,
 
-      // User position calculations
+      // User position calculations (now available)
       userTotalUSD,
       userBalanceXUSD,
       userBalanceYUSD,
       userSharesXUSD,
       userSharesYUSD,
 
-      // APR calculations
+      // APR calculations (now available)
       estimatedApr,
       dailyApr,
 
-      // User-specific metrics
+      // User-specific metrics (now available)
       userEarnings,
       userTotalDeposited,
       userROI,
 
-      // Additional metrics
-      pricePerShareX,
-      pricePerShareY,
-
-      // Data freshness
-      lastUpdated: now,
-      isStale: pricesWithTimestamp
-        ? now - pricesWithTimestamp.lastUpdated > 60000
-        : false, // Stale after 1 minute
+      // Update data freshness with price staleness
+      isStale: now - pricesWithTimestamp.lastUpdated > 60000, // Stale after 1 minute
 
       // Debug info for real data migration
       isRealData:
@@ -259,8 +278,9 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     pricesLoading,
   ]);
 
-  const isLoading = pricesLoading;
-  const error = pricesError;
+  // Don't block hook loading on price fetching - vault discovery should proceed
+  const isLoading = false; // Only loading if vault data itself is unavailable
+  const error = null; // Price errors are handled within metrics object
 
   const refetch = () => {
     refetchPrices();

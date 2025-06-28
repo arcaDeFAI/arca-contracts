@@ -14,8 +14,8 @@ import { getActiveVaultConfigs } from "../lib/vault-configs";
 import { useVault } from "./use-vault";
 
 export function useUserVaultPositions(): string[] {
-  const { isConnected } = useAccount();
-  const vaultConfigs = getActiveVaultConfigs();
+  const { isConnected, chainId } = useAccount();
+  const vaultConfigs = chainId ? getActiveVaultConfigs(chainId) : [];
 
   // For now, we'll check a reasonable number of vaults (up to 10)
   // This respects React hooks rules while being practical for most DeFi platforms

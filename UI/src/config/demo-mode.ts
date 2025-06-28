@@ -11,18 +11,35 @@ export interface DemoModeConfig {
   useFakeData: boolean;
 }
 
+export type PriceOracleOverride = "mock" | "coingecko" | "auto";
+
 /**
  * Get demo mode configuration from environment variables
  */
 export function getDemoModeConfig(): DemoModeConfig {
   // Use import.meta.env for Vite instead of process.env
   const isDemo = import.meta.env.VITE_DEMO_MODE !== "false";
+
+  // Price oracle override takes precedence over VITE_USE_REAL_PRICES
+  const priceOverride = import.meta.env
+    .VITE_PRICE_ORACLE_OVERRIDE as PriceOracleOverride;
   const useRealPrices = import.meta.env.VITE_USE_REAL_PRICES === "true";
+
+  // Determine price source based on override or fallback to useRealPrices
+  let useFakeData: boolean;
+  if (priceOverride === "mock") {
+    useFakeData = true;
+  } else if (priceOverride === "coingecko") {
+    useFakeData = false;
+  } else {
+    // Default/auto behavior - use existing logic
+    useFakeData = !useRealPrices;
+  }
 
   return {
     enabled: isDemo,
     showWarnings: isDemo,
-    useFakeData: !useRealPrices,
+    useFakeData,
   };
 }
 

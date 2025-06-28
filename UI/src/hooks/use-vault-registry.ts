@@ -1,12 +1,7 @@
 import { useAccount, useReadContract } from "wagmi";
+import { useQuery } from "@tanstack/react-query";
 import { getContracts } from "../lib/contracts";
-
-// ABI for the registry contract
-const REGISTRY_ABI = [
-  "function getActiveVaults() external view returns (address[] memory)",
-  "function getVaultInfo(address vault) external view returns (tuple(address vault, address rewardClaimer, address queueHandler, address feeManager, address tokenX, address tokenY, string name, string symbol, uint256 deploymentTimestamp, address deployer, bool isActive, bool isProxy))",
-  "function getVaultDetails(address vault) external view returns (string memory name, string memory symbol, address tokenX, address tokenY, bool isActive, bool isProxy)",
-] as const;
+import { REGISTRY_ABI } from "../lib/contracts";
 
 export interface RegistryVaultInfo {
   vault: string;
@@ -28,15 +23,45 @@ export function useVaultRegistry() {
   const contracts = chainId ? getContracts(chainId) : null;
   const registryAddress = contracts?.registry;
 
-  // Get list of active vault addresses
-  const { data: vaultAddresses, isLoading: isLoadingAddresses } = useReadContract({
-    address: registryAddress as `0x${string}`,
-    abi: REGISTRY_ABI,
-    functionName: "getActiveVaults",
-    query: { 
-      enabled: !!registryAddress,
-      staleTime: 30000, // Cache for 30 seconds
+  // Get list of active vault addresses - using direct contract call to bypass wagmi parsing issues
+  const {
+    data: vaultAddresses,
+    isLoading: isLoadingAddresses,
+    error: vaultAddressesError,
+  } = useQuery({
+    queryKey: ["activeVaults", registryAddress],
+    queryFn: async () => {
+      if (!registryAddress) return null;
+
+      const { createPublicClient, http } = await import("viem");
+      const client = createPublicClient({
+        chain: {
+          id: 31337,
+          name: "localhost",
+          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+          rpcUrls: { default: { http: ["http://127.0.0.1:8545"] } },
+        },
+        transport: http(),
+      });
+
+      const result = await client.readContract({
+        address: registryAddress as `0x${string}`,
+        abi: [
+          {
+            name: "getActiveVaults",
+            type: "function",
+            stateMutability: "view",
+            inputs: [],
+            outputs: [{ name: "", type: "address[]" }],
+          },
+        ],
+        functionName: "getActiveVaults",
+      });
+
+      return result as string[];
     },
+    enabled: !!registryAddress,
+    staleTime: 30000,
   });
 
   // Get detailed info for each vault (we'll start with just the first one for now)
@@ -46,7 +71,7 @@ export function useVaultRegistry() {
     abi: REGISTRY_ABI,
     functionName: "getVaultInfo",
     args: [firstVaultAddress as `0x${string}`],
-    query: { 
+    query: {
       enabled: !!registryAddress && !!firstVaultAddress,
       staleTime: 30000,
     },
@@ -55,7 +80,7 @@ export function useVaultRegistry() {
   const isLoading = isLoadingAddresses || isLoadingInfo;
 
   const vaults: RegistryVaultInfo[] = [];
-  
+
   if (vaultInfo && firstVaultAddress) {
     vaults.push({
       vault: vaultInfo[0],
@@ -70,7 +95,45 @@ export function useVaultRegistry() {
     });
   }
 
-  const error = !registryAddress && chainId ? "No registry found for this network" : null;
+  const error =
+    !registryAddress && chainId ? "No registry found for this network" : null;
+
+  // Debug logging
+  console.log("🔍 useVaultRegistry debug:", {
+    chainId,
+    registryAddress,
+    isLoadingAddresses,
+    isLoadingInfo,
+    isLoading,
+    vaultAddresses,
+    vaultInfo,
+    vaults: vaults.length,
+    error,
+    vaultAddressesError: vaultAddressesError?.message,
+  });
+
+  // CRITICAL DEBUG: Check if we have the right setup
+  if (!chainId) {
+    console.error(
+      "❌ CRITICAL: No chainId from useAccount() - wallet not connected or wrong network",
+    );
+  } else if (chainId !== 31337) {
+    console.error(
+      `❌ CRITICAL: Wrong chainId ${chainId}, expected 31337 for localhost`,
+    );
+  } else if (!registryAddress) {
+    console.error("❌ CRITICAL: No registry address found for chainId 31337");
+  } else if (isLoadingAddresses) {
+    console.log("⏳ Waiting for registry.getActiveVaults() call...");
+  } else if (!vaultAddresses || vaultAddresses.length === 0) {
+    console.error(
+      "❌ CRITICAL: Registry returned empty vaults array - vault not registered correctly",
+    );
+  } else {
+    console.log(
+      "✅ Registry working correctly, vault discovery should succeed",
+    );
+  }
 
   return {
     vaults,
