@@ -4,7 +4,7 @@ import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signer
 import * as fs from "fs";
 import * as path from "path";
 import { loadNetworkConfig, networkConfigToDeploymentConfig, validateDeploymentConfig } from "./utils/network-config";
-import { deployMockContracts } from "./setup-local-mocks";
+import { deployMockContracts } from "./utils/deploy-mocks";
 
 export interface DeploymentConfig {
   tokenX: string;
@@ -255,6 +255,9 @@ async function main() {
   console.log(`\n🚀 Starting deployment on ${network}...`);
   
   try {
+    // Get deployer
+    const [deployer]: HardhatEthersSigner[] = await hre.ethers.getSigners();
+    
     // Load network configuration
     const networkConfig = loadNetworkConfig(network);
     let deploymentConfig = networkConfigToDeploymentConfig(networkConfig);
@@ -262,7 +265,11 @@ async function main() {
     // For localhost, deploy mocks first
     if (network === "localhost" || network === "hardhat") {
       console.log("\n📦 Setting up mock contracts for local testing...");
-      const mockContracts = await deployMockContracts();
+      const mockContracts = await deployMockContracts(
+        deployer,
+        networkConfig.mockTokens!,
+        networkConfig.testAccounts!
+      );
       
       // Update deployment config with mock addresses
       deploymentConfig = {
@@ -271,11 +278,11 @@ async function main() {
         tokenY: mockContracts.tokenY,
         rewardToken: mockContracts.rewardToken,
         lbRouter: mockContracts.lbRouter,
-        lbpAMM: mockContracts.lbPair,
-        lbpContract: mockContracts.lbPair,
+        lbpAMM: mockContracts.lbpAMM,
+        lbpContract: mockContracts.lbpContract,
         rewarder: mockContracts.rewarder,
-        nativeToken: mockContracts.tokenX, // Use tokenX as native for testing
-        lbpContractUSD: mockContracts.lbPair, // Use same pair for USD testing
+        nativeToken: mockContracts.nativeToken,
+        lbpContractUSD: mockContracts.lbpContractUSD
       };
     }
     

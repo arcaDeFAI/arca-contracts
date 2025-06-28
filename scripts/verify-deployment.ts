@@ -85,11 +85,11 @@ async function verifyDeployment() {
   console.log(`👤 Deployer: ${deployment.deployer}\n`);
   
   // Connect to contracts
-  const vault = await hre.ethers.getContractAt("ArcaTestnetV1", deployment.addresses.vault);
-  const registry = await hre.ethers.getContractAt("ArcaVaultRegistry", deployment.addresses.registry);
-  const feeManager = await hre.ethers.getContractAt("ArcaFeeManagerV1", deployment.addresses.feeManager);
-  const queueHandler = await hre.ethers.getContractAt("ArcaQueueHandlerV1", deployment.addresses.queueHandler);
-  const rewardClaimer = await hre.ethers.getContractAt("ArcaRewardClaimerV1", deployment.addresses.rewardClaimer);
+  const vault = await hre.ethers.getContractAt("ArcaTestnetV1", deployment.contracts.vault);
+  const registry = await hre.ethers.getContractAt("ArcaVaultRegistry", deployment.contracts.registry);
+  const feeManager = await hre.ethers.getContractAt("ArcaFeeManagerV1", deployment.contracts.feeManager);
+  const queueHandler = await hre.ethers.getContractAt("ArcaQueueHandlerV1", deployment.contracts.queueHandler);
+  const rewardClaimer = await hre.ethers.getContractAt("ArcaRewardClaimerV1", deployment.contracts.rewardClaimer);
   
   console.log("🔗 === CONTRACT DEPLOYMENT VERIFICATION ===");
   
@@ -299,12 +299,9 @@ async function verifyDeployment() {
     addCheck(checkNotZeroAddress("Vault UUPS implementation", cleanImplAddress));
     
     // Verify beacon proxy implementations
-    if (deployment.addresses.beacons) {
-      const queueHandlerBeaconAddress = deployment.addresses.beacons.queueHandler;
-      const feeManagerBeaconAddress = deployment.addresses.beacons.feeManager;
-      
-      addCheck(checkNotZeroAddress("QueueHandler beacon", queueHandlerBeaconAddress));
-      addCheck(checkNotZeroAddress("FeeManager beacon", feeManagerBeaconAddress));
+    if (deployment.contracts.beaconQueueHandler && deployment.contracts.beaconFeeManager) {
+      addCheck(checkNotZeroAddress("QueueHandler beacon", deployment.contracts.beaconQueueHandler));
+      addCheck(checkNotZeroAddress("FeeManager beacon", deployment.contracts.beaconFeeManager));
     }
 
   } catch (error) {
