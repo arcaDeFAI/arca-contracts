@@ -34,7 +34,9 @@
       "Bash(npx prettier:*)",
       "Bash(npm run:*)",
       "Bash(sed:*)",
-      "Bash(timeout 10s npm run dev)"
+      "Bash(timeout 10s npm run dev)",
+      "WebFetch(domain:brand.coingecko.com)",
+      "Bash(timeout 8s npm run dev 2 >& 1)"
     ],
     "deny": []
   }
