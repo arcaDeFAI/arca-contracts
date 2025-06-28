@@ -105,6 +105,14 @@ const projectId: string =
 export const rainbowkitConfig1: Config = getDefaultConfig({
   appName: "Arca",
   projectId: projectId,
-  chains: [mainnet, polygon, arbitrum, sonic, sonicTestnet, localhost, sonicFork],
+  chains: [
+    mainnet,
+    polygon,
+    arbitrum,
+    sonic,
+    sonicTestnet,
+    localhost,
+    sonicFork,
+  ],
   ssr: false,
 });
