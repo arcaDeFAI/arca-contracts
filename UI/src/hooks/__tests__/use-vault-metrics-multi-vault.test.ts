@@ -11,15 +11,19 @@ import { useVaultMetrics, type VaultMetrics } from "../use-vault-metrics";
 
 // Mock the dependencies
 const mockUseVault = vi.fn();
-const mockUseTokenPrices = vi.fn();
+const mockUseHybridTokenPrices = vi.fn();
 const mockUseTransactionHistory = vi.fn();
 
 vi.mock("../use-vault", () => ({
   useVault: () => mockUseVault(),
 }));
 
+vi.mock("../use-hybrid-token-prices", () => ({
+  useHybridTokenPrices: () => mockUseHybridTokenPrices(),
+}));
+
 vi.mock("../use-token-prices", () => ({
-  useTokenPrices: () => mockUseTokenPrices(),
+  useTokenPrices: () => mockUseHybridTokenPrices(),
   getTokenUSDValue: (amount: string, tokenSymbol: string, prices: any) => {
     const price = prices[tokenSymbol.toLowerCase()] || 0;
     return parseFloat(amount) * price;
@@ -51,14 +55,15 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "USDC.e",
       });
 
-      mockUseTokenPrices.mockReturnValue({
+      mockUseHybridTokenPrices.mockReturnValue({
         prices: {
           ws: 0.85, // $0.85 per wS
           "usdc.e": 1.0, // $1.00 per USDC.e
         },
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -93,14 +98,15 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "METRO",
       });
 
-      mockUseTokenPrices.mockReturnValue({
+      mockUseHybridTokenPrices.mockReturnValue({
         prices: {
           ws: 0.85, // $0.85 per wS
           metro: 2.5, // $2.50 per METRO
         },
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -135,14 +141,15 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "USDC",
       });
 
-      mockUseTokenPrices.mockReturnValue({
+      mockUseHybridTokenPrices.mockReturnValue({
         prices: {
           metro: 2.5, // $2.50 per METRO
           usdc: 1.0, // $1.00 per USDC
         },
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -179,14 +186,15 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "METRO",
       });
 
-      mockUseTokenPrices.mockReturnValue({
+      mockUseHybridTokenPrices.mockReturnValue({
         prices: {
           ws: 0.85, // $0.85 per wS
           metro: 2.5, // $2.50 per METRO
         },
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -225,14 +233,15 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "METRO",
       });
 
-      mockUseTokenPrices.mockReturnValue({
+      mockUseHybridTokenPrices.mockReturnValue({
         prices: {
           ws: 0.85, // $0.85 per wS
           metro: 2.5, // $2.50 per METRO
         },
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -270,14 +279,15 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "USDC",
       });
 
-      mockUseTokenPrices.mockReturnValue({
+      mockUseHybridTokenPrices.mockReturnValue({
         prices: {
           metro: 3.0, // $3.00 per METRO
           usdc: 1.0, // $1.00 per USDC
         },
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -317,14 +327,15 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "USDC.e",
       });
 
-      mockUseTokenPrices.mockReturnValue({
+      mockUseHybridTokenPrices.mockReturnValue({
         prices: {
           ws: 0.85,
           "usdc.e": 1.0,
         },
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -361,14 +372,15 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "USDC",
       });
 
-      mockUseTokenPrices.mockReturnValue({
+      mockUseHybridTokenPrices.mockReturnValue({
         prices: {
           metro: 5.0, // High value token
           usdc: 1.0,
         },
         isLoading: false,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -409,11 +421,12 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "USDC.e",
       });
 
-      mockUseTokenPrices.mockReturnValue({
-        prices: null,
+      mockUseHybridTokenPrices.mockReturnValue({
+        prices: {},
         isLoading: true,
         error: null,
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
@@ -442,11 +455,12 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "USDC.e",
       });
 
-      mockUseTokenPrices.mockReturnValue({
-        prices: null,
+      mockUseHybridTokenPrices.mockReturnValue({
+        prices: {},
         isLoading: false,
         error: "Failed to fetch token prices",
-        refetch: vi.fn(),
+        refresh: vi.fn(),
+        isUsingRealPrices: false,
       });
 
       mockUseTransactionHistory.mockReturnValue({
