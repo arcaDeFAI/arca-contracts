@@ -21,14 +21,14 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
   // 🔍 DEBUG: Log vault prop received
   console.log("🔍 [VaultCard] Rendering with vault:", {
     id: vault.id,
-    name: vault.name, 
+    name: vault.name,
     tokens: vault.tokens,
     platform: vault.platform,
     chain: vault.chain,
     totalTvl: vault.totalTvl,
     userBalance: vault.userBalance,
     apr: vault.apr,
-    contractAddress: vault.contractAddress
+    contractAddress: vault.contractAddress,
   });
 
   const [isExpanded, setIsExpanded] = useState(false);
