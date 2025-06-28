@@ -11,6 +11,7 @@
  */
 
 import { useMemo } from "react";
+import { useAccount } from "wagmi";
 import { getVaultConfig } from "../lib/vault-configs";
 import { useVault } from "./use-vault";
 import { useVaultMetrics } from "./use-vault-metrics";
@@ -51,6 +52,8 @@ export interface DashboardData {
 
 export function useDashboardData(): DashboardData {
   try {
+    const { chainId } = useAccount();
+    
     // Get transaction history for deposit calculations
     const { transactions } = useTransactionHistory();
 
@@ -106,8 +109,10 @@ export function useDashboardData(): DashboardData {
 
     // Calculate vault positions
     const vaultPositions: VaultPosition[] = useMemo(() => {
+      if (!chainId) return [];
+      
       return vaultAddressesWithPositions.map((vaultAddress, index) => {
-        const config = getVaultConfig(vaultAddress);
+        const config = getVaultConfig(vaultAddress, chainId);
         const { vault, metrics: vaultMetrics } = allVaultData[index] || {};
 
         // Fallback if config not found (shouldn't happen in normal operation)
@@ -166,6 +171,7 @@ export function useDashboardData(): DashboardData {
         };
       });
     }, [
+      chainId,
       vaultAddressesWithPositions,
       ...allVaultData.map((d) => d.vault),
       ...allVaultData.map((d) => d.metrics),
