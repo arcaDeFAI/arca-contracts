@@ -3,12 +3,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { parseEther } from "viem";
 import { useVault } from "../use-vault";
 import { TestProviders } from "../../test-utils/test-providers";
-import { 
-  MOCK_TX_HASH, 
+import {
+  MOCK_TX_HASH,
   MOCK_SYSTEM_CONTRACTS,
   createMockVaultConfig,
   createMockVaultData,
-  createMockReadContract
+  createMockReadContract,
 } from "../../test-utils/mock-contracts";
 import * as contractsModule from "../../lib/contracts";
 import * as vaultConfigsModule from "../../lib/vault-configs";
@@ -110,9 +110,12 @@ describe("useVault Critical Money Flows", () => {
         return { data: undefined, isLoading: false, isError: false };
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Should not have allowance (using token index instead of symbol)
       expect(result.current.hasAllowance(0, "100")).toBe(false); // tokenX = index 0
@@ -127,9 +130,12 @@ describe("useVault Critical Money Flows", () => {
         return { data: undefined, isLoading: false, isError: false };
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // User should approve first (using token index)
       expect(result.current.hasAllowance(0, "100")).toBe(false); // tokenX = index 0
@@ -145,9 +151,12 @@ describe("useVault Critical Money Flows", () => {
         isPending: false,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // TDD: Use the modern token-agnostic interface instead of legacy depositWS
       await act(async () => {
@@ -176,9 +185,12 @@ describe("useVault Critical Money Flows", () => {
         isSuccess: false,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.isWritePending).toBe(true);
       expect(result.current.isConfirming).toBe(true);
@@ -196,9 +208,12 @@ describe("useVault Critical Money Flows", () => {
         return { data: undefined, isLoading: false, isError: false };
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // User shares should be properly formatted
       expect(result.current.userSharesX).toBe("10.0");
@@ -212,9 +227,12 @@ describe("useVault Critical Money Flows", () => {
         isPending: false,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       await act(async () => {
         await result.current.withdrawShares("5.5", "3.25");
@@ -230,9 +248,12 @@ describe("useVault Critical Money Flows", () => {
     });
 
     it("should set lastOperation to withdraw", async () => {
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       await act(async () => {
         await result.current.withdrawShares("1", "1");
@@ -261,9 +282,12 @@ describe("useVault Critical Money Flows", () => {
         },
       );
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Should format with full precision
       expect(result.current.vaultBalanceX).toBe("1234.567890123456789");
@@ -277,9 +301,12 @@ describe("useVault Critical Money Flows", () => {
         isError: false,
       }));
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.vaultBalanceX).toBe("0.0");
       expect(result.current.vaultBalanceY).toBe("0.0");
@@ -295,9 +322,12 @@ describe("useVault Critical Money Flows", () => {
         chainId: 31337,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Should return zero values when no user connected (with consistent formatting)
       expect(result.current.userSharesX).toBe("0.0");
@@ -314,9 +344,12 @@ describe("useVault Critical Money Flows", () => {
         error: new Error("RPC Error"),
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Should fallback to zero on errors (with consistent formatting)
       expect(result.current.vaultBalanceX).toBe("0.0");
@@ -324,9 +357,12 @@ describe("useVault Critical Money Flows", () => {
     });
 
     it("should handle invalid balance formats", () => {
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Test formatBalance with edge cases (consistent decimal formatting)
       expect(result.current.formatBalance(undefined)).toBe("0.0");
@@ -352,9 +388,12 @@ describe("useVault Critical Money Flows", () => {
         },
       );
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.pricePerShareX).toBe("1.1");
       expect(result.current.pricePerShareY).toBe("1.05");

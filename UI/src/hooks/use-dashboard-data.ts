@@ -1,12 +1,12 @@
 /**
  * useDashboardData Hook - Multi-Vault Portfolio Aggregation
- * 
+ *
  * Aggregates data across all active vaults to provide portfolio-level metrics:
  * - Total portfolio value
  * - Historical deposits
  * - Earnings and ROI calculations
  * - Individual vault positions
- * 
+ *
  * This hook implements the requirements defined by the TDD tests.
  */
 
@@ -40,10 +40,10 @@ export interface DashboardData {
   totalDeposited: number;
   totalEarnings: number;
   totalROI: number;
-  
+
   // Individual vault positions
   vaultPositions: VaultPosition[];
-  
+
   // State management
   isLoading: boolean;
   error: string | null;
@@ -53,10 +53,14 @@ export function useDashboardData(): DashboardData {
   try {
     // Get transaction history for deposit calculations
     const { transactions } = useTransactionHistory();
-    
+
     // Phase 1: Position Detection (Fast)
-    const { vaultAddressesWithPositions, isDetecting, error: detectionError } = usePositionDetection();
-    
+    const {
+      vaultAddressesWithPositions,
+      isDetecting,
+      error: detectionError,
+    } = usePositionDetection();
+
     // Phase 2: Detailed Data Loading (Only for vaults with positions)
     // TODO: This approach hardcodes 10 vault hooks to respect React hooks rules.
     // For >10 user positions, we'll need to either:
@@ -74,7 +78,7 @@ export function useDashboardData(): DashboardData {
     const vault8 = useVault(vaultAddressesWithPositions[7]);
     const vault9 = useVault(vaultAddressesWithPositions[8]);
     const vault10 = useVault(vaultAddressesWithPositions[9]);
-    
+
     const metrics1 = useVaultMetrics(vaultAddressesWithPositions[0]);
     const metrics2 = useVaultMetrics(vaultAddressesWithPositions[1]);
     const metrics3 = useVaultMetrics(vaultAddressesWithPositions[2]);
@@ -85,7 +89,7 @@ export function useDashboardData(): DashboardData {
     const metrics8 = useVaultMetrics(vaultAddressesWithPositions[7]);
     const metrics9 = useVaultMetrics(vaultAddressesWithPositions[8]);
     const metrics10 = useVaultMetrics(vaultAddressesWithPositions[9]);
-    
+
     // Collect all vault data
     const allVaultData = [
       { vault: vault1, metrics: metrics1 },
@@ -99,13 +103,13 @@ export function useDashboardData(): DashboardData {
       { vault: vault9, metrics: metrics9 },
       { vault: vault10, metrics: metrics10 },
     ];
-    
+
     // Calculate vault positions
     const vaultPositions: VaultPosition[] = useMemo(() => {
       return vaultAddressesWithPositions.map((vaultAddress, index) => {
         const config = getVaultConfig(vaultAddress);
         const { vault, metrics: vaultMetrics } = allVaultData[index] || {};
-        
+
         // Fallback if config not found (shouldn't happen in normal operation)
         if (!config) {
           return {
@@ -117,7 +121,7 @@ export function useDashboardData(): DashboardData {
             apy: 0,
           };
         }
-        
+
         // Always create a position object, even if data is missing
         if (!vault || !vaultMetrics) {
           return {
@@ -129,21 +133,21 @@ export function useDashboardData(): DashboardData {
             apy: 0,
           };
         }
-        
+
         // Calculate token values
         const sharesX = parseFloat(vault.userSharesX || "0");
         const sharesY = parseFloat(vault.userSharesY || "0");
         const pricePerShareX = parseFloat(vault.pricePerShareX || "0");
         const pricePerShareY = parseFloat(vault.pricePerShareY || "0");
-        
+
         // Get token prices (default to 0 if unavailable)
         const tokenPriceX = vaultMetrics.tokenPrices?.tokenX || 0;
         const tokenPriceY = vaultMetrics.tokenPrices?.tokenY || 0;
-        
+
         // Calculate USD values for each token
         const tokenXValue = sharesX * pricePerShareX * tokenPriceX;
         const tokenYValue = sharesY * pricePerShareY * tokenPriceY;
-        
+
         return {
           vaultAddress: config.address,
           vaultName: config.name,
@@ -161,37 +165,44 @@ export function useDashboardData(): DashboardData {
           apy: vaultMetrics.apy || 0,
         };
       });
-    }, [vaultAddressesWithPositions, ...allVaultData.map(d => d.vault), ...allVaultData.map(d => d.metrics)]);
-    
+    }, [
+      vaultAddressesWithPositions,
+      ...allVaultData.map((d) => d.vault),
+      ...allVaultData.map((d) => d.metrics),
+    ]);
+
     // Calculate total portfolio value
     const totalPortfolioValue = useMemo(() => {
-      return vaultPositions.reduce((total, position) => total + position.value, 0);
+      return vaultPositions.reduce(
+        (total, position) => total + position.value,
+        0,
+      );
     }, [vaultPositions]);
-    
+
     // Calculate total historical deposits from transaction history
     const totalDeposited = useMemo(() => {
       if (!transactions || !Array.isArray(transactions)) return 0;
-      
+
       return transactions
-        .filter(tx => tx.type === "deposit")
+        .filter((tx) => tx.type === "deposit")
         .reduce((total, tx) => total + (tx.usdValue || 0), 0);
     }, [transactions]);
-    
+
     // Calculate earnings and ROI
     const totalEarnings = useMemo(() => {
       return totalPortfolioValue - totalDeposited;
     }, [totalPortfolioValue, totalDeposited]);
-    
+
     const totalROI = useMemo(() => {
       if (totalDeposited === 0) return 0;
       return (totalEarnings / totalDeposited) * 100;
     }, [totalEarnings, totalDeposited]);
-    
+
     // Determine loading state - includes both phases
     const isLoading = useMemo(() => {
       return isDetecting || transactions === undefined;
     }, [isDetecting, transactions]);
-    
+
     return {
       totalPortfolioValue,
       totalDeposited,
@@ -201,7 +212,6 @@ export function useDashboardData(): DashboardData {
       isLoading,
       error: detectionError,
     };
-    
   } catch (error) {
     // Handle any errors gracefully
     return {
@@ -220,19 +230,19 @@ export function useDashboardData(): DashboardData {
 function useVaultValue(vaultAddress: string): number {
   const vault = useVault(vaultAddress);
   const metrics = useVaultMetrics(vaultAddress);
-  
+
   return useMemo(() => {
     const sharesX = parseFloat(vault.userSharesX || "0");
     const sharesY = parseFloat(vault.userSharesY || "0");
     const pricePerShareX = parseFloat(vault.pricePerShareX || "0");
     const pricePerShareY = parseFloat(vault.pricePerShareY || "0");
-    
+
     const tokenPriceX = metrics.tokenPrices?.tokenX || 0;
     const tokenPriceY = metrics.tokenPrices?.tokenY || 0;
-    
+
     const valueX = sharesX * pricePerShareX * tokenPriceX;
     const valueY = sharesY * pricePerShareY * tokenPriceY;
-    
+
     return valueX + valueY;
   }, [vault, metrics]);
 }

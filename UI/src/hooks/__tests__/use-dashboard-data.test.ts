@@ -1,10 +1,10 @@
 /**
  * 🎯 TDD: Dashboard Data Hook Tests
- * 
+ *
  * These tests define the behavior of the useDashboardData hook that aggregates
  * data across all vaults for the dashboard view. Following TDD: Tests define
  * requirements first, implementation follows.
- * 
+ *
  * Requirements:
  * - Calculate total portfolio value across all vaults
  * - Sum historical deposits from transaction history
@@ -87,7 +87,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         if (address === "0xVault2") return vault2Config;
         return undefined;
       });
-      
+
       // Reset mocks to ensure clean state
       mockUseVault.mockReset();
       mockUseVaultMetrics.mockReset();
@@ -165,16 +165,16 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       // Vault 1: (10 * 1.1 * 0.85) + (20 * 1.05 * 1.0) = 9.35 + 21 = 30.35
       // Vault 2: (5 * 2.0 * 12.5) + (15 * 1.02 * 1.0) = 125 + 15.3 = 140.3
       // Total: 30.35 + 140.3 = 170.65
-      
+
       // Debug what we're actually getting
       console.log("Debug dashboard result:", {
         totalPortfolioValue: result.current.totalPortfolioValue,
         vaultPositionsLength: result.current.vaultPositions.length,
         vaultPositions: result.current.vaultPositions,
         isLoading: result.current.isLoading,
-        error: result.current.error
+        error: result.current.error,
       });
-      
+
       expect(result.current.totalPortfolioValue).toBeCloseTo(170.65, 2);
       expect(result.current.vaultPositions).toHaveLength(2);
     });
@@ -199,7 +199,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
 
       // Mock vault config (though it won't be called since no positions)
       mockGetVaultConfig.mockReturnValue(vaultConfig);
-      
+
       // User has no shares in this vault
       mockUseVault.mockReturnValue({
         userSharesX: "0.0",
@@ -247,7 +247,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       });
 
       mockGetVaultConfig.mockReturnValue(vaultConfig);
-      
+
       mockUseVault.mockReturnValue({
         userSharesX: "10.0",
         userSharesY: "20.0",
@@ -283,7 +283,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         isDetecting: false,
         error: null,
       });
-      
+
       // Transaction history with deposits
       mockUseTransactionHistory.mockReturnValue({
         transactions: [
@@ -341,7 +341,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         isDetecting: false,
         error: null,
       });
-      
+
       mockUseTransactionHistory.mockReturnValue({
         transactions: [],
       });
@@ -372,7 +372,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       });
 
       mockGetVaultConfig.mockReturnValue(vaultConfig);
-      
+
       // Current value: $150
       mockUseVault.mockReturnValue({
         userSharesX: "100.0",
@@ -424,7 +424,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
 
       // Earnings: $150 - $120 = $30
       expect(result.current.totalEarnings).toBe(30.0);
-      
+
       // ROI: ($30 / $120) * 100 = 25%
       expect(result.current.totalROI).toBe(25.0);
     });
@@ -446,7 +446,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       });
 
       mockGetVaultConfig.mockReturnValue(vaultConfig);
-      
+
       // Current value: $100 (somehow user has value without deposits)
       mockUseVault.mockReturnValue({
         userSharesX: "100.0",
@@ -492,7 +492,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       });
 
       mockGetVaultConfig.mockReturnValue(vaultConfig);
-      
+
       // Current value: $80
       mockUseVault.mockReturnValue({
         userSharesX: "80.0",
@@ -532,7 +532,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
 
       // Earnings: $80 - $100 = -$20
       expect(result.current.totalEarnings).toBe(-20.0);
-      
+
       // ROI: (-$20 / $100) * 100 = -20%
       expect(result.current.totalROI).toBe(-20.0);
     });
@@ -556,7 +556,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       });
 
       mockGetVaultConfig.mockReturnValue(vaultConfig);
-      
+
       mockUseVault.mockReturnValue({
         userSharesX: "10.0",
         userSharesY: "20.0",
@@ -579,7 +579,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       });
 
       const position = result.current.vaultPositions[0];
-      
+
       expect(position).toEqual({
         vaultAddress: "0xVault1",
         vaultName: "wS-USDC.e",
@@ -607,7 +607,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         isDetecting: false,
         error: null,
       });
-      
+
       mockUseTransactionHistory.mockReturnValue({
         transactions: undefined, // Still loading
       });
@@ -627,7 +627,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         isDetecting: false,
         error: "Failed to detect positions",
       });
-      
+
       // Mock transaction history (required by the hook)
       mockUseTransactionHistory.mockReturnValue({
         transactions: [],
@@ -645,27 +645,27 @@ describe("🎯 TDD: useDashboardData Hook", () => {
 
 /**
  * Test Summary - Dashboard Data Hook Coverage:
- * 
+ *
  * ✅ Portfolio Value Calculations (3 tests)
  *    - Total value across multiple vaults
  *    - Zero positions handling
  *    - Missing price data handling
- * 
+ *
  * ✅ Historical Deposits Tracking (2 tests)
  *    - Sum deposits from transaction history
  *    - Empty history handling
- * 
+ *
  * ✅ Earnings and ROI Calculations (3 tests)
  *    - Earnings calculation (value - deposits)
  *    - ROI percentage calculation
  *    - Edge cases (zero deposits, losses)
- * 
+ *
  * ✅ Individual Vault Position Data (1 test)
  *    - Detailed position breakdown per vault
- * 
+ *
  * ✅ Loading and Error States (2 tests)
  *    - Loading state indication
  *    - Error handling
- * 
+ *
  * Total: 11 comprehensive tests defining dashboard data requirements
  */

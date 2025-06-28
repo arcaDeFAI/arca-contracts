@@ -1,10 +1,7 @@
 import { useMemo } from "react";
 import { useVault } from "./use-vault";
-import {
-  useTokenPrices,
-  getTokenUSDValue,
-  type TokenPrices,
-} from "./use-token-prices";
+import { useHybridTokenPrices } from "./use-hybrid-token-prices";
+import { getTokenUSDValue, type TokenPrices } from "./use-token-prices";
 import { useTransactionHistory } from "./use-transaction-history";
 
 export interface VaultMetrics {
@@ -36,6 +33,9 @@ export interface VaultMetrics {
   // Data freshness
   lastUpdated: number;
   isStale: boolean;
+
+  // Debug info for real data migration
+  isRealData?: boolean;
 }
 
 export interface VaultMetricsHook {
@@ -49,6 +49,7 @@ export interface VaultMetricsHook {
 // This shows FAKE 45% APR to users - DO NOT USE IN PRODUCTION
 // Users will expect these yields and be disappointed/lose money
 // TODO: Replace with real METRO rewards + DLMM fee calculations
+// DEMO MODE: These warnings will be removed once real APR calculation is integrated
 function calculateEstimatedAPR(
   totalTvlUSD: number,
   userTransactionHistory: unknown[],
@@ -98,12 +99,19 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     prices,
     isLoading: pricesLoading,
     error: pricesError,
-    refetch: refetchPrices,
-  } = useTokenPrices(tokenSymbols);
+    refresh: refetchPrices,
+    isUsingRealPrices: isRealData,
+  } = useHybridTokenPrices({ tokens: tokenSymbols });
   const { getTransactionSummary } = useTransactionHistory();
 
   const metrics = useMemo((): VaultMetrics | null => {
-    if (!prices || pricesLoading) return null;
+    if (
+      !prices ||
+      pricesLoading ||
+      pricesError ||
+      Object.keys(prices).length === 0
+    )
+      return null;
 
     // Get dynamic token symbols from vault configuration
     const tokenXSymbol = vault.tokenXSymbol;
@@ -120,15 +128,19 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     const userBalanceYStr = vault.userBalanceY;
 
     // Calculate USD values using dynamic token symbols
+    // Convert hybrid prices to TokenPrices format for compatibility
+    const pricesWithTimestamp = prices
+      ? { ...prices, lastUpdated: Date.now() }
+      : null;
     const vaultBalanceXUSD = getTokenUSDValue(
       vaultBalanceXStr,
       tokenXSymbol,
-      prices,
+      pricesWithTimestamp,
     );
     const vaultBalanceYUSD = getTokenUSDValue(
       vaultBalanceYStr,
       tokenYSymbol,
-      prices,
+      pricesWithTimestamp,
     );
     const totalTvlUSD = vaultBalanceXUSD + vaultBalanceYUSD;
 
@@ -136,12 +148,12 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     const userBalanceXUSD = getTokenUSDValue(
       userBalanceXStr,
       tokenXSymbol,
-      prices,
+      pricesWithTimestamp,
     );
     const userBalanceYUSD = getTokenUSDValue(
       userBalanceYStr,
       tokenYSymbol,
-      prices,
+      pricesWithTimestamp,
     );
 
     // Use price per share from vault contract (already formatted as strings)
@@ -171,7 +183,11 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     const userROI = calculateUserROI(userEarnings, userTotalDeposited);
 
     // APR calculations
-    const estimatedApr = calculateEstimatedAPR(totalTvlUSD, [], prices);
+    const estimatedApr = calculateEstimatedAPR(
+      totalTvlUSD,
+      [],
+      pricesWithTimestamp,
+    );
     const dailyApr = estimatedApr / 365;
 
     const now = Date.now();
@@ -204,7 +220,12 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
 
       // Data freshness
       lastUpdated: now,
-      isStale: prices ? now - prices.lastUpdated > 60000 : false, // Stale after 1 minute
+      isStale: pricesWithTimestamp
+        ? now - pricesWithTimestamp.lastUpdated > 60000
+        : false, // Stale after 1 minute
+
+      // Debug info for real data migration
+      isRealData: isRealData || false,
     };
   }, [
     vault.vaultBalanceX,
