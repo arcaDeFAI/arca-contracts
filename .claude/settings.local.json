@@ -36,7 +36,10 @@
       "Bash(sed:*)",
       "Bash(timeout 10s npm run dev)",
       "WebFetch(domain:brand.coingecko.com)",
-      "Bash(timeout 8s npm run dev 2 >& 1)"
+      "Bash(timeout 8s npm run dev 2 >& 1)",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_click"
     ],
     "deny": []
   }
