@@ -109,7 +109,7 @@ return sum + amount;
 
 **Current Code:**
 ```typescript
-export const platforms = ["Arca DLMM", "Shadow Exchange", "All Platforms"];
+export const platforms = ["DLMM", "Shadow Exchange", "All Platforms"];
 export const chains = ["Sonic", "Sonic Fork", "All Chains"];
 export const sortOptions = ["APR ↓", "APR ↑", "TVL ↓", "TVL ↑"];
 ```

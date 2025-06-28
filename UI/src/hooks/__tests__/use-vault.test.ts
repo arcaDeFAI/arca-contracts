@@ -97,23 +97,29 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     currentMockData = createMockVaultData(currentVaultConfig);
 
     // Mock the getContracts function to handle supported/unsupported chains
-    vi.mocked(contractsModule.getContracts).mockImplementation((chainId: number) => {
-      // Business Requirement: Return null for unsupported chains (graceful failure)
-      const supportedChainIds = Object.values(SUPPORTED_CHAINS).map(chain => chain.id);
-      if (!supportedChainIds.includes(chainId)) {
-        return null;
-      }
-      
-      // Return contracts for supported chains
-      return {
-        ...MOCK_SYSTEM_CONTRACTS,
-        vault: currentVaultConfig.address,
-        tokens: {
-          [currentVaultConfig.tokenX.symbol]: currentVaultConfig.tokenX.address,
-          [currentVaultConfig.tokenY.symbol]: currentVaultConfig.tokenY.address,
-        },
-      } as any;
-    });
+    vi.mocked(contractsModule.getContracts).mockImplementation(
+      (chainId: number) => {
+        // Business Requirement: Return null for unsupported chains (graceful failure)
+        const supportedChainIds = Object.values(SUPPORTED_CHAINS).map(
+          (chain) => chain.id,
+        );
+        if (!supportedChainIds.includes(chainId)) {
+          return null;
+        }
+
+        // Return contracts for supported chains
+        return {
+          ...MOCK_SYSTEM_CONTRACTS,
+          vault: currentVaultConfig.address,
+          tokens: {
+            [currentVaultConfig.tokenX.symbol]:
+              currentVaultConfig.tokenX.address,
+            [currentVaultConfig.tokenY.symbol]:
+              currentVaultConfig.tokenY.address,
+          },
+        } as any;
+      },
+    );
 
     // Mock the vault config lookup to return current test config
     vi.mocked(vaultConfigsModule.getVaultConfig).mockReturnValue(
