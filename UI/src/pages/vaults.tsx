@@ -2,15 +2,10 @@ import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import { useAccount } from "wagmi";
 import VaultCard from "../components/vault-card";
-import {
-  platforms,
-  sortOptions,
-  realVaults as mockRealVaults,
-  mockVaults,
-} from "../data/mock-vaults";
+import { PLATFORM_OPTIONS, SORT_OPTIONS } from "../config/ui-filters";
 import type { VaultFilters } from "../types/vault";
 import { useRealVaults } from "../hooks/use-real-vaults";
-import { CHAIN_FILTER_OPTIONS } from "../config/chains";
+import { CHAIN_FILTER_OPTIONS, ALL_CHAINS } from "../config/chains";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,7 +18,7 @@ import {
 export default function Vaults() {
   const [filters, setFilters] = useState<VaultFilters>({
     platform: "All Platforms",
-    chain: "Sonic",
+    chain: ALL_CHAINS,
     sortBy: "APR ↓",
     search: "",
   });
@@ -133,7 +128,7 @@ export default function Vaults() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-arca-surface border-arca-border">
-                  {platforms.map((platform) => (
+                  {PLATFORM_OPTIONS.map((platform) => (
                     <SelectItem
                       key={platform}
                       value={platform}
@@ -189,7 +184,7 @@ export default function Vaults() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-arca-surface border-arca-border">
-                  {sortOptions.map((option) => (
+                  {SORT_OPTIONS.map((option) => (
                     <SelectItem
                       key={option}
                       value={option}
