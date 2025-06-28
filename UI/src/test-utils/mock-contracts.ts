@@ -22,7 +22,7 @@ export function createMockVaultConfig(
       coingeckoId: tokenYSymbol.toLowerCase(),
     },
     name: `${tokenXSymbol}-${tokenYSymbol}`,
-    platform: "Arca DLMM",
+    platform: "DLMM",
     chain: "Test Network",
     isActive: true,
   };

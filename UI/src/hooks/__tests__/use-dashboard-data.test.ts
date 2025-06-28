@@ -73,7 +73,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         tokenX: { symbol: "wS", address: "0xTokenX1", decimals: 18 },
         tokenY: { symbol: "USDC.e", address: "0xTokenY1", decimals: 6 },
         name: "wS-USDC.e",
-        platform: "Arca DLMM",
+        platform: "DLMM",
         chain: "Sonic Fork",
         isActive: true,
       };
@@ -83,7 +83,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         tokenX: { symbol: "METRO", address: "0xTokenX2", decimals: 18 },
         tokenY: { symbol: "USDC", address: "0xTokenY2", decimals: 6 },
         name: "METRO-USDC",
-        platform: "Arca DLMM",
+        platform: "DLMM",
         chain: "Sonic Fork",
         isActive: true,
       };
@@ -161,7 +161,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
           return {
             metrics: {
               userSharesXUSD: 125.0, // 5 shares * 2.0 pricePerShare * $12.50
-              userSharesYUSD: 15.3,  // 15 shares * 1.02 pricePerShare * $1.00
+              userSharesYUSD: 15.3, // 15 shares * 1.02 pricePerShare * $1.00
               estimatedApr: 35.8,
               isDataAvailable: true,
               priceDataLoading: false,
@@ -212,7 +212,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         tokenX: { symbol: "wS", address: "0xTokenX1", decimals: 18 },
         tokenY: { symbol: "USDC.e", address: "0xTokenY1", decimals: 6 },
         name: "wS-USDC.e",
-        platform: "Arca DLMM",
+        platform: "DLMM",
         chain: "Sonic Fork",
         isActive: true,
       };
@@ -261,7 +261,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         tokenX: { symbol: "wS", address: "0xTokenX1", decimals: 18 },
         tokenY: { symbol: "USDC.e", address: "0xTokenY1", decimals: 6 },
         name: "wS-USDC.e",
-        platform: "Arca DLMM",
+        platform: "DLMM",
         chain: "Sonic Fork",
         isActive: true,
       };
@@ -413,7 +413,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       mockUseVaultMetrics.mockReturnValue({
         metrics: {
           userSharesXUSD: 100.0, // 100 shares * 1.0 pricePerShare * $1.0
-          userSharesYUSD: 50.0,  // 50 shares * 1.0 pricePerShare * $1.0
+          userSharesYUSD: 50.0, // 50 shares * 1.0 pricePerShare * $1.0
           estimatedApr: 45.2,
           isDataAvailable: true,
           priceDataLoading: false,
@@ -495,7 +495,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       mockUseVaultMetrics.mockReturnValue({
         metrics: {
           userSharesXUSD: 100.0, // 100 shares * 1.0 pricePerShare * $1.0
-          userSharesYUSD: 0.0,   // 0 shares
+          userSharesYUSD: 0.0, // 0 shares
           estimatedApr: 45.2,
           isDataAvailable: true,
           priceDataLoading: false,
@@ -549,7 +549,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       mockUseVaultMetrics.mockReturnValue({
         metrics: {
           userSharesXUSD: 80.0, // 80 shares * 1.0 pricePerShare * $1.0
-          userSharesYUSD: 0.0,  // 0 shares
+          userSharesYUSD: 0.0, // 0 shares
           estimatedApr: 45.2,
           isDataAvailable: true,
           priceDataLoading: false,

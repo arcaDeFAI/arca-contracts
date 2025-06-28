@@ -499,12 +499,12 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
       expect(result.current.metrics?.priceDataLoading).toBe(true);
       expect(result.current.metrics?.priceDataError).toBeNull();
       expect(result.current.metrics?.isDataAvailable).toBe(true);
-      
+
       // USD values should be undefined when prices loading
       expect(result.current.metrics?.totalTvlUSD).toBeUndefined();
       expect(result.current.metrics?.userTotalUSD).toBeUndefined();
       expect(result.current.metrics?.estimatedApr).toBeUndefined();
-      
+
       // Non-price dependent data should be available
       expect(result.current.metrics?.pricePerShareX).toBe(1.1);
       expect(result.current.metrics?.pricePerShareY).toBe(1.05);
@@ -544,15 +544,17 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
       expect(result.current.isLoading).toBe(false);
       expect(result.current.error).toBeNull(); // Hook level error is null (graceful)
       expect(result.current.metrics).toBeDefined();
-      expect(result.current.metrics?.priceDataError).toBe("Failed to fetch token prices");
+      expect(result.current.metrics?.priceDataError).toBe(
+        "Failed to fetch token prices",
+      );
       expect(result.current.metrics?.priceDataLoading).toBe(false);
       expect(result.current.metrics?.isDataAvailable).toBe(true);
-      
+
       // USD values should be undefined when price fetch failed
       expect(result.current.metrics?.totalTvlUSD).toBeUndefined();
       expect(result.current.metrics?.userTotalUSD).toBeUndefined();
       expect(result.current.metrics?.estimatedApr).toBeUndefined();
-      
+
       // Non-price dependent data should still be available
       expect(result.current.metrics?.pricePerShareX).toBe(1.1);
       expect(result.current.metrics?.pricePerShareY).toBe(1.05);
