@@ -82,12 +82,19 @@ function getLocalhostAddresses(): DeploymentAddresses | null {
       // Fallback to basic export data
       console.warn("Using basic deployment data - some features may not work");
       // Validate that all required addresses are present
-      if (!deployment.vault || !deployment.registry || !deployment.feeManager || 
-          !deployment.queueHandler || !deployment.rewardClaimer) {
-        console.error("Missing required contract addresses in deployment export");
+      if (
+        !deployment.vault ||
+        !deployment.registry ||
+        !deployment.feeManager ||
+        !deployment.queueHandler ||
+        !deployment.rewardClaimer
+      ) {
+        console.error(
+          "Missing required contract addresses in deployment export",
+        );
         return null;
       }
-      
+
       return {
         vault: deployment.vault,
         feeManager: deployment.feeManager,
