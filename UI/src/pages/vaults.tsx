@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
+import { useAccount } from "wagmi";
 import VaultCard from "../components/vault-card";
 import {
   platforms,
@@ -20,32 +21,6 @@ import {
 } from "@/components/ui/select";
 
 export default function Vaults() {
-  // 🔍 DEBUG: Verify this is the component being rendered
-  console.log("🔍 [Vaults] ======== VAULTS PAGE COMPONENT RENDERED ========");
-  console.log("🔍 [Vaults] Component location: src/pages/vaults.tsx");
-  console.log("🔍 [Vaults] Timestamp:", new Date().toISOString());
-
-  // 🔍 DEBUG: Check browser storage for cached data
-  console.log("🔍 [Vaults] Browser Storage Check:");
-  console.log("🔍 [Vaults] localStorage keys:", Object.keys(localStorage));
-  console.log("🔍 [Vaults] sessionStorage keys:", Object.keys(sessionStorage));
-
-  // Look for any vault-related storage
-  Object.keys(localStorage).forEach((key) => {
-    if (
-      key.toLowerCase().includes("vault") ||
-      key.toLowerCase().includes("arca")
-    ) {
-      console.log(
-        `🔍 [Vaults] localStorage.${key}:`,
-        localStorage.getItem(key),
-      );
-    }
-  });
-
-  // 🔍 DEBUG: Log call stack
-  console.log("🔍 [Vaults] Call stack:", new Error().stack);
-
   const [filters, setFilters] = useState<VaultFilters>({
     platform: "All Platforms",
     chain: "Sonic",
@@ -53,35 +28,8 @@ export default function Vaults() {
     search: "",
   });
 
+  const { isConnected } = useAccount();
   const { vaults: realVaults, isLoading, error } = useRealVaults();
-
-  // 🔍 DEBUG: Check mock vault imports
-  console.log("🔍 [Vaults Page] MOCK DATA CHECK:");
-  console.log("🔍 [Vaults Page] mockRealVaults:", mockRealVaults);
-  console.log("🔍 [Vaults Page] mockVaults:", mockVaults);
-  console.log("🔍 [Vaults Page] platforms:", platforms);
-  console.log("🔍 [Vaults Page] chains:", chains);
-
-  // 🔍 DEBUG: Log vault data received in component
-  console.log("🔍 [Vaults Page] DEBUG START");
-  console.log("🔍 [Vaults Page] realVaults received:", realVaults);
-  console.log("🔍 [Vaults Page] realVaults.length:", realVaults.length);
-  console.log("🔍 [Vaults Page] isLoading:", isLoading);
-  console.log("🔍 [Vaults Page] error:", error);
-
-  if (realVaults.length > 0) {
-    realVaults.forEach((vault, index) => {
-      console.log(`🔍 [Vaults Page] Vault ${index}:`, {
-        id: vault.id,
-        name: vault.name,
-        tokens: vault.tokens,
-        platform: vault.platform,
-        chain: vault.chain,
-        totalTvl: vault.totalTvl,
-        apr: vault.apr,
-      });
-    });
-  }
 
   const filteredAndSortedVaults = useMemo(() => {
     const filtered = realVaults.filter((vault) => {
@@ -288,7 +236,13 @@ export default function Vaults() {
         </div>
 
         {/* Vault Rows */}
-        {isLoading ? (
+        {!isConnected ? (
+          <div className="px-6 py-12 text-center bg-arca-surface rounded-xl border border-arca-border mx-4">
+            <p className="text-arca-secondary">
+              Connect your wallet to view vaults
+            </p>
+          </div>
+        ) : isLoading ? (
           <div className="px-6 py-12 text-center bg-arca-surface rounded-xl border border-arca-border mx-4">
             <p className="text-arca-secondary">Loading vaults...</p>
           </div>
@@ -298,10 +252,6 @@ export default function Vaults() {
           </div>
         ) : filteredAndSortedVaults.length > 0 ? (
           filteredAndSortedVaults.map((vault) => {
-            console.log(
-              "🔍 [Vaults Page] Rendering VaultCard for vault:",
-              vault.name,
-            );
             return (
               <VaultCard
                 key={vault.id}
