@@ -358,7 +358,7 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
 
   describe("🎯 TDD: Token-Agnostic APR Calculations", () => {
     it("should calculate real APR from METRO rewards and DLMM fees", () => {
-      // BUSINESS REQUIREMENT: Real APR = (METRO rewards + DLMM fees) / TVL × 100 
+      // BUSINESS REQUIREMENT: Real APR = (METRO rewards + DLMM fees) / TVL × 100
       // This test defines how real APR should be calculated from blockchain data
       mockUseVault.mockReturnValue({
         vaultBalanceX: "10000.0", // $8,500 TVL
@@ -373,7 +373,7 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         tokenYSymbol: "USDC.e",
         // Mock reward data from contracts
         totalMetroRewardsCompounded: "1000.0", // $2,500 in METRO rewards over time period
-        totalDLMMFeesEarned: "500.0", // $500 in DLMM trading fees 
+        totalDLMMFeesEarned: "500.0", // $500 in DLMM trading fees
         timeWindowDays: 30, // Over 30 days
       });
 

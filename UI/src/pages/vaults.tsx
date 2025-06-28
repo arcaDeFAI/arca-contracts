@@ -1,7 +1,13 @@
 import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import VaultCard from "../components/vault-card";
-import { platforms, chains, sortOptions, realVaults as mockRealVaults, mockVaults } from "../data/mock-vaults";
+import {
+  platforms,
+  chains,
+  sortOptions,
+  realVaults as mockRealVaults,
+  mockVaults,
+} from "../data/mock-vaults";
 import type { VaultFilters } from "../types/vault";
 import { useRealVaults } from "../hooks/use-real-vaults";
 import { Input } from "@/components/ui/input";
@@ -18,19 +24,25 @@ export default function Vaults() {
   console.log("🔍 [Vaults] ======== VAULTS PAGE COMPONENT RENDERED ========");
   console.log("🔍 [Vaults] Component location: src/pages/vaults.tsx");
   console.log("🔍 [Vaults] Timestamp:", new Date().toISOString());
-  
+
   // 🔍 DEBUG: Check browser storage for cached data
   console.log("🔍 [Vaults] Browser Storage Check:");
   console.log("🔍 [Vaults] localStorage keys:", Object.keys(localStorage));
   console.log("🔍 [Vaults] sessionStorage keys:", Object.keys(sessionStorage));
-  
+
   // Look for any vault-related storage
-  Object.keys(localStorage).forEach(key => {
-    if (key.toLowerCase().includes('vault') || key.toLowerCase().includes('arca')) {
-      console.log(`🔍 [Vaults] localStorage.${key}:`, localStorage.getItem(key));
+  Object.keys(localStorage).forEach((key) => {
+    if (
+      key.toLowerCase().includes("vault") ||
+      key.toLowerCase().includes("arca")
+    ) {
+      console.log(
+        `🔍 [Vaults] localStorage.${key}:`,
+        localStorage.getItem(key),
+      );
     }
   });
-  
+
   // 🔍 DEBUG: Log call stack
   console.log("🔍 [Vaults] Call stack:", new Error().stack);
 
@@ -56,7 +68,7 @@ export default function Vaults() {
   console.log("🔍 [Vaults Page] realVaults.length:", realVaults.length);
   console.log("🔍 [Vaults Page] isLoading:", isLoading);
   console.log("🔍 [Vaults Page] error:", error);
-  
+
   if (realVaults.length > 0) {
     realVaults.forEach((vault, index) => {
       console.log(`🔍 [Vaults Page] Vault ${index}:`, {
@@ -66,7 +78,7 @@ export default function Vaults() {
         platform: vault.platform,
         chain: vault.chain,
         totalTvl: vault.totalTvl,
-        apr: vault.apr
+        apr: vault.apr,
       });
     });
   }
@@ -286,7 +298,10 @@ export default function Vaults() {
           </div>
         ) : filteredAndSortedVaults.length > 0 ? (
           filteredAndSortedVaults.map((vault) => {
-            console.log("🔍 [Vaults Page] Rendering VaultCard for vault:", vault.name);
+            console.log(
+              "🔍 [Vaults Page] Rendering VaultCard for vault:",
+              vault.name,
+            );
             return (
               <VaultCard
                 key={vault.id}

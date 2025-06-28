@@ -238,40 +238,46 @@ describe("useRealTokenPrices", () => {
   });
 });
 
-  it("should work with useRealTokenPrice wrapper for single token", async () => {
-    const mockPrices = {
-      ws: {
-        symbol: "ws",
-        price: 0.95,
-        lastUpdated: Date.now(),
-        source: "coingecko" as const,
-      },
-    };
+it("should work with useRealTokenPrice wrapper for single token", async () => {
+  const mockPrices = {
+    ws: {
+      symbol: "ws",
+      price: 0.95,
+      lastUpdated: Date.now(),
+      source: "coingecko" as const,
+    },
+  };
 
-    mockPriceFeedService.getMultipleTokenPrices.mockResolvedValue(mockPrices);
+  mockPriceFeedService.getMultipleTokenPrices.mockResolvedValue(mockPrices);
 
-    const { result } = renderHook(() => useRealTokenPrice("ws", { refreshInterval: 0 }));
+  const { result } = renderHook(() =>
+    useRealTokenPrice("ws", { refreshInterval: 0 }),
+  );
 
-    await vi.waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
-
-    expect(result.current.price).toBe(0.95);
-    expect(result.current.priceDetail).toEqual(mockPrices.ws);
-    expect(mockPriceFeedService.getMultipleTokenPrices).toHaveBeenCalledWith(["ws"]);
+  await vi.waitFor(() => {
+    expect(result.current.isLoading).toBe(false);
   });
 
-  it("should return null for unknown token with useRealTokenPrice", async () => {
-    mockPriceFeedService.getMultipleTokenPrices.mockResolvedValue({});
+  expect(result.current.price).toBe(0.95);
+  expect(result.current.priceDetail).toEqual(mockPrices.ws);
+  expect(mockPriceFeedService.getMultipleTokenPrices).toHaveBeenCalledWith([
+    "ws",
+  ]);
+});
 
-    const { result } = renderHook(() => useRealTokenPrice("unknown", { refreshInterval: 0 }));
+it("should return null for unknown token with useRealTokenPrice", async () => {
+  mockPriceFeedService.getMultipleTokenPrices.mockResolvedValue({});
 
-    await vi.waitFor(() => {
-      expect(result.current.isLoading).toBe(false);
-    });
+  const { result } = renderHook(() =>
+    useRealTokenPrice("unknown", { refreshInterval: 0 }),
+  );
 
-    expect(result.current.price).toBeNull();
-    expect(result.current.priceDetail).toBeNull();
+  await vi.waitFor(() => {
+    expect(result.current.isLoading).toBe(false);
   });
+
+  expect(result.current.price).toBeNull();
+  expect(result.current.priceDetail).toBeNull();
+});
 
 // TODO: Add formatTokenPrice tests when module imports are resolved
