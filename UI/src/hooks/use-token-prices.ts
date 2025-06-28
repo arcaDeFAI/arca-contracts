@@ -17,6 +17,7 @@ export interface TokenPricesHook {
 // This shows FAKE prices to users and MUST be replaced before launch
 // Users will see wrong portfolio values and make decisions on false data
 // TODO: Replace with real CoinGecko/DEX price feeds
+// DEMO MODE: These warnings will be removed once real price feeds are integrated
 const MOCK_TOKEN_PRICES: Record<string, number> = {
   ws: 0.85, // ❌ FAKE price for wrapped Sonic
   "usdc.e": 1.0, // ❌ FAKE price (should be real peg check)
