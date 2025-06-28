@@ -40,7 +40,7 @@ export function useRealVaults(): {
       id: firstVault.vault,
       name: firstVault.name || `${vault.tokenXSymbol}-${vault.tokenYSymbol}`,
       tokens: [vault.tokenXSymbol, vault.tokenYSymbol],
-      platform: "Arca DLMM",
+      platform: "DLMM",
       chain: getChainName(chainId),
 
       // Real-time contract data (always available)
