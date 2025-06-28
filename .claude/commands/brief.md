@@ -1,1 +1,1 @@
-Hello Claude, please get started by reading your briefs: README.md and BRIEF.md
+Hello Claude, please start reading your briefs: README.md, and BRIEF.md

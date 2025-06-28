@@ -18,9 +18,23 @@ export function useRealVaults(): {
     error: metricsError,
   } = useVaultMetrics();
 
+  // 🔍 DEBUG: Log all incoming data
+  console.log("🔍 [useRealVaults] DEBUG START");
+  console.log("🔍 [useRealVaults] chainId:", chainId);
+  console.log("🔍 [useRealVaults] vault.contracts:", vault.contracts);
+  console.log("🔍 [useRealVaults] vault object keys:", Object.keys(vault));
+  console.log("🔍 [useRealVaults] metrics:", metrics);
+  console.log("🔍 [useRealVaults] metricsLoading:", metricsLoading);
+  console.log("🔍 [useRealVaults] metricsError:", metricsError);
+
   // For now we have one vault - wS/USDC.e on Sonic
   const realVaults: RealVault[] = useMemo(() => {
+    console.log("🔍 [useRealVaults] useMemo execution");
+    console.log("🔍 [useRealVaults] vault.contracts check:", !!vault.contracts);
+    console.log("🔍 [useRealVaults] metrics check:", !!metrics);
+    
     if (!vault.contracts || !metrics) {
+      console.log("🔍 [useRealVaults] Returning empty array - missing contracts or metrics");
       return [];
     }
 
@@ -74,6 +88,9 @@ export function useRealVaults(): {
       isStale: metrics.isStale,
     };
 
+    console.log("🔍 [useRealVaults] Created realVault:", realVault);
+    console.log("🔍 [useRealVaults] Returning vault array with length:", [realVault].length);
+    
     return [realVault];
   }, [
     vault.contracts,
@@ -91,13 +108,8 @@ export function useRealVaults(): {
     chainId,
   ]);
 
-  // Loading state - if any key data is still loading
-  const isLoading =
-    !vault.contracts ||
-    metricsLoading ||
-    (vault.vaultBalanceX === "0" &&
-      vault.vaultBalanceY === "0" &&
-      !vault.userBalanceWS);
+  // Loading state - if wallet connected, wait for contracts and metrics; if disconnected, show mock data
+  const isLoading = chainId && (!vault.contracts || metricsLoading);
 
   // Add error handling for contract data loading
   const error = useMemo(() => {
@@ -131,9 +143,18 @@ export function useRealVaults(): {
     metricsError,
   ]);
 
-  return {
+  const result = {
     vaults: realVaults,
     isLoading,
     error,
   };
+
+  console.log("🔍 [useRealVaults] FINAL RESULT:");
+  console.log("🔍 [useRealVaults] vaults.length:", result.vaults.length);
+  console.log("🔍 [useRealVaults] vaults:", result.vaults);
+  console.log("🔍 [useRealVaults] isLoading:", result.isLoading);
+  console.log("🔍 [useRealVaults] error:", result.error);
+  console.log("🔍 [useRealVaults] DEBUG END");
+
+  return result;
 }

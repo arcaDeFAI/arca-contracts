@@ -3,6 +3,10 @@
  *
  * Fetches real token prices from CoinGecko API to replace hardcoded mock prices.
  * Includes caching, error handling, and fallback mechanisms.
+ *
+ * ATTRIBUTION REQUIRED: This service uses CoinGecko's free API.
+ * UI components that display price data must include proper CoinGecko attribution
+ * as per their guidelines: https://brand.coingecko.com/resources/attribution-guide
  */
 
 export interface TokenPrice {
@@ -54,7 +58,7 @@ class PriceFeedService {
 
   constructor(config: PriceFeedConfig = {}) {
     this.config = {
-      apiKey: config.apiKey || process.env.REACT_APP_COINGECKO_API_KEY || "",
+      apiKey: config.apiKey || import.meta.env.VITE_COINGECKO_API_KEY || "",
       baseUrl: config.baseUrl || "https://api.coingecko.com/api/v3",
       cacheTimeout: config.cacheTimeout || 30000, // 30 seconds
       retryAttempts: config.retryAttempts || 3,

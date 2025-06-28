@@ -10,6 +10,7 @@ import {
 } from "./transaction-progress";
 import { useTransactionHistory } from "../hooks/use-transaction-history";
 import { DemoDataWrapper, InlineWarning } from "./demo-warnings";
+import { CoinGeckoAttributionMinimal } from "./coingecko-attribution";
 
 interface VaultCardProps {
   vault: RealVault;
@@ -17,6 +18,19 @@ interface VaultCardProps {
 }
 
 export default function VaultCard({ vault, onClick }: VaultCardProps) {
+  // 🔍 DEBUG: Log vault prop received
+  console.log("🔍 [VaultCard] Rendering with vault:", {
+    id: vault.id,
+    name: vault.name, 
+    tokens: vault.tokens,
+    platform: vault.platform,
+    chain: vault.chain,
+    totalTvl: vault.totalTvl,
+    userBalance: vault.userBalance,
+    apr: vault.apr,
+    contractAddress: vault.contractAddress
+  });
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">("deposit");
 
@@ -297,12 +311,13 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
           </div>
 
           {/* Total TVL */}
-          <div className="flex items-center">
+          <div className="flex flex-col">
             <DemoDataWrapper type="portfolio" className="inline-block">
               <span className="text-white font-medium">
                 {formatCurrency(vault.totalTvl)}
               </span>
             </DemoDataWrapper>
+            <CoinGeckoAttributionMinimal className="mt-1" />
           </div>
 
           {/* Queue Status */}
@@ -544,6 +559,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               <div className="text-white font-medium">
                 {formatCurrency(vault.totalTvl)}
               </div>
+              <CoinGeckoAttributionMinimal className="mt-1" />
             </div>
             <div>
               <div className="text-arca-secondary text-xs">QUEUE STATUS</div>

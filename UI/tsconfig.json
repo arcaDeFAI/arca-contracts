@@ -1,6 +1,6 @@
 {
   "include": [
-    "client/src/**/*",
+    "src/**/*",
     "shared/**/*",
     "server/**/*",
     "tailwind.config.ts"
@@ -21,7 +21,7 @@
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
-      "@/*": ["./client/src/*"],
+      "@/*": ["./src/*"],
       "@shared/*": ["./shared/*"]
     }
   }

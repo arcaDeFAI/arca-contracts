@@ -15,8 +15,9 @@ export interface DemoModeConfig {
  * Get demo mode configuration from environment variables
  */
 export function getDemoModeConfig(): DemoModeConfig {
-  const isDemo = process.env.REACT_APP_DEMO_MODE !== "false";
-  const useRealPrices = process.env.REACT_APP_USE_REAL_PRICES === "true";
+  // Use import.meta.env for Vite instead of process.env
+  const isDemo = import.meta.env.VITE_DEMO_MODE !== "false";
+  const useRealPrices = import.meta.env.VITE_USE_REAL_PRICES === "true";
 
   return {
     enabled: isDemo,
