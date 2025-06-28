@@ -41,66 +41,15 @@ export function useVault(vaultAddress?: string) {
     setError(null);
   };
 
-  // Get vault configuration - fallback to default vault if none provided
-  const contracts = getContracts(chainId || 31337);
+  // Get vault configuration - require both chainId and contracts
+  const contracts = chainId ? getContracts(chainId) : null;
   const defaultVaultAddress = vaultAddress || contracts?.vault;
-  const vaultConfig = defaultVaultAddress
-    ? getVaultConfig(defaultVaultAddress)
+  const vaultConfig = defaultVaultAddress && chainId
+    ? getVaultConfig(defaultVaultAddress, chainId)
     : null;
 
-  // If no vault config found, return empty state
-  if (!vaultConfig || !defaultVaultAddress) {
-    return {
-      // Contract info
-      vaultConfig: null,
-      vaultAddress: defaultVaultAddress,
-
-      // Token info
-      tokenXSymbol: "",
-      tokenYSymbol: "",
-
-      // Vault data
-      vaultBalanceX: "0.0",
-      vaultBalanceY: "0.0",
-      userSharesX: "0.0",
-      userSharesY: "0.0",
-      pricePerShareX: "0.0",
-      pricePerShareY: "0.0",
-
-      // User balances
-      userBalanceX: "0.0",
-      userBalanceY: "0.0",
-
-      // Queue status
-      pendingDeposits: "0",
-      pendingWithdraws: "0",
-
-      // Transaction state
-      isWritePending: false,
-      isConfirming: false,
-      isConfirmed: false,
-      lastOperation,
-      hash: undefined,
-
-      // Actions (no-ops when no vault)
-      approveTokenX: async () => {},
-      approveTokenY: async () => {},
-      depositTokenX: async () => {},
-      depositTokenY: async () => {},
-      withdrawShares: async () => {},
-      withdrawAll: async () => {},
-      hasAllowance: () => false,
-      validateBalance: () => false,
-      validateConnection: () => false,
-
-      // Utils
-      formatBalance: (balance: bigint | unknown) => "0.0",
-
-      // Error handling
-      error: null,
-      clearError: () => {},
-    };
-  }
+  // Determine if we should enable contract queries (but always call the hooks)
+  const shouldEnableQueries = !!(vaultConfig && defaultVaultAddress && chainId);
 
   // Vault balance queries (token-agnostic)
   const { data: vaultBalanceX } = useReadContract({
@@ -108,7 +57,7 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "tokenBalance",
     args: [0], // TokenX (first token in pair)
-    query: { enabled: !!defaultVaultAddress },
+    query: { enabled: shouldEnableQueries },
   });
 
   const { data: vaultBalanceY } = useReadContract({
@@ -116,7 +65,7 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "tokenBalance",
     args: [1], // TokenY (second token in pair)
-    query: { enabled: !!defaultVaultAddress },
+    query: { enabled: shouldEnableQueries },
   });
 
   // User share queries (token-agnostic)
@@ -125,7 +74,7 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "getShares",
     args: [userAddress, 0],
-    query: { enabled: !!defaultVaultAddress && !!userAddress },
+    query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
   const { data: userSharesY } = useReadContract({
@@ -133,7 +82,7 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "getShares",
     args: [userAddress, 1],
-    query: { enabled: !!defaultVaultAddress && !!userAddress },
+    query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
   // Share price queries (token-agnostic)
@@ -142,7 +91,7 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "getPricePerFullShare",
     args: [0],
-    query: { enabled: !!defaultVaultAddress },
+    query: { enabled: shouldEnableQueries },
   });
 
   const { data: pricePerShareY } = useReadContract({
@@ -150,47 +99,41 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "getPricePerFullShare",
     args: [1],
-    query: { enabled: !!defaultVaultAddress },
+    query: { enabled: shouldEnableQueries },
   });
 
   // Token balance queries (dynamic based on vault config)
   const { data: userBalanceX } = useReadContract({
-    address: vaultConfig.tokenX.address as Address,
+    address: vaultConfig?.tokenX.address as Address,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [userAddress],
-    query: { enabled: !!vaultConfig.tokenX.address && !!userAddress },
+    query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
   const { data: userBalanceY } = useReadContract({
-    address: vaultConfig.tokenY.address as Address,
+    address: vaultConfig?.tokenY.address as Address,
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [userAddress],
-    query: { enabled: !!vaultConfig.tokenY.address && !!userAddress },
+    query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
   // Token allowance queries (dynamic based on vault config)
   const { data: allowanceX } = useReadContract({
-    address: vaultConfig.tokenX.address as Address,
+    address: vaultConfig?.tokenX.address as Address,
     abi: ERC20_ABI,
     functionName: "allowance",
     args: [userAddress, defaultVaultAddress],
-    query: {
-      enabled:
-        !!vaultConfig.tokenX.address && !!userAddress && !!defaultVaultAddress,
-    },
+    query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
   const { data: allowanceY } = useReadContract({
-    address: vaultConfig.tokenY.address as Address,
+    address: vaultConfig?.tokenY.address as Address,
     abi: ERC20_ABI,
     functionName: "allowance",
     args: [userAddress, defaultVaultAddress],
-    query: {
-      enabled:
-        !!vaultConfig.tokenY.address && !!userAddress && !!defaultVaultAddress,
-    },
+    query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
   // Queue status queries (using legacy contracts structure for queue handler)
@@ -198,14 +141,14 @@ export function useVault(vaultAddress?: string) {
     address: contracts?.queueHandler as Address,
     abi: QUEUE_HANDLER_ABI,
     functionName: "getPendingDepositsCount",
-    query: { enabled: !!contracts?.queueHandler },
+    query: { enabled: shouldEnableQueries },
   });
 
   const { data: pendingWithdraws } = useReadContract({
     address: contracts?.queueHandler as Address,
     abi: QUEUE_HANDLER_ABI,
     functionName: "getPendingWithdrawsCount",
-    query: { enabled: !!contracts?.queueHandler },
+    query: { enabled: shouldEnableQueries },
   });
 
   // Token-agnostic approve functions
@@ -308,10 +251,11 @@ export function useVault(vaultAddress?: string) {
     // Contract info
     vaultConfig,
     vaultAddress: defaultVaultAddress,
+    contracts,
 
     // Token info
-    tokenXSymbol: vaultConfig.tokenX.symbol,
-    tokenYSymbol: vaultConfig.tokenY.symbol,
+    tokenXSymbol: vaultConfig?.tokenX.symbol || "",
+    tokenYSymbol: vaultConfig?.tokenY.symbol || "",
 
     // Vault data (token-agnostic)
     vaultBalanceX: formatBalance(vaultBalanceX),
