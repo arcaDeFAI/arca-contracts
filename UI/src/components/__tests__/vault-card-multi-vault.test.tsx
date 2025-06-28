@@ -39,7 +39,7 @@ const createVault = (
   tokenAddresses: ["0xTokenX...", "0xTokenY..."],
   tokenDecimals: [18, 18], // Simplified for testing
   tokenSymbols: [tokenX, tokenY],
-  platform: "Arca DLMM",
+  platform: "DLMM",
   chain: "Sonic Fork",
 
   // Contract data

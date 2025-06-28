@@ -17,7 +17,7 @@ export interface VaultConfig {
   tokenX: TokenConfig; // First token in the pair
   tokenY: TokenConfig; // Second token in the pair
   name: string; // Display name like "wS-USDC.e"
-  platform: string; // "Arca DLMM", "Shadow Exchange", etc.
+  platform: string; // "DLMM", "Shadow Exchange", etc.
   chain: string; // "Sonic", "Sonic Fork", etc.
   isActive: boolean;
   description?: string;
@@ -139,7 +139,7 @@ export const getVaultConfigsForChain = (chainId: number): VaultConfig[] => {
         coingeckoId: "usd-coin",
       },
       name: "wS-USDC.e",
-      platform: "Arca DLMM",
+      platform: "DLMM",
       chain: chainInfo.name,
       isActive: true,
       description: `Automated liquidity provision for wS-USDC.e pair with Metro reward compounding${chainInfo.testnet ? " (Test Network)" : ""}`,
