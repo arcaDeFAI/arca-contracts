@@ -1,12 +1,12 @@
 /**
  * 🎯 TDD: Position Detection Hook Tests
- * 
+ *
  * These tests define the behavior of the position detection hook for two-phase loading.
  * Following TDD: Tests define requirements first, implementation follows.
- * 
+ *
  * Requirements:
  * - Check balance across active vaults (1-10, practical for balance checking)
- * - Return only vault addresses where user has >0 shares  
+ * - Return only vault addresses where user has >0 shares
  * - Support any arbitrary token pairs
  * - Fast execution for Phase 1 of two-phase loading
  * - Proper loading states and error handling
@@ -40,7 +40,7 @@ vi.mock("wagmi", async (importOriginal) => {
 describe("🎯 TDD: usePositionDetection Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Default account state
     mockUseAccount.mockReturnValue({
       address: "0xUser123",
@@ -62,7 +62,7 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
           isActive: true,
         },
         {
-          address: "0xVault2", 
+          address: "0xVault2",
           tokenX: { symbol: "METRO", address: "0xTokenX2", decimals: 18 },
           tokenY: { symbol: "USDC", address: "0xTokenY2", decimals: 6 },
           name: "METRO-USDC",
@@ -75,7 +75,7 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
           tokenX: { symbol: "ETH", address: "0xTokenX3", decimals: 18 },
           tokenY: { symbol: "wS", address: "0xTokenY3", decimals: 18 },
           name: "ETH-wS",
-          platform: "Arca DLMM", 
+          platform: "Arca DLMM",
           chain: "Sonic Fork",
           isActive: true,
         },
@@ -87,11 +87,11 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       mockUseReadContracts.mockReturnValue({
         data: [
           { result: BigInt("1000000000000000000") }, // vault1 tokenX shares: 1.0
-          { result: BigInt("500000000") },            // vault1 tokenY shares: 500.0 (6 decimals)
-          { result: BigInt("0") },                    // vault2 tokenX shares: 0
-          { result: BigInt("0") },                    // vault2 tokenY shares: 0
-          { result: BigInt("2500000000000000000") },  // vault3 tokenX shares: 2.5
-          { result: BigInt("0") },                    // vault3 tokenY shares: 0
+          { result: BigInt("500000000") }, // vault1 tokenY shares: 500.0 (6 decimals)
+          { result: BigInt("0") }, // vault2 tokenX shares: 0
+          { result: BigInt("0") }, // vault2 tokenY shares: 0
+          { result: BigInt("2500000000000000000") }, // vault3 tokenX shares: 2.5
+          { result: BigInt("0") }, // vault3 tokenY shares: 0
         ],
         isLoading: false,
         isError: false,
@@ -104,7 +104,7 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       // Should detect positions in vault1 and vault3, but not vault2
       expect(result.current.vaultAddressesWithPositions).toEqual([
         "0xVault1",
-        "0xVault3"
+        "0xVault3",
       ]);
       expect(result.current.isDetecting).toBe(false);
       expect(result.current.error).toBeNull();
@@ -125,7 +125,7 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
           address: "0xVault2",
           tokenX: { symbol: "METRO", address: "0xTokenX2", decimals: 18 },
           tokenY: { symbol: "USDC", address: "0xTokenY2", decimals: 6 },
-          name: "METRO-USDC", 
+          name: "METRO-USDC",
           isActive: true,
         },
       ];
@@ -171,10 +171,14 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       const mockData = Array.from({ length: 16 }, (_, i) => {
         const vaultIndex = Math.floor(i / 2);
         const isTokenX = i % 2 === 0;
-        
+
         // User has positions in vault 2, 5, and 7 (indexes 1, 4, 6)
         if (vaultIndex === 1 || vaultIndex === 4 || vaultIndex === 6) {
-          return { result: isTokenX ? BigInt("1000000000000000000") : BigInt("500000000") };
+          return {
+            result: isTokenX
+              ? BigInt("1000000000000000000")
+              : BigInt("500000000"),
+          };
         }
         return { result: BigInt("0") };
       });
@@ -191,8 +195,8 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
 
       expect(result.current.vaultAddressesWithPositions).toEqual([
         "0xVault2",
-        "0xVault5", 
-        "0xVault7"
+        "0xVault5",
+        "0xVault7",
       ]);
       expect(result.current.isDetecting).toBe(false);
     });
@@ -307,7 +311,7 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       mockUseReadContracts.mockReturnValue({
         data: [
           { result: BigInt("1000000000000000000") }, // vault1 tokenX shares: 1.0
-          { result: BigInt("500000000") },            // vault1 tokenY shares: 500.0
+          { result: BigInt("500000000") }, // vault1 tokenY shares: 500.0
           // Missing vault2 responses
         ],
         isLoading: false,
@@ -345,21 +349,21 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
 
 /**
  * Test Summary - Position Detection Hook Coverage:
- * 
+ *
  * ✅ Position Detection Across Multiple Vaults (3 tests)
  *    - Detect positions in multiple arbitrary token pair vaults
  *    - Handle users with no positions
  *    - Scale efficiently to large numbers of vaults (50+ tested)
- * 
+ *
  * ✅ Loading States and Error Handling (4 tests)
  *    - Show loading state during detection
  *    - Handle errors gracefully
  *    - Handle disconnected user state
- * 
+ *
  * ✅ Edge Cases and Resilience (2 tests)
  *    - Handle partial data responses
  *    - Handle empty vault configurations
- * 
+ *
  * Total: 9 comprehensive tests defining position detection requirements
  * Focus: Fast, reliable detection of user positions across 1-100 vaults
  */

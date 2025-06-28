@@ -1,9 +1,9 @@
 /**
  * usePositionDetection Hook - Two-Phase Loading (Phase 1)
- * 
+ *
  * Efficiently detects which vaults the user has positions in by checking balances.
  * This enables the dashboard to only fetch detailed data for relevant vaults.
- * 
+ *
  * Optimized for 1-10 vaults with balance checking approach.
  * Returns array of vault addresses where user has >0 shares.
  */
@@ -28,7 +28,7 @@ export function usePositionDetection(): PositionDetectionResult {
     if (!isConnected || !userAddress) return [];
 
     const contracts = [];
-    
+
     for (const config of vaultConfigs) {
       // Check both tokenX and tokenY shares for each vault
       contracts.push(
@@ -41,17 +41,21 @@ export function usePositionDetection(): PositionDetectionResult {
         {
           address: config.address as `0x${string}`,
           abi: VAULT_ABI,
-          functionName: "balanceOf", 
+          functionName: "balanceOf",
           args: [userAddress, 1], // TokenY shares (index 1)
-        }
+        },
       );
     }
-    
+
     return contracts;
   }, [vaultConfigs, userAddress, isConnected]);
 
   // Execute balance checks
-  const { data: balanceResults, isLoading, isError } = useReadContracts({
+  const {
+    data: balanceResults,
+    isLoading,
+    isError,
+  } = useReadContracts({
     contracts: balanceContracts,
     query: {
       enabled: isConnected && !!userAddress && vaultConfigs.length > 0,
@@ -113,11 +117,11 @@ export function usePositionDetection(): PositionDetectionResult {
 
 /**
  * Future optimization notes:
- * 
+ *
  * When we grow beyond ~10 vaults, we can optimize this by:
  * 1. Event-based detection using transaction history
  * 2. Subgraph queries for efficient position lookup
  * 3. Backend API for cached position data
- * 
+ *
  * For now, balance checking works well for 1-10 vaults and keeps things simple.
  */

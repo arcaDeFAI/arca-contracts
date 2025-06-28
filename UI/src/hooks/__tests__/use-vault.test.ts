@@ -210,15 +210,17 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     });
 
     it("should calculate price per share correctly", () => {
-      mockedUseReadContract.mockImplementation(({ functionName, args }: any) => {
-        if (functionName === "getPricePerFullShare") {
-          if (args?.[0] === 0)
-            return createMockReadContract(currentMockData.pricePerShareX);
-          if (args?.[0] === 1)
-            return createMockReadContract(currentMockData.pricePerShareY);
-        }
-        return createMockReadContract(undefined);
-      });
+      mockedUseReadContract.mockImplementation(
+        ({ functionName, args }: any) => {
+          if (functionName === "getPricePerFullShare") {
+            if (args?.[0] === 0)
+              return createMockReadContract(currentMockData.pricePerShareX);
+            if (args?.[0] === 1)
+              return createMockReadContract(currentMockData.pricePerShareY);
+          }
+          return createMockReadContract(undefined);
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -231,15 +233,17 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     });
 
     it("should return user token balances", () => {
-      mockedUseReadContract.mockImplementation(({ functionName, address }: any) => {
-        if (functionName === "balanceOf") {
-          if (address === currentVaultConfig.tokenX.address)
-            return createMockReadContract(currentMockData.userBalanceX);
-          if (address === currentVaultConfig.tokenY.address)
-            return createMockReadContract(currentMockData.userBalanceY);
-        }
-        return createMockReadContract(undefined);
-      });
+      mockedUseReadContract.mockImplementation(
+        ({ functionName, address }: any) => {
+          if (functionName === "balanceOf") {
+            if (address === currentVaultConfig.tokenX.address)
+              return createMockReadContract(currentMockData.userBalanceX);
+            if (address === currentVaultConfig.tokenY.address)
+              return createMockReadContract(currentMockData.userBalanceY);
+          }
+          return createMockReadContract(undefined);
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -259,9 +263,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.vaultBalanceX).toBe("0.0"); // Consistent formatting
       expect(result.current.vaultBalanceY).toBe("0.0");
@@ -275,9 +282,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         error: new Error("Contract read failed"),
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.vaultBalanceX).toBe("0.0"); // Consistent formatting
       expect(result.current.userSharesX).toBe("0.0");
@@ -373,9 +383,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         return createMockReadContract(undefined);
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Should have allowance for 50 tokens (using token index)
       expect(result.current.hasAllowance(0, "50")).toBe(true); // tokenX = index 0
@@ -394,9 +407,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Test tokenY approval and deposit
       await result.current.approveTokenY("250");
@@ -434,9 +450,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.isWritePending).toBe(true);
       expect(result.current.isConfirming).toBe(true);
@@ -458,9 +477,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
       // Note: Using existing beforeEach setup for contracts and vault config
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       await act(async () => {
         await result.current.withdrawShares("5", "5");
@@ -487,9 +509,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         error: null,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       await result.current.withdrawAll();
 
@@ -510,9 +535,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         return createMockReadContract(undefined);
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Validate sufficient balance
       expect(result.current.validateBalance(0, "50")).toBe(true); // tokenX: 50 <= 100
@@ -529,9 +557,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         chainId: 31337,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.validateConnection()).toBe(true);
     });
@@ -542,9 +573,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         chainId: 31337,
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.validateConnection()).toBe(false);
     });
@@ -562,9 +596,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         return createMockReadContract(undefined); // No data when no user
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       // Should return zero values when no user connected (token-agnostic)
       expect(result.current.userSharesX).toBe("0.0");
@@ -579,17 +616,23 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         chainId: 1, // Ethereum mainnet - not supported
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.contracts).toBeUndefined();
     });
 
     it("should format balance with various bigint values", () => {
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.formatBalance(parseEther("1.5"))).toBe("1.5");
       expect(result.current.formatBalance(parseEther("0.000001"))).toBe(
@@ -608,9 +651,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         return createMockReadContract(undefined);
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.hasAllowance(0, "0.000001")).toBe(false); // tokenX = index 0
       expect(result.current.hasAllowance(1, "100")).toBe(false); // tokenY = index 1
@@ -629,9 +675,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         return createMockReadContract(undefined);
       });
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.pendingDeposits).toBe("3");
       expect(result.current.pendingWithdraws).toBe("2");
@@ -642,9 +691,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         createMockReadContract(undefined),
       );
 
-      const { result } = renderHook(() => useVault(currentVaultConfig.address), {
-        wrapper: TestProviders,
-      });
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
 
       expect(result.current.pendingDeposits).toBe("0");
       expect(result.current.pendingWithdraws).toBe("0");

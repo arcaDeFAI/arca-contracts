@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
 
+// 🚨 WARNING: TRANSACTION HISTORY IS INCOMPLETE - localStorage ONLY 🚨
+// This only tracks manually added transactions, NOT blockchain events
+// Users will miss transactions and have inaccurate history
+// TODO: Replace with blockchain event indexing for complete transaction history
+// DEMO MODE: These warnings will be removed once real event indexing is integrated
+
 export interface TransactionRecord {
   id: string;
   hash: string;

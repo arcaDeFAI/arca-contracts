@@ -9,6 +9,7 @@ import {
   type TransactionStatus,
 } from "./transaction-progress";
 import { useTransactionHistory } from "../hooks/use-transaction-history";
+import { DemoDataWrapper, InlineWarning } from "./demo-warnings";
 
 interface VaultCardProps {
   vault: RealVault;
@@ -297,9 +298,11 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
           {/* Total TVL */}
           <div className="flex items-center">
-            <span className="text-white font-medium">
-              {formatCurrency(vault.totalTvl)}
-            </span>
+            <DemoDataWrapper type="portfolio" className="inline-block">
+              <span className="text-white font-medium">
+                {formatCurrency(vault.totalTvl)}
+              </span>
+            </DemoDataWrapper>
           </div>
 
           {/* Queue Status */}
@@ -312,10 +315,17 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
           {/* Rewards */}
           <div className="flex items-center">
             <div>
-              <div className="arca-primary font-bold text-lg">{vault.apr}%</div>
+              <DemoDataWrapper type="apr" className="inline-block">
+                <div className="arca-primary font-bold text-lg">
+                  {vault.apr}%
+                </div>
+              </DemoDataWrapper>
               <div className="text-arca-secondary text-sm">
-                ({vault.aprDaily}% daily)
+                <DemoDataWrapper type="apr" className="inline-block">
+                  ({vault.aprDaily}% daily)
+                </DemoDataWrapper>
               </div>
+              <InlineWarning type="apr" compact />
             </div>
           </div>
         </div>
