@@ -5,10 +5,13 @@ import * as path from "path";
 async function exportAddresses() {
   console.log("\n📤 Exporting deployment addresses for frontend integration...\n");
   
-  const networks = ["localhost", "sonic-testnet", "sonic-mainnet"];
+  const networks = ["localhost", "sonic-fork", "sonic-mainnet"];
   const allAddresses: Record<string, {
     vault: string;
     registry: string;
+    feeManager: string;
+    queueHandler: string;
+    rewardClaimer: string;
     deploymentTime: string;
     config: {
       name: string;
@@ -24,9 +27,22 @@ async function exportAddresses() {
     if (fs.existsSync(deploymentPath)) {
       const deployment = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
       
+      if (!deployment.contracts) {
+        console.log(`❌ Missing contracts in ${network} deployment`);
+        continue;
+      }
+      
+      if (!deployment.config) {
+        console.log(`❌ Missing config in ${network} deployment`);
+        continue;
+      }
+      
       allAddresses[network] = {
-        vault: deployment.addresses.vault,
-        registry: deployment.addresses.registry,
+        vault: deployment.contracts.vault,
+        registry: deployment.contracts.registry,
+        feeManager: deployment.contracts.feeManager,
+        queueHandler: deployment.contracts.queueHandler,
+        rewardClaimer: deployment.contracts.rewardClaimer,
         deploymentTime: deployment.timestamp,
         config: {
           name: deployment.config.name,
@@ -72,6 +88,9 @@ export type DeploymentNetwork = keyof typeof deployments;
     const envContent = `# Deployment addresses for ${currentNetwork}
 VITE_VAULT_ADDRESS=${allAddresses[currentNetwork].vault}
 VITE_REGISTRY_ADDRESS=${allAddresses[currentNetwork].registry}
+VITE_FEE_MANAGER_ADDRESS=${allAddresses[currentNetwork].feeManager}
+VITE_QUEUE_HANDLER_ADDRESS=${allAddresses[currentNetwork].queueHandler}
+VITE_REWARD_CLAIMER_ADDRESS=${allAddresses[currentNetwork].rewardClaimer}
 VITE_TOKEN_X_ADDRESS=${allAddresses[currentNetwork].config.tokenX}
 VITE_TOKEN_Y_ADDRESS=${allAddresses[currentNetwork].config.tokenY}
 `;

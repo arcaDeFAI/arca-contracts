@@ -1,0 +1,31 @@
+{
+  "name": "sonic-fork",
+  "chainId": 31337,
+  "rpcUrl": "http://127.0.0.1:8545",
+  "blockExplorer": "https://sonicscan.org",
+  "deployment": {
+    "binStep": 25,
+    "amountXMin": "1000000000000000",
+    "amountYMin": "1000000000000000",
+    "vaultName": "Arca Fork Test Vault",
+    "vaultSymbol": "ARCA-FORK",
+    "idSlippage": "5",
+    "feeRecipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+  },
+  "contracts": {
+    "tokenX": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "tokenY": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
+    "lbRouter": "0x67803fe6d76409640efDC9b7ABcD2c6c2E7cBa48",
+    "lbpAMM": "0x39D966c1BaFe7D3F1F53dA4845805E15f7D6EE43",
+    "lbpContract": "0x11d899dec22fb03a0047212b1a20a7ad8d699420",
+    "rewarder": "0x0000000000000000000000000000000000000000",
+    "rewardToken": "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321",
+    "nativeToken": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "lbpContractUSD": "0x11d899dec22fb03a0047212b1a20a7ad8d699420"
+  },
+  "gasSettings": {
+    "gasPrice": "auto",
+    "gasLimit": 5000000
+  },
+  "notes": "Fork configuration uses mainnet addresses for testing against real contracts"
+}
