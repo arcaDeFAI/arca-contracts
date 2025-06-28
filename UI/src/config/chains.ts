@@ -80,9 +80,12 @@ export const CHAIN_ID_TO_NAME: Record<number, string> = {
   31337: "Localhost",
 } as const;
 
+// Chain filter constants
+export const ALL_CHAINS = "All Chains" as const;
+
 // Chain names for filtering (matches what's used in vault data)
 export const CHAIN_FILTER_OPTIONS = [
-  "All Chains",
+  ALL_CHAINS,
   "Sonic",
   "Sonic Fork",
   "Localhost",
