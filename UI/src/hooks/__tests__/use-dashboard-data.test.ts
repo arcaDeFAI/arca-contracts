@@ -18,6 +18,7 @@ import { renderHook } from "@testing-library/react";
 import { useDashboardData } from "../use-dashboard-data";
 import { TestProviders } from "../../test-utils/test-providers";
 import type { VaultConfig } from "../../lib/vault-configs";
+import { SUPPORTED_CHAINS } from "../../config/chains";
 
 // Mock dependencies
 const mockGetVaultConfig = vi.fn();
@@ -45,6 +46,19 @@ vi.mock("../use-transaction-history", () => ({
 vi.mock("../use-position-detection", () => ({
   usePositionDetection: () => mockUsePositionDetection(),
 }));
+
+// Mock wagmi useAccount to return a test chainId from centralized config
+vi.mock("wagmi", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    useAccount: () => ({
+      chainId: SUPPORTED_CHAINS.sonicFork.id, // Test environment: Sonic Fork
+      address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      isConnected: true,
+    }),
+  };
+});
 
 describe("🎯 TDD: useDashboardData Hook", () => {
   beforeEach(() => {
@@ -125,30 +139,43 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         };
       });
 
-      // Token prices
+      // Vault metrics with progressive enhancement structure
       mockUseVaultMetrics.mockImplementation((address: string | undefined) => {
         if (address === "0xVault1") {
+          // Vault 1: (10 * 1.1 * 0.85) + (20 * 1.05 * 1.0) = 9.35 + 21 = 30.35
           return {
-            tokenPrices: {
-              tokenX: 0.85, // wS = $0.85
-              tokenY: 1.0, // USDC.e = $1.00
+            metrics: {
+              userSharesXUSD: 9.35, // 10 shares * 1.1 pricePerShare * $0.85
+              userSharesYUSD: 21.0, // 20 shares * 1.05 pricePerShare * $1.00
+              estimatedApr: 45.2,
+              isDataAvailable: true,
+              priceDataLoading: false,
+              priceDataError: null,
             },
-            apy: 45.2,
+            isLoading: false,
+            error: null,
           };
         }
         if (address === "0xVault2") {
+          // Vault 2: (5 * 2.0 * 12.5) + (15 * 1.02 * 1.0) = 125 + 15.3 = 140.3
           return {
-            tokenPrices: {
-              tokenX: 12.5, // METRO = $12.50
-              tokenY: 1.0, // USDC = $1.00
+            metrics: {
+              userSharesXUSD: 125.0, // 5 shares * 2.0 pricePerShare * $12.50
+              userSharesYUSD: 15.3,  // 15 shares * 1.02 pricePerShare * $1.00
+              estimatedApr: 35.8,
+              isDataAvailable: true,
+              priceDataLoading: false,
+              priceDataError: null,
             },
-            apy: 35.8,
+            isLoading: false,
+            error: null,
           };
         }
         // Return empty data for undefined addresses
         return {
-          tokenPrices: null,
-          apy: 0,
+          metrics: null,
+          isLoading: false,
+          error: null,
         };
       });
 
@@ -379,13 +406,21 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         userSharesY: "50.0",
         pricePerShareX: "1.0",
         pricePerShareY: "1.0",
+        tokenXSymbol: "wS",
+        tokenYSymbol: "USDC.e",
       });
 
       mockUseVaultMetrics.mockReturnValue({
-        tokenPrices: {
-          tokenX: 1.0, // wS = $1
-          tokenY: 1.0, // USDC.e = $1
+        metrics: {
+          userSharesXUSD: 100.0, // 100 shares * 1.0 pricePerShare * $1.0
+          userSharesYUSD: 50.0,  // 50 shares * 1.0 pricePerShare * $1.0
+          estimatedApr: 45.2,
+          isDataAvailable: true,
+          priceDataLoading: false,
+          priceDataError: null,
         },
+        isLoading: false,
+        error: null,
       });
 
       // Historical deposits: $120
@@ -453,13 +488,21 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         userSharesY: "0.0",
         pricePerShareX: "1.0",
         pricePerShareY: "1.0",
+        tokenXSymbol: "wS",
+        tokenYSymbol: "USDC.e",
       });
 
       mockUseVaultMetrics.mockReturnValue({
-        tokenPrices: {
-          tokenX: 1.0,
-          tokenY: 1.0,
+        metrics: {
+          userSharesXUSD: 100.0, // 100 shares * 1.0 pricePerShare * $1.0
+          userSharesYUSD: 0.0,   // 0 shares
+          estimatedApr: 45.2,
+          isDataAvailable: true,
+          priceDataLoading: false,
+          priceDataError: null,
         },
+        isLoading: false,
+        error: null,
       });
 
       // No transaction history
@@ -499,13 +542,21 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         userSharesY: "0.0",
         pricePerShareX: "1.0",
         pricePerShareY: "1.0",
+        tokenXSymbol: "wS",
+        tokenYSymbol: "USDC.e",
       });
 
       mockUseVaultMetrics.mockReturnValue({
-        tokenPrices: {
-          tokenX: 1.0,
-          tokenY: 1.0,
+        metrics: {
+          userSharesXUSD: 80.0, // 80 shares * 1.0 pricePerShare * $1.0
+          userSharesYUSD: 0.0,  // 0 shares
+          estimatedApr: 45.2,
+          isDataAvailable: true,
+          priceDataLoading: false,
+          priceDataError: null,
         },
+        isLoading: false,
+        error: null,
       });
 
       // Historical deposits: $100
@@ -567,11 +618,16 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       });
 
       mockUseVaultMetrics.mockReturnValue({
-        tokenPrices: {
-          tokenX: 0.85,
-          tokenY: 1.0,
+        metrics: {
+          userSharesXUSD: 9.35, // 10 shares * 1.1 pricePerShare * $0.85
+          userSharesYUSD: 21.0, // 20 shares * 1.05 pricePerShare * $1.00
+          estimatedApr: 45.2,
+          isDataAvailable: true,
+          priceDataLoading: false,
+          priceDataError: null,
         },
-        apy: 45.2,
+        isLoading: false,
+        error: null,
       });
 
       const { result } = renderHook(() => useDashboardData(), {

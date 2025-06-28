@@ -44,9 +44,10 @@ export function useVault(vaultAddress?: string) {
   // Get vault configuration - require both chainId and contracts
   const contracts = chainId ? getContracts(chainId) : null;
   const defaultVaultAddress = vaultAddress || contracts?.vault;
-  const vaultConfig = defaultVaultAddress && chainId
-    ? getVaultConfig(defaultVaultAddress, chainId)
-    : null;
+  const vaultConfig =
+    defaultVaultAddress && chainId
+      ? getVaultConfig(defaultVaultAddress, chainId)
+      : null;
 
   // Determine if we should enable contract queries (but always call the hooks)
   const shouldEnableQueries = !!(vaultConfig && defaultVaultAddress && chainId);

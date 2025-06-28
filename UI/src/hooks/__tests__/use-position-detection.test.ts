@@ -18,6 +18,7 @@ import { renderHook } from "@testing-library/react";
 import { usePositionDetection } from "../use-position-detection";
 import { TestProviders } from "../../test-utils/test-providers";
 import type { VaultConfig } from "../../lib/vault-configs";
+import { SUPPORTED_CHAINS } from "../../config/chains";
 
 // Mock dependencies
 const mockGetActiveVaultConfigs = vi.fn();
@@ -41,10 +42,11 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    // Default account state
+    // Default account state - using test environment chain from centralized config
     mockUseAccount.mockReturnValue({
       address: "0xUser123",
       isConnected: true,
+      chainId: SUPPORTED_CHAINS.sonicFork.id, // Test environment: Sonic Fork
     });
   });
 
