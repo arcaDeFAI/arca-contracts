@@ -42,7 +42,10 @@ export const VAULT_CONFIGS: VaultConfig[] = [
 /**
  * Get vault configuration by address
  */
-export const getVaultConfig = (address: string, chainId: number): VaultConfig | undefined => {
+export const getVaultConfig = (
+  address: string,
+  chainId: number,
+): VaultConfig | undefined => {
   if (!chainId) {
     console.warn("No chainId provided to getVaultConfig");
     return undefined;

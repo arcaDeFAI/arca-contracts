@@ -463,7 +463,7 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
   });
 
   describe("🎯 TDD: Loading States and Error Handling", () => {
-    it("should return loading state when prices are loading", () => {
+    it("should return partial data immediately when prices are loading (progressive enhancement)", () => {
       mockUseVault.mockReturnValue({
         vaultBalanceX: "1000.0",
         vaultBalanceY: "2000.0",
@@ -493,11 +493,24 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
 
       const { result } = renderHook(() => useVaultMetrics());
 
-      expect(result.current.isLoading).toBe(true);
-      expect(result.current.metrics).toBeNull();
+      // Progressive enhancement: Returns partial data immediately
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.metrics).toBeDefined();
+      expect(result.current.metrics?.priceDataLoading).toBe(true);
+      expect(result.current.metrics?.priceDataError).toBeNull();
+      expect(result.current.metrics?.isDataAvailable).toBe(true);
+      
+      // USD values should be undefined when prices loading
+      expect(result.current.metrics?.totalTvlUSD).toBeUndefined();
+      expect(result.current.metrics?.userTotalUSD).toBeUndefined();
+      expect(result.current.metrics?.estimatedApr).toBeUndefined();
+      
+      // Non-price dependent data should be available
+      expect(result.current.metrics?.pricePerShareX).toBe(1.1);
+      expect(result.current.metrics?.pricePerShareY).toBe(1.05);
     });
 
-    it("should handle price fetch errors gracefully", () => {
+    it("should handle price fetch errors gracefully with progressive enhancement", () => {
       mockUseVault.mockReturnValue({
         vaultBalanceX: "1000.0",
         vaultBalanceY: "2000.0",
@@ -527,8 +540,22 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
 
       const { result } = renderHook(() => useVaultMetrics());
 
-      expect(result.current.error).toBe("Failed to fetch token prices");
-      expect(result.current.metrics).toBeNull();
+      // Progressive enhancement: Still returns partial data during errors
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.error).toBeNull(); // Hook level error is null (graceful)
+      expect(result.current.metrics).toBeDefined();
+      expect(result.current.metrics?.priceDataError).toBe("Failed to fetch token prices");
+      expect(result.current.metrics?.priceDataLoading).toBe(false);
+      expect(result.current.metrics?.isDataAvailable).toBe(true);
+      
+      // USD values should be undefined when price fetch failed
+      expect(result.current.metrics?.totalTvlUSD).toBeUndefined();
+      expect(result.current.metrics?.userTotalUSD).toBeUndefined();
+      expect(result.current.metrics?.estimatedApr).toBeUndefined();
+      
+      // Non-price dependent data should still be available
+      expect(result.current.metrics?.pricePerShareX).toBe(1.1);
+      expect(result.current.metrics?.pricePerShareY).toBe(1.05);
     });
   });
 });

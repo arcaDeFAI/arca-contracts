@@ -765,7 +765,8 @@ describe("🔴 CRITICAL: VaultCard Money-Handling Validation", () => {
       );
 
       // TDD: Implementation shows APR in both desktop and mobile layouts (better responsive UX)
-      const aprElements = screen.getAllByText("45.2%");
+      // Component formats APR with 2 decimal places for consistency
+      const aprElements = screen.getAllByText("45.20%");
       expect(aprElements).toHaveLength(2); // Desktop + Mobile layouts
 
       const dailyElements = screen.getAllByText("(0.124% daily)");

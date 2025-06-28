@@ -4,13 +4,13 @@ import { useAccount } from "wagmi";
 import VaultCard from "../components/vault-card";
 import {
   platforms,
-  chains,
   sortOptions,
   realVaults as mockRealVaults,
   mockVaults,
 } from "../data/mock-vaults";
 import type { VaultFilters } from "../types/vault";
 import { useRealVaults } from "../hooks/use-real-vaults";
+import { CHAIN_FILTER_OPTIONS } from "../config/chains";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -161,7 +161,7 @@ export default function Vaults() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-arca-surface border-arca-border">
-                  {chains.map((chain) => (
+                  {CHAIN_FILTER_OPTIONS.map((chain) => (
                     <SelectItem
                       key={chain}
                       value={chain}

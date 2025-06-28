@@ -53,7 +53,7 @@ export interface DashboardData {
 export function useDashboardData(): DashboardData {
   try {
     const { chainId } = useAccount();
-    
+
     // Get transaction history for deposit calculations
     const { transactions } = useTransactionHistory();
 
@@ -110,7 +110,7 @@ export function useDashboardData(): DashboardData {
     // Calculate vault positions
     const vaultPositions: VaultPosition[] = useMemo(() => {
       if (!chainId) return [];
-      
+
       return vaultAddressesWithPositions.map((vaultAddress, index) => {
         const config = getVaultConfig(vaultAddress, chainId);
         const { vault, metrics: vaultMetrics } = allVaultData[index] || {};
@@ -139,19 +139,16 @@ export function useDashboardData(): DashboardData {
           };
         }
 
-        // Calculate token values
-        const sharesX = parseFloat(vault.userSharesX || "0");
-        const sharesY = parseFloat(vault.userSharesY || "0");
-        const pricePerShareX = parseFloat(vault.pricePerShareX || "0");
-        const pricePerShareY = parseFloat(vault.pricePerShareY || "0");
+        // Use progressive enhancement values from vault metrics
+        // If USD values are available (when prices loaded), use them directly
+        // Otherwise, fall back to raw calculations
+        const userSharesXUSD = vaultMetrics.metrics?.userSharesXUSD;
+        const userSharesYUSD = vaultMetrics.metrics?.userSharesYUSD;
+        const estimatedApr = vaultMetrics.metrics?.estimatedApr;
 
-        // Get token prices (default to 0 if unavailable)
-        const tokenPriceX = vaultMetrics.tokenPrices?.tokenX || 0;
-        const tokenPriceY = vaultMetrics.tokenPrices?.tokenY || 0;
-
-        // Calculate USD values for each token
-        const tokenXValue = sharesX * pricePerShareX * tokenPriceX;
-        const tokenYValue = sharesY * pricePerShareY * tokenPriceY;
+        // If we have USD values from metrics, use them
+        const tokenXValue = userSharesXUSD ?? 0;
+        const tokenYValue = userSharesYUSD ?? 0;
 
         return {
           vaultAddress: config.address,
@@ -167,7 +164,7 @@ export function useDashboardData(): DashboardData {
             value: tokenYValue,
           },
           value: tokenXValue + tokenYValue,
-          apy: vaultMetrics.apy || 0,
+          apy: estimatedApr ?? 0,
         };
       });
     }, [

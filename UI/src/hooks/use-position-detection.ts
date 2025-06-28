@@ -20,8 +20,8 @@ export interface PositionDetectionResult {
 }
 
 export function usePositionDetection(): PositionDetectionResult {
-  const { address: userAddress, isConnected } = useAccount();
-  const vaultConfigs = getActiveVaultConfigs();
+  const { address: userAddress, isConnected, chainId } = useAccount();
+  const vaultConfigs = chainId ? getActiveVaultConfigs(chainId) : [];
 
   // Create balance check contracts for all vaults
   const balanceContracts = useMemo(() => {
