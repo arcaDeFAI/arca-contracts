@@ -1,35 +1,4 @@
-// Step 8: Transfer user their share (original METRO + piggy bank share - penalty)
-        uint256 userReceives = amountAfterPenalty + fairShare;
-        require(metroToken.balanceOf(address(this)) >= userReceives, "Insufficient METRO balance");
-        metroToken.transfer(msg.sender, userReceives);
-        
-        // Step 9: Distribute penalty to piggy bank (90%) and treasury (10%)
-        _distributePenalty(penalty);
-        
-        // Step 10: Emit event
-        emit EarlyExit(msg.sender, _tokenId, userReceives, penalty);
-    }
-    
-    /**
-     * @dev Distribute penalty: 90% stays in contract (piggy bank), 10% to treasury
-     * @param penaltyAmount Amount of METRO penalty to distribute
-     */
-    function _distributePenalty(uint256 penaltyAmount) internal {
-        if (penaltyAmount == 0) return;
-        
-        uint256 toTreasury = (penaltyAmount * TREASURY_SHARE) / PERCENTAGE_BASE; // 10%
-        uint256 toPiggyBank = penaltyAmount - toTreasury; // 90% (stays in contract)
-        
-        // Send 10% to treasury
-        if (toTreasury > 0) {
-            metroToken.transfer(treasury, toTreasury);
-        }
-        
-        // 90% stays in contract, automatically increases piggy bank for all users
-        // (The penalty METRO stays in contract balance, increasing everyone's fair shares)
-        
-        emit PenaltyDistributed(toPiggyBank, toTreasury);
-    }// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -339,7 +308,28 @@ contract MetroStaking is ERC20, Ownable, ReentrancyGuard, Pausable {
         // Step 10: Emit event
         emit MaturedClaim(msg.sender, _tokenId, totalReceived);
     }
-    
+      /**
+     * @dev Distribute penalty: 90% stays in contract (piggy bank), 10% to treasury
+     * @param penaltyAmount Amount of METRO penalty to distribute
+     */
+    function _distributePenalty(uint256 penaltyAmount) internal {
+        if (penaltyAmount == 0) return;
+        
+        uint256 toTreasury = (penaltyAmount * TREASURY_SHARE) / PERCENTAGE_BASE; // 10%
+        uint256 toPiggyBank = penaltyAmount - toTreasury; // 90% (stays in contract)
+        
+        // Send 10% to treasury
+        if (toTreasury > 0) {
+            metroToken.transfer(treasury, toTreasury);
+        }
+        
+        // 90% stays in contract, automatically increases piggy bank for all users
+        // (The penalty METRO stays in contract balance, increasing everyone's fair shares)
+        
+        emit PenaltyDistributed(toPiggyBank, toTreasury);
+    }
+
+
     /**
      * @dev Calculate user's fair share of piggy bank based on their stake
      * @param stakeAmount User's original stake amount
