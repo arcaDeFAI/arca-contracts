@@ -1,5 +1,7 @@
 import { parseEther } from "viem";
 import { vi } from "vitest";
+import { type UseAccountReturnType, type UseWriteContractReturnType } from "wagmi";
+import { SUPPORTED_CHAINS } from "../config/chains";
 
 // Token-agnostic mock contract factory
 export function createMockVaultConfig(
@@ -125,37 +127,166 @@ export const MOCK_TX_RECEIPT = {
 };
 
 // Helper to create mock read contract response
-export function createMockReadContract(data: any) {
+export function createMockReadContract<T>(data: T) {
   return {
     data,
-    isLoading: false,
-    isError: false,
+    isLoading: false as const,
+    isPending: false as const,
+    isError: false as const,
+    isSuccess: true as const,
+    isLoadingError: false as const,
+    isRefetchError: false as const,
+    isPlaceholderData: false as const,
     error: null,
+    status: "success" as const,
+    dataUpdatedAt: Date.now(),
+    errorUpdatedAt: 0,
+    failureCount: 0,
+    failureReason: null,
+    fetchStatus: "idle" as const,
+    isFetched: true as const,
+    isFetchedAfterMount: true as const,
+    isFetching: false as const,
+    isInitialLoading: false as const,
+    isRefetching: false as const,
+    isStale: false as const,
     refetch: vi.fn(),
+    remove: vi.fn(),
+    queryKey: ["mock-query"] as readonly unknown[],
+    errorUpdateCount: 0,
+    isPaused: false as const,
+    promise: Promise.resolve(data),
   };
 }
 
 // Helper to create mock write contract response
-export function createMockWriteContract() {
+export function createMockWriteContract(overrides: Partial<UseWriteContractReturnType> = {}): UseWriteContractReturnType {
+  const mockVariables = {
+    abi: [],
+    functionName: "mockFunction",
+    args: [],
+    address: "0x1234567890123456789012345678901234567890" as `0x${string}`,
+  };
+
   return {
     writeContract: vi.fn().mockResolvedValue(MOCK_TX_HASH),
-    data: MOCK_TX_HASH,
+    writeContractAsync: vi.fn().mockResolvedValue(MOCK_TX_HASH),
+    data: MOCK_TX_HASH as `0x${string}`,
     isPending: false,
     isError: false,
+    isSuccess: true,
+    status: "success",
     error: null,
+    failureCount: 0,
+    failureReason: null,
+    variables: mockVariables,
     reset: vi.fn(),
-  };
+    submittedAt: Date.now(),
+    context: undefined,
+    isPaused: false,
+    isIdle: false,
+    ...overrides,
+  } as UseWriteContractReturnType;
 }
 
 // Helper to create mock wait for transaction receipt
 export function createMockWaitForTransactionReceipt(isConfirming = false) {
-  return {
-    data: isConfirming ? undefined : MOCK_TX_RECEIPT,
-    isLoading: isConfirming,
-    isSuccess: !isConfirming,
-    isError: false,
-    error: null,
-  };
+  if (isConfirming) {
+    return {
+      data: undefined,
+      isLoading: true as const,
+      isPending: true as const,
+      isSuccess: false as const,
+      isError: false as const,
+      isLoadingError: false as const,
+      isRefetchError: false as const,
+      isPlaceholderData: false as const,
+      error: null,
+      status: "pending" as const,
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: "fetching" as const,
+      isFetched: false,
+      isFetchedAfterMount: false,
+      isFetching: true,
+      isInitialLoading: true,
+      isRefetching: false as const,
+      isStale: false as const,
+      refetch: vi.fn(),
+      remove: vi.fn(),
+      queryKey: ["mock-wait-for-receipt"] as readonly unknown[],
+      errorUpdateCount: 0,
+      isPaused: false as const,
+      promise: Promise.resolve(undefined),
+    };
+  } else {
+    return {
+      data: MOCK_TX_RECEIPT,
+      isLoading: false as const,
+      isPending: false as const,
+      isSuccess: true as const,
+      isError: false as const,
+      isLoadingError: false as const,
+      isRefetchError: false as const,
+      isPlaceholderData: false as const,
+      error: null,
+      status: "success" as const,
+      dataUpdatedAt: Date.now(),
+      errorUpdatedAt: 0,
+      failureCount: 0,
+      failureReason: null,
+      fetchStatus: "idle" as const,
+      isFetched: true,
+      isFetchedAfterMount: true,
+      isFetching: false,
+      isInitialLoading: false,
+      isRefetching: false as const,
+      isStale: false as const,
+      refetch: vi.fn(),
+      remove: vi.fn(),
+      queryKey: ["mock-wait-for-receipt"] as readonly unknown[],
+      errorUpdateCount: 0,
+      isPaused: false as const,
+      promise: Promise.resolve(MOCK_TX_RECEIPT),
+    };
+  }
+}
+
+// Helper to create mock UseAccount return
+export function createMockUseAccount(
+  address?: string,
+  chainId: number = SUPPORTED_CHAINS.localhost.id,
+): UseAccountReturnType {
+  // Let's try "reconnecting" since that's what TypeScript keeps suggesting
+  if (address) {
+    return {
+      address: address as `0x${string}`,
+      addresses: [address as `0x${string}`] as readonly `0x${string}`[],
+      chain: undefined,
+      chainId: chainId,
+      connector: undefined,
+      status: "reconnecting",
+      isConnecting: false,
+      isReconnecting: true,
+      isConnected: false,
+      isDisconnected: false,
+    };
+  } else {
+    return {
+      address: undefined,
+      addresses: undefined,
+      chain: undefined,
+      chainId: chainId,
+      connector: undefined,
+      status: "reconnecting",
+      isConnecting: false,
+      isReconnecting: true,
+      isConnected: false,
+      isDisconnected: false,
+    };
+  }
 }
 
 // Mock vault hook data for testing

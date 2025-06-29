@@ -42,9 +42,6 @@ const createTestVault = (
   id: vaultAddress,
   name: `${tokenX}-${tokenY}`,
   tokens: [tokenX, tokenY],
-  tokenAddresses: ["0xTokenX...", "0xTokenY..."],
-  tokenDecimals: [18, 18],
-  tokenSymbols: [tokenX, tokenY],
   platform: "Arca DLMM",
   chain: "Sonic Fork",
 
@@ -518,7 +515,9 @@ describe("🔴 CRITICAL: VaultCard Money-Handling Validation", () => {
       await waitFor(() => {
         const buttons = screen.getAllByRole("button");
         const pendingButton = buttons.find(
-          (btn) => btn.textContent?.includes("Pending") || btn.disabled,
+          (btn) =>
+            btn.textContent?.includes("Pending") ||
+            (btn as HTMLButtonElement).disabled,
         );
         expect(pendingButton).toBeDefined();
       });
@@ -564,7 +563,9 @@ describe("🔴 CRITICAL: VaultCard Money-Handling Validation", () => {
       await waitFor(() => {
         const buttons = screen.getAllByRole("button");
         const confirmingButton = buttons.find(
-          (btn) => btn.textContent?.includes("Confirming") || btn.disabled,
+          (btn) =>
+            btn.textContent?.includes("Confirming") ||
+            (btn as HTMLButtonElement).disabled,
         );
         expect(confirmingButton).toBeDefined();
       });

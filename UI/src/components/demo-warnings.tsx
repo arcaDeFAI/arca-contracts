@@ -147,6 +147,7 @@ export function DemoDataWrapper({
 interface InlineWarningProps {
   type: "price" | "apr" | "portfolio" | "tvl";
   className?: string;
+  compact?: boolean;
 }
 
 export function InlineWarning({ type, className = "" }: InlineWarningProps) {

@@ -235,17 +235,15 @@ function useVaultValue(vaultAddress: string): number {
   const metrics = useVaultMetrics(vaultAddress);
 
   return useMemo(() => {
-    const sharesX = parseFloat(vault.userSharesX || "0");
-    const sharesY = parseFloat(vault.userSharesY || "0");
-    const pricePerShareX = parseFloat(vault.pricePerShareX || "0");
-    const pricePerShareY = parseFloat(vault.pricePerShareY || "0");
+    // Use pre-calculated USD values from metrics if available
+    if (
+      metrics.metrics?.userSharesXUSD !== undefined &&
+      metrics.metrics?.userSharesYUSD !== undefined
+    ) {
+      return metrics.metrics.userSharesXUSD + metrics.metrics.userSharesYUSD;
+    }
 
-    const tokenPriceX = metrics.tokenPrices?.tokenX || 0;
-    const tokenPriceY = metrics.tokenPrices?.tokenY || 0;
-
-    const valueX = sharesX * pricePerShareX * tokenPriceX;
-    const valueY = sharesY * pricePerShareY * tokenPriceY;
-
-    return valueX + valueY;
+    // Fallback: return 0 if USD calculations aren't available (no prices)
+    return 0;
   }, [vault, metrics]);
 }
