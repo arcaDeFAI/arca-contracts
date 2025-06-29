@@ -21,7 +21,7 @@ export interface TransactionProgressProps {
   status: TransactionStatus;
   txHash?: string;
   type: "deposit" | "withdraw" | "approve";
-  token: "wS" | "USDC.e";
+  token: string;
   amount?: string;
   error?: string;
   onRetry?: () => void;

@@ -48,17 +48,13 @@ vi.mock("../use-position-detection", () => ({
 }));
 
 // Mock wagmi useAccount to return a test chainId from centralized config
-vi.mock("wagmi", async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    useAccount: () => ({
-      chainId: SUPPORTED_CHAINS.sonicFork.id, // Test environment: Sonic Fork
-      address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      isConnected: true,
-    }),
-  };
-});
+vi.mock("wagmi", () => ({
+  useAccount: () => ({
+    chainId: SUPPORTED_CHAINS.sonicFork.id, // Test environment: Sonic Fork
+    address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    isConnected: true,
+  }),
+}));
 
 describe("🎯 TDD: useDashboardData Hook", () => {
   beforeEach(() => {
@@ -388,6 +384,8 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         tokenX: { symbol: "wS", address: "0xTokenX1", decimals: 18 },
         tokenY: { symbol: "USDC.e", address: "0xTokenY1", decimals: 6 },
         name: "wS-USDC.e",
+        platform: "DLMM",
+        chain: "Localhost",
         isActive: true,
       };
 
@@ -470,6 +468,8 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         tokenX: { symbol: "wS", address: "0xTokenX1", decimals: 18 },
         tokenY: { symbol: "USDC.e", address: "0xTokenY1", decimals: 6 },
         name: "wS-USDC.e",
+        platform: "DLMM",
+        chain: "Localhost",
         isActive: true,
       };
 
@@ -524,6 +524,8 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         tokenX: { symbol: "wS", address: "0xTokenX1", decimals: 18 },
         tokenY: { symbol: "USDC.e", address: "0xTokenY1", decimals: 6 },
         name: "wS-USDC.e",
+        platform: "DLMM",
+        chain: "Localhost",
         isActive: true,
       };
 
@@ -596,6 +598,8 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         tokenX: { symbol: "wS", address: "0xTokenX1", decimals: 18 },
         tokenY: { symbol: "USDC.e", address: "0xTokenY1", decimals: 6 },
         name: "wS-USDC.e",
+        platform: "DLMM",
+        chain: "Localhost",
         isActive: true,
       };
 

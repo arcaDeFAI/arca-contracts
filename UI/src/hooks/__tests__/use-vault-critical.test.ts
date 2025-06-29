@@ -19,18 +19,14 @@ const mockedUseReadContract = vi.fn();
 const mockedUseWriteContract = vi.fn();
 const mockedUseWaitForTransactionReceipt = vi.fn();
 
-vi.mock("wagmi", async (importOriginal) => {
-  const actual = await importOriginal();
-  return {
-    ...actual,
-    useAccount: vi.fn(() => mockedUseAccount()),
-    useReadContract: vi.fn((args) => mockedUseReadContract(args)),
-    useWriteContract: vi.fn(() => mockedUseWriteContract()),
-    useWaitForTransactionReceipt: vi.fn(() =>
-      mockedUseWaitForTransactionReceipt(),
-    ),
-  };
-});
+vi.mock("wagmi", () => ({
+  useAccount: vi.fn(() => mockedUseAccount()),
+  useReadContract: vi.fn((args) => mockedUseReadContract(args)),
+  useWriteContract: vi.fn(() => mockedUseWriteContract()),
+  useWaitForTransactionReceipt: vi.fn(() =>
+    mockedUseWaitForTransactionReceipt(),
+  ),
+}));
 
 // Mock the contracts module
 vi.mock("../../lib/contracts", () => ({

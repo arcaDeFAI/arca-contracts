@@ -53,7 +53,11 @@ export interface VaultMetricsHook {
 // Calculate real APR from blockchain data (METRO rewards + DLMM fees)
 function calculateEstimatedAPR(
   totalTvlUSD: number,
-  vaultData: any, // Contains reward data from contracts
+  vaultData: {
+    totalMetroRewardsCompounded?: string;
+    totalDLMMFeesEarned?: string;
+    timeWindowDays?: number;
+  }, // Contains reward data from contracts
   prices: TokenPrices | null,
 ): number {
   if (!prices || totalTvlUSD === 0) return 0;
@@ -67,10 +71,10 @@ function calculateEstimatedAPR(
   if (hasRealRewardData) {
     // ✅ REAL APR calculation from blockchain data
     const metroRewardsUSD =
-      parseFloat(vaultData.totalMetroRewardsCompounded) * (prices.metro || 0);
-    const dlmmFeesUSD = parseFloat(vaultData.totalDLMMFeesEarned);
+      parseFloat(vaultData.totalMetroRewardsCompounded || "0") * (prices.metro || 0);
+    const dlmmFeesUSD = parseFloat(vaultData.totalDLMMFeesEarned || "0");
     const totalRewardsUSD = metroRewardsUSD + dlmmFeesUSD;
-    const timeWindowDays = vaultData.timeWindowDays;
+    const timeWindowDays = vaultData.timeWindowDays || 1;
 
     // Annualize the rewards
     const annualizedRewardsUSD = totalRewardsUSD * (365 / timeWindowDays);
@@ -226,7 +230,11 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     // APR calculations
     const estimatedApr = calculateEstimatedAPR(
       totalTvlUSD,
-      vault, // Pass vault data for real reward calculations
+      {
+        totalMetroRewardsCompounded: vault.totalMetroRewardsCompounded,
+        totalDLMMFeesEarned: vault.totalDLMMFeesEarned,
+        timeWindowDays: vault.timeWindowDays,
+      },
       pricesWithTimestamp,
     );
     const dailyApr = estimatedApr / 365;
@@ -260,8 +268,7 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
       isStale: now - pricesWithTimestamp.lastUpdated > 60000, // Stale after 1 minute
 
       // Debug info for real data migration
-      isRealData:
-        isRealData || (vault?.totalMetroRewardsCompounded ? true : false),
+      isRealData: isRealData,
     };
   }, [
     vault.vaultBalanceX,
@@ -283,7 +290,7 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
   const error = null; // Price errors are handled within metrics object
 
   const refetch = () => {
-    refetchPrices();
+    void refetchPrices?.();
     // Note: vault data refetches automatically via wagmi queries
   };
 
