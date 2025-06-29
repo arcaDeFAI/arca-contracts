@@ -148,7 +148,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
             metrics: {
               userSharesXUSD: 9.35, // 10 shares * 1.1 pricePerShare * $0.85
               userSharesYUSD: 21.0, // 20 shares * 1.05 pricePerShare * $1.00
-              estimatedApr: 45.2,
+              realApr: 45.2,
               isDataAvailable: true,
               priceDataLoading: false,
               priceDataError: null,
@@ -163,7 +163,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
             metrics: {
               userSharesXUSD: 125.0, // 5 shares * 2.0 pricePerShare * $12.50
               userSharesYUSD: 15.3, // 15 shares * 1.02 pricePerShare * $1.00
-              estimatedApr: 35.8,
+              realApr: 35.8,
               isDataAvailable: true,
               priceDataLoading: false,
               priceDataError: null,
@@ -417,7 +417,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         metrics: {
           userSharesXUSD: 100.0, // 100 shares * 1.0 pricePerShare * $1.0
           userSharesYUSD: 50.0, // 50 shares * 1.0 pricePerShare * $1.0
-          estimatedApr: 45.2,
+          realApr: 45.2,
           isDataAvailable: true,
           priceDataLoading: false,
           priceDataError: null,
@@ -501,7 +501,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         metrics: {
           userSharesXUSD: 100.0, // 100 shares * 1.0 pricePerShare * $1.0
           userSharesYUSD: 0.0, // 0 shares
-          estimatedApr: 45.2,
+          realApr: 45.2,
           isDataAvailable: true,
           priceDataLoading: false,
           priceDataError: null,
@@ -557,7 +557,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         metrics: {
           userSharesXUSD: 80.0, // 80 shares * 1.0 pricePerShare * $1.0
           userSharesYUSD: 0.0, // 0 shares
-          estimatedApr: 45.2,
+          realApr: 45.2,
           isDataAvailable: true,
           priceDataLoading: false,
           priceDataError: null,
@@ -630,7 +630,7 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         metrics: {
           userSharesXUSD: 9.35, // 10 shares * 1.1 pricePerShare * $0.85
           userSharesYUSD: 21.0, // 20 shares * 1.05 pricePerShare * $1.00
-          estimatedApr: 45.2,
+          realApr: 45.2,
           isDataAvailable: true,
           priceDataLoading: false,
           priceDataError: null,
