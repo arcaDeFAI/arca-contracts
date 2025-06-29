@@ -19,6 +19,7 @@ import { useDashboardData } from "../use-dashboard-data";
 import { TestProviders } from "../../test-utils/test-providers";
 import type { VaultConfig } from "../../lib/vault-configs";
 import { SUPPORTED_CHAINS } from "../../config/chains";
+import type * as wagmi from "wagmi";
 
 // Mock dependencies
 const mockGetVaultConfig = vi.fn();
@@ -48,13 +49,17 @@ vi.mock("../use-position-detection", () => ({
 }));
 
 // Mock wagmi useAccount to return a test chainId from centralized config
-vi.mock("wagmi", () => ({
-  useAccount: () => ({
-    chainId: SUPPORTED_CHAINS.sonicFork.id, // Test environment: Sonic Fork
-    address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-    isConnected: true,
-  }),
-}));
+vi.mock("wagmi", async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof wagmi;
+  return {
+    ...actual,
+    useAccount: () => ({
+      chainId: SUPPORTED_CHAINS.sonicFork.id, // Test environment: Sonic Fork
+      address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      isConnected: true,
+    }),
+  };
+});
 
 describe("🎯 TDD: useDashboardData Hook", () => {
   beforeEach(() => {

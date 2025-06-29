@@ -1,4 +1,4 @@
-import { defineChain, type Chain } from "viem";
+import { defineChain } from "viem";
 
 // Single source of truth for all supported chains in Arca
 export const SUPPORTED_CHAINS = {

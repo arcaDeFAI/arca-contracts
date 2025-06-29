@@ -39,7 +39,7 @@ global.ResizeObserver = vi.fn().mockImplementation(() => ({
 // Suppress console errors in tests (optional)
 const originalError = console.error;
 beforeAll(() => {
-  console.error = (...args: any[]) => {
+  console.error = (...args: unknown[]) => {
     if (
       typeof args[0] === "string" &&
       args[0].includes("Consider adding an error boundary")

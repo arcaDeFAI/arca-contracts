@@ -253,3 +253,52 @@ export const REGISTRY_ABI = [
     ],
   },
 ] as const;
+
+// ArcaRewardClaimerV1 ABI for reading compounded reward data
+export const REWARD_CLAIMER_ABI = [
+  {
+    name: "getTotalCompounded",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      {
+        name: "tokenType",
+        type: "uint8",
+        internalType: "enum TokenValidator.Type",
+      },
+    ],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+  },
+  {
+    name: "minSwapAmount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "uint256",
+        internalType: "uint256",
+      },
+    ],
+  },
+  {
+    name: "nativeToken",
+    type: "function",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
+      },
+    ],
+  },
+] as const;

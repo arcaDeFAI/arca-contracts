@@ -8,6 +8,7 @@
 import { renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { useVaultMetrics, type VaultMetrics } from "../use-vault-metrics";
+import { TestProviders } from "../../test-utils/test-providers";
 
 // Mock the dependencies
 const mockUseVault = vi.fn();
@@ -24,7 +25,11 @@ vi.mock("../use-hybrid-token-prices", () => ({
 
 vi.mock("../use-token-prices", () => ({
   useTokenPrices: () => mockUseHybridTokenPrices(),
-  getTokenUSDValue: (amount: string, tokenSymbol: string, prices: any) => {
+  getTokenUSDValue: (
+    amount: string,
+    tokenSymbol: string,
+    prices: Record<string, number>,
+  ) => {
     const price = prices[tokenSymbol.toLowerCase()] || 0;
     return parseFloat(amount) * price;
   },
@@ -72,7 +77,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -115,7 +122,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -158,7 +167,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -203,7 +214,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -250,7 +263,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -296,7 +311,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -344,7 +361,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -357,8 +376,8 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
   });
 
   describe("🎯 TDD: Token-Agnostic APR Calculations", () => {
-    it("should calculate real APR from METRO rewards and DLMM fees", () => {
-      // BUSINESS REQUIREMENT: Real APR = (METRO rewards + DLMM fees) / TVL × 100
+    it("should calculate real APR from METRO rewards and DLMM fees using contract data", () => {
+      // BUSINESS REQUIREMENT: Real APR = (METRO rewards + DLMM fees) / TVL / Time Window × 365
       // This test defines how real APR should be calculated from blockchain data
       mockUseVault.mockReturnValue({
         vaultBalanceX: "10000.0", // $8,500 TVL
@@ -371,10 +390,11 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         pricePerShareY: "1.0",
         tokenXSymbol: "wS",
         tokenYSymbol: "USDC.e",
-        // Mock reward data from contracts
-        totalMetroRewardsCompounded: "1000.0", // $2,500 in METRO rewards over time period
-        totalDLMMFeesEarned: "500.0", // $500 in DLMM trading fees
-        timeWindowDays: 30, // Over 30 days
+        // Real reward data from ArcaRewardClaimerV1 contract
+        totalCompoundedX: "1000.0", // 1000 wS compounded from METRO rewards
+        totalCompoundedY: "0.0", // 0 USDC.e compounded (example distribution)
+        rewardDataAvailable: true,
+        rewardClaimerAddress: "0x4567890123456789012345678901234567890123",
       });
 
       mockUseHybridTokenPrices.mockReturnValue({
@@ -393,9 +413,12 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         getTransactionSummary: vi.fn().mockReturnValue({
           totalDeposited: 1000,
         }),
+        calculateTimeWindowDays: vi.fn().mockReturnValue(30), // 30 days since first deposit
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -403,14 +426,119 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
       // TVL = (10,000 × $0.85) + (20,000 × $1.00) = $8,500 + $20,000 = $28,500
       expect(metrics.totalTvlUSD).toBe(28500);
 
-      // Real APR calculation:
-      // METRO rewards = 1,000 × $2.50 = $2,500
-      // DLMM fees = $500
-      // Total rewards = $3,000 over 30 days
-      // Annualized = $3,000 × (365/30) = $36,500
-      // APR = $36,500 / $28,500 × 100 = 128.07%
-      expect(metrics.estimatedApr).toBeCloseTo(128.07, 1);
+      // Real APR calculation from actual reward data:
+      // Total METRO rewards compounded = 1000 wS × $0.85 = $850 value over 30 days
+      // Annualized = $850 × (365/30) = $10,337.50
+      // APR = $10,337.50 / $28,500 × 100 = 36.27%
+      expect(metrics.realApr).toBeCloseTo(36.27, 1);
       expect(metrics.isRealData).toBe(true);
+      expect(metrics.timeWindowDays).toBe(30);
+    });
+
+    it("should fall back to estimated APR when real reward data unavailable", () => {
+      // BUSINESS REQUIREMENT: Graceful fallback to estimated APR when real data missing
+      mockUseVault.mockReturnValue({
+        vaultBalanceX: "5000.0",
+        vaultBalanceY: "10000.0",
+        userSharesX: "50.0",
+        userSharesY: "100.0",
+        userBalanceX: "25.0",
+        userBalanceY: "50.0",
+        pricePerShareX: "1.1",
+        pricePerShareY: "1.05",
+        tokenXSymbol: "wS",
+        tokenYSymbol: "USDC.e",
+        // No reward data available
+        totalCompoundedX: "0.0",
+        totalCompoundedY: "0.0",
+        rewardDataAvailable: false,
+        rewardClaimerAddress: null,
+      });
+
+      mockUseHybridTokenPrices.mockReturnValue({
+        prices: {
+          ws: 0.85,
+          "usdc.e": 1.0,
+        },
+        isLoading: false,
+        error: null,
+        refresh: vi.fn(),
+        isUsingRealPrices: false, // Fallback to estimated prices
+      });
+
+      mockUseTransactionHistory.mockReturnValue({
+        getTransactionSummary: vi.fn().mockReturnValue({
+          totalDeposited: 500,
+        }),
+        calculateTimeWindowDays: vi.fn().mockReturnValue(1), // Minimum time window
+      });
+
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
+
+      expect(result.current.metrics).toBeDefined();
+      const metrics = result.current.metrics as VaultMetrics;
+
+      // Should fall back to estimated APR calculation
+      expect(metrics.realApr).toBeUndefined();
+      expect(metrics.estimatedApr).toBeGreaterThan(0);
+      expect(metrics.isRealData).toBe(false);
+    });
+
+    it("should handle different token distributions in reward compounding", () => {
+      // BUSINESS REQUIREMENT: Handle unequal reward distributions between tokens
+      mockUseVault.mockReturnValue({
+        vaultBalanceX: "1000.0", // wS
+        vaultBalanceY: "2000.0", // METRO
+        userSharesX: "50.0",
+        userSharesY: "100.0",
+        userBalanceX: "25.0",
+        userBalanceY: "50.0",
+        pricePerShareX: "1.0",
+        pricePerShareY: "1.0",
+        tokenXSymbol: "wS",
+        tokenYSymbol: "METRO",
+        // Unequal reward distribution (more METRO rewards)
+        totalCompoundedX: "50.0", // 50 wS compounded
+        totalCompoundedY: "200.0", // 200 METRO compounded
+        rewardDataAvailable: true,
+        rewardClaimerAddress: "0x4567890123456789012345678901234567890123",
+      });
+
+      mockUseHybridTokenPrices.mockReturnValue({
+        prices: {
+          ws: 0.85, // $0.85 per wS
+          metro: 2.5, // $2.50 per METRO
+        },
+        isLoading: false,
+        error: null,
+        refresh: vi.fn(),
+        isUsingRealPrices: true,
+      });
+
+      mockUseTransactionHistory.mockReturnValue({
+        getTransactionSummary: vi.fn().mockReturnValue({
+          totalDeposited: 1000,
+        }),
+        calculateTimeWindowDays: vi.fn().mockReturnValue(60), // 60 days
+      });
+
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
+
+      expect(result.current.metrics).toBeDefined();
+      const metrics = result.current.metrics as VaultMetrics;
+
+      // TVL = (1000 × $0.85) + (2000 × $2.50) = $850 + $5000 = $5850
+      expect(metrics.totalTvlUSD).toBe(5850);
+
+      // Total rewards = (50 × $0.85) + (200 × $2.50) = $42.50 + $500 = $542.50 over 60 days
+      // Annualized = $542.50 × (365/60) = $3,300.42
+      // APR = $3,300.42 / $5850 × 100 = 56.41%
+      expect(metrics.realApr).toBeCloseTo(56.41, 1);
+      expect(metrics.timeWindowDays).toBe(60);
     });
 
     it("should calculate estimated APR based on TVL size regardless of token composition", () => {
@@ -445,7 +573,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
@@ -491,7 +621,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       // Progressive enhancement: Returns partial data immediately
       expect(result.current.isLoading).toBe(false);
@@ -538,7 +670,9 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         }),
       });
 
-      const { result } = renderHook(() => useVaultMetrics());
+      const { result } = renderHook(() => useVaultMetrics(), {
+        wrapper: TestProviders,
+      });
 
       // Progressive enhancement: Still returns partial data during errors
       expect(result.current.isLoading).toBe(false);

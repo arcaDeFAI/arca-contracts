@@ -18,6 +18,7 @@ import { renderHook } from "@testing-library/react";
 import { usePositionDetection } from "../use-position-detection";
 import { TestProviders } from "../../test-utils/test-providers";
 import type { VaultConfig } from "../../lib/vault-configs";
+import type * as WagmiTypes from "wagmi";
 import { SUPPORTED_CHAINS } from "../../config/chains";
 
 // Mock dependencies
@@ -30,11 +31,11 @@ vi.mock("../../lib/vault-configs", () => ({
 }));
 
 vi.mock("wagmi", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("wagmi")>();
+  const actual = (await importOriginal()) as typeof WagmiTypes;
   return {
     ...actual,
     useAccount: () => mockUseAccount(),
-    useReadContracts: (contracts: any) => mockUseReadContracts(contracts),
+    useReadContracts: () => mockUseReadContracts(),
   };
 });
 
@@ -86,17 +87,19 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       mockGetActiveVaultConfigs.mockReturnValue(vaultConfigs);
 
       // Mock balance responses - user has positions in vault1 and vault3, but not vault2
-      mockUseReadContracts.mockReturnValue({
-        data: [
-          { result: BigInt("1000000000000000000") }, // vault1 tokenX shares: 1.0
-          { result: BigInt("500000000") }, // vault1 tokenY shares: 500.0 (6 decimals)
-          { result: BigInt("0") }, // vault2 tokenX shares: 0
-          { result: BigInt("0") }, // vault2 tokenY shares: 0
-          { result: BigInt("2500000000000000000") }, // vault3 tokenX shares: 2.5
-          { result: BigInt("0") }, // vault3 tokenY shares: 0
-        ],
-        isLoading: false,
-        isError: false,
+      mockUseReadContracts.mockImplementation(() => {
+        return {
+          data: [
+            { status: "success", result: BigInt("1000000000000000000") }, // vault1 tokenX shares: 1.0
+            { status: "success", result: BigInt("500000000") }, // vault1 tokenY shares: 500.0 (6 decimals)
+            { status: "success", result: BigInt("0") }, // vault2 tokenX shares: 0
+            { status: "success", result: BigInt("0") }, // vault2 tokenY shares: 0
+            { status: "success", result: BigInt("2500000000000000000") }, // vault3 tokenX shares: 2.5
+            { status: "success", result: BigInt("0") }, // vault3 tokenY shares: 0
+          ],
+          isLoading: false,
+          isError: false,
+        };
       });
 
       const { result } = renderHook(() => usePositionDetection(), {
@@ -137,15 +140,17 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       mockGetActiveVaultConfigs.mockReturnValue(vaultConfigs);
 
       // Mock balance responses - user has no positions in any vault
-      mockUseReadContracts.mockReturnValue({
-        data: [
-          { result: BigInt("0") }, // vault1 tokenX shares: 0
-          { result: BigInt("0") }, // vault1 tokenY shares: 0
-          { result: BigInt("0") }, // vault2 tokenX shares: 0
-          { result: BigInt("0") }, // vault2 tokenY shares: 0
-        ],
-        isLoading: false,
-        isError: false,
+      mockUseReadContracts.mockImplementation(() => {
+        return {
+          data: [
+            { status: "success", result: BigInt("0") }, // vault1 tokenX shares: 0
+            { status: "success", result: BigInt("0") }, // vault1 tokenY shares: 0
+            { status: "success", result: BigInt("0") }, // vault2 tokenX shares: 0
+            { status: "success", result: BigInt("0") }, // vault2 tokenY shares: 0
+          ],
+          isLoading: false,
+          isError: false,
+        };
       });
 
       const { result } = renderHook(() => usePositionDetection(), {
@@ -179,18 +184,21 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
         // User has positions in vault 2, 5, and 7 (indexes 1, 4, 6)
         if (vaultIndex === 1 || vaultIndex === 4 || vaultIndex === 6) {
           return {
+            status: "success",
             result: isTokenX
               ? BigInt("1000000000000000000")
               : BigInt("500000000"),
           };
         }
-        return { result: BigInt("0") };
+        return { status: "success", result: BigInt("0") };
       });
 
-      mockUseReadContracts.mockReturnValue({
-        data: mockData,
-        isLoading: false,
-        isError: false,
+      mockUseReadContracts.mockImplementation(() => {
+        return {
+          data: mockData,
+          isLoading: false,
+          isError: false,
+        };
       });
 
       const { result } = renderHook(() => usePositionDetection(), {
@@ -223,10 +231,12 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       mockGetActiveVaultConfigs.mockReturnValue(vaultConfigs);
 
       // Mock loading state
-      mockUseReadContracts.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        isError: false,
+      mockUseReadContracts.mockImplementation(() => {
+        return {
+          data: undefined,
+          isLoading: true,
+          isError: false,
+        };
       });
 
       const { result } = renderHook(() => usePositionDetection(), {
@@ -254,11 +264,13 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       mockGetActiveVaultConfigs.mockReturnValue(vaultConfigs);
 
       // Mock error state
-      mockUseReadContracts.mockReturnValue({
-        data: undefined,
-        isLoading: false,
-        isError: true,
-        error: new Error("Failed to fetch balances"),
+      mockUseReadContracts.mockImplementation(() => {
+        return {
+          data: undefined,
+          isLoading: false,
+          isError: true,
+          error: new Error("Failed to fetch balances"),
+        };
       });
 
       const { result } = renderHook(() => usePositionDetection(), {
@@ -312,14 +324,16 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       mockGetActiveVaultConfigs.mockReturnValue(vaultConfigs);
 
       // Mock partial data response (missing some vault responses)
-      mockUseReadContracts.mockReturnValue({
-        data: [
-          { result: BigInt("1000000000000000000") }, // vault1 tokenX shares: 1.0
-          { result: BigInt("500000000") }, // vault1 tokenY shares: 500.0
-          // Missing vault2 responses
-        ],
-        isLoading: false,
-        isError: false,
+      mockUseReadContracts.mockImplementation(() => {
+        return {
+          data: [
+            { status: "success", result: BigInt("1000000000000000000") }, // vault1 tokenX shares: 1.0
+            { status: "success", result: BigInt("500000000") }, // vault1 tokenY shares: 500.0
+            // Missing vault2 responses
+          ],
+          isLoading: false,
+          isError: false,
+        };
       });
 
       const { result } = renderHook(() => usePositionDetection(), {
@@ -334,10 +348,12 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
     it("should handle empty vault configurations", () => {
       mockGetActiveVaultConfigs.mockReturnValue([]);
 
-      mockUseReadContracts.mockReturnValue({
-        data: [],
-        isLoading: false,
-        isError: false,
+      mockUseReadContracts.mockImplementation(() => {
+        return {
+          data: [],
+          isLoading: false,
+          isError: false,
+        };
       });
 
       const { result } = renderHook(() => usePositionDetection(), {
