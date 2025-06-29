@@ -14,6 +14,15 @@ export function useRealVaults(): {
 } {
   const { chainId } = useAccount();
 
+  // If no chainId, user needs to connect wallet or switch to supported network
+  if (!chainId) {
+    return {
+      vaults: [],
+      isLoading: false,
+      error: null, // Let parent components handle wallet connection UI
+    };
+  }
+
   // Use registry to discover vaults
   const {
     vaults: registryVaults,

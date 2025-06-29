@@ -458,7 +458,7 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
       expect(metrics.estimatedApr).toBeLessThan(200); // Reasonable upper bound
 
       // Daily APR should be annual APR / 365
-      expect(metrics.dailyApr).toBe(metrics.estimatedApr / 365);
+      expect(metrics.dailyApr).toBe(metrics.estimatedApr! / 365);
     });
   });
 

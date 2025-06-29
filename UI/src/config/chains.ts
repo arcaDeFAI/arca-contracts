@@ -1,4 +1,4 @@
-import { defineChain } from "viem";
+import { defineChain, type Chain } from "viem";
 
 // Single source of truth for all supported chains in Arca
 export const SUPPORTED_CHAINS = {
@@ -107,5 +107,9 @@ export function isSupportedChain(chainId: number): chainId is SupportedChainId {
 
 // Get all supported chains as array (for wallet configuration)
 export function getSupportedChains() {
-  return Object.values(SUPPORTED_CHAINS);
+  return [
+    SUPPORTED_CHAINS.sonic,
+    SUPPORTED_CHAINS.sonicFork,
+    SUPPORTED_CHAINS.localhost,
+  ] as const;
 }

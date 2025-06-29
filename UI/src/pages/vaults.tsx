@@ -56,13 +56,13 @@ export default function Vaults() {
     filtered.sort((a, b) => {
       switch (filters.sortBy) {
         case "APR ↓":
-          return b.apr - a.apr;
+          return (b.apr ?? 0) - (a.apr ?? 0);
         case "APR ↑":
-          return a.apr - b.apr;
+          return (a.apr ?? 0) - (b.apr ?? 0);
         case "TVL ↓":
-          return b.totalTvl - a.totalTvl;
+          return (b.totalTvl ?? 0) - (a.totalTvl ?? 0);
         case "TVL ↑":
-          return a.totalTvl - b.totalTvl;
+          return (a.totalTvl ?? 0) - (b.totalTvl ?? 0);
         default:
           return 0;
       }

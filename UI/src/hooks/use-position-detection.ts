@@ -97,8 +97,21 @@ export function usePositionDetection(): PositionDetectionResult {
       const tokenYResult = balanceResults[i * 2 + 1];
 
       // Check if user has shares in either token
-      const hasTokenXShares = tokenXResult?.result && tokenXResult.result > 0n;
-      const hasTokenYShares = tokenYResult?.result && tokenYResult.result > 0n;
+      let hasTokenXShares = false;
+      if (tokenXResult && tokenXResult.status === "success") {
+        const result = tokenXResult.result;
+        if (typeof result === "bigint" && result > 0n) {
+          hasTokenXShares = true;
+        }
+      }
+
+      let hasTokenYShares = false;
+      if (tokenYResult && tokenYResult.status === "success") {
+        const result = tokenYResult.result;
+        if (typeof result === "bigint" && result > 0n) {
+          hasTokenYShares = true;
+        }
+      }
 
       if (hasTokenXShares || hasTokenYShares) {
         vaultAddressesWithPositions.push(config.address);

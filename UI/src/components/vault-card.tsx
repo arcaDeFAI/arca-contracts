@@ -8,7 +8,8 @@ import {
   TransactionProgress,
   type TransactionStatus,
 } from "./transaction-progress";
-import { useTransactionHistory } from "../hooks/use-transaction-history";
+import { useVaultTransactionHistory } from "../hooks/use-vault-transaction-history";
+import { useAccount } from "wagmi";
 import { DemoDataWrapper, InlineWarning } from "./demo-warnings";
 import { CoinGeckoAttributionMinimal } from "./coingecko-attribution";
 
@@ -18,19 +19,6 @@ interface VaultCardProps {
 }
 
 export default function VaultCard({ vault, onClick }: VaultCardProps) {
-  // 🔍 DEBUG: Log vault prop received
-  console.log("🔍 [VaultCard] Rendering with vault:", {
-    id: vault.id,
-    name: vault.name,
-    tokens: vault.tokens,
-    platform: vault.platform,
-    chain: vault.chain,
-    totalTvl: vault.totalTvl,
-    userBalance: vault.userBalance,
-    apr: vault.apr,
-    contractAddress: vault.contractAddress,
-  });
-
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<"deposit" | "withdraw">("deposit");
 
@@ -101,7 +89,17 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     return true;
   };
 
-  const { addTransaction, updateTransactionStatus } = useTransactionHistory();
+  const { address: userAddress, chainId } = useAccount();
+
+  // Vault-scoped transaction history with proper token context
+  const { addTransaction, updateTransactionStatus } =
+    useVaultTransactionHistory({
+      vaultAddress: vault.contractAddress,
+      tokenXSymbol: vault.tokens[0], // Dynamic: "wS", "METRO", "BTC", etc.
+      tokenYSymbol: vault.tokens[1], // Dynamic: "USDC.e", "ETH", "USDT", etc.
+      chainId: chainId || 31337,
+      userAddress: userAddress || "0x0000000000000000000000000000000000000000",
+    });
 
   // Track transaction status changes
   useEffect(() => {
@@ -115,7 +113,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
         addTransaction(
           hash,
           pendingTransaction.type,
-          pendingTransaction.tokenSymbol,
+          pendingTransaction.tokenSymbol, // Now uses actual token symbol (no type casting needed!)
           pendingTransaction.amount,
         );
       }
@@ -149,7 +147,10 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     updateTransactionStatus,
   ]);
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: number | undefined) => {
+    if (amount === undefined || amount === null) {
+      return "$--";
+    }
     return new Intl.NumberFormat("en-US", {
       style: "currency",
       currency: "USD",

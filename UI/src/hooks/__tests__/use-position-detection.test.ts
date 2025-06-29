@@ -128,6 +128,8 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
           tokenX: { symbol: "METRO", address: "0xTokenX2", decimals: 18 },
           tokenY: { symbol: "USDC", address: "0xTokenY2", decimals: 6 },
           name: "METRO-USDC",
+          platform: "DLMM",
+          chain: "Localhost",
           isActive: true,
         },
       ];
