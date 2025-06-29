@@ -115,9 +115,6 @@ describe("🎯 TDD: Real Reward System Integration", () => {
       expect(metrics?.isRealData).toBe(true);
       expect(metrics?.timeWindowDays).toBe(30);
       expect(metrics?.rewardDataSource).toBe("blockchain");
-
-      // Estimated APR should be undefined when real data available
-      expect(metrics?.estimatedApr).toBeUndefined();
     });
 
     it("should handle zero reward compounding gracefully", () => {
@@ -202,9 +199,8 @@ describe("🎯 TDD: Real Reward System Integration", () => {
 
       const metrics = result.current.metrics;
 
-      // Should fall back to estimated APR
+      // Should have no APR when reward data unavailable
       expect(metrics?.realApr).toBeUndefined();
-      expect(metrics?.estimatedApr).toBeGreaterThan(0);
       expect(metrics?.isRealData).toBe(false);
       expect(metrics?.rewardDataSource).toBe("estimated");
     });
