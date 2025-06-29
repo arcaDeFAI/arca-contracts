@@ -14,6 +14,7 @@ import { TestProviders } from "../../test-utils/test-providers";
 const mockUseVault = vi.fn();
 const mockUseHybridTokenPrices = vi.fn();
 const mockUseTransactionHistory = vi.fn();
+const mockUseVaultTransactionHistory = vi.fn();
 
 vi.mock("../use-vault", () => ({
   useVault: () => mockUseVault(),
@@ -39,9 +40,25 @@ vi.mock("../use-transaction-history", () => ({
   useTransactionHistory: () => mockUseTransactionHistory(),
 }));
 
+vi.mock("../use-vault-transaction-history", () => ({
+  useVaultTransactionHistory: () => mockUseVaultTransactionHistory(),
+}));
+
 describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Set default mocks for transaction history hooks
+    mockUseTransactionHistory.mockReturnValue({
+      getTransactionSummary: vi.fn().mockReturnValue({
+        totalDeposited: 0,
+      }),
+      calculateTimeWindowDays: vi.fn().mockReturnValue(1),
+    });
+
+    mockUseVaultTransactionHistory.mockReturnValue({
+      calculateTimeWindowDays: vi.fn().mockReturnValue(1),
+    });
   });
 
   describe("🎯 TDD: Token-Agnostic Vault Metrics Calculations", () => {
@@ -416,6 +433,10 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         calculateTimeWindowDays: vi.fn().mockReturnValue(30), // 30 days since first deposit
       });
 
+      mockUseVaultTransactionHistory.mockReturnValue({
+        calculateTimeWindowDays: vi.fn().mockReturnValue(30), // 30 days since first deposit
+      });
+
       const { result } = renderHook(() => useVaultMetrics(), {
         wrapper: TestProviders,
       });
@@ -480,9 +501,8 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
       expect(result.current.metrics).toBeDefined();
       const metrics = result.current.metrics as VaultMetrics;
 
-      // Should fall back to estimated APR calculation
+      // Should have no APR when real reward data unavailable
       expect(metrics.realApr).toBeUndefined();
-      expect(metrics.estimatedApr).toBeGreaterThan(0);
       expect(metrics.isRealData).toBe(false);
     });
 
@@ -521,6 +541,10 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
         getTransactionSummary: vi.fn().mockReturnValue({
           totalDeposited: 1000,
         }),
+        calculateTimeWindowDays: vi.fn().mockReturnValue(60), // 60 days
+      });
+
+      mockUseVaultTransactionHistory.mockReturnValue({
         calculateTimeWindowDays: vi.fn().mockReturnValue(60), // 60 days
       });
 
@@ -583,12 +607,11 @@ describe("🎯 TDD: Multi-Vault useVaultMetrics Hook", () => {
       // Large TVL = (10000 × $5.0) + (20000 × $1.0) = $50000 + $20000 = $70000
       expect(metrics.totalTvlUSD).toBe(70000);
 
-      // APR should be calculated and reasonable (not hardcoded)
-      expect(metrics.estimatedApr).toBeGreaterThan(0);
-      expect(metrics.estimatedApr).toBeLessThan(200); // Reasonable upper bound
+      // Without real reward data, APR should be undefined
+      expect(metrics.realApr).toBeUndefined();
 
-      // Daily APR should be annual APR / 365
-      expect(metrics.dailyApr).toBe(metrics.estimatedApr! / 365);
+      // Daily APR should be 0 when no real APR available
+      expect(metrics.dailyApr).toBe(0);
     });
   });
 
