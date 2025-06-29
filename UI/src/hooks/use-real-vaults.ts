@@ -63,7 +63,7 @@ export function useRealVaults(): {
       // Calculated values from metrics (optional - loaded async)
       totalTvl: metrics?.totalTvlUSD,
       userBalance: metrics?.userTotalUSD,
-      apr: metrics?.estimatedApr,
+      apr: metrics?.realApr,
       aprDaily: metrics?.dailyApr,
 
       // Enhanced user metrics (optional - loaded async)
@@ -123,34 +123,6 @@ export function useRealVaults(): {
   const isLoading = chainId
     ? registryLoading || !firstVault || !vault.vaultConfig
     : true; // Still loading if we don't have chainId yet
-
-  // Debug logging to trace the issue
-  console.log("🔍 useRealVaults debug:", {
-    chainId,
-    registryLoading,
-    registryError,
-    firstVault: firstVault?.vault,
-    vaultConfig: !!vault.vaultConfig,
-    isLoading,
-    totalVaults: registryVaults.length,
-  });
-
-  // CRITICAL DEBUG: Identify exact blocking point
-  if (!chainId) {
-    console.error(
-      "❌ REAL VAULTS BLOCKED: No chainId - check wallet connection",
-    );
-  } else if (registryError) {
-    console.error("❌ REAL VAULTS BLOCKED: Registry error:", registryError);
-  } else if (registryLoading) {
-    console.log("⏳ REAL VAULTS WAITING: Registry loading...");
-  } else if (!firstVault) {
-    console.error("❌ REAL VAULTS BLOCKED: No vault found in registry");
-  } else if (!vault.vaultConfig) {
-    console.error("❌ REAL VAULTS BLOCKED: Vault config not loaded");
-  } else {
-    console.log("✅ REAL VAULTS: All dependencies loaded, should show vault");
-  }
 
   // Add error handling for registry and contract data loading only
   // Metrics errors are handled within the metrics object (progressive enhancement)

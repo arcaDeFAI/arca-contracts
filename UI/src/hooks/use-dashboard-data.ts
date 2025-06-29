@@ -144,7 +144,7 @@ export function useDashboardData(): DashboardData {
         // Otherwise, fall back to raw calculations
         const userSharesXUSD = vaultMetrics.metrics?.userSharesXUSD;
         const userSharesYUSD = vaultMetrics.metrics?.userSharesYUSD;
-        const estimatedApr = vaultMetrics.metrics?.estimatedApr;
+        const realApr = vaultMetrics.metrics?.realApr;
 
         // If we have USD values from metrics, use them
         const tokenXValue = userSharesXUSD ?? 0;
@@ -164,7 +164,7 @@ export function useDashboardData(): DashboardData {
             value: tokenYValue,
           },
           value: tokenXValue + tokenYValue,
-          apy: estimatedApr ?? 0,
+          apy: realApr ?? 0,
         };
       });
     }, [

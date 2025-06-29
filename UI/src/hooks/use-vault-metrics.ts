@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useVault } from "./use-vault";
 import { useHybridTokenPrices } from "./use-hybrid-token-prices";
-import { getTokenUSDValue, type TokenPrices } from "./use-token-prices";
+import { getTokenUSDValue } from "./use-token-prices";
 import { useTransactionHistory } from "./use-transaction-history";
 import { useVaultTransactionHistory } from "./use-vault-transaction-history";
 
