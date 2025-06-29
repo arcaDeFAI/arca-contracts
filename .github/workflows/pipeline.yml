@@ -42,10 +42,10 @@ jobs:
 
       # Hardhat compile & tests
       - name: Compile Contracts
-        run: npx hardhat compile
+        run: npm run compile
 
       - name: Run Hardhat Tests
-        run: npx hardhat test
+        run: npm run test:sol
 
       # UI part starts here
       - name: Install deps (UI)
@@ -61,7 +61,7 @@ jobs:
         working-directory: UI/
         run: npm run build
 
-      # (Optional) Run UI unit tests if we add some
-      #- name: Run UI Tests
-      #   working-directory: UI/
-      #   run: npm test
+      # Run UI unit tests
+      - name: Run UI Tests
+        working-directory: UI/
+        run: npm run test

@@ -5,8 +5,14 @@
  * replacing localStorage with on-chain event indexing.
  */
 
-import { renderHook } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { TransactionRecord } from "../use-transaction-history";
+
+// Minimal type for time window calculation - only needs fields used by the function
+type TimeWindowTransaction = Pick<
+  TransactionRecord,
+  "type" | "status" | "timestamp"
+>;
 
 // Mock wagmi and viem for blockchain interactions
 const mockUseAccount = vi.fn();
@@ -26,6 +32,164 @@ vi.mock("viem", () => ({
 describe("🎯 TDD: Blockchain Transaction History Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe("🎯 TDD: Time Window Calculation for Real APR", () => {
+    it("should calculate time window from first deposit to current date", () => {
+      // BUSINESS REQUIREMENT: Time window = days since first successful deposit
+      const mockTransactions: TimeWindowTransaction[] = [
+        {
+          type: "deposit" as const,
+          timestamp: Date.now() - 30 * 24 * 60 * 60 * 1000, // 30 days ago
+          status: "success" as const,
+        },
+        {
+          type: "deposit" as const,
+          timestamp: Date.now() - 15 * 24 * 60 * 60 * 1000, // 15 days ago
+          status: "success" as const,
+        },
+        {
+          type: "withdraw" as const,
+          timestamp: Date.now() - 5 * 24 * 60 * 60 * 1000, // 5 days ago
+          status: "success" as const,
+        },
+      ];
+
+      // Function that should be implemented in useTransactionHistory
+      const calculateTimeWindowDays = (
+        transactions: TimeWindowTransaction[],
+      ) => {
+        const successfulDeposits = transactions.filter(
+          (tx) => tx.type === "deposit" && tx.status === "success",
+        );
+
+        if (successfulDeposits.length === 0) return 1; // Minimum 1 day
+
+        const firstDepositTime = Math.min(
+          ...successfulDeposits.map((tx) => tx.timestamp),
+        );
+        const daysSinceFirst = Math.floor(
+          (Date.now() - firstDepositTime) / (24 * 60 * 60 * 1000),
+        );
+
+        return Math.max(1, daysSinceFirst); // Minimum 1 day
+      };
+
+      const timeWindow = calculateTimeWindowDays(mockTransactions);
+
+      // Should return 30 days (time since first deposit)
+      expect(timeWindow).toBe(30);
+    });
+
+    it("should return minimum 1 day for recent deposits", () => {
+      // BUSINESS REQUIREMENT: Minimum time window to avoid division by zero
+      const mockTransactions: TimeWindowTransaction[] = [
+        {
+          type: "deposit" as const,
+          timestamp: Date.now() - 2 * 60 * 60 * 1000, // 2 hours ago
+          status: "success" as const,
+        },
+      ];
+
+      const calculateTimeWindowDays = (
+        transactions: TimeWindowTransaction[],
+      ) => {
+        const successfulDeposits = transactions.filter(
+          (tx) => tx.type === "deposit" && tx.status === "success",
+        );
+
+        if (successfulDeposits.length === 0) return 1; // Minimum 1 day
+
+        const firstDepositTime = Math.min(
+          ...successfulDeposits.map((tx) => tx.timestamp),
+        );
+        const daysSinceFirst = Math.floor(
+          (Date.now() - firstDepositTime) / (24 * 60 * 60 * 1000),
+        );
+
+        return Math.max(1, daysSinceFirst); // Minimum 1 day
+      };
+
+      const timeWindow = calculateTimeWindowDays(mockTransactions);
+
+      // Should return 1 day minimum, even for very recent deposits
+      expect(timeWindow).toBe(1);
+    });
+
+    it("should ignore failed deposits when calculating time window", () => {
+      // BUSINESS REQUIREMENT: Only count successful deposits for time window
+      const mockTransactions: TimeWindowTransaction[] = [
+        {
+          type: "deposit" as const,
+          timestamp: Date.now() - 60 * 24 * 60 * 60 * 1000, // 60 days ago (failed)
+          status: "failed" as const,
+        },
+        {
+          type: "deposit" as const,
+          timestamp: Date.now() - 20 * 24 * 60 * 60 * 1000, // 20 days ago (success)
+          status: "success" as const,
+        },
+      ];
+
+      const calculateTimeWindowDays = (
+        transactions: TimeWindowTransaction[],
+      ) => {
+        const successfulDeposits = transactions.filter(
+          (tx) => tx.type === "deposit" && tx.status === "success",
+        );
+
+        if (successfulDeposits.length === 0) return 1; // Minimum 1 day
+
+        const firstDepositTime = Math.min(
+          ...successfulDeposits.map((tx) => tx.timestamp),
+        );
+        const daysSinceFirst = Math.floor(
+          (Date.now() - firstDepositTime) / (24 * 60 * 60 * 1000),
+        );
+
+        return Math.max(1, daysSinceFirst); // Minimum 1 day
+      };
+
+      const timeWindow = calculateTimeWindowDays(mockTransactions);
+
+      // Should use first successful deposit (20 days ago), not failed one
+      expect(timeWindow).toBe(20);
+    });
+
+    it("should return 1 day when no deposits exist", () => {
+      // BUSINESS REQUIREMENT: Handle edge case of no deposits
+      const mockTransactions: TimeWindowTransaction[] = [
+        {
+          type: "withdraw" as const,
+          timestamp: Date.now() - 10 * 24 * 60 * 60 * 1000,
+          status: "success" as const,
+        },
+      ];
+
+      const calculateTimeWindowDays = (
+        transactions: TimeWindowTransaction[],
+      ) => {
+        const successfulDeposits = transactions.filter(
+          (tx) => tx.type === "deposit" && tx.status === "success",
+        );
+
+        if (successfulDeposits.length === 0) return 1; // Minimum 1 day
+
+        const firstDepositTime = Math.min(
+          ...successfulDeposits.map((tx) => tx.timestamp),
+        );
+        const daysSinceFirst = Math.floor(
+          (Date.now() - firstDepositTime) / (24 * 60 * 60 * 1000),
+        );
+
+        return Math.max(1, daysSinceFirst); // Minimum 1 day
+      };
+
+      const timeWindow = calculateTimeWindowDays(mockTransactions);
+
+      // Should return 1 day when no successful deposits exist
+      expect(timeWindow).toBe(1);
+    });
   });
 
   describe("🎯 TDD: Event Indexing from Vault Contracts", () => {

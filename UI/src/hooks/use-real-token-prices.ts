@@ -99,7 +99,7 @@ export function useRealTokenPrices(
 
   // Initial fetch on mount
   useEffect(() => {
-    fetchPrices();
+    void fetchPrices();
   }, [fetchPrices]);
 
   // Set up automatic refresh interval
@@ -107,7 +107,7 @@ export function useRealTokenPrices(
     if (!enabled || refreshInterval <= 0) return;
 
     const interval = setInterval(() => {
-      fetchPrices();
+      void fetchPrices();
     }, refreshInterval);
 
     return () => clearInterval(interval);

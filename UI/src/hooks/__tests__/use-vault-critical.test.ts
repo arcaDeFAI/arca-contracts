@@ -2,6 +2,7 @@ import { renderHook, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { parseEther } from "viem";
 import { useVault } from "../use-vault";
+import type * as wagmi from "wagmi";
 import { TestProviders } from "../../test-utils/test-providers";
 import {
   MOCK_TX_HASH,
@@ -12,6 +13,7 @@ import {
 } from "../../test-utils/mock-contracts";
 import * as contractsModule from "../../lib/contracts";
 import * as vaultConfigsModule from "../../lib/vault-configs";
+import { SUPPORTED_CHAINS } from "../../config/chains";
 
 // Mock wagmi hooks using the working pattern from VaultCard critical tests
 const mockedUseAccount = vi.fn();
@@ -19,14 +21,18 @@ const mockedUseReadContract = vi.fn();
 const mockedUseWriteContract = vi.fn();
 const mockedUseWaitForTransactionReceipt = vi.fn();
 
-vi.mock("wagmi", () => ({
-  useAccount: vi.fn(() => mockedUseAccount()),
-  useReadContract: vi.fn((args) => mockedUseReadContract(args)),
-  useWriteContract: vi.fn(() => mockedUseWriteContract()),
-  useWaitForTransactionReceipt: vi.fn(() =>
-    mockedUseWaitForTransactionReceipt(),
-  ),
-}));
+vi.mock("wagmi", async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof wagmi;
+  return {
+    ...actual,
+    useAccount: vi.fn(() => mockedUseAccount()),
+    useReadContract: vi.fn((args) => mockedUseReadContract(args)),
+    useWriteContract: vi.fn(() => mockedUseWriteContract()),
+    useWaitForTransactionReceipt: vi.fn(() =>
+      mockedUseWaitForTransactionReceipt(),
+    ),
+  };
+});
 
 // Mock the contracts module
 vi.mock("../../lib/contracts", () => ({
@@ -34,6 +40,7 @@ vi.mock("../../lib/contracts", () => ({
   VAULT_ABI: [],
   ERC20_ABI: [],
   QUEUE_HANDLER_ABI: [],
+  REWARD_CLAIMER_ABI: [],
 }));
 
 // Mock the vault configs module
@@ -74,7 +81,7 @@ describe("useVault Critical Money Flows", () => {
     // Default mock implementations using the working pattern
     mockedUseAccount.mockReturnValue({
       address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      chainId: 31337,
+      chainId: SUPPORTED_CHAINS.localhost.id,
     });
 
     mockedUseReadContract.mockReturnValue({
@@ -99,12 +106,14 @@ describe("useVault Critical Money Flows", () => {
   describe("Critical: Deposit Flow", () => {
     it("should check allowance before allowing deposit", () => {
       // Mock zero allowance
-      mockedUseReadContract.mockImplementation(({ functionName }: any) => {
-        if (functionName === "allowance") {
-          return { data: 0n, isLoading: false, isError: false };
-        }
-        return { data: undefined, isLoading: false, isError: false };
-      });
+      mockedUseReadContract.mockImplementation(
+        (params?: { functionName?: string }) => {
+          if (params?.functionName === "allowance") {
+            return { data: 0n, isLoading: false, isError: false };
+          }
+          return { data: undefined, isLoading: false, isError: false };
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -119,12 +128,14 @@ describe("useVault Critical Money Flows", () => {
 
     it("should require approval before deposit when no allowance", () => {
       // Mock no allowance
-      mockedUseReadContract.mockImplementation(({ functionName }: any) => {
-        if (functionName === "allowance") {
-          return { data: 0n, isLoading: false, isError: false };
-        }
-        return { data: undefined, isLoading: false, isError: false };
-      });
+      mockedUseReadContract.mockImplementation(
+        (params?: { functionName?: string }) => {
+          if (params?.functionName === "allowance") {
+            return { data: 0n, isLoading: false, isError: false };
+          }
+          return { data: undefined, isLoading: false, isError: false };
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -196,13 +207,15 @@ describe("useVault Critical Money Flows", () => {
 
   describe("Critical: Withdraw Flow", () => {
     it("should prevent withdrawal of more shares than user owns", () => {
-      mockedUseReadContract.mockImplementation(({ functionName }: any) => {
-        if (functionName === "getShares") {
-          // User has 10 shares
-          return { data: parseEther("10"), isLoading: false, isError: false };
-        }
-        return { data: undefined, isLoading: false, isError: false };
-      });
+      mockedUseReadContract.mockImplementation(
+        (params?: { functionName?: string }) => {
+          if (params?.functionName === "getShares") {
+            // User has 10 shares
+            return { data: parseEther("10"), isLoading: false, isError: false };
+          }
+          return { data: undefined, isLoading: false, isError: false };
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -262,15 +275,21 @@ describe("useVault Critical Money Flows", () => {
   describe("Critical: Balance Display", () => {
     it("should format balance correctly for display", () => {
       mockedUseReadContract.mockImplementation(
-        ({ functionName, args }: any) => {
-          if (functionName === "tokenBalance" && args?.[0] === 0) {
+        (params?: { functionName?: string; args?: unknown[] }) => {
+          if (
+            params?.functionName === "tokenBalance" &&
+            params?.args?.[0] === 0
+          ) {
             // Vault has 1234.567890123456789 wS tokens
             return {
               data: parseEther("1234.567890123456789"),
               isLoading: false,
             };
           }
-          if (functionName === "tokenBalance" && args?.[0] === 1) {
+          if (
+            params?.functionName === "tokenBalance" &&
+            params?.args?.[0] === 1
+          ) {
             // Vault has 5678.9 USDC.e tokens
             return { data: parseEther("5678.9"), isLoading: false };
           }
@@ -315,7 +334,7 @@ describe("useVault Critical Money Flows", () => {
     it("should handle missing user address gracefully", () => {
       mockedUseAccount.mockReturnValue({
         address: undefined,
-        chainId: 31337,
+        chainId: SUPPORTED_CHAINS.localhost.id,
       });
 
       const { result } = renderHook(
@@ -371,12 +390,18 @@ describe("useVault Critical Money Flows", () => {
   describe("Critical: Price Per Share", () => {
     it("should display price per share for user calculations", () => {
       mockedUseReadContract.mockImplementation(
-        ({ functionName, args }: any) => {
-          if (functionName === "getPricePerFullShare" && args?.[0] === 0) {
+        (params?: { functionName?: string; args?: unknown[] }) => {
+          if (
+            params?.functionName === "getPricePerFullShare" &&
+            params?.args?.[0] === 0
+          ) {
             // 1.1 tokens per share for wS
             return { data: parseEther("1.1"), isLoading: false };
           }
-          if (functionName === "getPricePerFullShare" && args?.[0] === 1) {
+          if (
+            params?.functionName === "getPricePerFullShare" &&
+            params?.args?.[0] === 1
+          ) {
             // 1.05 tokens per share for USDC.e
             return { data: parseEther("1.05"), isLoading: false };
           }

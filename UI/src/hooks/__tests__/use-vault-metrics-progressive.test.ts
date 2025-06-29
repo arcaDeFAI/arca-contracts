@@ -15,6 +15,7 @@ import { useVaultMetrics, type VaultMetrics } from "../use-vault-metrics";
 const mockUseVault = vi.fn();
 const mockUseHybridTokenPrices = vi.fn();
 const mockUseTransactionHistory = vi.fn();
+const mockUseVaultTransactionHistory = vi.fn();
 
 vi.mock("../use-vault", () => ({
   useVault: () => mockUseVault(),
@@ -26,7 +27,11 @@ vi.mock("../use-hybrid-token-prices", () => ({
 
 vi.mock("../use-token-prices", () => ({
   useTokenPrices: () => mockUseHybridTokenPrices(),
-  getTokenUSDValue: (amount: string, tokenSymbol: string, prices: any) => {
+  getTokenUSDValue: (
+    amount: string,
+    tokenSymbol: string,
+    prices: Record<string, number>,
+  ) => {
     const price = prices[tokenSymbol.toLowerCase()] || 0;
     return parseFloat(amount) * price;
   },
@@ -34,6 +39,10 @@ vi.mock("../use-token-prices", () => ({
 
 vi.mock("../use-transaction-history", () => ({
   useTransactionHistory: () => mockUseTransactionHistory(),
+}));
+
+vi.mock("../use-vault-transaction-history", () => ({
+  useVaultTransactionHistory: () => mockUseVaultTransactionHistory(),
 }));
 
 describe("🎯 TDD: Progressive Enhancement for useVaultMetrics", () => {
@@ -57,6 +66,9 @@ describe("🎯 TDD: Progressive Enhancement for useVaultMetrics", () => {
       getTransactionSummary: vi.fn().mockReturnValue({
         totalDeposited: 400,
       }),
+    });
+    mockUseVaultTransactionHistory.mockReturnValue({
+      calculateTimeWindowDays: vi.fn().mockReturnValue(7), // 7 days window for testing
     });
   });
 
