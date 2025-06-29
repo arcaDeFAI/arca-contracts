@@ -1,16 +1,19 @@
 // Auto-generated deployment addresses
-// Generated at: 2025-06-26T15:13:00.965Z
+// Generated at: 2025-06-28T18:37:21.018Z
 
 export const deployments = {
   "localhost": {
-    "vault": "0xDC11f7E700A4c898AE5CAddB1082cFfa76512aDD",
-    "registry": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726",
-    "deploymentTime": "2025-06-26T15:11:28.635Z",
+    "vault": "0xD8a5a9b31c3C0232E196d518E89Fd8bF83AcAd43",
+    "registry": "0x8198f5d8F8CfFE8f9C413d98a0A55aEB8ab9FbB7",
+    "feeManager": "0x21dF544947ba3E8b3c32561399E88B52Dc8b2823",
+    "queueHandler": "0x4C4a2f8c81640e47606d3fd77B353E87Ba015584",
+    "rewardClaimer": "0x2E2Ed0Cfd3AD2f1d34481277b3204d807Ca2F8c2",
+    "deploymentTime": "2025-06-28T18:37:13.862Z",
     "config": {
       "name": "Arca Local Test Vault",
       "symbol": "ARCA-LOCAL",
-      "tokenX": "0xb7278A61aa25c888815aFC32Ad3cC52fF24fE575",
-      "tokenY": "0xCD8a1C3ba11CF5ECfa6267617243239504a98d90"
+      "tokenX": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528",
+      "tokenY": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF"
     }
   }
 } as const;
