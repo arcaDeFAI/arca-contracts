@@ -53,7 +53,7 @@ describe("useRealVaults - Decoupling Test", () => {
     // Setup default useAccount mock
     vi.mocked(useAccount).mockReturnValue({
       chainId: 146,
-    } as any);
+    } as ReturnType<typeof useAccount>);
   });
 
   it("should return vaults immediately without waiting for metrics", async () => {
@@ -66,7 +66,9 @@ describe("useRealVaults - Decoupling Test", () => {
     });
 
     // Setup vault data to be available
-    vi.mocked(useVaultModule.useVault).mockReturnValue(mockVaultData as any);
+    vi.mocked(useVaultModule.useVault).mockReturnValue(
+      mockVaultData as ReturnType<typeof useVaultModule.useVault>,
+    );
 
     // Setup metrics to be loading (simulating slow price fetch)
     vi.mocked(useVaultMetricsModule.useVaultMetrics).mockReturnValue({
@@ -123,7 +125,9 @@ describe("useRealVaults - Decoupling Test", () => {
       registryAddress: "0xregistry",
     });
 
-    vi.mocked(useVaultModule.useVault).mockReturnValue(mockVaultData as any);
+    vi.mocked(useVaultModule.useVault).mockReturnValue(
+      mockVaultData as ReturnType<typeof useVaultModule.useVault>,
+    );
 
     // Start with loading metrics
     const metricsHook = vi.mocked(useVaultMetricsModule.useVaultMetrics);
@@ -144,7 +148,9 @@ describe("useRealVaults - Decoupling Test", () => {
 
     // Update metrics to be loaded
     metricsHook.mockReturnValue({
-      metrics: mockMetrics as any,
+      metrics: mockMetrics as ReturnType<
+        typeof useVaultMetricsModule.useVaultMetrics
+      >["metrics"],
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -188,7 +194,9 @@ describe("useRealVaults - Decoupling Test", () => {
       registryAddress: "0xregistry",
     });
 
-    vi.mocked(useVaultModule.useVault).mockReturnValue(mockVaultData as any);
+    vi.mocked(useVaultModule.useVault).mockReturnValue(
+      mockVaultData as ReturnType<typeof useVaultModule.useVault>,
+    );
 
     // Progressive enhancement: metrics returns partial data with error indicators
     vi.mocked(useVaultMetricsModule.useVaultMetrics).mockReturnValue({
@@ -201,7 +209,7 @@ describe("useRealVaults - Decoupling Test", () => {
         lastUpdated: Date.now(),
         isStale: false,
         // USD values undefined due to price error
-      } as any,
+      } as ReturnType<typeof useVaultMetricsModule.useVaultMetrics>["metrics"],
       isLoading: false,
       error: null, // No top-level error
       refetch: vi.fn(),

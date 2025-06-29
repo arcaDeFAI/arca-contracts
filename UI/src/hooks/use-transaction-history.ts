@@ -202,7 +202,7 @@ export function useTransactionHistory() {
       }
 
       // Load blockchain history
-      loadBlockchainHistory();
+      void loadBlockchainHistory();
     }
   }, [userAddress, chainId, loadBlockchainHistory]);
 

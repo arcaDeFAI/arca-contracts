@@ -139,7 +139,7 @@ describe("🎯 TDD: Multi-Vault useTokenPrices Hook", () => {
   describe("🎯 TDD: Dynamic getTokenUSDValue Function", () => {
     it("should calculate USD value for any token symbol", () => {
       // BUSINESS REQUIREMENT: getTokenUSDValue should work with any token
-      const mockPrices: any = {
+      const mockPrices: Record<string, number> & { lastUpdated: number } = {
         ws: 0.85,
         metro: 2.5,
         "usdc.e": 1.0,
@@ -162,7 +162,7 @@ describe("🎯 TDD: Multi-Vault useTokenPrices Hook", () => {
 
     it("should handle case-insensitive token symbols", () => {
       // BUSINESS REQUIREMENT: Token symbols should be case-insensitive
-      const mockPrices: any = {
+      const mockPrices: Record<string, number> & { lastUpdated: number } = {
         ws: 0.85,
         metro: 2.5,
         "usdc.e": 1.0,
@@ -178,7 +178,7 @@ describe("🎯 TDD: Multi-Vault useTokenPrices Hook", () => {
 
     it("should handle unknown tokens gracefully", () => {
       // BUSINESS REQUIREMENT: Unknown tokens should return 0, not crash
-      const mockPrices: any = {
+      const mockPrices: Record<string, number> & { lastUpdated: number } = {
         ws: 0.85,
         lastUpdated: Date.now(),
       };
@@ -189,7 +189,7 @@ describe("🎯 TDD: Multi-Vault useTokenPrices Hook", () => {
 
     it("should handle invalid amounts gracefully", () => {
       // BUSINESS REQUIREMENT: Invalid inputs should not crash
-      const mockPrices: any = {
+      const mockPrices: Record<string, number> & { lastUpdated: number } = {
         ws: 0.85,
         lastUpdated: Date.now(),
       };
@@ -203,7 +203,7 @@ describe("🎯 TDD: Multi-Vault useTokenPrices Hook", () => {
   describe("🎯 TDD: Dynamic formatTokenPrice Function", () => {
     it("should format prices for any token symbol", () => {
       // BUSINESS REQUIREMENT: Price formatting should work with any token
-      const mockPrices: any = {
+      const mockPrices: Record<string, number> & { lastUpdated: number } = {
         ws: 0.85,
         metro: 2.505,
         "usdc.e": 1.0,
@@ -220,7 +220,7 @@ describe("🎯 TDD: Multi-Vault useTokenPrices Hook", () => {
 
     it("should handle unknown tokens in formatting", () => {
       // BUSINESS REQUIREMENT: Unknown tokens should show $0.00
-      const mockPrices: any = {
+      const mockPrices: Record<string, number> & { lastUpdated: number } = {
         ws: 0.85,
         lastUpdated: Date.now(),
       };

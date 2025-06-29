@@ -1,7 +1,7 @@
 import { renderHook, waitFor, act } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach, Mock } from "vitest";
 import { parseEther, formatEther } from "viem";
-import * as wagmi from "wagmi";
+import type * as wagmi from "wagmi";
 import * as contractsModule from "../../lib/contracts";
 import * as vaultConfigsModule from "../../lib/vault-configs";
 import { useVault } from "../use-vault";
@@ -20,35 +20,23 @@ import {
   createMockVaultData,
 } from "../../test-utils/mock-contracts";
 
+// Create mocked functions
+const mockedUseAccount = vi.fn();
+const mockedUseReadContract = vi.fn();
+const mockedUseWriteContract = vi.fn();
+const mockedUseWaitForTransactionReceipt = vi.fn();
+
 // Mock wagmi hooks
-vi.mock("wagmi", async () => {
-  const actual = await vi.importActual("wagmi");
+vi.mock("wagmi", async (importOriginal) => {
+  const actual = (await importOriginal()) as typeof wagmi;
   return {
     ...actual,
-    useAccount: vi.fn(() => ({
-      address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      chainId: SUPPORTED_CHAINS.localhost.id, // Localhost chain ID
-    })),
-    useReadContract: vi.fn(() => ({
-      data: undefined,
-      isLoading: false,
-      isError: false,
-      error: null,
-    })),
-    useWriteContract: vi.fn(() => ({
-      writeContract: vi.fn(),
-      data: undefined,
-      isPending: false,
-      isError: false,
-      error: null,
-    })),
-    useWaitForTransactionReceipt: vi.fn(() => ({
-      data: undefined,
-      isLoading: false,
-      isSuccess: false,
-      isError: false,
-      error: null,
-    })),
+    useAccount: vi.fn(() => mockedUseAccount()),
+    useReadContract: vi.fn((args) => mockedUseReadContract(args)),
+    useWriteContract: vi.fn(() => mockedUseWriteContract()),
+    useWaitForTransactionReceipt: vi.fn(() =>
+      mockedUseWaitForTransactionReceipt(),
+    ),
   };
 });
 
@@ -58,6 +46,7 @@ vi.mock("../../lib/contracts", () => ({
   VAULT_ABI: [],
   ERC20_ABI: [],
   QUEUE_HANDLER_ABI: [],
+  REWARD_CLAIMER_ABI: [],
 }));
 
 // Mock the vault configs module - setup after imports
@@ -68,12 +57,7 @@ vi.mock("../../lib/vault-configs", () => ({
   getVaultConfigByTokens: vi.fn(),
 }));
 
-const mockedUseAccount = vi.mocked(wagmi.useAccount);
-const mockedUseReadContract = vi.mocked(wagmi.useReadContract);
-const mockedUseWriteContract = vi.mocked(wagmi.useWriteContract);
-const mockedUseWaitForTransactionReceipt = vi.mocked(
-  wagmi.useWaitForTransactionReceipt,
-);
+// Using the mocked functions defined above
 
 describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
   // Test different token pairs to ensure true token-agnostic behavior
@@ -97,6 +81,35 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     );
     currentMockData = createMockVaultData(currentVaultConfig);
 
+    // Set default mock implementations
+    mockedUseAccount.mockReturnValue({
+      address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+      chainId: SUPPORTED_CHAINS.localhost.id,
+    });
+
+    mockedUseReadContract.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: null,
+    });
+
+    mockedUseWriteContract.mockReturnValue({
+      writeContract: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    });
+
+    mockedUseWaitForTransactionReceipt.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isSuccess: false,
+      isError: false,
+      error: null,
+    });
+
     // Mock the getContracts function to handle supported/unsupported chains
     vi.mocked(contractsModule.getContracts).mockImplementation(
       (chainId: number) => {
@@ -118,7 +131,7 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
             [currentVaultConfig.tokenY.symbol]:
               currentVaultConfig.tokenY.address,
           },
-        } as any;
+        } as ReturnType<typeof contractsModule.getContracts>;
       },
     );
 
@@ -141,7 +154,9 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     it("should return formatted vault balances for any token pair", () => {
       // Mock vault balance queries using current vault config
       mockedUseReadContract.mockImplementation(
-        ({ functionName, args }: any) => {
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          const args = params?.args;
           if (functionName === "tokenBalance") {
             if (args?.[0] === 0)
               return createMockReadContract(currentMockData.vaultBalanceX);
@@ -177,7 +192,9 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
         // Mock vault balance queries using current vault config
         mockedUseReadContract.mockImplementation(
-          ({ functionName, args }: any) => {
+          (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+            const functionName = params?.functionName;
+            const args = params?.args;
             if (functionName === "tokenBalance") {
               if (args?.[0] === 0)
                 return createMockReadContract(currentMockData.vaultBalanceX);
@@ -205,7 +222,9 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
     it("should return user share balances", () => {
       mockedUseReadContract.mockImplementation(
-        ({ functionName, args }: any) => {
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          const args = params?.args;
           if (functionName === "getShares") {
             if (args?.[1] === 0)
               return createMockReadContract(currentMockData.userSharesX);
@@ -228,7 +247,9 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
     it("should calculate price per share correctly", () => {
       mockedUseReadContract.mockImplementation(
-        ({ functionName, args }: any) => {
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          const args = params?.args;
           if (functionName === "getPricePerFullShare") {
             if (args?.[0] === 0)
               return createMockReadContract(currentMockData.pricePerShareX);
@@ -251,7 +272,9 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
     it("should return user token balances", () => {
       mockedUseReadContract.mockImplementation(
-        ({ functionName, address }: any) => {
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          const address = params?.address;
           if (functionName === "balanceOf") {
             if (address === currentVaultConfig.tokenX.address)
               return createMockReadContract(currentMockData.userBalanceX);
@@ -407,12 +430,15 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     });
 
     it("should check allowance before deposit (token-agnostic)", () => {
-      mockedUseReadContract.mockImplementation(({ functionName }: any) => {
-        if (functionName === "allowance") {
-          return createMockReadContract(parseEther("50"));
-        }
-        return createMockReadContract(undefined);
-      });
+      mockedUseReadContract.mockImplementation(
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          if (functionName === "allowance") {
+            return createMockReadContract(parseEther("50"));
+          }
+          return createMockReadContract(undefined);
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -548,12 +574,15 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
   describe("Token-Agnostic Validation Functions", () => {
     it("should validate balance correctly for both tokens", () => {
-      mockedUseReadContract.mockImplementation(({ functionName }: any) => {
-        if (functionName === "balanceOf") {
-          return createMockReadContract(parseEther("100")); // User has 100 tokens
-        }
-        return createMockReadContract(undefined);
-      });
+      mockedUseReadContract.mockImplementation(
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          if (functionName === "balanceOf") {
+            return createMockReadContract(parseEther("100")); // User has 100 tokens
+          }
+          return createMockReadContract(undefined);
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -612,9 +641,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
       );
 
       // Mock contract queries to return undefined when no user address
-      mockedUseReadContract.mockImplementation(({ functionName }: any) => {
-        return createMockReadContract(undefined); // No data when no user
-      });
+      mockedUseReadContract.mockImplementation(
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          return createMockReadContract(undefined); // No data when no user
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -663,12 +695,15 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     });
 
     it("should handle zero allowance correctly", () => {
-      mockedUseReadContract.mockImplementation(({ functionName }: any) => {
-        if (functionName === "allowance") {
-          return createMockReadContract(0n);
-        }
-        return createMockReadContract(undefined);
-      });
+      mockedUseReadContract.mockImplementation(
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          if (functionName === "allowance") {
+            return createMockReadContract(0n);
+          }
+          return createMockReadContract(undefined);
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -684,15 +719,18 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
   describe("Queue Status", () => {
     it("should return queue status as strings", () => {
-      mockedUseReadContract.mockImplementation(({ functionName }: any) => {
-        if (functionName === "getPendingDepositsCount") {
-          return createMockReadContract(3n); // Return count directly
-        }
-        if (functionName === "getPendingWithdrawsCount") {
-          return createMockReadContract(2n); // Return count directly
-        }
-        return createMockReadContract(undefined);
-      });
+      mockedUseReadContract.mockImplementation(
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          if (functionName === "getPendingDepositsCount") {
+            return createMockReadContract(3n); // Return count directly
+          }
+          if (functionName === "getPendingWithdrawsCount") {
+            return createMockReadContract(2n); // Return count directly
+          }
+          return createMockReadContract(undefined);
+        },
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -719,6 +757,198 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
       expect(result.current.pendingDeposits).toBe("0");
       expect(result.current.pendingWithdraws).toBe("0");
+    });
+  });
+
+  describe("🎯 TDD: Real Reward Data Integration", () => {
+    it("should read total compounded rewards from ArcaRewardClaimerV1 contract", () => {
+      // BUSINESS REQUIREMENT: Read real reward data from reward claimer contract
+      mockedUseReadContract.mockImplementation(
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          const args = params?.args;
+          const address = params?.address;
+          // Mock reward claimer contract calls
+          if (address === MOCK_SYSTEM_CONTRACTS.rewardClaimer) {
+            if (functionName === "getTotalCompounded") {
+              if (args?.[0] === 0) {
+                // TokenX rewards
+                return createMockReadContract(currentMockData.totalCompoundedX);
+              }
+              if (args?.[0] === 1) {
+                // TokenY rewards
+                return createMockReadContract(currentMockData.totalCompoundedY);
+              }
+            }
+          }
+
+          // Mock vault contract calls (required for basic vault functionality)
+          if (address === currentVaultConfig.address) {
+            if (functionName === "tokenBalance") {
+              if (args?.[0] === 0)
+                return createMockReadContract(currentMockData.vaultBalanceX);
+              if (args?.[0] === 1)
+                return createMockReadContract(currentMockData.vaultBalanceY);
+            }
+            if (functionName === "getShares") {
+              if (args?.[1] === 0)
+                return createMockReadContract(currentMockData.userSharesX);
+              if (args?.[1] === 1)
+                return createMockReadContract(currentMockData.userSharesY);
+            }
+            if (functionName === "getPricePerFullShare") {
+              if (args?.[0] === 0)
+                return createMockReadContract(currentMockData.pricePerShareX);
+              if (args?.[0] === 1)
+                return createMockReadContract(currentMockData.pricePerShareY);
+            }
+          }
+
+          // Mock token contract calls (required for user balances and allowances)
+          if (address === currentVaultConfig.tokenX.address) {
+            if (functionName === "balanceOf")
+              return createMockReadContract(currentMockData.userBalanceX);
+            if (functionName === "allowance")
+              return createMockReadContract(currentMockData.allowanceX);
+          }
+          if (address === currentVaultConfig.tokenY.address) {
+            if (functionName === "balanceOf")
+              return createMockReadContract(currentMockData.userBalanceY);
+            if (functionName === "allowance")
+              return createMockReadContract(currentMockData.allowanceY);
+          }
+
+          // Mock queue handler calls
+          if (address === MOCK_SYSTEM_CONTRACTS.queueHandler) {
+            if (functionName === "getPendingDepositsCount")
+              return createMockReadContract(currentMockData.pendingDeposits);
+            if (functionName === "getPendingWithdrawsCount")
+              return createMockReadContract(currentMockData.pendingWithdraws);
+          }
+
+          return createMockReadContract(undefined);
+        },
+      );
+
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
+
+      // Should provide formatted reward data
+      expect(result.current.totalCompoundedX).toBe("50.0"); // 50 tokens compounded
+      expect(result.current.totalCompoundedY).toBe("75.0"); // 75 tokens compounded
+    });
+
+    it("should handle reward claimer contract unavailable gracefully", () => {
+      // BUSINESS REQUIREMENT: Graceful fallback when reward claimer unavailable
+      mockedUseReadContract.mockImplementation(
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const address = params?.address;
+          if (address === MOCK_SYSTEM_CONTRACTS.rewardClaimer) {
+            return createMockReadContract(undefined, {
+              isError: true,
+              error: new Error("Contract not found"),
+            });
+          }
+          return createMockReadContract(undefined);
+        },
+      );
+
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
+
+      // Should return default values when reward claimer unavailable
+      expect(result.current.totalCompoundedX).toBe("0.0");
+      expect(result.current.totalCompoundedY).toBe("0.0");
+      expect(result.current.rewardDataAvailable).toBe(false);
+    });
+
+    it("should provide reward claimer contract address from registry", () => {
+      // BUSINESS REQUIREMENT: Get reward claimer address dynamically from registry
+      mockedUseReadContract.mockImplementation(
+        (params: Parameters<typeof wagmi.useReadContract>[0] | undefined) => {
+          const functionName = params?.functionName;
+          const address = params?.address;
+          if (
+            address === MOCK_SYSTEM_CONTRACTS.registry &&
+            functionName === "getVaultInfo"
+          ) {
+            return createMockReadContract({
+              vault: currentVaultConfig.address,
+              rewardClaimer: MOCK_SYSTEM_CONTRACTS.rewardClaimer,
+              queueHandler: MOCK_SYSTEM_CONTRACTS.queueHandler,
+              feeManager: MOCK_SYSTEM_CONTRACTS.feeManager,
+              tokenX: currentVaultConfig.tokenX.address,
+              tokenY: currentVaultConfig.tokenY.address,
+              name: currentVaultConfig.name,
+              symbol: currentVaultConfig.name,
+              deploymentTimestamp: BigInt(Date.now()),
+              deployer: "0x1234567890123456789012345678901234567890",
+              isActive: true,
+              isProxy: true,
+            });
+          }
+          return createMockReadContract(undefined);
+        },
+      );
+
+      const { result } = renderHook(
+        () => useVault(currentVaultConfig.address),
+        {
+          wrapper: TestProviders,
+        },
+      );
+
+      // Should expose reward claimer address for other hooks to use
+      expect(result.current.rewardClaimerAddress).toBe(
+        MOCK_SYSTEM_CONTRACTS.rewardClaimer,
+      );
+    });
+
+    it("should support any token pair for reward data (token-agnostic)", () => {
+      // TDD: Test reward system works with different token pairs
+      testVaultConfigs
+        .slice(0, 2)
+        .forEach(({ tokenX, tokenY, description }) => {
+          setupVaultConfig(tokenX, tokenY);
+
+          mockedUseReadContract.mockImplementation(
+            (
+              params: Parameters<typeof wagmi.useReadContract>[0] | undefined,
+            ) => {
+              const functionName = params?.functionName;
+              const args = params?.args;
+              const address = params?.address;
+              if (
+                address === MOCK_SYSTEM_CONTRACTS.rewardClaimer &&
+                functionName === "getTotalCompounded"
+              ) {
+                return createMockReadContract(parseEther("100")); // Same reward amount regardless of token pair
+              }
+              return createMockReadContract(undefined);
+            },
+          );
+
+          const { result } = renderHook(
+            () => useVault(currentVaultConfig.address),
+            {
+              wrapper: TestProviders,
+            },
+          );
+
+          // Reward system should work with any token pair
+          expect(result.current.totalCompoundedX).toBe("100.0");
+          expect(result.current.totalCompoundedY).toBe("100.0");
+          expect(result.current.tokenXSymbol).toBe(tokenX);
+          expect(result.current.tokenYSymbol).toBe(tokenY);
+        });
     });
   });
 });

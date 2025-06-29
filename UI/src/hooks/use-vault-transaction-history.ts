@@ -321,6 +321,25 @@ export function useVaultTransactionHistory(context: VaultTransactionContext) {
       }, 0);
   }, [transactions]);
 
+  // Calculate time window in days since first successful deposit
+  const calculateTimeWindowDays = useCallback(() => {
+    const successfulDeposits = transactions
+      .filter((tx) => tx.type === "deposit" && tx.status === "success")
+      .sort((a, b) => a.timestamp - b.timestamp); // Oldest first
+
+    if (successfulDeposits.length === 0) {
+      return 1; // Minimum 1 day to avoid division by zero
+    }
+
+    const firstDepositTime = successfulDeposits[0].timestamp;
+    const now = Date.now();
+    const timeDiffMs = now - firstDepositTime;
+    const timeDiffDays = timeDiffMs / (1000 * 60 * 60 * 24);
+
+    // Return minimum 1 day to avoid division by zero in APR calculations
+    return Math.max(1, timeDiffDays);
+  }, [transactions]);
+
   return {
     // State
     transactions,
@@ -337,6 +356,7 @@ export function useVaultTransactionHistory(context: VaultTransactionContext) {
     getPendingTransactions,
     getTotalDeposited,
     getTotalWithdrawn,
+    calculateTimeWindowDays,
 
     // Vault context
     vaultAddress: context.vaultAddress,
