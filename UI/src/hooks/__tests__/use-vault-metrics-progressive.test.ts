@@ -110,7 +110,7 @@ describe("🎯 TDD: Progressive Enhancement for useVaultMetrics", () => {
       expect(metrics.userBalanceYUSD).toBeUndefined();
 
       // APR should be undefined (price-dependent)
-      expect(metrics.estimatedApr).toBeUndefined();
+      expect(metrics.realApr).toBeUndefined();
       expect(metrics.dailyApr).toBeUndefined();
 
       // ROI calculations should be undefined (price-dependent)
@@ -148,7 +148,7 @@ describe("🎯 TDD: Progressive Enhancement for useVaultMetrics", () => {
       // USD values should be undefined (price fetch failed)
       expect(metrics.totalTvlUSD).toBeUndefined();
       expect(metrics.userTotalUSD).toBeUndefined();
-      expect(metrics.estimatedApr).toBeUndefined();
+      expect(metrics.realApr).toBeUndefined();
     });
 
     it("should update metrics when prices become available (progressive loading)", () => {
@@ -276,7 +276,7 @@ describe("🎯 TDD: Progressive Enhancement for useVaultMetrics", () => {
       // All data should be available as before
       expect(metrics.totalTvlUSD).toBe(2850);
       expect(metrics.userTotalUSD).toBeCloseTo(151.75, 1); // (50*1.1*0.85) + (100*1.05*1.0) = 46.75 + 105 = 151.75
-      expect(metrics.estimatedApr).toBeGreaterThan(0);
+      expect(metrics.realApr).toBeUndefined(); // No real APR without reward data
       expect(metrics.priceDataLoading).toBe(false);
       expect(metrics.priceDataError).toBeNull();
       expect(metrics.isDataAvailable).toBe(true);

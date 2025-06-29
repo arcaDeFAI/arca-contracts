@@ -24,9 +24,8 @@ export interface VaultMetrics {
   userSharesYUSD?: number;
 
   // APR calculations (optional - undefined when prices unavailable)
-  estimatedApr?: number;
-  dailyApr?: number;
   realApr?: number; // Real APR from blockchain reward data
+  dailyApr?: number;
 
   // User-specific metrics (optional - undefined when prices unavailable)
   userEarnings?: number;
@@ -52,64 +51,6 @@ export interface VaultMetricsHook {
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
-}
-
-// Calculate real APR from blockchain data (METRO rewards + DLMM fees)
-function calculateEstimatedAPR(
-  totalTvlUSD: number,
-  vaultData: {
-    totalMetroRewardsCompounded?: string;
-    totalDLMMFeesEarned?: string;
-    timeWindowDays?: number;
-  }, // Contains reward data from contracts
-  prices: TokenPrices | null,
-): number {
-  if (!prices || totalTvlUSD === 0) return 0;
-
-  // Check if we have real reward data from contracts
-  const hasRealRewardData =
-    vaultData?.totalMetroRewardsCompounded && vaultData?.timeWindowDays;
-
-  if (hasRealRewardData) {
-    // ✅ REAL APR calculation from blockchain data
-    const totalRewardsCompounded = parseFloat(
-      vaultData.totalMetroRewardsCompounded || "0",
-    );
-
-    // Note: totalCompoundedX and totalCompoundedY are already in the correct token denomination
-    // These represent METRO rewards that have been claimed and compounded back into the vault
-    // We need to calculate their individual USD values based on actual token prices
-
-    // Get token prices (with fallbacks)
-    const tokenXPrice = prices?.["ws"] || 0.85; // Default to a reasonable fallback
-    const tokenYPrice = prices?.["usdc.e"] || 1.0; // Default to $1 for stablecoin
-
-    // Calculate USD value based on the actual reward distribution
-    // This requires parsing the compounded amounts as individual token amounts
-    // For now, use the totalRewardsCompounded as a simple total
-    const rewardsUSD =
-      totalRewardsCompounded * ((tokenXPrice + tokenYPrice) / 2);
-
-    const dlmmFeesUSD = parseFloat(vaultData.totalDLMMFeesEarned || "0");
-    const totalRewardsUSD = rewardsUSD + dlmmFeesUSD;
-    const timeWindowDays = vaultData.timeWindowDays || 1;
-
-    // Annualize the rewards
-    const annualizedRewardsUSD = totalRewardsUSD * (365 / timeWindowDays);
-
-    // Calculate APR = (Annual Rewards / TVL) × 100
-    const apr = (annualizedRewardsUSD / totalTvlUSD) * 100;
-
-    return apr;
-  }
-
-  // ❌ FALLBACK: Fake APR calculation - clearly marked as demo data
-  // This shows FAKE 45% APR to users but is clearly marked with warnings
-  const baseAPR = 45; // ❌ FAKE 45% APR promise
-  const tvlFactor = Math.max(0.5, Math.min(1.0, 100000 / totalTvlUSD)); // ❌ FAKE scaling
-  const seasonalBonus = 1.2; // ❌ FAKE 20% bonus
-
-  return baseAPR * tvlFactor * seasonalBonus;
 }
 
 // Calculate user's earnings based on current position vs deposits
@@ -273,51 +214,46 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     const timeWindowDays = Math.max(1, rawTimeWindowDays); // Minimum 1 day to avoid division errors
 
     // Check if we have real reward data (contracts available and data exists)
+    // Changed to check for existence rather than truthiness to handle "0.0" values
     const hasRealRewardData =
-      vault.totalCompoundedX &&
-      vault.totalCompoundedY &&
-      vault.rewardDataAvailable !== false &&
+      vault.totalCompoundedX !== undefined &&
+      vault.totalCompoundedY !== undefined &&
+      vault.rewardDataAvailable === true &&
       vault.rewardClaimerAddress;
 
     let realApr: number | undefined;
-    let estimatedApr: number | undefined;
-    let rewardDataSource: "blockchain" | "estimated" = "estimated";
+    const rewardDataSource: "blockchain" | "estimated" = hasRealRewardData
+      ? "blockchain"
+      : "estimated";
 
-    if (hasRealRewardData) {
+    if (hasRealRewardData && totalTvlUSD > 0) {
       // Calculate real APR from contract reward data
-      rewardDataSource = "blockchain";
 
       // Calculate USD values for each token type separately
       const tokenXSymbolLower = tokenXSymbol.toLowerCase();
       const tokenYSymbolLower = tokenYSymbol.toLowerCase();
       const tokenXPrice =
         (pricesWithTimestamp as Record<string, number>)?.[tokenXSymbolLower] ||
-        1.0;
+        0;
       const tokenYPrice =
         (pricesWithTimestamp as Record<string, number>)?.[tokenYSymbolLower] ||
-        1.0;
+        0;
 
-      const compoundedXUSD = parseFloat(vault.totalCompoundedX) * tokenXPrice;
-      const compoundedYUSD = parseFloat(vault.totalCompoundedY) * tokenYPrice;
+      const compoundedXUSD =
+        parseFloat(vault.totalCompoundedX || "0") * tokenXPrice;
+      const compoundedYUSD =
+        parseFloat(vault.totalCompoundedY || "0") * tokenYPrice;
       const totalRewardsUSD = compoundedXUSD + compoundedYUSD;
 
-      // Direct APR calculation without using the helper function for more control
-      const annualizedRewardsUSD = totalRewardsUSD * (365 / timeWindowDays);
-      realApr = (annualizedRewardsUSD / totalTvlUSD) * 100;
-    } else {
-      // Fall back to estimated APR
-      estimatedApr = calculateEstimatedAPR(
-        totalTvlUSD,
-        {
-          totalMetroRewardsCompounded: undefined,
-          totalDLMMFeesEarned: undefined,
-          timeWindowDays: undefined,
-        },
-        pricesWithTimestamp,
-      );
+      // Direct APR calculation matching the test expectations
+      // APR = (Total Rewards * 365 / Time Window Days) / TVL * 100
+      if (timeWindowDays > 0) {
+        const annualizedRewardsUSD = totalRewardsUSD * (365 / timeWindowDays);
+        realApr = (annualizedRewardsUSD / totalTvlUSD) * 100;
+      }
     }
 
-    const dailyApr = (realApr || estimatedApr || 0) / 365;
+    const dailyApr = (realApr || 0) / 365;
 
     // Return complete metrics with price data
     return {
@@ -336,7 +272,6 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
       userSharesYUSD,
 
       // APR calculations (now available)
-      estimatedApr,
       realApr,
       dailyApr,
 
