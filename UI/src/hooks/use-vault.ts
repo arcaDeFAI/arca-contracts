@@ -10,6 +10,7 @@ import {
   VAULT_ABI,
   ERC20_ABI,
   QUEUE_HANDLER_ABI,
+  REWARD_CLAIMER_ABI,
 } from "../lib/contracts";
 import { getVaultConfig, type VaultConfig } from "../lib/vault-configs";
 import { useState } from "react";
@@ -152,6 +153,23 @@ export function useVault(vaultAddress?: string) {
     query: { enabled: shouldEnableQueries },
   });
 
+  // Reward claimer contract reads for compounded rewards
+  const { data: totalCompoundedX } = useReadContract({
+    address: contracts?.rewardClaimer as Address,
+    abi: REWARD_CLAIMER_ABI,
+    functionName: "getTotalCompounded",
+    args: [0], // TokenX (first token in pair)
+    query: { enabled: shouldEnableQueries && !!contracts?.rewardClaimer },
+  });
+
+  const { data: totalCompoundedY } = useReadContract({
+    address: contracts?.rewardClaimer as Address,
+    abi: REWARD_CLAIMER_ABI,
+    functionName: "getTotalCompounded",
+    args: [1], // TokenY (second token in pair)
+    query: { enabled: shouldEnableQueries && !!contracts?.rewardClaimer },
+  });
+
   // Token-agnostic approve functions
   const approveTokenX = async (amount: string) => {
     if (!vaultConfig?.tokenX.address || !defaultVaultAddress) return;
@@ -253,6 +271,8 @@ export function useVault(vaultAddress?: string) {
     vaultConfig,
     vaultAddress: defaultVaultAddress,
     contracts,
+    userAddress,
+    chainId,
 
     // Token info
     tokenXSymbol: vaultConfig?.tokenX.symbol || "",
@@ -273,6 +293,16 @@ export function useVault(vaultAddress?: string) {
     // Queue status
     pendingDeposits: pendingDeposits?.toString() || "0",
     pendingWithdraws: pendingWithdraws?.toString() || "0",
+
+    // Reward data (token-agnostic)
+    totalCompoundedX: formatBalance(totalCompoundedX),
+    totalCompoundedY: formatBalance(totalCompoundedY),
+    rewardClaimerAddress: contracts?.rewardClaimer,
+    rewardDataAvailable: !!(
+      contracts?.rewardClaimer &&
+      totalCompoundedX &&
+      totalCompoundedY
+    ),
 
     // Transaction state
     isWritePending,

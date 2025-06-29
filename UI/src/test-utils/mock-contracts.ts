@@ -1,6 +1,9 @@
 import { parseEther } from "viem";
 import { vi } from "vitest";
-import { type UseAccountReturnType, type UseWriteContractReturnType } from "wagmi";
+import {
+  type UseAccountReturnType,
+  type UseWriteContractReturnType,
+} from "wagmi";
 import { SUPPORTED_CHAINS } from "../config/chains";
 
 // Token-agnostic mock contract factory
@@ -44,6 +47,14 @@ export const MOCK_SYSTEM_CONTRACTS = {
   },
 };
 
+// Mock reward data for testing real reward calculations
+export const MOCK_REWARD_DATA = {
+  totalCompoundedX: parseEther("50"), // 50 tokens compounded for TokenX
+  totalCompoundedY: parseEther("75"), // 75 tokens compounded for TokenY
+  metroPrice: 2.5, // $2.50 per METRO
+  dlmmFeesCollected: parseEther("25"), // 25 tokens worth of DLMM fees
+};
+
 // Legacy MOCK_CONTRACTS for backward compatibility (will be phased out)
 export const MOCK_CONTRACTS = {
   ...MOCK_SYSTEM_CONTRACTS,
@@ -82,6 +93,10 @@ export function createMockVaultData(
     // Queue status
     pendingDeposits: 5n,
     pendingWithdraws: 2n,
+
+    // Reward data from ArcaRewardClaimerV1 contract
+    totalCompoundedX: MOCK_REWARD_DATA.totalCompoundedX,
+    totalCompoundedY: MOCK_REWARD_DATA.totalCompoundedY,
 
     // Token addresses for mock resolution
     tokenXAddress: vaultConfig.tokenX.address,
@@ -127,7 +142,10 @@ export const MOCK_TX_RECEIPT = {
 };
 
 // Helper to create mock read contract response
-export function createMockReadContract<T>(data: T) {
+export function createMockReadContract<T>(
+  data: T,
+  overrides?: Record<string, unknown>,
+) {
   return {
     data,
     isLoading: false as const,
@@ -156,11 +174,14 @@ export function createMockReadContract<T>(data: T) {
     errorUpdateCount: 0,
     isPaused: false as const,
     promise: Promise.resolve(data),
+    ...overrides,
   };
 }
 
 // Helper to create mock write contract response
-export function createMockWriteContract(overrides: Partial<UseWriteContractReturnType> = {}): UseWriteContractReturnType {
+export function createMockWriteContract(
+  overrides: Partial<UseWriteContractReturnType> = {},
+): UseWriteContractReturnType {
   const mockVariables = {
     abi: [],
     functionName: "mockFunction",

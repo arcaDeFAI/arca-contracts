@@ -232,7 +232,10 @@ class PriceFeedService {
   /**
    * Make API request with retry logic and rate limit handling
    */
-  private async makeAPIRequest(url: string, attempt = 1): Promise<Record<string, { usd: number; last_updated_at?: number }>> {
+  private async makeAPIRequest(
+    url: string,
+    attempt = 1,
+  ): Promise<Record<string, { usd: number; last_updated_at?: number }>> {
     try {
       const response = await fetch(url, {
         headers: this.config.apiKey

@@ -7,10 +7,9 @@
  * Following TDD principles: Tests define behavior, implementation follows tests.
  */
 
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { parseEther } from "viem";
 import VaultCard from "../vault-card";
 import { TestProviders } from "../../test-utils/test-providers";
 import type { RealVault } from "../../types/vault";
