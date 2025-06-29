@@ -14,11 +14,7 @@ export interface DeploymentAddresses {
   queueHandler: string;
   rewardClaimer: string;
   registry: string;
-  tokens: {
-    wS: string;
-    usdce: string;
-    metro: string;
-  };
+  tokens: Record<string, string>; // Generic token addresses for any token pair
   metropolis: {
     lbRouter: string;
     lbFactory: string;

@@ -83,15 +83,15 @@ export function useVaultRegistry() {
 
   if (vaultInfo && firstVaultAddress) {
     vaults.push({
-      vault: vaultInfo[0],
-      rewardClaimer: vaultInfo[1],
-      queueHandler: vaultInfo[2],
-      feeManager: vaultInfo[3],
-      tokenX: vaultInfo[4],
-      tokenY: vaultInfo[5],
-      name: vaultInfo[6],
-      symbol: vaultInfo[7],
-      isActive: vaultInfo[10],
+      vault: vaultInfo.vault,
+      rewardClaimer: vaultInfo.rewardClaimer,
+      queueHandler: vaultInfo.queueHandler,
+      feeManager: vaultInfo.feeManager,
+      tokenX: vaultInfo.tokenX,
+      tokenY: vaultInfo.tokenY,
+      name: vaultInfo.name,
+      symbol: vaultInfo.symbol,
+      isActive: vaultInfo.isActive,
     });
   }
 

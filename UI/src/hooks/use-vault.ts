@@ -74,7 +74,7 @@ export function useVault(vaultAddress?: string) {
     address: defaultVaultAddress as Address,
     abi: VAULT_ABI,
     functionName: "getShares",
-    args: [userAddress, 0],
+    args: [userAddress as Address, 0],
     query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
@@ -82,7 +82,7 @@ export function useVault(vaultAddress?: string) {
     address: defaultVaultAddress as Address,
     abi: VAULT_ABI,
     functionName: "getShares",
-    args: [userAddress, 1],
+    args: [userAddress as Address, 1],
     query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
@@ -108,7 +108,7 @@ export function useVault(vaultAddress?: string) {
     address: vaultConfig?.tokenX.address as Address,
     abi: ERC20_ABI,
     functionName: "balanceOf",
-    args: [userAddress],
+    args: [userAddress as Address],
     query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
@@ -116,7 +116,7 @@ export function useVault(vaultAddress?: string) {
     address: vaultConfig?.tokenY.address as Address,
     abi: ERC20_ABI,
     functionName: "balanceOf",
-    args: [userAddress],
+    args: [userAddress as Address],
     query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
@@ -125,7 +125,7 @@ export function useVault(vaultAddress?: string) {
     address: vaultConfig?.tokenX.address as Address,
     abi: ERC20_ABI,
     functionName: "allowance",
-    args: [userAddress, defaultVaultAddress],
+    args: [userAddress as Address, defaultVaultAddress as Address],
     query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
@@ -133,7 +133,7 @@ export function useVault(vaultAddress?: string) {
     address: vaultConfig?.tokenY.address as Address,
     abi: ERC20_ABI,
     functionName: "allowance",
-    args: [userAddress, defaultVaultAddress],
+    args: [userAddress as Address, defaultVaultAddress as Address],
     query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
@@ -154,24 +154,24 @@ export function useVault(vaultAddress?: string) {
 
   // Token-agnostic approve functions
   const approveTokenX = async (amount: string) => {
-    if (!vaultConfig.tokenX.address || !defaultVaultAddress) return;
+    if (!vaultConfig?.tokenX.address || !defaultVaultAddress) return;
 
     writeContract({
       address: vaultConfig.tokenX.address as Address,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [defaultVaultAddress, parseEther(amount)],
+      args: [defaultVaultAddress as Address, parseEther(amount)],
     });
   };
 
   const approveTokenY = async (amount: string) => {
-    if (!vaultConfig.tokenY.address || !defaultVaultAddress) return;
+    if (!vaultConfig?.tokenY.address || !defaultVaultAddress) return;
 
     writeContract({
       address: vaultConfig.tokenY.address as Address,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [defaultVaultAddress, parseEther(amount)],
+      args: [defaultVaultAddress as Address, parseEther(amount)],
     });
   };
 

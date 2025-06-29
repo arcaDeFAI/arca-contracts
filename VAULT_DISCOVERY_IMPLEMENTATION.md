@@ -221,30 +221,6 @@ npm test src/hooks/__tests__/use-real-vaults-decoupling.test.ts         # 4/4 �
 npm test src/components/__tests__/vault-card-critical-flows.test.tsx    # 26/27 ✅
 ```
 
-### ❌ FAILING TESTS TO FIX
-```bash
-# Architecture Migration Issues ❌
-npm test src/hooks/__tests__/use-vault-metrics-multi-vault.test.ts      # 2 failing
-npm test src/hooks/__tests__/use-dashboard-data.test.ts                 # 6 failing  
-npm test src/hooks/__tests__/use-position-detection.test.ts             # 3 failing
-npm test src/hooks/__tests__/use-vault.test.ts                          # 1 failing
-npm test src/hooks/__tests__/use-real-token-prices.test.ts              # 1 failing
-
-# Full test suite
-npm test  # 14 failing, 160 passing
-```
-
-### 🎯 SUCCESS CRITERIA FOR NEXT DEVELOPER
-
-#### Phase 1 Extension - Test Suite Fix ✅ 
-- [ ] All 14 failing tests updated to expect progressive enhancement behavior  
-- [ ] Full test suite passes: `npm test` shows 0 failures
-- [ ] No changes to working functionality (vault discovery continues working)
-
-#### Phase 1 Polish (Optional) ✅
-- [ ] Remove all act() warnings from test output
-- [ ] Clean up any console.log debug statements added during debugging
-
 ## Technical Implementation Details
 
 ### Progressive Enhancement Architecture ✅

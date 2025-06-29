@@ -36,9 +36,6 @@ const createVault = (
   id: vaultAddress,
   name: `${tokenX}-${tokenY}`,
   tokens: [tokenX, tokenY],
-  tokenAddresses: ["0xTokenX...", "0xTokenY..."],
-  tokenDecimals: [18, 18], // Simplified for testing
-  tokenSymbols: [tokenX, tokenY],
   platform: "DLMM",
   chain: "Sonic Fork",
 

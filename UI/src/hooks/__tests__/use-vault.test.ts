@@ -15,6 +15,7 @@ import {
   createMockReadContract,
   createMockWriteContract,
   createMockWaitForTransactionReceipt,
+  createMockUseAccount,
   createMockVaultConfig,
   createMockVaultData,
 } from "../../test-utils/mock-contracts";
@@ -26,7 +27,7 @@ vi.mock("wagmi", async () => {
     ...actual,
     useAccount: vi.fn(() => ({
       address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      chainId: 31337, // Hardhat chain ID
+      chainId: SUPPORTED_CHAINS.localhost.id, // Localhost chain ID
     })),
     useReadContract: vi.fn(() => ({
       data: undefined,
@@ -100,7 +101,7 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     vi.mocked(contractsModule.getContracts).mockImplementation(
       (chainId: number) => {
         // Business Requirement: Return null for unsupported chains (graceful failure)
-        const supportedChainIds = Object.values(SUPPORTED_CHAINS).map(
+        const supportedChainIds: number[] = Object.values(SUPPORTED_CHAINS).map(
           (chain) => chain.id,
         );
         if (!supportedChainIds.includes(chainId)) {
@@ -273,10 +274,11 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
     it("should handle loading states correctly", () => {
       mockedUseReadContract.mockReturnValue({
-        data: undefined,
+        ...createMockReadContract(undefined),
         isLoading: true,
-        isError: false,
-        error: null,
+        isPending: true,
+        isSuccess: false,
+        status: "pending",
       });
 
       const { result } = renderHook(
@@ -292,10 +294,29 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
     it("should handle error states gracefully", () => {
       mockedUseReadContract.mockReturnValue({
-        data: undefined,
-        isLoading: false,
+        ...createMockReadContract(undefined),
         isError: true,
-        error: new Error("Contract read failed"),
+        isSuccess: false,
+        status: "error",
+        isRefetchError: true,
+        error: {
+          name: "ContractFunctionExecutionError",
+          message: "Contract read failed",
+          abi: [],
+          functionName: "testFunction",
+          details: "Contract read failed",
+          shortMessage: "Contract read failed",
+          version: "1.0.0",
+          walk: vi.fn(),
+          cause: {
+            name: "ContractFunctionRevertedError",
+            message: "Contract read failed",
+            details: "Contract read failed",
+            shortMessage: "Contract read failed",
+            version: "1.0.0",
+            walk: vi.fn(),
+          },
+        },
       });
 
       const { result } = renderHook(
@@ -315,11 +336,8 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
       const mockWriteContract = vi.fn().mockResolvedValue(MOCK_TX_HASH);
 
       mockedUseWriteContract.mockReturnValue({
+        ...createMockWriteContract(),
         writeContract: mockWriteContract,
-        data: MOCK_TX_HASH,
-        isPending: false,
-        isError: false,
-        error: null,
       });
 
       mockedUseWaitForTransactionReceipt.mockReturnValue(
@@ -361,11 +379,8 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
         const mockWriteContract = vi.fn().mockResolvedValue(MOCK_TX_HASH);
         mockedUseWriteContract.mockReturnValue({
+          ...createMockWriteContract(),
           writeContract: mockWriteContract,
-          data: MOCK_TX_HASH,
-          isPending: false,
-          isError: false,
-          error: null,
         });
 
         const { result } = renderHook(
@@ -416,11 +431,8 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
       const mockWriteContract = vi.fn().mockResolvedValue(MOCK_TX_HASH);
 
       mockedUseWriteContract.mockReturnValue({
+        ...createMockWriteContract(),
         writeContract: mockWriteContract,
-        data: MOCK_TX_HASH,
-        isPending: false,
-        isError: false,
-        error: null,
       });
 
       const { result } = renderHook(
@@ -450,21 +462,19 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     });
 
     it("should handle deposit transaction states", async () => {
-      mockedUseWriteContract.mockReturnValue({
-        writeContract: vi.fn().mockResolvedValue(MOCK_TX_HASH),
-        data: undefined,
-        isPending: true,
-        isError: false,
-        error: null,
-      });
+      mockedUseWriteContract.mockReturnValue(
+        createMockWriteContract({
+          writeContract: vi.fn().mockResolvedValue(MOCK_TX_HASH),
+          data: undefined,
+          isPending: true,
+          isSuccess: false,
+          status: "pending",
+        }),
+      );
 
-      mockedUseWaitForTransactionReceipt.mockReturnValue({
-        data: undefined,
-        isLoading: true,
-        isSuccess: false,
-        isError: false,
-        error: null,
-      });
+      mockedUseWaitForTransactionReceipt.mockReturnValue(
+        createMockWaitForTransactionReceipt(true),
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -484,11 +494,8 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
       const mockWriteContract = vi.fn().mockResolvedValue(MOCK_TX_HASH);
 
       mockedUseWriteContract.mockReturnValue({
+        ...createMockWriteContract(),
         writeContract: mockWriteContract,
-        data: MOCK_TX_HASH,
-        isPending: false,
-        isError: false,
-        error: null,
       });
 
       // Note: Using existing beforeEach setup for contracts and vault config
@@ -518,11 +525,8 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
       const mockWriteContract = vi.fn().mockResolvedValue(MOCK_TX_HASH);
 
       mockedUseWriteContract.mockReturnValue({
+        ...createMockWriteContract(),
         writeContract: mockWriteContract,
-        data: MOCK_TX_HASH,
-        isPending: false,
-        isError: false,
-        error: null,
       });
 
       const { result } = renderHook(
@@ -568,10 +572,12 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     });
 
     it("should validate connection correctly", () => {
-      mockedUseAccount.mockReturnValue({
-        address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        chainId: 31337,
-      });
+      mockedUseAccount.mockReturnValue(
+        createMockUseAccount(
+          "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+          SUPPORTED_CHAINS.localhost.id,
+        ),
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -584,10 +590,9 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     });
 
     it("should return false for validateConnection when no user address", () => {
-      mockedUseAccount.mockReturnValue({
-        address: undefined,
-        chainId: 31337,
-      });
+      mockedUseAccount.mockReturnValue(
+        createMockUseAccount(undefined, SUPPORTED_CHAINS.localhost.id),
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
@@ -602,10 +607,9 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
 
   describe("Edge Cases and Error Handling", () => {
     it("should handle missing user address", () => {
-      mockedUseAccount.mockReturnValue({
-        address: undefined,
-        chainId: 31337,
-      });
+      mockedUseAccount.mockReturnValue(
+        createMockUseAccount(undefined, SUPPORTED_CHAINS.localhost.id),
+      );
 
       // Mock contract queries to return undefined when no user address
       mockedUseReadContract.mockImplementation(({ functionName }: any) => {
@@ -627,10 +631,9 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     });
 
     it("should handle unsupported chain", () => {
-      mockedUseAccount.mockReturnValue({
-        address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-        chainId: 1, // Ethereum mainnet - not supported
-      });
+      mockedUseAccount.mockReturnValue(
+        createMockUseAccount("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", 1), // Ethereum mainnet - not supported
+      );
 
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),

@@ -25,6 +25,10 @@ describe("useRealVaults - Decoupling Test", () => {
     name: "Test Vault",
     tokenX: "0xabc",
     tokenY: "0xdef",
+    rewardClaimer: "0xRewardClaimer",
+    queueHandler: "0xQueueHandler",
+    feeManager: "0xFeeManager",
+    symbol: "TEST",
     isActive: true,
   };
 
