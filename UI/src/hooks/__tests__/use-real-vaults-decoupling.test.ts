@@ -105,9 +105,18 @@ describe("useRealVaults - Decoupling Test", () => {
 
   it("should update vault with metrics when they become available", async () => {
     const mockMetrics = {
+      // Required properties
+      isDataAvailable: true,
+      priceDataLoading: false,
+      priceDataError: null,
+      pricePerShareX: 1.0,
+      pricePerShareY: 1.0,
+      lastUpdated: Date.now(),
+      isStale: false,
+      // Optional properties
       totalTvlUSD: 5000,
       userTotalUSD: 500,
-      estimatedApr: 45.2,
+      realApr: 45.2,
       dailyApr: 0.124,
       vaultBalanceXUSD: 2000,
       vaultBalanceYUSD: 3000,
