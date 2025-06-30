@@ -157,6 +157,7 @@ npm run deploy --network <network>
 
 # Or use specific shortcuts:
 npm run deploy:local        # Local development with mocks
+npm run deploy:testnet      # Sonic Blaze Testnet deployment
 npm run deploy:fork         # Mainnet fork testing  
 npm run deploy:mainnet      # Sonic mainnet deployment
 
@@ -169,9 +170,11 @@ npm run deploy:export       # Export addresses for UI
 npm run dev:reset           # Reset local blockchain
 npm run dev:check           # Check mainnet readiness
 npm run dev:discover        # Discover rewarder addresses
+npm run dev:testnet:faucet  # Get testnet faucet info and check balance
+npm run dev:testnet:status  # Check testnet readiness and contract status
 ```
 
-**Deployment Strategy**: See `DEPLOYMENT.md` for complete deployment guide and our two-tier testing approach (localhost + mainnet fork → mainnet).
+**Deployment Strategy**: See `DEPLOYMENT.md` for complete deployment guide and our three-tier testing approach (localhost → testnet → mainnet). Fork testing remains available as an alternative to testnet.
 
 ## Code Conventions
 

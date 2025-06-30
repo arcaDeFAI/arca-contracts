@@ -42,9 +42,10 @@ async function main() {
     // Validate configuration before deployment
     validateDeploymentConfig(deploymentConfig, network.name);
     
-    // For fork networks, verify contracts exist
-    if (network.name === "sonic-fork") {
-      console.log("🔍 Verifying mainnet contracts exist on fork...\n");
+    // For fork and testnet networks, verify contracts exist
+    if (network.name === "sonic-fork" || network.name === "sonic-testnet") {
+      const networkType = network.name === "sonic-fork" ? "mainnet contracts on fork" : "testnet contracts";
+      console.log(`🔍 Verifying ${networkType} exist...\n`);
       
       const contractsToVerify = [
         { name: "LB Router", address: deploymentConfig.lbRouter },
@@ -62,7 +63,7 @@ async function main() {
         console.log(`✓ ${contract.name}: ${contract.address}`);
       }
       
-      console.log("\n✅ All mainnet contracts verified on fork\n");
+      console.log(`\n✅ All ${networkType} verified\n`);
     }
     
     // Deploy Arca system

@@ -5,7 +5,7 @@ import * as path from "path";
 async function exportAddresses() {
   console.log("\n📤 Exporting deployment addresses for frontend integration...\n");
   
-  const networks = ["localhost", "sonic-fork", "sonic-mainnet"];
+  const networks = ["localhost", "sonic-testnet", "sonic-fork", "sonic-mainnet"];
   const allAddresses: Record<string, {
     vault: string;
     registry: string;
