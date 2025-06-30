@@ -61,8 +61,8 @@ export const SUPPORTED_CHAINS = {
     rpcUrls: {
       default: {
         http: [
-          process.env.VITE_SONIC_TESTNET_RPC_URL || 
-          "https://sonic-blaze.g.alchemy.com/v2/ulHul-6EQCoEEQm7UzD1z_NWtREniPeU"
+          process.env.VITE_SONIC_TESTNET_RPC_URL ||
+            "https://sonic-blaze.g.alchemy.com/v2/ulHul-6EQCoEEQm7UzD1z_NWtREniPeU",
         ],
       },
       public: {
