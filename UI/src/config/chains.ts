@@ -50,6 +50,36 @@ export const SUPPORTED_CHAINS = {
     testnet: true,
   }),
 
+  sonicTestnet: defineChain({
+    id: 57054,
+    name: "Sonic Blaze Testnet",
+    nativeCurrency: {
+      decimals: 18,
+      name: "Sonic",
+      symbol: "S",
+    },
+    rpcUrls: {
+      default: {
+        http: [
+          process.env.VITE_SONIC_TESTNET_RPC_URL || 
+          "https://sonic-blaze.g.alchemy.com/v2/ulHul-6EQCoEEQm7UzD1z_NWtREniPeU"
+        ],
+      },
+      public: {
+        http: ["https://rpc.blaze.soniclabs.com"],
+      },
+    },
+    blockExplorers: {
+      default: {
+        name: "Sonic Testnet Explorer",
+        url: "https://testnet.sonicscan.org",
+      },
+    },
+    iconUrl:
+      "https://res.cloudinary.com/dpnvhlvim/image/upload/sonic_logo_Black_xjdjoi.png",
+    testnet: true,
+  }),
+
   localhost: defineChain({
     id: 31337,
     name: "Localhost",
@@ -76,6 +106,7 @@ export const SUPPORTED_CHAINS = {
 // Chain ID to chain name mapping for UI display
 export const CHAIN_ID_TO_NAME: Record<number, string> = {
   146: "Sonic",
+  57054: "Sonic Blaze Testnet",
   31338: "Sonic Fork",
   31337: "Localhost",
 } as const;
@@ -87,6 +118,7 @@ export const ALL_CHAINS = "All Chains" as const;
 export const CHAIN_FILTER_OPTIONS = [
   ALL_CHAINS,
   "Sonic",
+  "Sonic Blaze Testnet",
   "Sonic Fork",
   "Localhost",
 ] as const;
@@ -109,6 +141,7 @@ export function isSupportedChain(chainId: number): chainId is SupportedChainId {
 export function getSupportedChains() {
   return [
     SUPPORTED_CHAINS.sonic,
+    SUPPORTED_CHAINS.sonicTestnet,
     SUPPORTED_CHAINS.sonicFork,
     SUPPORTED_CHAINS.localhost,
   ] as const;

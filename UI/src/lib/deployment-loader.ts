@@ -49,6 +49,9 @@ export function getDeploymentAddresses(
       case 31338: // Sonic Fork
         return getForkAddresses();
 
+      case 57054: // Sonic Blaze Testnet
+        return getTestnetAddresses();
+
       case 146: // Sonic Mainnet
         return getMainnetAddresses();
 

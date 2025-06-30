@@ -63,6 +63,11 @@ describe("ArcaTestnetV1 - Business Logic", function () {
     );
     await rewardClaimer.waitForDeployment();
     
+    // Deploy registry for testing integration
+    const Registry = await hre.ethers.getContractFactory("ArcaVaultRegistry");
+    const registry = await Registry.deploy();
+    await registry.waitForDeployment();
+    
     // Deploy fresh instance helper
     const deployFreshInstance = async () => {
       const Vault = await hre.ethers.getContractFactory("ArcaTestnetV1");
@@ -94,6 +99,20 @@ describe("ArcaTestnetV1 - Business Logic", function () {
     await feeManager.transferOwnership(vault.target);
     await rewardClaimer.transferOwnership(vault.target);
     
+    // Register vault with registry (testing integration)
+    await registry.registerVault(
+      vault.target,
+      rewardClaimer.target,
+      queueHandler.target,
+      feeManager.target,
+      tokenX.target,
+      tokenY.target,
+      "Test Vault",
+      "ARCA-TEST",
+      1, // deploymentId
+      false // isProxy
+    );
+    
     // Token enum values for testing
     const TokenX = 0;
     const TokenY = 1;
@@ -103,6 +122,7 @@ describe("ArcaTestnetV1 - Business Logic", function () {
       feeManager,
       queueHandler,
       rewardClaimer,
+      registry,
       owner,
       user1,
       user2,
@@ -815,6 +835,32 @@ describe("ArcaTestnetV1 - Business Logic", function () {
       
       expect(balance).to.be.a("bigint");
       expect(supply).to.be.a("bigint");
+    });
+  });
+
+  describe("Registry Integration", function () {
+    it("should be properly registered in the vault registry", async function () {
+      const { vault, registry, tokenX, tokenY } = await loadFixture(deployVaultFixture);
+      
+      // Verify vault is registered
+      const isRegistered = await registry.isRegisteredVault(vault.target);
+      expect(isRegistered).to.be.true;
+      
+      // Verify vault info
+      const vaultInfo = await registry.vaultInfo(vault.target);
+      expect(vaultInfo.name).to.equal("Test Vault");
+      expect(vaultInfo.symbol).to.equal("ARCA-TEST");
+      expect(vaultInfo.tokenX).to.equal(tokenX.target);
+      expect(vaultInfo.tokenY).to.equal(tokenY.target);
+      expect(vaultInfo.isActive).to.be.true;
+      
+      // Verify vault is discoverable
+      const activeVaults = await registry.getActiveVaults();
+      expect(activeVaults).to.include(vault.target);
+      
+      // Verify vault can be found by token pair
+      const vaultsForPair = await registry.getVaultsByTokenPair(tokenX.target, tokenY.target);
+      expect(vaultsForPair).to.include(vault.target);
     });
   });
 });
