@@ -65,10 +65,20 @@ const config: HardhatUserConfig = {
       gasPrice: "auto",
       timeout: 120000,
     },
+    "sonic-testnet": {
+      url: process.env.SONIC_TESTNET_RPC_URL 
+        ? process.env.SONIC_TESTNET_RPC_URL
+        : "https://rpc.blaze.soniclabs.com",
+      chainId: 57054,
+      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length === 64) ? [process.env.PRIVATE_KEY] : [],
+      gasPrice: "auto",
+      timeout: 120000,
+    },
   },
   etherscan: {
     apiKey: {
       "sonic-mainnet": process.env.SONIC_SCAN_API_KEY || "placeholder",
+      "sonic-testnet": process.env.SONIC_TESTNET_SCAN_API_KEY || "placeholder",
     },
     customChains: [
       {
@@ -77,6 +87,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.sonicscan.org/api",
           browserURL: "https://sonicscan.org",
+        },
+      },
+      {
+        network: "sonic-testnet",
+        chainId: 57054,
+        urls: {
+          apiURL: "https://api-testnet.sonicscan.org/api",
+          browserURL: "https://testnet.sonicscan.org",
         },
       },
     ],

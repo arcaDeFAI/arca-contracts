@@ -1,0 +1,45 @@
+{
+  "name": "sonic-testnet",
+  "chainId": 57054,
+  "rpcUrl": "https://rpc.blaze.soniclabs.com",
+  "blockExplorer": "https://testnet.sonicscan.org",
+  "deployment": {
+    "binStep": 25,
+    "amountXMin": "1000000000000000",
+    "amountYMin": "1000000000000000",
+    "vaultName": "Arca Testnet Vault",
+    "vaultSymbol": "ARCA-TEST",
+    "idSlippage": "5",
+    "feeRecipient": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98"
+  },
+  "contracts": {
+    "tokenX": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "tokenY": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
+    "lbRouter": "0xe77DA7F5B6927fD5E0e825B2B27aca526341069B",
+    "lbpAMM": "0x90F28Fe6963cE929d4cBc3480Df1169b92DD22B7",
+    "lbpContract": "0xf931d5d6a019961096aaf4749e05d123e1b38a55",
+    "rewarder": "0x0000000000000000000000000000000000000000",
+    "rewardToken": "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321",
+    "nativeToken": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "lbpContractUSD": "0xf931d5d6a019961096aaf4749e05d123e1b38a55"
+  },
+  "gasSettings": {
+    "gasPrice": "auto",
+    "gasLimit": 5000000
+  },
+  "security": {
+    "requireMultisig": false,
+    "timelockDelay": 86400,
+    "upgradeDelay": 172800
+  },
+  "testnet": {
+    "faucetUrl": "https://testnet.soniclabs.com/account",
+    "explorerUrl": "https://testnet.sonicscan.org",
+    "documentation": {
+      "networkName": "Sonic Blaze Testnet",
+      "currencySymbol": "S",
+      "rpcUrl": "https://rpc.blaze.soniclabs.com",
+      "alchemyRpcUrl": "https://sonic-blaze.g.alchemy.com/v2/"
+    }
+  }
+}

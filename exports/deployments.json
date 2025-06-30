@@ -12,5 +12,19 @@
       "tokenX": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528",
       "tokenY": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF"
     }
+  },
+  "sonic-testnet": {
+    "vault": "0xf1C14D85E15a78122a19972b58e964eFd5F583F5",
+    "registry": "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
+    "feeManager": "0x173F32DCf921AcBd7a303f5FF071359fD23f9FA7",
+    "queueHandler": "0x0F910626713b40659851BA42c62D4ab82Bf860aB",
+    "rewardClaimer": "0xD0D944682F1012ad9a9DEB09516bD7EA4529A2C8",
+    "deploymentTime": "2025-06-30T14:55:09.986Z",
+    "config": {
+      "name": "Arca Testnet Vault",
+      "symbol": "ARCA-TEST",
+      "tokenX": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+      "tokenY": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0"
+    }
   }
 }

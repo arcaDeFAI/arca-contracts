@@ -4,12 +4,13 @@ This guide provides a comprehensive overview of deploying the Arca vault system 
 
 ## Overview
 
-The Arca deployment system follows a **two-tier testing strategy**:
+The Arca deployment system follows a **three-tier testing strategy**:
 
-1. **Development Tier**: Local testing with mocks + Mainnet fork testing  
-2. **Production Tier**: Direct deployment to Sonic mainnet
+1. **Development Tier**: Local testing with mocks for rapid development  
+2. **Testnet Tier**: Sonic Blaze Testnet deployment for safe integration testing
+3. **Production Tier**: Direct deployment to Sonic mainnet
 
-> **Note**: We skip Sonic testnet deployment because it lacks the necessary Metropolis DLMM contracts. Instead, we use mainnet forks for production-accurate testing.
+> **New**: Sonic Blaze Testnet now has full Metropolis DLMM contract support, enabling safe testing with real network conditions using free testnet tokens. Fork testing remains available as an alternative.
 
 ## Quick Start
 
@@ -40,6 +41,7 @@ npm run deploy --network <network-name>
 
 # Or use specific shortcuts:
 npm run deploy:local      # Deploy to localhost with mocks
+npm run deploy:testnet    # Deploy to Sonic Blaze Testnet
 npm run deploy:fork       # Deploy to mainnet fork
 npm run deploy:mainnet    # Deploy to Sonic mainnet
 ```
@@ -50,10 +52,15 @@ npm run deploy:mainnet    # Deploy to Sonic mainnet
 graph LR
     A[Development] -->|npm run deploy:local| B[Localhost with Mocks]
     B --> C[Run Tests]
-    C --> D[Mainnet Fork]
-    D -->|npm run deploy:fork| E[Test with Real Contracts]
-    E --> F[Production Ready]
-    F -->|npm run deploy:mainnet| G[Sonic Mainnet]
+    C --> D[Sonic Blaze Testnet]
+    D -->|npm run deploy:testnet| E[Test with Real Network]
+    E --> F[Client Testing]
+    F --> G[Production Ready]
+    G -->|npm run deploy:mainnet| H[Sonic Mainnet]
+    
+    C -.->|Alternative| I[Mainnet Fork]
+    I -.->|npm run deploy:fork| J[Fork Testing]
+    J -.-> G
 ```
 
 ## Environment Configurations
@@ -97,7 +104,68 @@ npm run dev:reset
 - UI development and testing
 - Quick iteration cycles
 
-### 2. Mainnet Fork Testing
+### 2. Sonic Blaze Testnet
+
+- **Network**: `sonic-testnet`
+- **Chain ID**: `57054`
+- **RPC**: `https://sonic-blaze.g.alchemy.com/v2/YOUR_API_KEY`
+- **Purpose**: Safe integration testing with real network conditions using free tokens
+- **Features**:
+  - Real Metropolis DLMM contracts and liquidity
+  - Free testnet tokens from official faucet
+  - Production-like environment without financial risk
+  - Client alpha testing and demo environments
+
+#### Deployment Workflow
+```bash
+# Check testnet readiness and get faucet info
+npm run dev:testnet:faucet
+
+# Check current testnet status
+npm run dev:testnet:status
+
+# Deploy to testnet
+npm run deploy:testnet
+```
+
+#### Post-Deployment Commands
+```bash
+# Verify deployment integrity
+npm run deploy:verify:testnet
+
+# Run integration tests on testnet
+npm run deploy:test:testnet
+
+# Export addresses for UI testing
+npm run deploy:export
+```
+
+#### Testnet Setup Guide
+1. **Get Testnet Tokens**:
+   - Visit faucet: https://testnet.soniclabs.com/account
+   - Connect wallet or enter address
+   - Request testnet S tokens
+
+2. **Add Testnet to Wallet**:
+   - Network Name: Sonic Blaze Testnet
+   - RPC URL: https://rpc.blaze.soniclabs.com (or Alchemy)
+   - Chain ID: 57054
+   - Currency Symbol: S
+   - Block Explorer: https://testnet.sonicscan.org
+
+3. **Verify Contracts**:
+   - All Metropolis contracts deployed and verified
+   - Real liquidity pools available for testing
+   - METRO rewards system functional
+
+#### When to Use
+- Before mainnet deployment (always recommended)
+- Client alpha testing and demos
+- Integration testing with real contracts
+- UI testing with production-like environment
+- Training new team members safely
+
+### 3. Mainnet Fork Testing
 
 - **Network**: `sonic-fork`
 - **Purpose**: Production-accurate testing with real contracts
@@ -136,7 +204,7 @@ npm run deploy:export
 - Validating integration with live Metropolis contracts
 - Final verification before production
 
-### 3. Sonic Mainnet
+### 4. Sonic Mainnet
 
 - **Network**: `sonic-mainnet`
 - **Purpose**: Live production deployment
@@ -247,6 +315,7 @@ The deployment creates the following contract structure:
 |---------|-------------|---------|
 | `npm run deploy --network <name>` | Universal deployment to any network | Any |
 | `npm run deploy:local` | Deploy to localhost with mocks | localhost |
+| `npm run deploy:testnet` | Deploy to Sonic Blaze Testnet | sonic-testnet |
 | `npm run deploy:fork` | Deploy to mainnet fork | sonic-fork |
 | `npm run deploy:mainnet` | Deploy to Sonic mainnet | sonic-mainnet |
 
@@ -254,9 +323,11 @@ The deployment creates the following contract structure:
 | Command | Description | Usage |
 |---------|-------------|-------|
 | `npm run deploy:verify:local` | Verify localhost deployment | After localhost deployment |
+| `npm run deploy:verify:testnet` | Verify testnet deployment | After testnet deployment |
 | `npm run deploy:verify:fork` | Verify fork deployment | After fork deployment |
 | `npm run deploy:verify:mainnet` | Verify mainnet deployment | After mainnet deployment |
 | `npm run deploy:test:local` | Test localhost deployment | localhost integration testing |
+| `npm run deploy:test:testnet` | Test testnet deployment | testnet integration testing |
 | `npm run deploy:test:fork` | Test fork deployment | fork integration testing |
 | `npm run deploy:export` | Export addresses for UI integration | After successful deployment |
 
@@ -266,12 +337,18 @@ The deployment creates the following contract structure:
 | `npm run dev:reset` | Reset local blockchain state | Clean up localhost |
 | `npm run dev:check` | Check mainnet deployment readiness | Before mainnet deployment |
 | `npm run dev:discover` | Discover Metropolis rewarder addresses | Configuration setup |
+| `npm run dev:testnet:faucet` | Get testnet faucet info and check balance | Testnet setup |
+| `npm run dev:testnet:status` | Check testnet readiness and contract status | Before testnet deployment |
 
 ### 3. Contract Verification
 
-For mainnet deployments, verify on block explorer:
+For testnet and mainnet deployments, verify on block explorer:
 
 ```bash
+# Verify on testnet
+npx hardhat verify --network sonic-testnet <contract-address>
+
+# Verify on mainnet
 npx hardhat verify --network sonic-mainnet <contract-address>
 ```
 
@@ -314,6 +391,17 @@ Before mainnet deployment:
 
 ## Contract Addresses
 
+### Sonic Blaze Testnet
+
+| Contract | Address |
+|----------|---------|
+| Token X (S) | 0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38 |
+| Token Y (USDC) | 0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0 |
+| LB Router | 0xe77DA7F5B6927fD5E0e825B2B27aca526341069B |
+| LB Factory | 0x90F28Fe6963cE929d4cBc3480Df1169b92DD22B7 |
+| LB Pair (S-USDC) | 0xf931d5d6a019961096aaf4749e05d123e1b38a55 |
+| METRO Token | 0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321 |
+
 ### Sonic Mainnet
 
 | Contract | Address |
@@ -326,11 +414,13 @@ Before mainnet deployment:
 
 ## Best Practices
 
-1. **Always test on fork first** - Catch issues before mainnet
-2. **Use deployment scripts** - Avoid manual deployment errors  
-3. **Save artifacts** - Keep deployment history for debugging
-4. **Verify immediately** - Ensure source code is public
-5. **Transfer ownership carefully** - Use multi-sig for production
+1. **Always test on testnet first** - Safe testing with real network conditions using free tokens
+2. **Use testnet for client demos** - Show functionality without financial risk
+3. **Fork testing as alternative** - Catch specific mainnet edge cases
+4. **Use deployment scripts** - Avoid manual deployment errors  
+5. **Save artifacts** - Keep deployment history for debugging
+6. **Verify immediately** - Ensure source code is public on both testnet and mainnet
+7. **Transfer ownership carefully** - Use multi-sig for production
 
 ---
 
