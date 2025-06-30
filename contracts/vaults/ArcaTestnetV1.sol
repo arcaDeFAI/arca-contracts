@@ -177,6 +177,12 @@ contract ArcaTestnetV1 is
         return totalShares[uint256(tokenType)];
     }
 
+    // // TODO create Approve function
+    // // It needs to be called before deposit
+    // function approve(uint256 amount) {
+    //     address(tokens[uint256(TokenValidator.Type.TokenX)]).approve(address(this), amount);
+    // }
+
     /**
      * @dev Function for various UIs to display the current value of one of our yield tokens.
      * Returns an uint256 with 18 decimals of how much underlying asset one vault share represents.

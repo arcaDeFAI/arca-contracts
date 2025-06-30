@@ -37,6 +37,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Remember**: When tests fail, ask "What should the code do?" not "How can I make the test pass?"
 
+### Critical TDD Lesson: Tests Define Business Requirements, Not Implementation Constraints
+
+**When your implementation reveals better business practices than what tests expect, update the TESTS to reflect the improved requirements.**
+
+**Example from Multi-Vault VaultCard Refactoring**:
+- **Initial Tests**: Expected direct function calls when clicking deposit button
+- **Better Implementation**: Added confirmation modals for transaction safety
+- **Correct TDD Response**: Updated tests to expect modal → confirm → function call flow
+- **Wrong TDD Response**: ❌ Removing modals to make poor tests pass
+
+**The Principle**: Tests should enforce good business requirements. If implementation demonstrates better practices (UX, security, efficiency, maintainability), those practices should become the new business requirements, and tests should be updated accordingly.
+
+**Common Scenarios Where This Applies**:
+- **Security**: Implementation adds input validation → Update tests to expect validation
+- **UX**: Implementation adds confirmation flows → Update tests to expect confirmations  
+- **Gas Efficiency**: Implementation batches operations → Update tests to expect batching
+- **Error Handling**: Implementation adds graceful fallbacks → Update tests to expect fallbacks
+- **Performance**: Implementation adds caching → Update tests to expect cached behavior
+
+**Key Questions When Tests Conflict with Implementation**:
+1. "Does this implementation demonstrate better business practices?"
+2. "Should this improvement become our standard requirement?"
+3. If yes → Update tests to enforce the better pattern
+4. If no → Fix implementation to meet existing requirements
+
 ## Project Overview
 
 Arca is a decentralized vault system for automated liquidity provision on the Sonic blockchain. It provides intelligent vault management for Metropolis DLMM (Dynamic Liquidity Market Maker) pools with automated reward compounding and yield optimization through Python bot rebalancing.
@@ -47,7 +72,7 @@ This is a full-stack DeFi project with:
 - **Smart Contracts** (`/contracts/`) - Solidity vault system
 - **Frontend dApp** (`/UI/`) - React-based user interface  
 - **Testing Suite** (`/test/`) - Comprehensive test coverage
-- **Deployment System** (`/scripts/`, `/ignition/`) - TypeScript deployment infrastructure
+- **Deployment System** (`/scripts/`) - TypeScript deployment infrastructure
 - **External Dependencies** (`/lib/`) - Git submodules (joe-v2)
 
 ## Core Architecture
@@ -95,11 +120,8 @@ npm run dev
 # Build production
 npm run build
 
-# Lint frontend code
-npm run lint
-
-# TypeScript type checking
-npm run type-check
+# Fix linting frontend code issues
+npm run lint:fix
 ```
 
 ### Testing
@@ -116,6 +138,10 @@ npx hardhat test test/*.integration.test.ts
 # Run precision tests
 npx hardhat test test/*.precise.test.ts
 
+# Test on mainnet fork
+npm run fork:deploy
+npm run fork:verify
+
 # Generate test data
 npx hardhat test-data:network-config
 ```
@@ -126,14 +152,26 @@ npx hardhat test-data:network-config
 ⚠️ Always use script-based deployment, not factory contracts. Factory contracts that import multiple concrete contracts will exceed the 24.5KB contract size limit and fail to deploy on mainnet.
 
 ```bash
-# Recommended: Script-based UUPS deployment
-npx hardhat run scripts/deployArcaSystem.ts --network <network>
+# Unified deployment command (auto-detects network)
+npm run deploy --network <network>
 
-# Hardhat Ignition (for testing only - no proxies)
-npx hardhat ignition deploy ./ignition/modules/ArcaVault.ts --network localhost
+# Or use specific shortcuts:
+npm run deploy:local        # Local development with mocks
+npm run deploy:fork         # Mainnet fork testing  
+npm run deploy:mainnet      # Sonic mainnet deployment
+
+# Post-deployment
+npm run deploy:verify       # Verify deployment (requires --network flag)
+npm run deploy:test         # Integration testing (requires --network flag)
+npm run deploy:export       # Export addresses for UI
+
+# Development utilities
+npm run dev:reset           # Reset local blockchain
+npm run dev:check           # Check mainnet readiness
+npm run dev:discover        # Discover rewarder addresses
 ```
 
-**Deployment Strategy**: See `DEPLOYMENT_STRATEGY.md` for comprehensive deployment guidelines.
+**Deployment Strategy**: See `DEPLOYMENT.md` for complete deployment guide and our two-tier testing approach (localhost + mainnet fork → mainnet).
 
 ## Code Conventions
 

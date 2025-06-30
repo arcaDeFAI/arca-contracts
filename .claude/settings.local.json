@@ -22,7 +22,27 @@
       "Bash(do echo \"=== $file ===\")",
       "Bash(done)",
       "WebFetch(domain:github.com)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(npm run deploy:local:*)",
+      "Bash(npm run deploy:verify:*)",
+      "WebFetch(domain:docs.soniclabs.com)",
+      "WebFetch(domain:www.alchemy.com)",
+      "WebFetch(domain:docs.metropolis.exchange)",
+      "WebFetch(domain:www.geckoterminal.com)",
+      "WebFetch(domain:sonicscan.org)",
+      "Bash(node:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npm run:*)",
+      "Bash(sed:*)",
+      "Bash(timeout 10s npm run dev)",
+      "WebFetch(domain:brand.coingecko.com)",
+      "Bash(timeout 8s npm run dev 2 >& 1)",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_click",
+      "WebFetch(domain:wagmi.sh)",
+      "Bash(npx vitest run:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": []
   }
