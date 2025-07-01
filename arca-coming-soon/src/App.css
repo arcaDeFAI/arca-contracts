@@ -1,8 +1,13 @@
+/* Import Poppins font */
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(to bottom, #1f2937, #111827);
-  color: white;
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(
+    to bottom,
+    #083f0f, /* dark green from image */
+    #5a945d /* mid green from image */
+  );
+  color: #c7d9c5; /* light accent from image */
   text-align: center;
 }
 
@@ -16,7 +21,7 @@ body {
 }
 
 .hero-image {
-  max-width: 100%;
+  max-width: 90%;
   height: auto;
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
@@ -26,9 +31,21 @@ body {
 h1 {
   font-size: 2.5rem;
   margin-bottom: 8px;
+  font-weight: 700;
 }
 
 p {
   font-size: 1.25rem;
-  color: #d1d5db;
+  margin-bottom: 16px;
+}
+
+.social-link {
+  font-size: 1rem;
+  color: #c7d9c5;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.social-link:hover {
+  text-decoration: underline;
 }
