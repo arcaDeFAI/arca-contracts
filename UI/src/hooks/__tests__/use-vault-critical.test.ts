@@ -7,6 +7,7 @@ import { TestProviders } from "../../test-utils/test-providers";
 import {
   MOCK_TX_HASH,
   MOCK_SYSTEM_CONTRACTS,
+  MOCK_DEPLOYMENT_ADDRESSES,
   createMockVaultConfig,
   createMockVaultData,
   createMockReadContract,
@@ -22,10 +23,9 @@ const mockedUseReadContract = vi.fn();
 const mockedUseWriteContract = vi.fn();
 const mockedUseWaitForTransactionReceipt = vi.fn();
 
-// Mock vault registry - we'll set up the return value in beforeEach
-const mockUseVaultRegistry = vi.fn();
+// Mock vault registry - define inline to avoid hoisting issues
 vi.mock("../use-vault-registry", () => ({
-  useVaultRegistry: mockUseVaultRegistry,
+  useVaultRegistry: vi.fn(),
 }));
 
 vi.mock("wagmi", async (importOriginal) => {
@@ -50,12 +50,13 @@ vi.mock("../../lib/contracts", () => ({
   REWARD_CLAIMER_ABI: [],
 }));
 
-// Mock the vault configs module
+// Mock the vault configs module - include all exports that useVault needs
 vi.mock("../../lib/vault-configs", () => ({
   getVaultConfig: vi.fn(),
   getActiveVaultConfigs: vi.fn(),
   getVaultConfigsByChain: vi.fn(),
   getVaultConfigByTokens: vi.fn(),
+  createVaultConfigFromRegistry: vi.fn(),
 }));
 
 describe("useVault Critical Money Flows", () => {
@@ -72,7 +73,7 @@ describe("useVault Critical Money Flows", () => {
 
     // Mock the getContracts function
     vi.mocked(contractsModule.getContracts).mockReturnValue(
-      MOCK_SYSTEM_CONTRACTS,
+      MOCK_DEPLOYMENT_ADDRESSES,
     );
 
     // Mock the vault config lookup
@@ -80,8 +81,13 @@ describe("useVault Critical Money Flows", () => {
       currentVaultConfig,
     );
 
+    // Mock createVaultConfigFromRegistry to return the current vault config
+    vi.mocked(vaultConfigsModule.createVaultConfigFromRegistry).mockReturnValue(
+      currentVaultConfig,
+    );
+
     // Mock vault registry to return vault info matching the current config
-    mockUseVaultRegistry.mockReturnValue({
+    vi.mocked(useVaultRegistry).mockReturnValue({
       vaults: [
         {
           vault: currentVaultConfig.address,
@@ -97,6 +103,7 @@ describe("useVault Critical Money Flows", () => {
       ],
       isLoading: false,
       error: null,
+      registryAddress: MOCK_SYSTEM_CONTRACTS.registry,
     });
 
     // Default mock implementations using the working pattern

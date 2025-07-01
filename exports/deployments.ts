@@ -1,5 +1,5 @@
 // Auto-generated deployment addresses
-// Generated at: 2025-06-30T14:56:08.078Z
+// Generated at: 2025-07-01T14:52:14.952Z
 
 export const deployments = {
   "localhost": {

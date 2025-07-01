@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## CRITICAL: Use Type Safety
+**Never use the "any" type in TypeScript files**, that defeats the purpose of using TypeScript. Type saafety protects us from mistakes. Use proper types.
+
 ## CRITICAL: Test-Driven Development (TDD) Methodology
 
 **ALWAYS follow TDD principles when working on this codebase.** This is the primary development methodology and has proven essential for this project's success.

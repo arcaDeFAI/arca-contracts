@@ -16,7 +16,7 @@ vi.mock("../../lib/contracts", () => ({
 
 // Mock viem for direct contract calls
 vi.mock("viem", async (importOriginal) => {
-  const actual = (await importOriginal()) as typeof import("viem");
+  const actual = await importOriginal();
   return {
     ...actual,
     createPublicClient: vi.fn(),

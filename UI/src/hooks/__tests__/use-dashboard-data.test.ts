@@ -20,6 +20,7 @@ import { TestProviders } from "../../test-utils/test-providers";
 import type { VaultConfig } from "../../lib/vault-configs";
 import { SUPPORTED_CHAINS } from "../../config/chains";
 import type * as wagmi from "wagmi";
+import type { RegistryVaultInfo } from "../use-vault-registry";
 
 // Mock dependencies
 const mockGetVaultConfig = vi.fn();
@@ -31,8 +32,10 @@ const mockUsePositionDetection = vi.fn();
 const mockCreateVaultConfigFromRegistry = vi.fn();
 vi.mock("../../lib/vault-configs", () => ({
   getVaultConfig: (address: string) => mockGetVaultConfig(address),
-  createVaultConfigFromRegistry: (vaultInfo: any, chainId: number) =>
-    mockCreateVaultConfigFromRegistry(vaultInfo, chainId),
+  createVaultConfigFromRegistry: (
+    vaultInfo: RegistryVaultInfo,
+    chainId: number,
+  ) => mockCreateVaultConfigFromRegistry(vaultInfo, chainId),
 }));
 
 vi.mock("../use-vault", () => ({
@@ -187,11 +190,13 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       });
 
       // Mock createVaultConfigFromRegistry
-      mockCreateVaultConfigFromRegistry.mockImplementation((vaultInfo: any) => {
-        if (vaultInfo.vault === "0xVault1") return vault1Config;
-        if (vaultInfo.vault === "0xVault2") return vault2Config;
-        return undefined;
-      });
+      mockCreateVaultConfigFromRegistry.mockImplementation(
+        (vaultInfo: RegistryVaultInfo) => {
+          if (vaultInfo.vault === "0xVault1") return vault1Config;
+          if (vaultInfo.vault === "0xVault2") return vault2Config;
+          return undefined;
+        },
+      );
 
       // Reset mocks to ensure clean state
       mockUseVault.mockReset();
