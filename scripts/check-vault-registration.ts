@@ -5,7 +5,7 @@ async function main() {
   console.log(`\n🔍 Checking vault registration on ${network.name} (chainId: ${network.chainId})`);
 
   // Get deployment info
-  const deployment = require(`../deployments/${network.name}/latest.json`);
+  const deployment = await import(`../deployments/${network.name}/latest.json`).then(mod => mod.default);
   const registryAddress = deployment.contracts.registry;
   const vaultAddress = deployment.contracts.vault;
 

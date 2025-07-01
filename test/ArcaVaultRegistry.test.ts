@@ -2,6 +2,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import type { Contract } from "ethers";
 import type {
   ArcaVaultRegistry,
   MockERC20,
@@ -33,8 +34,8 @@ describe("ArcaVaultRegistry - Core Registry Testing", function () {
   let mockRewarder: MockLBHooksBaseRewarder;
   
   // Supporting contracts (reused across vaults)
-  let feeManagerBeacon: any;
-  let queueHandlerBeacon: any;
+  let feeManagerBeacon: Contract;
+  let queueHandlerBeacon: Contract;
 
   async function deployRegistryFixture() {
     [owner, user1, feeRecipient] = await hre.ethers.getSigners();
@@ -208,13 +209,13 @@ describe("ArcaVaultRegistry - Core Registry Testing", function () {
       
       // Verify registration
       const isRegistered = await registry.isRegisteredVault(vault.target);
-      expect(isRegistered).to.be.true;
+      expect(isRegistered).to.equal(true);
       
       const vaultInfo = await registry.vaultInfo(vault.target);
       expect(vaultInfo.vault).to.equal(vault.target);
       expect(vaultInfo.name).to.equal("ETH/USDT Vault");
       expect(vaultInfo.symbol).to.equal("ARCA-ETH-USDT");
-      expect(vaultInfo.isActive).to.be.true;
+      expect(vaultInfo.isActive).to.equal(true);
       
       const activeVaults = await registry.getActiveVaults();
       expect(activeVaults).to.have.length(1);
@@ -501,7 +502,7 @@ describe("ArcaVaultRegistry - Core Registry Testing", function () {
       expect(activeVaults).to.have.length(0);
       
       const vaultInfo = await registry.vaultInfo(vault.target);
-      expect(vaultInfo.isActive).to.be.false;
+      expect(vaultInfo.isActive).to.equal(false);
       
       // Reactivate vault
       await registry.activateVault(vault.target);
@@ -510,7 +511,7 @@ describe("ArcaVaultRegistry - Core Registry Testing", function () {
       expect(activeVaults).to.have.length(1);
       
       const reactivatedVaultInfo = await registry.vaultInfo(vault.target);
-      expect(reactivatedVaultInfo.isActive).to.be.true;
+      expect(reactivatedVaultInfo.isActive).to.equal(true);;
     });
 
     it("should handle partial deactivation of multiple vaults", async function () {

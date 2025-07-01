@@ -844,7 +844,7 @@ describe("ArcaTestnetV1 - Business Logic", function () {
       
       // Verify vault is registered
       const isRegistered = await registry.isRegisteredVault(vault.target);
-      expect(isRegistered).to.be.true;
+      expect(isRegistered).to.equal(true);
       
       // Verify vault info
       const vaultInfo = await registry.vaultInfo(vault.target);
@@ -852,7 +852,7 @@ describe("ArcaTestnetV1 - Business Logic", function () {
       expect(vaultInfo.symbol).to.equal("ARCA-TEST");
       expect(vaultInfo.tokenX).to.equal(tokenX.target);
       expect(vaultInfo.tokenY).to.equal(tokenY.target);
-      expect(vaultInfo.isActive).to.be.true;
+      expect(vaultInfo.isActive).to.equal(true);
       
       // Verify vault is discoverable
       const activeVaults = await registry.getActiveVaults();

@@ -6,7 +6,7 @@ async function main() {
   console.log(`Network: ${network.name} (chainId: ${network.chainId})`);
 
   // Load deployment
-  const deployment = require(`../deployments/${network.name}/latest.json`);
+  const deployment = await import(`../deployments/${network.name}/latest.json`).then(mod => mod.default || mod);
   const registryAddress = deployment.contracts.registry;
   const vaultAddress = deployment.contracts.vault;
 

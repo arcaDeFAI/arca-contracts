@@ -2,6 +2,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import type { Contract } from "ethers";
 import type {
   ArcaVaultRegistry,
   MockERC20,
@@ -29,8 +30,8 @@ describe("Arbitrary Token Pairs Integration Testing", function () {
   let metroToken: MockERC20;
   
   // Supporting contract beacons
-  let feeManagerBeacon: any;
-  let queueHandlerBeacon: any;
+  let feeManagerBeacon: Contract;
+  let queueHandlerBeacon: Contract;
 
   interface TokenPairConfig {
     tokenX: {
@@ -403,7 +404,7 @@ describe("Arbitrary Token Pairs Integration Testing", function () {
         );
         
         // Verify no hash collisions
-        expect(tokenPairHashes.has(pairHash)).to.be.false;
+        expect(tokenPairHashes.has(pairHash)).to.equal(false);;
         tokenPairHashes.add(pairHash);
         
         // Verify registry can find vault by token pair

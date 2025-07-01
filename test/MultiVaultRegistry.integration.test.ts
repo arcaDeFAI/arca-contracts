@@ -2,6 +2,7 @@ import { expect } from "chai";
 import hre from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import type { Contract } from "ethers";
 import type {
   ArcaVaultRegistry,
   MockERC20,
@@ -41,8 +42,8 @@ describe("Multi-Vault Registry Integration Testing", function () {
   let mockRewarder: MockLBHooksBaseRewarder;
   
   // Supporting contract beacons
-  let feeManagerBeacon: any;
-  let queueHandlerBeacon: any;
+  let feeManagerBeacon: Contract;
+  let queueHandlerBeacon: Contract;
 
   interface VaultSystem {
     vault: ArcaTestnetV1;
@@ -237,14 +238,14 @@ describe("Multi-Vault Registry Integration Testing", function () {
       for (let i = 0; i < vaults.length; i++) {
         const vault = vaults[i];
         const isRegistered = await registry.isRegisteredVault(vault.vault.target);
-        expect(isRegistered).to.be.true;
+        expect(isRegistered).to.equal(true);;
         
         const vaultInfo = await registry.vaultInfo(vault.vault.target);
         expect(vaultInfo.name).to.equal(vault.name);
         expect(vaultInfo.symbol).to.equal(vault.symbol);
         expect(vaultInfo.tokenX).to.equal(vault.tokenX.target);
         expect(vaultInfo.tokenY).to.equal(vault.tokenY.target);
-        expect(vaultInfo.isActive).to.be.true;
+        expect(vaultInfo.isActive).to.equal(true);;
       }
     });
 
@@ -309,7 +310,7 @@ describe("Multi-Vault Registry Integration Testing", function () {
       
       // Verify deactivated vault still exists in registry but inactive
       const daiUsdcInfo = await registry.vaultInfo(vaults[1].vault.target);
-      expect(daiUsdcInfo.isActive).to.be.false;
+      expect(daiUsdcInfo.isActive).to.equal(false);;
       expect(daiUsdcInfo.name).to.equal("DAI/USDC Vault");
       
       // Reactivate and verify
@@ -350,7 +351,7 @@ describe("Multi-Vault Registry Integration Testing", function () {
       ];
       
       expectedTokens.forEach(token => {
-        expect(tokensInVaults.has(token)).to.be.true;
+        expect(tokensInVaults.has(token)).to.equal(true);;
       });
     });
 
@@ -373,7 +374,7 @@ describe("Multi-Vault Registry Integration Testing", function () {
       for (const vaultAddress of allVaults) {
         const info = await registry.vaultInfo(vaultAddress);
         expect(info.vault).to.equal(vaultAddress);
-        expect(info.isActive).to.be.true;
+        expect(info.isActive).to.equal(true);;
         expect(info.name).to.not.be.empty;
         expect(info.symbol).to.not.be.empty;
       }
@@ -459,7 +460,7 @@ describe("Multi-Vault Registry Integration Testing", function () {
       expect(queries[3]).to.have.length(1); // DAI/USDC vaults
       expect(queries[4].name).to.equal("ETH/USDT Vault"); // vault info
       expect(queries[5].name).to.equal("LINK/WBTC Vault"); // vault info
-      expect(queries[6]).to.be.true; // isRegisteredVault
+      expect(queries[6]).to.equal(true);; // isRegisteredVault
     });
 
     it("should maintain data integrity under complex operations", async function () {
@@ -479,10 +480,10 @@ describe("Multi-Vault Registry Integration Testing", function () {
       
       // Verify specific vault states
       const vault1Info = await registry.vaultInfo(vaults[1].vault.target);
-      expect(vault1Info.isActive).to.be.true;
+      expect(vault1Info.isActive).to.equal(true);;
       
       const vault3Info = await registry.vaultInfo(vaults[3].vault.target);
-      expect(vault3Info.isActive).to.be.false;
+      expect(vault3Info.isActive).to.equal(false);;
       
       // Verify token pair queries still work correctly
       const daiUsdcVaults = await registry.getVaultsByTokenPair(
