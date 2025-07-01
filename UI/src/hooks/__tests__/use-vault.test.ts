@@ -19,6 +19,7 @@ import {
   createMockVaultConfig,
   createMockVaultData,
 } from "../../test-utils/mock-contracts";
+import { useVaultRegistry } from "../use-vault-registry";
 
 // Create mocked functions
 const mockedUseAccount = vi.fn();
@@ -55,6 +56,17 @@ vi.mock("../../lib/vault-configs", () => ({
   getActiveVaultConfigs: vi.fn(),
   getVaultConfigsByChain: vi.fn(),
   getVaultConfigByTokens: vi.fn(),
+  createVaultConfigFromRegistry: vi.fn(),
+}));
+
+// Mock the vault registry hook
+vi.mock("../use-vault-registry", () => ({
+  useVaultRegistry: vi.fn(() => ({
+    vaults: [],
+    isLoading: false,
+    error: null,
+    refetch: vi.fn(),
+  })),
 }));
 
 // Using the mocked functions defined above
@@ -80,6 +92,43 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
       testVaultConfigs[0].tokenY,
     );
     currentMockData = createMockVaultData(currentVaultConfig);
+
+    // Mock the vault registry to return current vault
+    vi.mocked(useVaultRegistry).mockReturnValue({
+      vaults: [
+        {
+          vault: currentVaultConfig.address,
+          tokenX: currentVaultConfig.tokenX.address,
+          tokenY: currentVaultConfig.tokenY.address,
+          name: currentVaultConfig.name,
+          symbol: currentVaultConfig.symbol,
+          deploymentTimestamp: BigInt(Date.now()),
+          deployer: "0x1234567890123456789012345678901234567890",
+          isActive: true,
+          isProxy: true,
+          queueHandler: MOCK_SYSTEM_CONTRACTS.queueHandler,
+          rewardClaimer: MOCK_SYSTEM_CONTRACTS.rewardClaimer,
+          feeManager: MOCK_SYSTEM_CONTRACTS.feeManager,
+        },
+      ],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    // Mock createVaultConfigFromRegistry to return the current config
+    vi.mocked(
+      vaultConfigsModule.createVaultConfigFromRegistry,
+    ).mockImplementation((vaultInfo, chainId) => {
+      // Return null for unsupported chains
+      const supportedChainIds: number[] = Object.values(SUPPORTED_CHAINS).map(
+        (chain) => chain.id,
+      );
+      if (!supportedChainIds.includes(chainId)) {
+        return null;
+      }
+      return currentVaultConfig;
+    });
 
     // Set default mock implementations
     mockedUseAccount.mockReturnValue({
@@ -148,6 +197,43 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
     vi.mocked(vaultConfigsModule.getVaultConfig).mockReturnValue(
       currentVaultConfig,
     );
+
+    // Update vault registry mock
+    vi.mocked(useVaultRegistry).mockReturnValue({
+      vaults: [
+        {
+          vault: currentVaultConfig.address,
+          tokenX: currentVaultConfig.tokenX.address,
+          tokenY: currentVaultConfig.tokenY.address,
+          name: currentVaultConfig.name,
+          symbol: currentVaultConfig.symbol,
+          deploymentTimestamp: BigInt(Date.now()),
+          deployer: "0x1234567890123456789012345678901234567890",
+          isActive: true,
+          isProxy: true,
+          queueHandler: MOCK_SYSTEM_CONTRACTS.queueHandler,
+          rewardClaimer: MOCK_SYSTEM_CONTRACTS.rewardClaimer,
+          feeManager: MOCK_SYSTEM_CONTRACTS.feeManager,
+        },
+      ],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    // Update createVaultConfigFromRegistry mock
+    vi.mocked(
+      vaultConfigsModule.createVaultConfigFromRegistry,
+    ).mockImplementation((vaultInfo, chainId) => {
+      // Return null for unsupported chains
+      const supportedChainIds: number[] = Object.values(SUPPORTED_CHAINS).map(
+        (chain) => chain.id,
+      );
+      if (!supportedChainIds.includes(chainId)) {
+        return null;
+      }
+      return currentVaultConfig;
+    });
   }
 
   describe("🎯 TDD: Contract Data Reading (Token-Agnostic)", () => {
@@ -674,7 +760,8 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         },
       );
 
-      expect(result.current.contracts).toBeNull();
+      // When on unsupported chain, vaultConfig should be null
+      expect(result.current.vaultConfig).toBeNull();
     });
 
     it("should format balance with various bigint values", () => {

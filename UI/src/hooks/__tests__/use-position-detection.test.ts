@@ -25,6 +25,7 @@ import { SUPPORTED_CHAINS } from "../../config/chains";
 const mockGetActiveVaultConfigs = vi.fn();
 const mockUseAccount = vi.fn();
 const mockUseReadContracts = vi.fn();
+const mockUseVaultRegistry = vi.fn();
 
 vi.mock("../../lib/vault-configs", () => ({
   getActiveVaultConfigs: () => mockGetActiveVaultConfigs(),
@@ -39,6 +40,10 @@ vi.mock("wagmi", async (importOriginal) => {
   };
 });
 
+vi.mock("../use-vault-registry", () => ({
+  useVaultRegistry: () => mockUseVaultRegistry(),
+}));
+
 describe("🎯 TDD: usePositionDetection Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,6 +53,14 @@ describe("🎯 TDD: usePositionDetection Hook", () => {
       address: "0xUser123",
       isConnected: true,
       chainId: SUPPORTED_CHAINS.sonicFork.id, // Test environment: Sonic Fork
+    });
+
+    // Default vault registry state
+    mockUseVaultRegistry.mockReturnValue({
+      vaults: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
     });
   });
 

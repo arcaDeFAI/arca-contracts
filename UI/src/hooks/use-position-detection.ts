@@ -12,6 +12,7 @@ import { useMemo } from "react";
 import { useAccount, useReadContracts } from "wagmi";
 import { getActiveVaultConfigs } from "../lib/vault-configs";
 import { VAULT_ABI } from "../lib/contracts";
+import { useVaultRegistry } from "./use-vault-registry";
 
 export interface PositionDetectionResult {
   vaultAddressesWithPositions: string[];
@@ -21,7 +22,16 @@ export interface PositionDetectionResult {
 
 export function usePositionDetection(): PositionDetectionResult {
   const { address: userAddress, isConnected, chainId } = useAccount();
-  const vaultConfigs = chainId ? getActiveVaultConfigs(chainId) : [];
+
+  // Get vaults from registry
+  const { vaults: registryVaults, isLoading: registryLoading } =
+    useVaultRegistry();
+
+  // Get active vault configs
+  const vaultConfigs = useMemo(() => {
+    if (!chainId || registryLoading) return [];
+    return getActiveVaultConfigs(registryVaults, chainId);
+  }, [registryVaults, chainId, registryLoading]);
 
   // Create balance check contracts for all vaults
   const balanceContracts = useMemo(() => {
@@ -35,13 +45,13 @@ export function usePositionDetection(): PositionDetectionResult {
         {
           address: config.address as `0x${string}`,
           abi: VAULT_ABI,
-          functionName: "balanceOf",
+          functionName: "getShares",
           args: [userAddress, 0], // TokenX shares (index 0)
         },
         {
           address: config.address as `0x${string}`,
           abi: VAULT_ABI,
-          functionName: "balanceOf",
+          functionName: "getShares",
           args: [userAddress, 1], // TokenY shares (index 1)
         },
       );

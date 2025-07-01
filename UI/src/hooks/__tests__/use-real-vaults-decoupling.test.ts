@@ -5,7 +5,7 @@ import * as useVaultRegistryModule from "../use-vault-registry";
 import * as useVaultModule from "../use-vault";
 import * as useVaultMetricsModule from "../use-vault-metrics";
 import { TestProviders } from "../../test-utils/test-providers";
-import { useAccount } from "wagmi";
+import { useAccount, useReadContracts } from "wagmi";
 
 // Mock dependencies
 vi.mock("../use-vault-registry");
@@ -16,6 +16,7 @@ vi.mock("wagmi", async () => {
   return {
     ...actual,
     useAccount: vi.fn(),
+    useReadContracts: vi.fn(),
   };
 });
 
@@ -30,29 +31,17 @@ describe("useRealVaults - Decoupling Test", () => {
     feeManager: "0xFeeManager",
     symbol: "TEST",
     isActive: true,
-  };
-
-  const mockVaultData = {
-    vaultConfig: { address: "0x123" },
-    tokenXSymbol: "wS",
-    tokenYSymbol: "USDC.e",
-    vaultBalanceX: "1000.0",
-    vaultBalanceY: "2000.0",
-    userSharesX: "100.0",
-    userSharesY: "200.0",
-    pricePerShareX: "1.1",
-    pricePerShareY: "1.2",
-    userBalanceX: "50.0",
-    userBalanceY: "100.0",
-    pendingDeposits: "5",
-    pendingWithdraws: "2",
+    deploymentTimestamp: BigInt(Date.now()),
+    deployer: "0x1234567890123456789012345678901234567890",
+    isProxy: true,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Setup default useAccount mock
+    // Setup default useAccount mock with user address
     vi.mocked(useAccount).mockReturnValue({
       chainId: 146,
+      address: "0xUser123",
     } as ReturnType<typeof useAccount>);
   });
 
@@ -64,6 +53,23 @@ describe("useRealVaults - Decoupling Test", () => {
       error: null,
       registryAddress: "0xregistry",
     });
+
+    // Mock useReadContracts to return vault data
+    vi.mocked(useReadContracts).mockReturnValue({
+      data: [
+        { result: 1000n }, // vaultBalanceX
+        { result: 2000n }, // vaultBalanceY
+        { result: 100n }, // userSharesX
+        { result: 200n }, // userSharesY
+        { result: 1100000000000000000n }, // pricePerShareX (1.1 * 1e18)
+        { result: 1200000000000000000n }, // pricePerShareY (1.2 * 1e18)
+        { result: "wS" }, // tokenX symbol
+        { result: "USDC.e" }, // tokenY symbol
+        { result: 50n }, // userBalanceX
+        { result: 100n }, // userBalanceY
+      ],
+      isLoading: false,
+    } as any);
 
     // Setup vault data to be available
     vi.mocked(useVaultModule.useVault).mockReturnValue(

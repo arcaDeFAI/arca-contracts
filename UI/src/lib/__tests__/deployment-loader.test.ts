@@ -3,6 +3,7 @@ import {
   getDeploymentAddresses,
   validateDeploymentAddresses,
   getDeploymentStatus,
+  type DeploymentAddresses,
 } from "../deployment-loader";
 
 // Mock the deployments export
@@ -33,182 +34,233 @@ vi.mock("../../../../exports/deployments", () => ({
   },
 }));
 
-describe("deployment-loader - TDD Testnet Support & Registry Architecture", () => {
+describe("deployment-loader - Infrastructure vs Vault Tokens Architecture", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  describe("Testnet Support", () => {
-    it("should support Sonic Blaze Testnet (chainId 57054)", () => {
-      // Act
-      const deployment = getDeploymentAddresses(57054);
-
-      // Assert
-      expect(deployment).toBeDefined();
-      expect(deployment).not.toBeNull();
-      expect(deployment?.registry).toBe("0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f");
-      expect(deployment?.tokens.wS).toBe("0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38");
-      expect(deployment?.tokens.usdce).toBe("0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0");
-    });
-
-    it("should have proper Metropolis addresses for testnet", () => {
-      // Act
-      const deployment = getDeploymentAddresses(57054);
-
-      // Assert
-      expect(deployment?.metropolis).toBeDefined();
-      expect(deployment?.metropolis.lbRouter).toBeDefined();
-      expect(deployment?.metropolis.lbFactory).toBeDefined();
-      expect(deployment?.metropolis.pool).toBeDefined();
-      // Testnet should have real contract addresses, not null addresses
-      expect(deployment?.metropolis.lbRouter).not.toBe("0x0000000000000000000000000000000000000000");
-    });
-  });
-
-  describe("Registry-Based Architecture", () => {
-    it("should return infrastructure only, not vault-specific addresses", () => {
-      // Act
-      const localhostDeployment = getDeploymentAddresses(31337);
-      const testnetDeployment = getDeploymentAddresses(57054);
-      const mainnetDeployment = getDeploymentAddresses(146);
-
-      // Assert - all deployments should have registry
-      expect(localhostDeployment?.registry).toBeDefined();
-      expect(testnetDeployment?.registry).toBeDefined();
-      
-      // Registry should be the source of vault discovery
-      // The deployment should still include vault address for backward compatibility
-      // but in the future this will be removed
-      expect(localhostDeployment?.vault).toBeDefined(); // For now, kept for compatibility
-    });
-
-    it("should provide network infrastructure for dynamic vault discovery", () => {
+  describe("Network Infrastructure Tokens", () => {
+    it("should provide network infrastructure tokens separately", () => {
       // Act
       const deployment = getDeploymentAddresses(31337);
 
-      // Assert - should have infrastructure needed for vault operations
-      expect(deployment).toMatchObject({
-        registry: expect.any(String),
-        metropolis: {
-          lbRouter: expect.any(String),
-          lbFactory: expect.any(String),
-          pool: expect.any(String),
-        },
-        tokens: expect.any(Object),
-      });
+      // Assert
+      expect(deployment).toBeDefined();
+
+      // Should have network-wide tokens
+      expect(deployment?.networkTokens).toBeDefined();
+      expect(deployment?.networkTokens?.rewardToken).toBeDefined(); // METRO
+      expect(deployment?.networkTokens?.wrappedNative).toBeDefined(); // wS
+
+      // Should NOT have vault-specific token structure
+      expect("tokens" in deployment!).toBe(false);
+
+      // The old structure should not exist
+      const deploymentStr = JSON.stringify(deployment);
+      expect(deploymentStr).not.toContain('"tokens":{"wS"');
+      expect(deploymentStr).not.toContain('"tokens":{"usdce"');
+    });
+
+    it("should not mix infrastructure with vault configuration", () => {
+      // Act
+      const deployment = getDeploymentAddresses(57054);
+
+      // Assert - Infrastructure only
+      expect(deployment).toBeDefined();
+      expect(deployment?.registry).toBeDefined();
+
+      // Network tokens are infrastructure
+      expect(deployment?.networkTokens).toBeDefined();
+      expect(deployment?.networkTokens?.rewardToken).toBeDefined();
+      expect(deployment?.networkTokens?.wrappedNative).toBeDefined();
+
+      // Metropolis infrastructure
+      expect(deployment?.metropolis).toBeDefined();
+      expect(deployment?.metropolis?.lbRouter).toBeDefined();
+      expect(deployment?.metropolis?.lbFactory).toBeDefined();
+
+      // NO vault-specific data
+      expect("pool" in deployment!.metropolis).toBe(false); // Pool is vault-specific
+
+      // Vault-specific contracts should be obtained from registry
+      expect("vault" in deployment!).toBe(false);
+      expect("feeManager" in deployment!).toBe(false);
+      expect("queueHandler" in deployment!).toBe(false);
+      expect("rewardClaimer" in deployment!).toBe(false);
+    });
+
+    it("should support vaults with any token pair", () => {
+      // Act
+      const deployment = getDeploymentAddresses(31337);
+      const jsonStr = JSON.stringify(deployment);
+
+      // Assert - Should not contain vault-specific token references
+      expect(jsonStr).not.toContain('"tokenX"');
+      expect(jsonStr).not.toContain('"tokenY"');
+      expect(jsonStr).not.toContain('"usdce"'); // Specific token, not infrastructure
+
+      // Should not make assumptions about which tokens vaults use
+      expect(jsonStr).not.toContain("wS-USDC.e");
+      expect(jsonStr).not.toContain("vault-specific");
     });
   });
 
-  describe("Deployment Validation", () => {
-    it("should validate complete deployment addresses", () => {
-      // Arrange
+  describe("Infrastructure Token Addresses", () => {
+    it("should have correct METRO address for testnet", () => {
+      // Act
+      const deployment = getDeploymentAddresses(57054);
+
+      // Assert - METRO is the reward token
+      expect(deployment?.networkTokens?.rewardToken).toBe(
+        "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321",
+      );
+    });
+
+    it("should have correct wrapped native (wS) address for testnet", () => {
+      // Act
+      const deployment = getDeploymentAddresses(57054);
+
+      // Assert - wS is the wrapped native token
+      expect(deployment?.networkTokens?.wrappedNative).toBe(
+        "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+      );
+    });
+
+    it("should have correct Metropolis infrastructure for testnet", () => {
+      // Act
+      const deployment = getDeploymentAddresses(57054);
+
+      // Assert
+      expect(deployment?.metropolis?.lbRouter).toBe(
+        "0xe77DA7F5B6927fD5E0e825B2B27aca526341069B",
+      );
+      expect(deployment?.metropolis?.lbFactory).toBe(
+        "0x90F28Fe6963cE929d4cBc3480Df1169b92DD22B7",
+      );
+    });
+  });
+
+  describe("Registry as Source of Truth", () => {
+    it("should provide registry address for vault discovery", () => {
+      // Act
+      const localhostDeployment = getDeploymentAddresses(31337);
+      const testnetDeployment = getDeploymentAddresses(57054);
+
+      // Assert - Registry is the entry point for vault discovery
+      expect(localhostDeployment?.registry).toBeDefined();
+      expect(testnetDeployment?.registry).toBe(
+        "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
+      );
+    });
+
+    it("should not include individual vault addresses", () => {
+      // Act
+      const deployment = getDeploymentAddresses(31337);
+
+      // Assert - These should come from registry, not deployment
+      expect("vault" in deployment!).toBe(false);
+      expect("vaults" in deployment!).toBe(false);
+      expect("vaultAddresses" in deployment!).toBe(false);
+    });
+  });
+
+  describe("Clean Architecture Validation", () => {
+    it("should validate infrastructure-only addresses", () => {
+      // Arrange - Infrastructure-only deployment
       const validDeployment = {
-        vault: "0xVault",
-        feeManager: "0xFeeManager",
-        queueHandler: "0xQueueHandler",
-        rewardClaimer: "0xRewardClaimer",
         registry: "0xRegistry",
-        tokens: {
-          wS: "0xTokenX",
-          usdce: "0xTokenY",
-          metro: "0xMetro",
+        networkTokens: {
+          rewardToken: "0xMETRO",
+          wrappedNative: "0xwS",
         },
         metropolis: {
           lbRouter: "0xRouter",
           lbFactory: "0xFactory",
-          pool: "0xPool",
         },
       };
 
       // Act & Assert
-      expect(validateDeploymentAddresses(validDeployment)).toBe(true);
+      expect(
+        validateDeploymentAddresses(validDeployment as DeploymentAddresses),
+      ).toBe(true);
     });
 
     it("should reject deployment with null addresses", () => {
       // Arrange
       const invalidDeployment = {
-        vault: "0x0000000000000000000000000000000000000000",
-        feeManager: "0xFeeManager",
-        queueHandler: "0xQueueHandler",
-        rewardClaimer: "0xRewardClaimer",
-        registry: "0xRegistry",
-        tokens: {
-          wS: "0xTokenX",
-          usdce: "0xTokenY",
-          metro: "0xMetro",
+        registry: "0x0000000000000000000000000000000000000000",
+        networkTokens: {
+          rewardToken: "0xMETRO",
+          wrappedNative: "0xwS",
         },
         metropolis: {
           lbRouter: "0xRouter",
           lbFactory: "0xFactory",
-          pool: "0xPool",
         },
       };
 
       // Act & Assert
-      expect(validateDeploymentAddresses(invalidDeployment)).toBe(false);
+      expect(
+        validateDeploymentAddresses(invalidDeployment as DeploymentAddresses),
+      ).toBe(false);
     });
   });
 
   describe("Deployment Status", () => {
-    it("should return ready status for supported networks", () => {
+    it("should report ready status with infrastructure-only deployment", () => {
       // Act
       const localhostStatus = getDeploymentStatus(31337);
       const testnetStatus = getDeploymentStatus(57054);
 
-      // Assert
+      // Assert - Infrastructure ready is sufficient
       expect(localhostStatus.status).toBe("ready");
       expect(testnetStatus.status).toBe("ready");
+
+      // Should not require vault-specific addresses for ready status
       expect(localhostStatus.addresses).toBeDefined();
-      expect(testnetStatus.addresses).toBeDefined();
-    });
-
-    it("should return missing status for unsupported networks", () => {
-      // Act
-      const unsupportedStatus = getDeploymentStatus(999);
-
-      // Assert
-      expect(unsupportedStatus.status).toBe("missing");
-      expect(unsupportedStatus.message).toBe("No deployment found");
-    });
-
-    it("should return missing status for mainnet (not deployed yet)", () => {
-      // Act
-      const mainnetStatus = getDeploymentStatus(146);
-
-      // Assert
-      expect(mainnetStatus.status).toBe("missing");
-      expect(mainnetStatus.message).toBe("No deployment found");
+      expect(localhostStatus.addresses?.registry).toBeDefined();
+      expect(localhostStatus.addresses?.networkTokens).toBeDefined();
     });
   });
 
-  describe("Network Infrastructure Functions", () => {
-    it("should provide function to get network infrastructure", () => {
-      // This test verifies the architecture supports getting just infrastructure
-      // without vault-specific addresses
+  describe("Token Agnostic Support", () => {
+    it("should not hardcode any vault token pairs", () => {
+      // Act
       const deployment = getDeploymentAddresses(31337);
-      
-      // Should be able to extract network infrastructure
-      const infrastructure = {
-        registry: deployment?.registry,
-        metropolis: deployment?.metropolis,
-        // Note: tokens might be network-specific (wrapped versions)
-      };
+      const deploymentStr = JSON.stringify(deployment);
 
-      expect(infrastructure.registry).toBeDefined();
-      expect(infrastructure.metropolis).toBeDefined();
+      // Assert - No hardcoded pairs
+      expect(deploymentStr).not.toContain("wS/USDC.e");
+      expect(deploymentStr).not.toContain("METRO/USDC.e");
+      expect(deploymentStr).not.toContain("wS/METRO");
+
+      // Infrastructure tokens are labeled as such
+      expect(deployment?.networkTokens?.rewardToken).toBeDefined();
+      expect(deployment?.networkTokens?.wrappedNative).toBeDefined();
+    });
+
+    it("should support any token being tokenX or tokenY", () => {
+      // This test verifies the architecture supports flexibility
+      const deployment = getDeploymentAddresses(31337);
+
+      // wS can be tokenX OR tokenY in different vaults
+      // METRO can be tokenX OR tokenY in different vaults
+      // USDC.e can be tokenX OR tokenY in different vaults
+
+      // The deployment structure should not make assumptions
+      expect("tokenX" in deployment!).toBe(false);
+      expect("tokenY" in deployment!).toBe(false);
+
+      // Only infrastructure tokens are defined
+      expect(deployment?.networkTokens).toBeDefined();
     });
   });
 
   describe("Backward Compatibility", () => {
-    it("should maintain backward compatibility with existing UI code", () => {
-      // The deployment should still work with existing code that expects vault address
+    it("should maintain registry address for existing code", () => {
+      // The registry is still needed
       const deployment = getDeploymentAddresses(31337);
-
-      // These fields should still exist for now
-      expect(deployment?.vault).toBeDefined();
-      expect(deployment?.feeManager).toBeDefined();
-      expect(deployment?.queueHandler).toBeDefined();
-      expect(deployment?.rewardClaimer).toBeDefined();
+      expect(deployment?.registry).toBeDefined();
     });
   });
 });

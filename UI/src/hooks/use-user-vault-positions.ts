@@ -12,10 +12,14 @@ import { useMemo } from "react";
 import { useAccount } from "wagmi";
 import { getActiveVaultConfigs } from "../lib/vault-configs";
 import { useVault } from "./use-vault";
+import { useVaultRegistry } from "./use-vault-registry";
 
 export function useUserVaultPositions(): string[] {
   const { isConnected, chainId } = useAccount();
-  const vaultConfigs = chainId ? getActiveVaultConfigs(chainId) : [];
+  const { vaults: registryVaults } = useVaultRegistry();
+  const vaultConfigs = chainId
+    ? getActiveVaultConfigs(registryVaults, chainId)
+    : [];
 
   // For now, we'll check a reasonable number of vaults (up to 10)
   // This respects React hooks rules while being practical for most DeFi platforms
