@@ -222,8 +222,8 @@ describe("Registry Deployment Flow Integration Testing", function () {
       expect(vaultInfo.tokenY).to.equal(tokenY.target);
       expect(vaultInfo.name).to.equal("Production Test Vault");
       expect(vaultInfo.symbol).to.equal("PROD-TEST");
-      expect(vaultInfo.isActive).to.be.true;
-      expect(vaultInfo.isProxy).to.be.true;
+      expect(vaultInfo.isActive).to.equal(true);;
+      expect(vaultInfo.isProxy).to.equal(true);;
       expect(vaultInfo.deployer).to.equal(owner.address);
       expect(vaultInfo.deploymentTimestamp).to.be.greaterThan(0);
     });
@@ -245,7 +245,7 @@ describe("Registry Deployment Flow Integration Testing", function () {
 
       // Test isRegisteredVault
       const isRegistered = await registry.isRegisteredVault(vault.target);
-      expect(isRegistered).to.be.true;
+      expect(isRegistered).to.equal(true);;
     });
   });
 
@@ -283,7 +283,7 @@ describe("Registry Deployment Flow Integration Testing", function () {
 
       // Verify registry can be used to discover vault info
       const vaultInfo = await registry.vaultInfo(deploymentExport.contracts.vault);
-      expect(vaultInfo.isActive).to.be.true;
+      expect(vaultInfo.isActive).to.equal(true);;
     });
 
     it("should demonstrate registry-driven UI loading pattern", async function () {
@@ -336,7 +336,7 @@ describe("Registry Deployment Flow Integration Testing", function () {
 
       // Check 3: Vault is registered and discoverable
       const isRegistered = await registry.isRegisteredVault(vault.target);
-      expect(isRegistered).to.be.true;
+      expect(isRegistered).to.equal(true);;
 
       // Check 4: Vault metadata is complete
       const vaultInfo = await registry.vaultInfo(vault.target);
@@ -373,7 +373,7 @@ describe("Registry Deployment Flow Integration Testing", function () {
 
       // Registry maintains state correctly
       const vaultInfo = await registry.vaultInfo(activeVaults[0]);
-      expect(vaultInfo.isActive).to.be.true;
+      expect(vaultInfo.isActive).to.equal(true);;
     });
   });
 });

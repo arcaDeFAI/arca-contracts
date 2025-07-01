@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 import hre from "hardhat";
 import { loadNetworkConfig, validateDeploymentConfig, networkConfigToDeploymentConfig } from "./utils/network-config";
 

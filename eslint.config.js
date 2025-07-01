@@ -1,4 +1,3 @@
-// eslint.config.js
 import tseslint from 'typescript-eslint';
 import js from '@eslint/js';
 
@@ -31,6 +30,19 @@ export default [
       '@typescript-eslint/no-require-imports': 'error',
       'no-console': 'warn',
       'eqeqeq': ['error', 'always'],
+    },
+  },
+  {
+    files: ['**/*.test.ts', '**/*.spec.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-expressions': 'off',
+      'no-console': 'off',
+    },
+  },
+  {
+    files: ['**/scripts/**/*.ts'],
+    rules: {
+      'no-console': 'off',
     },
   },
 ];
