@@ -71,28 +71,32 @@ export function useVaultRegistry() {
   });
 
   // Get detailed info for ALL vaults
-  const vaultInfoQueries = (vaultAddresses || []).map((vaultAddress) => ({
-    address: registryAddress as `0x${string}`,
-    abi: REGISTRY_ABI,
-    functionName: "getVaultInfo" as const,
-    args: [vaultAddress as `0x${string}`],
-    enabled: !!registryAddress && !!vaultAddress,
-  }));
+  const vaultInfoQueries = (vaultAddresses || []).map((vaultAddress) => {
+    if (!registryAddress || !vaultAddress) {
+      return null;
+    }
+    return {
+      address: registryAddress as `0x${string}`,
+      abi: REGISTRY_ABI,
+      functionName: "getVaultInfo" as const,
+      args: [vaultAddress as `0x${string}`] as const,
+    };
+  });
 
   // Use multiple useReadContract hooks for each vault
   // This is a temporary solution - ideally we'd use useQueries from React Query
   // For now, we'll handle up to 10 vaults (can be extended as needed)
   const vaultInfoResults = [
-    useReadContract(vaultInfoQueries[0] || { enabled: false }),
-    useReadContract(vaultInfoQueries[1] || { enabled: false }),
-    useReadContract(vaultInfoQueries[2] || { enabled: false }),
-    useReadContract(vaultInfoQueries[3] || { enabled: false }),
-    useReadContract(vaultInfoQueries[4] || { enabled: false }),
-    useReadContract(vaultInfoQueries[5] || { enabled: false }),
-    useReadContract(vaultInfoQueries[6] || { enabled: false }),
-    useReadContract(vaultInfoQueries[7] || { enabled: false }),
-    useReadContract(vaultInfoQueries[8] || { enabled: false }),
-    useReadContract(vaultInfoQueries[9] || { enabled: false }),
+    useReadContract(vaultInfoQueries[0] || undefined),
+    useReadContract(vaultInfoQueries[1] || undefined),
+    useReadContract(vaultInfoQueries[2] || undefined),
+    useReadContract(vaultInfoQueries[3] || undefined),
+    useReadContract(vaultInfoQueries[4] || undefined),
+    useReadContract(vaultInfoQueries[5] || undefined),
+    useReadContract(vaultInfoQueries[6] || undefined),
+    useReadContract(vaultInfoQueries[7] || undefined),
+    useReadContract(vaultInfoQueries[8] || undefined),
+    useReadContract(vaultInfoQueries[9] || undefined),
   ];
 
   // Check if any vault info is still loading

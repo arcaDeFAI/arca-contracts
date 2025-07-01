@@ -1,9 +1,12 @@
 /**
  * Central Vault Configuration System
  *
- * This file defines all supported vault types and their metadata.
- * Adding new vaults is as simple as adding a new configuration here.
+ * This file creates vault configurations from registry data.
+ * It's fully token-agnostic and supports any token pair.
  */
+
+import type { RegistryVaultInfo } from "../hooks/use-vault-registry";
+import { getChainName } from "../config/chains";
 
 export interface TokenConfig {
   symbol: string;
@@ -14,139 +17,141 @@ export interface TokenConfig {
 
 export interface VaultConfig {
   address: string;
-  tokenX: TokenConfig; // First token in the pair
-  tokenY: TokenConfig; // Second token in the pair
-  name: string; // Display name like "wS-USDC.e"
-  platform: string; // "DLMM", "Shadow Exchange", etc.
-  chain: string; // "Sonic", "Sonic Fork", etc.
+  tokenX: TokenConfig;
+  tokenY: TokenConfig;
+  name: string;
+  platform: string;
+  chain: string;
   isActive: boolean;
   description?: string;
-  // Future: Add APR calculation specifics, fee structures, etc.
 }
 
-// Import contract addresses from deployment data
-import { getContracts } from "./contracts";
+// Known token information for symbol and decimal resolution
+const KNOWN_TOKENS: Record<
+  string,
+  { symbol: string; decimals: number; coingeckoId?: string }
+> = {
+  // Network infrastructure tokens
+  "0x71e99522ead5e21cf57f1f542dc4ad2e841f7321": {
+    symbol: "METRO",
+    decimals: 18,
+    coingeckoId: "metro",
+  },
+  "0x039e2fb66102314ce7b64ce5ce3e5183bc94ad38": {
+    symbol: "wS",
+    decimals: 18,
+    coingeckoId: "sonic",
+  },
+  // Common tokens
+  "0x29219dd400f2bf60e5a23d13be72b486d4038894": {
+    symbol: "USDC.e",
+    decimals: 6,
+    coingeckoId: "usd-coin",
+  },
+  "0x1570300e9cfec66c9fb0c8bc14366c86eb170ad0": {
+    symbol: "USDC.e",
+    decimals: 6,
+    coingeckoId: "usd-coin",
+  },
+};
 
 /**
- * Vault Configurations for Different Networks
- *
- * NOTE: This is now deprecated in favor of getVaultConfigsForChain()
- * which dynamically loads configurations based on the current chain.
- *
- * This static array is kept for backward compatibility but will be empty.
+ * Get token symbol from address
  */
-export const VAULT_CONFIGS: VaultConfig[] = [
-  // Static configurations removed - use getVaultConfigsForChain() instead
-];
+export function getTokenSymbol(address: string): string {
+  const normalizedAddress = address.toLowerCase();
+  const tokenInfo = KNOWN_TOKENS[normalizedAddress];
+
+  if (tokenInfo) {
+    return tokenInfo.symbol;
+  }
+
+  // For unknown tokens, return a shortened address as symbol
+  return `TOKEN-${address.slice(2, 8).toUpperCase()}`;
+}
+
+/**
+ * Get token decimals from address
+ */
+export function getTokenDecimals(address: string): number {
+  const normalizedAddress = address.toLowerCase();
+  const tokenInfo = KNOWN_TOKENS[normalizedAddress];
+
+  return tokenInfo?.decimals || 18; // Default to 18 decimals
+}
+
+/**
+ * Get coingecko ID for price fetching
+ */
+function getCoingeckoId(address: string): string | undefined {
+  const normalizedAddress = address.toLowerCase();
+  const tokenInfo = KNOWN_TOKENS[normalizedAddress];
+
+  return tokenInfo?.coingeckoId;
+}
+
+/**
+ * Create vault configuration from registry data
+ * This is the main function that creates configs without assumptions
+ */
+export function createVaultConfigFromRegistry(
+  vaultInfo: RegistryVaultInfo,
+  chainId: number,
+): VaultConfig {
+  const tokenXSymbol = getTokenSymbol(vaultInfo.tokenX);
+  const tokenYSymbol = getTokenSymbol(vaultInfo.tokenY);
+
+  return {
+    address: vaultInfo.vault,
+    tokenX: {
+      symbol: tokenXSymbol,
+      address: vaultInfo.tokenX,
+      decimals: getTokenDecimals(vaultInfo.tokenX),
+      coingeckoId: getCoingeckoId(vaultInfo.tokenX),
+    },
+    tokenY: {
+      symbol: tokenYSymbol,
+      address: vaultInfo.tokenY,
+      decimals: getTokenDecimals(vaultInfo.tokenY),
+      coingeckoId: getCoingeckoId(vaultInfo.tokenY),
+    },
+    name: vaultInfo.name,
+    platform: "DLMM", // All vaults use Metropolis DLMM
+    chain: getChainName(chainId),
+    isActive: vaultInfo.isActive,
+    description: `Automated liquidity provision for ${tokenXSymbol}-${tokenYSymbol} pair with Metro reward compounding`,
+  };
+}
+
+/**
+ * Get active vault configurations from registry data
+ */
+export function getActiveVaultConfigs(
+  registryVaults: RegistryVaultInfo[],
+  chainId: number,
+): VaultConfig[] {
+  return registryVaults
+    .filter((vault) => vault.isActive)
+    .map((vault) => createVaultConfigFromRegistry(vault, chainId));
+}
 
 /**
  * Get vault configuration by address
  */
 export const getVaultConfig = (
   address: string,
+  registryVaults: RegistryVaultInfo[],
   chainId: number,
 ): VaultConfig | undefined => {
-  if (!chainId) {
-    console.warn("No chainId provided to getVaultConfig");
+  const vaultInfo = registryVaults.find(
+    (vault) => vault.vault.toLowerCase() === address.toLowerCase(),
+  );
+
+  if (!vaultInfo) {
     return undefined;
   }
-  const configs = getVaultConfigsForChain(chainId);
-  return configs.find(
-    (config) => config.address.toLowerCase() === address.toLowerCase(),
-  );
-};
 
-/**
- * Get all active vault configurations - now uses dynamic loading
- *
- * @param chainId - The chain ID to get configurations for. If not provided,
- *                  will attempt to use a reasonable default.
- */
-export const getActiveVaultConfigs = (chainId: number): VaultConfig[] => {
-  if (!chainId) {
-    console.warn("No chainId provided to getActiveVaultConfigs");
-    return [];
-  }
-  return getVaultConfigsForChain(chainId);
-};
-
-/**
- * Get vault configurations by chain
- */
-export const getVaultConfigsByChain = (chain: string): VaultConfig[] => {
-  return VAULT_CONFIGS.filter(
-    (config) => config.chain === chain && config.isActive,
-  );
-};
-
-/**
- * Get vault configuration by token pair
- */
-export const getVaultConfigByTokens = (
-  tokenXSymbol: string,
-  tokenYSymbol: string,
-): VaultConfig | undefined => {
-  return VAULT_CONFIGS.find(
-    (config) =>
-      (config.tokenX.symbol === tokenXSymbol &&
-        config.tokenY.symbol === tokenYSymbol) ||
-      (config.tokenX.symbol === tokenYSymbol &&
-        config.tokenY.symbol === tokenXSymbol),
-  );
-};
-
-/**
- * Generate vault configurations dynamically for different networks
- * This function will be called when the user switches networks
- */
-export const getVaultConfigsForChain = (chainId: number): VaultConfig[] => {
-  const networkContracts = getContracts(chainId);
-
-  if (!networkContracts) {
-    console.warn(`No contracts available for chain ${chainId}`);
-    return [];
-  }
-
-  // Get chain-specific names and settings
-  const getChainInfo = (chainId: number) => {
-    switch (chainId) {
-      case 31337:
-        return { name: "Localhost", testnet: true };
-      case 31338:
-        return { name: "Sonic Fork", testnet: true };
-      case 146:
-        return { name: "Sonic", testnet: false };
-      default:
-        return { name: "Unknown", testnet: true };
-    }
-  };
-
-  const chainInfo = getChainInfo(chainId);
-
-  return [
-    {
-      address: networkContracts.vault,
-      tokenX: {
-        symbol: "wS",
-        address: networkContracts.tokens.wS,
-        decimals: 18,
-        coingeckoId: "sonic",
-      },
-      tokenY: {
-        symbol: "USDC.e",
-        address: networkContracts.tokens.usdce,
-        decimals: 6,
-        coingeckoId: "usd-coin",
-      },
-      name: "wS-USDC.e",
-      platform: "DLMM",
-      chain: chainInfo.name,
-      isActive: true,
-      description: `Automated liquidity provision for wS-USDC.e pair with Metro reward compounding${chainInfo.testnet ? " (Test Network)" : ""}`,
-    },
-    // Future: Auto-discover additional vaults from on-chain registry
-    // Future: Add METRO-USDC vault when available
-  ];
+  return createVaultConfigFromRegistry(vaultInfo, chainId);
 };
 
 /**

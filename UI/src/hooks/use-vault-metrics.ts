@@ -86,7 +86,9 @@ export function useVaultMetrics(vaultAddress?: string): VaultMetricsHook {
     refresh: refetchPrices,
     isUsingRealPrices: isRealData,
   } = useHybridTokenPrices({ tokens: tokenSymbols });
-  const { getTransactionSummary } = useTransactionHistory();
+  const { getTransactionSummary } = useTransactionHistory(
+    vaultAddress ? [vaultAddress] : [],
+  );
 
   // Use vault-specific transaction history when vault data is available
   const vaultTransactionHistory = useVaultTransactionHistory(

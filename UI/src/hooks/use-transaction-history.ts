@@ -18,6 +18,7 @@ export interface TransactionRecord {
   gasPrice?: string;
   userAddress: string;
   chainId: number;
+  vaultAddress: string; // Important: which vault this transaction belongs to
   error?: string;
   // Calculated values for display
   usdValue?: number;
@@ -29,7 +30,7 @@ export interface TransactionRecord {
   shares?: string; // Shares minted/burned
 }
 
-export function useTransactionHistory() {
+export function useTransactionHistory(vaultAddresses: string[] = []) {
   const { address: userAddress, chainId } = useAccount();
   const publicClient = usePublicClient();
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
@@ -37,14 +38,15 @@ export function useTransactionHistory() {
     useState(false);
   const [blockchainHistoryLoaded, setBlockchainHistoryLoaded] = useState(false);
 
-  // Load blockchain transaction history
+  // Load blockchain transaction history for multiple vaults
   const loadBlockchainHistory = useCallback(async () => {
-    if (!userAddress || !chainId || !publicClient || blockchainHistoryLoaded) {
-      return;
-    }
-
-    const contracts = getContracts(chainId);
-    if (!contracts?.vault) {
+    if (
+      !userAddress ||
+      !chainId ||
+      !publicClient ||
+      vaultAddresses.length === 0 ||
+      blockchainHistoryLoaded
+    ) {
       return;
     }
 
@@ -55,9 +57,9 @@ export function useTransactionHistory() {
       const fromBlock = BigInt(0); // In production, use deployment block
       const toBlock = "latest" as const;
 
-      // Fetch deposit events
+      // Fetch deposit events from all vaults
       const depositLogs = await publicClient.getLogs({
-        address: contracts.vault as `0x${string}`,
+        address: vaultAddresses as `0x${string}`[],
         event: {
           type: "event",
           name: "Deposit",
@@ -77,7 +79,7 @@ export function useTransactionHistory() {
 
       // Fetch withdraw events
       const withdrawLogs = await publicClient.getLogs({
-        address: contracts.vault as `0x${string}`,
+        address: vaultAddresses as `0x${string}`[],
         event: {
           type: "event",
           name: "Withdraw",
@@ -117,6 +119,7 @@ export function useTransactionHistory() {
           blockNumber: Number(log.blockNumber),
           userAddress,
           chainId,
+          vaultAddress: log.address,
           source: "blockchain",
           logIndex: log.logIndex,
           tokenType: args.tokenType,
@@ -143,6 +146,7 @@ export function useTransactionHistory() {
           blockNumber: Number(log.blockNumber),
           userAddress,
           chainId,
+          vaultAddress: log.address,
           source: "blockchain",
           logIndex: log.logIndex,
           tokenType: args.tokenType,
@@ -178,7 +182,13 @@ export function useTransactionHistory() {
     } finally {
       setIsLoadingBlockchainHistory(false);
     }
-  }, [userAddress, chainId, publicClient, blockchainHistoryLoaded]);
+  }, [
+    userAddress,
+    chainId,
+    publicClient,
+    vaultAddresses,
+    blockchainHistoryLoaded,
+  ]);
 
   // Load localStorage transactions and blockchain history on mount
   useEffect(() => {
@@ -221,6 +231,7 @@ export function useTransactionHistory() {
       type: "deposit" | "withdraw" | "approve",
       token: string,
       amount: string,
+      vaultAddress: string,
     ) => {
       if (!userAddress || !chainId) return;
 
@@ -234,6 +245,7 @@ export function useTransactionHistory() {
         timestamp: Date.now(),
         userAddress,
         chainId,
+        vaultAddress,
         source: "localStorage", // Manual tracking
       };
 

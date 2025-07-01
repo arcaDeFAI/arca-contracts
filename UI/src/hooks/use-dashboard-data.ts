@@ -12,11 +12,12 @@
 
 import { useMemo } from "react";
 import { useAccount } from "wagmi";
-import { getVaultConfig } from "../lib/vault-configs";
+import { createVaultConfigFromRegistry } from "../lib/vault-configs";
 import { useVault } from "./use-vault";
 import { useVaultMetrics } from "./use-vault-metrics";
 import { useTransactionHistory } from "./use-transaction-history";
 import { usePositionDetection } from "./use-position-detection";
+import { useVaultRegistry } from "./use-vault-registry";
 
 export interface VaultPosition {
   vaultAddress: string;
@@ -54,8 +55,9 @@ export function useDashboardData(): DashboardData {
   try {
     const { chainId } = useAccount();
 
-    // Get transaction history for deposit calculations
-    const { transactions } = useTransactionHistory();
+    // Get vault registry data
+    const { vaults: registryVaults, isLoading: registryLoading } =
+      useVaultRegistry();
 
     // Phase 1: Position Detection (Fast)
     const {
@@ -63,6 +65,9 @@ export function useDashboardData(): DashboardData {
       isDetecting,
       error: detectionError,
     } = usePositionDetection();
+
+    // Get transaction history for all vaults where user has positions
+    const { transactions } = useTransactionHistory(vaultAddressesWithPositions);
 
     // Phase 2: Detailed Data Loading (Only for vaults with positions)
     // TODO: This approach hardcodes 10 vault hooks to respect React hooks rules.
@@ -112,7 +117,17 @@ export function useDashboardData(): DashboardData {
       if (!chainId) return [];
 
       return vaultAddressesWithPositions.map((vaultAddress, index) => {
-        const config = getVaultConfig(vaultAddress, chainId);
+        // Get vault info from registry
+        const vaultInfo = registryVaults.find(
+          (v) => v.vault.toLowerCase() === vaultAddress.toLowerCase(),
+        );
+
+        // Create config from registry data
+        const config =
+          vaultInfo && chainId
+            ? createVaultConfigFromRegistry(vaultInfo, chainId)
+            : null;
+
         const { vault, metrics: vaultMetrics } = allVaultData[index] || {};
 
         // Fallback if config not found (shouldn't happen in normal operation)

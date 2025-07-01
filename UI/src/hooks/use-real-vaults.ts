@@ -1,9 +1,11 @@
 import { useMemo } from "react";
-import { useAccount } from "wagmi";
-import { useVault } from "./use-vault";
+import { useAccount, useReadContracts } from "wagmi";
+import { formatEther } from "viem";
 import { useVaultMetrics } from "./use-vault-metrics";
 import { useVaultRegistry } from "./use-vault-registry";
 import { getChainName } from "../config/chains";
+import { VAULT_ABI, ERC20_ABI } from "../lib/contracts";
+import { createVaultConfigFromRegistry } from "../lib/vault-configs";
 import type { RealVault } from "../types/vault";
 
 // Hook to provide real vault data from contracts
@@ -12,7 +14,7 @@ export function useRealVaults(): {
   isLoading: boolean;
   error: string | null;
 } {
-  const { chainId } = useAccount();
+  const { chainId, address: userAddress } = useAccount();
 
   // If no chainId, user needs to connect wallet or switch to supported network
   if (!chainId) {
@@ -30,99 +32,206 @@ export function useRealVaults(): {
     error: registryError,
   } = useVaultRegistry();
 
-  // For now, use the first vault from registry (single vault support)
-  const firstVault = registryVaults[0];
-  const vault = useVault(firstVault?.vault);
+  // Prepare contract calls for all vaults
+  const vaultContractCalls = registryVaults.flatMap((vault) => {
+    // Create config from registry data
+    const vaultConfig = createVaultConfigFromRegistry(vault, chainId);
+
+    return [
+      // Vault data
+      {
+        address: vault.vault as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: "tokenBalance" as const,
+        args: [0], // TokenX
+      },
+      {
+        address: vault.vault as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: "tokenBalance" as const,
+        args: [1], // TokenY
+      },
+      {
+        address: vault.vault as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: "getShares" as const,
+        args: userAddress ? [userAddress, 0] : undefined, // User shares for TokenX
+      },
+      {
+        address: vault.vault as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: "getShares" as const,
+        args: userAddress ? [userAddress, 1] : undefined, // User shares for TokenY
+      },
+      {
+        address: vault.vault as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: "getPricePerFullShare" as const,
+        args: [0], // TokenX
+      },
+      {
+        address: vault.vault as `0x${string}`,
+        abi: VAULT_ABI,
+        functionName: "getPricePerFullShare" as const,
+        args: [1], // TokenY
+      },
+      // Token symbols
+      {
+        address: vaultConfig.tokenX.address as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "symbol" as const,
+      },
+      {
+        address: vaultConfig.tokenY.address as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "symbol" as const,
+      },
+      // User balances
+      {
+        address: vaultConfig.tokenX.address as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "balanceOf" as const,
+        args: userAddress ? [userAddress] : undefined,
+      },
+      {
+        address: vaultConfig.tokenY.address as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: "balanceOf" as const,
+        args: userAddress ? [userAddress] : undefined,
+      },
+    ];
+  });
+
+  // Read all contract data in parallel
+  const { data: contractData, isLoading: contractLoading } = useReadContracts({
+    contracts: vaultContractCalls,
+  });
+
+  // Get metrics - for now using shared metrics, but can be per-vault in future
   const {
     metrics,
     isLoading: metricsLoading,
     error: metricsError,
   } = useVaultMetrics();
 
-  // Create vault data from registry info + contract data
+  // Process registry data and create RealVault objects with progressive enhancement
   const realVaults: RealVault[] = useMemo(() => {
-    if (!firstVault || !vault.vaultConfig) {
-      return [];
-    }
+    if (registryVaults.length === 0) return [];
 
-    const realVault: RealVault = {
-      id: firstVault.vault,
-      name: firstVault.name || `${vault.tokenXSymbol}-${vault.tokenYSymbol}`,
-      tokens: [vault.tokenXSymbol, vault.tokenYSymbol],
-      platform: "DLMM",
-      chain: getChainName(chainId),
+    const vaults: RealVault[] = [];
+    const resultsPerVault = 10; // Number of contract calls per vault
 
-      // Real-time contract data (always available)
-      vaultBalanceX: vault.vaultBalanceX,
-      vaultBalanceY: vault.vaultBalanceY,
-      userSharesX: vault.userSharesX,
-      userSharesY: vault.userSharesY,
-      pricePerShareX: vault.pricePerShareX,
-      pricePerShareY: vault.pricePerShareY,
+    registryVaults.forEach((registryVault, vaultIndex) => {
+      const startIdx = vaultIndex * resultsPerVault;
 
-      // Calculated values from metrics (optional - loaded async)
-      totalTvl: metrics?.totalTvlUSD,
-      userBalance: metrics?.userTotalUSD,
-      apr: metrics?.realApr,
-      aprDaily: metrics?.dailyApr,
+      // Extract data for this vault - handle case where contractData is not available yet
+      const vaultBalanceX = contractData?.[startIdx]?.result as
+        | bigint
+        | undefined;
+      const vaultBalanceY = contractData?.[startIdx + 1]?.result as
+        | bigint
+        | undefined;
+      const userSharesX = contractData?.[startIdx + 2]?.result as
+        | bigint
+        | undefined;
+      const userSharesY = contractData?.[startIdx + 3]?.result as
+        | bigint
+        | undefined;
+      const pricePerShareX = contractData?.[startIdx + 4]?.result as
+        | bigint
+        | undefined;
+      const pricePerShareY = contractData?.[startIdx + 5]?.result as
+        | bigint
+        | undefined;
+      const tokenXSymbol = contractData?.[startIdx + 6]?.result as
+        | string
+        | undefined;
+      const tokenYSymbol = contractData?.[startIdx + 7]?.result as
+        | string
+        | undefined;
+      const userBalanceX = contractData?.[startIdx + 8]?.result as
+        | bigint
+        | undefined;
+      const userBalanceY = contractData?.[startIdx + 9]?.result as
+        | bigint
+        | undefined;
 
-      // Enhanced user metrics (optional - loaded async)
-      userEarnings: metrics?.userEarnings,
-      userROI: metrics?.userROI,
-      userTotalDeposited: metrics?.userTotalDeposited,
+      // Create vault config from registry data (always available)
+      const vaultConfig = createVaultConfigFromRegistry(registryVault, chainId);
 
-      // USD breakdowns for display (optional - loaded async)
-      vaultBalanceXUSD: metrics?.vaultBalanceXUSD,
-      vaultBalanceYUSD: metrics?.vaultBalanceYUSD,
-      userSharesXUSD: metrics?.userSharesXUSD,
-      userSharesYUSD: metrics?.userSharesYUSD,
+      // Use token symbols from contract data if available, otherwise fall back to config
+      const finalTokenXSymbol = tokenXSymbol || vaultConfig.tokenX.symbol;
+      const finalTokenYSymbol = tokenYSymbol || vaultConfig.tokenY.symbol;
 
-      contractAddress: firstVault.vault,
-      isActive: true,
-      description:
-        "Automated liquidity provision for wS/USDC.e on Metropolis DLMM with Metro reward compounding",
+      const realVault: RealVault = {
+        id: registryVault.vault,
+        name: registryVault.name || `${finalTokenXSymbol}-${finalTokenYSymbol}`,
+        tokens: [finalTokenXSymbol, finalTokenYSymbol],
+        platform: "DLMM",
+        chain: getChainName(chainId),
 
-      // User balances for deposit/withdraw UI
-      userBalanceX: vault.userBalanceX,
-      userBalanceY: vault.userBalanceY,
+        // Real-time contract data (show 0 while loading)
+        vaultBalanceX: (vaultBalanceX || 0n).toString(),
+        vaultBalanceY: (vaultBalanceY || 0n).toString(),
+        userSharesX: (userSharesX || 0n).toString(),
+        userSharesY: (userSharesY || 0n).toString(),
+        pricePerShareX: pricePerShareX ? formatEther(pricePerShareX) : "1", // Default to 1:1 while loading
+        pricePerShareY: pricePerShareY ? formatEther(pricePerShareY) : "1",
 
-      // Queue status
-      pendingDeposits: vault.pendingDeposits,
-      pendingWithdraws: vault.pendingWithdraws,
+        // Calculated values from metrics (optional - loaded async)
+        totalTvl: metrics?.totalTvlUSD,
+        userBalance: metrics?.userTotalUSD,
+        apr: metrics?.realApr,
+        aprDaily: metrics?.dailyApr,
 
-      // Data freshness indicators
-      lastUpdated: metrics?.lastUpdated,
-      isStale: metrics?.isStale,
+        // Enhanced user metrics (optional - loaded async)
+        userEarnings: metrics?.userEarnings,
+        userROI: metrics?.userROI,
+        userTotalDeposited: metrics?.userTotalDeposited,
 
-      // Loading states for progressive enhancement
-      metricsLoading,
-      metricsError: metrics?.priceDataError || metricsError,
-    };
+        // USD breakdowns for display (optional - loaded async)
+        vaultBalanceXUSD: metrics?.vaultBalanceXUSD,
+        vaultBalanceYUSD: metrics?.vaultBalanceYUSD,
+        userSharesXUSD: metrics?.userSharesXUSD,
+        userSharesYUSD: metrics?.userSharesYUSD,
 
-    return [realVault];
+        contractAddress: registryVault.vault,
+        isActive: true,
+        description: `Automated liquidity provision for ${tokenXSymbol}/${tokenYSymbol} on Metropolis DLMM with Metro reward compounding`,
+
+        // User balances for deposit/withdraw UI
+        userBalanceX: (userBalanceX || 0n).toString(),
+        userBalanceY: (userBalanceY || 0n).toString(),
+
+        // Queue status - TODO: fetch these from queue handler
+        pendingDeposits: "0",
+        pendingWithdraws: "0",
+
+        // Data freshness indicators
+        lastUpdated: metrics?.lastUpdated,
+        isStale: metrics?.isStale,
+
+        // Loading states for progressive enhancement
+        metricsLoading,
+        metricsError: metrics?.priceDataError || metricsError,
+      };
+
+      vaults.push(realVault);
+    });
+
+    return vaults;
   }, [
-    firstVault,
-    vault.vaultConfig,
-    vault.vaultBalanceX,
-    vault.vaultBalanceY,
-    vault.userSharesX,
-    vault.userSharesY,
-    vault.pricePerShareX,
-    vault.pricePerShareY,
-    vault.userBalanceX,
-    vault.userBalanceY,
-    vault.pendingDeposits,
-    vault.pendingWithdraws,
+    contractData,
+    registryVaults,
     metrics,
     metricsLoading,
     metricsError,
     chainId,
   ]);
 
-  // Loading state - show loading only when discovering vaults (not when fetching metrics)
-  const isLoading = chainId
-    ? registryLoading || !firstVault || !vault.vaultConfig
-    : true; // Still loading if we don't have chainId yet
+  // Loading state - show loading only when discovering vaults (not when fetching contract data or metrics)
+  // This enables progressive enhancement: show vault list immediately, load details async
+  const isLoading = chainId ? registryLoading : true; // Only wait for registry, not contract data
 
   // Add error handling for registry and contract data loading only
   // Metrics errors are handled within the metrics object (progressive enhancement)
@@ -131,12 +240,12 @@ export function useRealVaults(): {
       return `Registry error: ${registryError}`;
     }
 
-    if (!firstVault && chainId && !registryLoading) {
-      return "No vaults found in registry";
+    if (registryVaults.length === 0 && chainId && !registryLoading) {
+      return null; // Empty vault list is not an error - user may not have any vaults
     }
 
     return null;
-  }, [registryError, firstVault, chainId, registryLoading]);
+  }, [registryError, registryVaults.length, chainId, registryLoading]);
 
   return {
     vaults: realVaults,

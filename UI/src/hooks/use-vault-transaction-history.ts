@@ -67,8 +67,8 @@ export function useVaultTransactionHistory(context: VaultTransactionContext) {
       return;
     }
 
-    const contracts = getContracts(context.chainId);
-    if (!contracts?.vault || contracts.vault !== context.vaultAddress) {
+    // Skip if no vault address provided
+    if (!context.vaultAddress) {
       return;
     }
 

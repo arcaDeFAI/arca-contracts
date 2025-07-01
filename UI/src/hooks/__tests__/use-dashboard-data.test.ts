@@ -28,8 +28,11 @@ const mockUseVaultMetrics = vi.fn();
 const mockUseTransactionHistory = vi.fn();
 const mockUsePositionDetection = vi.fn();
 
+const mockCreateVaultConfigFromRegistry = vi.fn();
 vi.mock("../../lib/vault-configs", () => ({
   getVaultConfig: (address: string) => mockGetVaultConfig(address),
+  createVaultConfigFromRegistry: (vaultInfo: any, chainId: number) =>
+    mockCreateVaultConfigFromRegistry(vaultInfo, chainId),
 }));
 
 vi.mock("../use-vault", () => ({
@@ -48,6 +51,11 @@ vi.mock("../use-position-detection", () => ({
   usePositionDetection: () => mockUsePositionDetection(),
 }));
 
+const mockUseVaultRegistry = vi.fn();
+vi.mock("../use-vault-registry", () => ({
+  useVaultRegistry: () => mockUseVaultRegistry(),
+}));
+
 // Mock wagmi useAccount to return a test chainId from centralized config
 vi.mock("wagmi", async (importOriginal) => {
   const actual = (await importOriginal()) as typeof wagmi;
@@ -64,7 +72,45 @@ vi.mock("wagmi", async (importOriginal) => {
 describe("🎯 TDD: useDashboardData Hook", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+
+    // Default vault registry state
+    mockUseVaultRegistry.mockReturnValue({
+      vaults: [],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
   });
+
+  // Helper to mock vault registry for a given vault
+  const mockVaultRegistryForVault = (
+    vaultAddress: string,
+    vaultConfig: VaultConfig,
+  ) => {
+    mockUseVaultRegistry.mockReturnValue({
+      vaults: [
+        {
+          vault: vaultAddress,
+          tokenX: vaultConfig.tokenX.address,
+          tokenY: vaultConfig.tokenY.address,
+          name: vaultConfig.name,
+          symbol: vaultConfig.name,
+          deploymentTimestamp: BigInt(Date.now()),
+          deployer: "0x1234567890123456789012345678901234567890",
+          isActive: true,
+          isProxy: true,
+          queueHandler: "0xQueueHandler",
+          rewardClaimer: "0xRewardClaimer",
+          feeManager: "0xFeeManager",
+        },
+      ],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    mockCreateVaultConfigFromRegistry.mockReturnValue(vaultConfig);
+  };
 
   describe("Portfolio Value Calculations", () => {
     it("should calculate total portfolio value across all vaults", () => {
@@ -89,6 +135,43 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         isActive: true,
       };
 
+      // Mock vault registry
+      mockUseVaultRegistry.mockReturnValue({
+        vaults: [
+          {
+            vault: "0xVault1",
+            tokenX: "0xTokenX1",
+            tokenY: "0xTokenY1",
+            name: "wS-USDC.e",
+            symbol: "wS-USDC.e",
+            deploymentTimestamp: BigInt(Date.now()),
+            deployer: "0x1234567890123456789012345678901234567890",
+            isActive: true,
+            isProxy: true,
+            queueHandler: "0xQueueHandler",
+            rewardClaimer: "0xRewardClaimer",
+            feeManager: "0xFeeManager",
+          },
+          {
+            vault: "0xVault2",
+            tokenX: "0xTokenX2",
+            tokenY: "0xTokenY2",
+            name: "METRO-USDC",
+            symbol: "METRO-USDC",
+            deploymentTimestamp: BigInt(Date.now()),
+            deployer: "0x1234567890123456789012345678901234567890",
+            isActive: true,
+            isProxy: true,
+            queueHandler: "0xQueueHandler",
+            rewardClaimer: "0xRewardClaimer",
+            feeManager: "0xFeeManager",
+          },
+        ],
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      });
+
       // Mock position detection - user has positions in both vaults
       mockUsePositionDetection.mockReturnValue({
         vaultAddressesWithPositions: ["0xVault1", "0xVault2"],
@@ -100,6 +183,13 @@ describe("🎯 TDD: useDashboardData Hook", () => {
       mockGetVaultConfig.mockImplementation((address: string) => {
         if (address === "0xVault1") return vault1Config;
         if (address === "0xVault2") return vault2Config;
+        return undefined;
+      });
+
+      // Mock createVaultConfigFromRegistry
+      mockCreateVaultConfigFromRegistry.mockImplementation((vaultInfo: any) => {
+        if (vaultInfo.vault === "0xVault1") return vault1Config;
+        if (vaultInfo.vault === "0xVault2") return vault2Config;
         return undefined;
       });
 
@@ -394,6 +484,9 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         isActive: true,
       };
 
+      // Mock vault registry for single vault
+      mockVaultRegistryForVault("0xVault1", vaultConfig);
+
       // Mock position detection - user has position in one vault
       mockUsePositionDetection.mockReturnValue({
         vaultAddressesWithPositions: ["0xVault1"],
@@ -478,6 +571,9 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         isActive: true,
       };
 
+      // Mock vault registry for single vault
+      mockVaultRegistryForVault("0xVault1", vaultConfig);
+
       // Mock position detection - user has position in one vault
       mockUsePositionDetection.mockReturnValue({
         vaultAddressesWithPositions: ["0xVault1"],
@@ -533,6 +629,9 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         chain: "Localhost",
         isActive: true,
       };
+
+      // Mock vault registry for single vault
+      mockVaultRegistryForVault("0xVault1", vaultConfig);
 
       // Mock position detection - user has position in one vault
       mockUsePositionDetection.mockReturnValue({
@@ -607,6 +706,9 @@ describe("🎯 TDD: useDashboardData Hook", () => {
         chain: "Localhost",
         isActive: true,
       };
+
+      // Mock vault registry for single vault
+      mockVaultRegistryForVault("0xVault1", vaultConfig);
 
       // Mock position detection - user has position in one vault
       mockUsePositionDetection.mockReturnValue({

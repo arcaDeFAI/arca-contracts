@@ -35,16 +35,19 @@ export function createMockVaultConfig(
 
 // Base system contracts (vault infrastructure)
 export const MOCK_SYSTEM_CONTRACTS = {
-  vault: "0x1234567890123456789012345678901234567890" as const,
-  queueHandler: "0x2345678901234567890123456789012345678901" as const,
-  feeManager: "0x3456789012345678901234567890123456789012" as const,
-  rewardClaimer: "0x4567890123456789012345678901234567890123" as const,
   registry: "0x5678901234567890123456789012345678901234" as const,
+  networkTokens: {
+    rewardToken: "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321" as const,
+    wrappedNative: "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38" as const,
+  },
   metropolis: {
     lbRouter: "0x9012345678901234567890123456789012345678" as const,
     lbFactory: "0x0123456789012345678901234567890123456789" as const,
-    pool: "0x1234567890123456789012345678901234567890" as const,
   },
+  // Vault-specific contracts for testing
+  queueHandler: "0x2345678901234567890123456789012345678901" as const,
+  feeManager: "0x3456789012345678901234567890123456789012" as const,
+  rewardClaimer: "0x4567890123456789012345678901234567890123" as const,
 };
 
 // Mock reward data for testing real reward calculations

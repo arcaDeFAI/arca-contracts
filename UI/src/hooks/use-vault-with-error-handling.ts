@@ -112,12 +112,12 @@ export function useVaultWithErrorHandling() {
 
   // Connection validation
   const validateConnection = useCallback(() => {
-    if (!vault.contracts) {
-      setError("Wallet not connected or contracts not available");
+    if (!vault.vaultConfig || !vault.chainId) {
+      setError("Wallet not connected or vault not available");
       return false;
     }
     return true;
-  }, [vault.contracts]);
+  }, [vault.vaultConfig, vault.chainId]);
 
   // Balance validation
   const validateBalance = useCallback(

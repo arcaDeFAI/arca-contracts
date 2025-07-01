@@ -11,6 +11,7 @@ import {
   createMockVaultData,
   createMockReadContract,
 } from "../../test-utils/mock-contracts";
+import { useVaultRegistry } from "../use-vault-registry";
 import * as contractsModule from "../../lib/contracts";
 import * as vaultConfigsModule from "../../lib/vault-configs";
 import { SUPPORTED_CHAINS } from "../../config/chains";
@@ -20,6 +21,12 @@ const mockedUseAccount = vi.fn();
 const mockedUseReadContract = vi.fn();
 const mockedUseWriteContract = vi.fn();
 const mockedUseWaitForTransactionReceipt = vi.fn();
+
+// Mock vault registry - we'll set up the return value in beforeEach
+const mockUseVaultRegistry = vi.fn();
+vi.mock("../use-vault-registry", () => ({
+  useVaultRegistry: mockUseVaultRegistry,
+}));
 
 vi.mock("wagmi", async (importOriginal) => {
   const actual = (await importOriginal()) as typeof wagmi;
@@ -63,20 +70,34 @@ describe("useVault Critical Money Flows", () => {
     currentVaultConfig = createMockVaultConfig("wS", "USDC.e");
     currentMockData = createMockVaultData(currentVaultConfig);
 
-    // Mock the getContracts function with multi-vault support
-    vi.mocked(contractsModule.getContracts).mockReturnValue({
-      ...MOCK_SYSTEM_CONTRACTS,
-      vault: currentVaultConfig.address,
-      tokens: {
-        [currentVaultConfig.tokenX.symbol]: currentVaultConfig.tokenX.address,
-        [currentVaultConfig.tokenY.symbol]: currentVaultConfig.tokenY.address,
-      },
-    });
+    // Mock the getContracts function
+    vi.mocked(contractsModule.getContracts).mockReturnValue(
+      MOCK_SYSTEM_CONTRACTS,
+    );
 
     // Mock the vault config lookup
     vi.mocked(vaultConfigsModule.getVaultConfig).mockReturnValue(
       currentVaultConfig,
     );
+
+    // Mock vault registry to return vault info matching the current config
+    mockUseVaultRegistry.mockReturnValue({
+      vaults: [
+        {
+          vault: currentVaultConfig.address,
+          rewardClaimer: MOCK_SYSTEM_CONTRACTS.rewardClaimer,
+          queueHandler: MOCK_SYSTEM_CONTRACTS.queueHandler,
+          feeManager: MOCK_SYSTEM_CONTRACTS.feeManager,
+          tokenX: currentVaultConfig.tokenX.address,
+          tokenY: currentVaultConfig.tokenY.address,
+          name: currentVaultConfig.name,
+          symbol: "ARCA-V1",
+          isActive: true,
+        },
+      ],
+      isLoading: false,
+      error: null,
+    });
 
     // Default mock implementations using the working pattern
     mockedUseAccount.mockReturnValue({

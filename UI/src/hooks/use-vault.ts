@@ -12,8 +12,12 @@ import {
   QUEUE_HANDLER_ABI,
   REWARD_CLAIMER_ABI,
 } from "../lib/contracts";
-import { getVaultConfig, type VaultConfig } from "../lib/vault-configs";
+import {
+  createVaultConfigFromRegistry,
+  type VaultConfig,
+} from "../lib/vault-configs";
 import { useState } from "react";
+import { useVaultRegistry } from "./use-vault-registry";
 
 export function useVault(vaultAddress?: string) {
   const { address: userAddress, chainId } = useAccount();
@@ -42,20 +46,34 @@ export function useVault(vaultAddress?: string) {
     setError(null);
   };
 
-  // Get vault configuration - require both chainId and contracts
-  const contracts = chainId ? getContracts(chainId) : null;
-  const defaultVaultAddress = vaultAddress || contracts?.vault;
+  // Get vault registry data
+  const { vaults: registryVaults, isLoading: registryLoading } =
+    useVaultRegistry();
+
+  // Find the vault info from registry
+  const vaultInfo = vaultAddress
+    ? registryVaults.find(
+        (v) => v.vault.toLowerCase() === vaultAddress.toLowerCase(),
+      )
+    : null;
+
+  // Create vault config from registry data
   const vaultConfig =
-    defaultVaultAddress && chainId
-      ? getVaultConfig(defaultVaultAddress, chainId)
+    vaultInfo && chainId
+      ? createVaultConfigFromRegistry(vaultInfo, chainId)
       : null;
 
-  // Determine if we should enable contract queries (but always call the hooks)
-  const shouldEnableQueries = !!(vaultConfig && defaultVaultAddress && chainId);
+  // Determine if we should enable contract queries
+  const shouldEnableQueries = !!(
+    vaultConfig &&
+    vaultAddress &&
+    chainId &&
+    !registryLoading
+  );
 
   // Vault balance queries (token-agnostic)
   const { data: vaultBalanceX } = useReadContract({
-    address: defaultVaultAddress as Address,
+    address: vaultAddress as Address,
     abi: VAULT_ABI,
     functionName: "tokenBalance",
     args: [0], // TokenX (first token in pair)
@@ -63,7 +81,7 @@ export function useVault(vaultAddress?: string) {
   });
 
   const { data: vaultBalanceY } = useReadContract({
-    address: defaultVaultAddress as Address,
+    address: vaultAddress as Address,
     abi: VAULT_ABI,
     functionName: "tokenBalance",
     args: [1], // TokenY (second token in pair)
@@ -72,7 +90,7 @@ export function useVault(vaultAddress?: string) {
 
   // User share queries (token-agnostic)
   const { data: userSharesX } = useReadContract({
-    address: defaultVaultAddress as Address,
+    address: vaultAddress as Address,
     abi: VAULT_ABI,
     functionName: "getShares",
     args: [userAddress as Address, 0],
@@ -80,7 +98,7 @@ export function useVault(vaultAddress?: string) {
   });
 
   const { data: userSharesY } = useReadContract({
-    address: defaultVaultAddress as Address,
+    address: vaultAddress as Address,
     abi: VAULT_ABI,
     functionName: "getShares",
     args: [userAddress as Address, 1],
@@ -89,7 +107,7 @@ export function useVault(vaultAddress?: string) {
 
   // Share price queries (token-agnostic)
   const { data: pricePerShareX } = useReadContract({
-    address: defaultVaultAddress as Address,
+    address: vaultAddress as Address,
     abi: VAULT_ABI,
     functionName: "getPricePerFullShare",
     args: [0],
@@ -97,7 +115,7 @@ export function useVault(vaultAddress?: string) {
   });
 
   const { data: pricePerShareY } = useReadContract({
-    address: defaultVaultAddress as Address,
+    address: vaultAddress as Address,
     abi: VAULT_ABI,
     functionName: "getPricePerFullShare",
     args: [1],
@@ -126,7 +144,7 @@ export function useVault(vaultAddress?: string) {
     address: vaultConfig?.tokenX.address as Address,
     abi: ERC20_ABI,
     functionName: "allowance",
-    args: [userAddress as Address, defaultVaultAddress as Address],
+    args: [userAddress as Address, vaultAddress as Address],
     query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
@@ -134,72 +152,72 @@ export function useVault(vaultAddress?: string) {
     address: vaultConfig?.tokenY.address as Address,
     abi: ERC20_ABI,
     functionName: "allowance",
-    args: [userAddress as Address, defaultVaultAddress as Address],
+    args: [userAddress as Address, vaultAddress as Address],
     query: { enabled: shouldEnableQueries && !!userAddress },
   });
 
-  // Queue status queries (using legacy contracts structure for queue handler)
+  // Queue status queries
   const { data: pendingDeposits } = useReadContract({
-    address: contracts?.queueHandler as Address,
+    address: vaultInfo?.queueHandler as Address,
     abi: QUEUE_HANDLER_ABI,
     functionName: "getPendingDepositsCount",
-    query: { enabled: shouldEnableQueries },
+    query: { enabled: shouldEnableQueries && !!vaultInfo?.queueHandler },
   });
 
   const { data: pendingWithdraws } = useReadContract({
-    address: contracts?.queueHandler as Address,
+    address: vaultInfo?.queueHandler as Address,
     abi: QUEUE_HANDLER_ABI,
     functionName: "getPendingWithdrawsCount",
-    query: { enabled: shouldEnableQueries },
+    query: { enabled: shouldEnableQueries && !!vaultInfo?.queueHandler },
   });
 
-  // Reward claimer contract reads for compounded rewards
+  // Reward claimer queries
   const { data: totalCompoundedX } = useReadContract({
-    address: contracts?.rewardClaimer as Address,
+    address: vaultInfo?.rewardClaimer as Address,
     abi: REWARD_CLAIMER_ABI,
     functionName: "getTotalCompounded",
     args: [0], // TokenX (first token in pair)
-    query: { enabled: shouldEnableQueries && !!contracts?.rewardClaimer },
+    query: { enabled: shouldEnableQueries && !!vaultInfo?.rewardClaimer },
   });
 
   const { data: totalCompoundedY } = useReadContract({
-    address: contracts?.rewardClaimer as Address,
+    address: vaultInfo?.rewardClaimer as Address,
     abi: REWARD_CLAIMER_ABI,
     functionName: "getTotalCompounded",
     args: [1], // TokenY (second token in pair)
-    query: { enabled: shouldEnableQueries && !!contracts?.rewardClaimer },
+    query: { enabled: shouldEnableQueries && !!vaultInfo?.rewardClaimer },
   });
 
   // Token-agnostic approve functions
   const approveTokenX = async (amount: string) => {
-    if (!vaultConfig?.tokenX.address || !defaultVaultAddress) return;
+    if (!vaultConfig?.tokenX.address || !vaultAddress) return;
 
     writeContract({
       address: vaultConfig.tokenX.address as Address,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [defaultVaultAddress as Address, parseEther(amount)],
+      args: [vaultAddress as Address, parseEther(amount)],
     });
   };
 
   const approveTokenY = async (amount: string) => {
-    if (!vaultConfig?.tokenY.address || !defaultVaultAddress) return;
+    if (!vaultConfig?.tokenY.address || !vaultAddress) return;
 
     writeContract({
       address: vaultConfig.tokenY.address as Address,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [defaultVaultAddress as Address, parseEther(amount)],
+      args: [vaultAddress as Address, parseEther(amount)],
     });
   };
 
   // Token-agnostic deposit functions
   const depositTokenX = async (amount: string) => {
-    if (!defaultVaultAddress) return;
+    if (!vaultAddress) return;
 
     setLastOperation("deposit");
     writeContract({
-      address: defaultVaultAddress as Address,
+      address: vaultAddress as Address,
       abi: VAULT_ABI,
       functionName: "depositToken",
       args: [parseEther(amount), 0], // TokenX (first token)
@@ -207,11 +225,11 @@ export function useVault(vaultAddress?: string) {
   };
 
   const depositTokenY = async (amount: string) => {
-    if (!defaultVaultAddress) return;
+    if (!vaultAddress) return;
 
     setLastOperation("deposit");
     writeContract({
-      address: defaultVaultAddress as Address,
+      address: vaultAddress as Address,
       abi: VAULT_ABI,
       functionName: "depositToken",
       args: [parseEther(amount), 1], // TokenY (second token)
@@ -220,11 +238,11 @@ export function useVault(vaultAddress?: string) {
 
   // Token-agnostic withdraw functions
   const withdrawShares = async (sharesX: string, sharesY: string) => {
-    if (!defaultVaultAddress) return;
+    if (!vaultAddress) return;
 
     setLastOperation("withdraw");
     writeContract({
-      address: defaultVaultAddress as Address,
+      address: vaultAddress as Address,
       abi: VAULT_ABI,
       functionName: "withdrawTokenShares",
       args: [[parseEther(sharesX), parseEther(sharesY)]],
@@ -232,11 +250,11 @@ export function useVault(vaultAddress?: string) {
   };
 
   const withdrawAll = async () => {
-    if (!defaultVaultAddress) return;
+    if (!vaultAddress) return;
 
     setLastOperation("withdraw");
     writeContract({
-      address: defaultVaultAddress as Address,
+      address: vaultAddress as Address,
       abi: VAULT_ABI,
       functionName: "withdrawAll",
     });
@@ -269,8 +287,7 @@ export function useVault(vaultAddress?: string) {
   return {
     // Contract info
     vaultConfig,
-    vaultAddress: defaultVaultAddress,
-    contracts,
+    vaultAddress: vaultAddress,
     userAddress,
     chainId,
 
@@ -297,12 +314,9 @@ export function useVault(vaultAddress?: string) {
     // Reward data (token-agnostic)
     totalCompoundedX: formatBalance(totalCompoundedX),
     totalCompoundedY: formatBalance(totalCompoundedY),
-    rewardClaimerAddress: contracts?.rewardClaimer,
-    rewardDataAvailable: !!(
-      contracts?.rewardClaimer &&
-      totalCompoundedX &&
-      totalCompoundedY
-    ),
+    rewardClaimerAddress: vaultInfo?.rewardClaimer,
+    rewardDataAvailable:
+      !!vaultInfo?.rewardClaimer && (!!totalCompoundedX || !!totalCompoundedY),
 
     // Transaction state
     isWritePending,
