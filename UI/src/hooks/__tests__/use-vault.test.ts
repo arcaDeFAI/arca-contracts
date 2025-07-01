@@ -9,8 +9,7 @@ import { TestProviders } from "../../test-utils/test-providers";
 import { SUPPORTED_CHAINS } from "../../config/chains";
 import {
   MOCK_SYSTEM_CONTRACTS,
-  MOCK_CONTRACTS,
-  MOCK_VAULT_DATA,
+  MOCK_DEPLOYMENT_ADDRESSES,
   MOCK_TX_HASH,
   createMockReadContract,
   createMockWriteContract,
@@ -101,11 +100,8 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
           tokenX: currentVaultConfig.tokenX.address,
           tokenY: currentVaultConfig.tokenY.address,
           name: currentVaultConfig.name,
-          symbol: currentVaultConfig.symbol,
-          deploymentTimestamp: BigInt(Date.now()),
-          deployer: "0x1234567890123456789012345678901234567890",
+          symbol: "ARCA-V1",
           isActive: true,
-          isProxy: true,
           queueHandler: MOCK_SYSTEM_CONTRACTS.queueHandler,
           rewardClaimer: MOCK_SYSTEM_CONTRACTS.rewardClaimer,
           feeManager: MOCK_SYSTEM_CONTRACTS.feeManager,
@@ -113,20 +109,13 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
       ],
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      registryAddress: MOCK_SYSTEM_CONTRACTS.registry,
     });
 
     // Mock createVaultConfigFromRegistry to return the current config
     vi.mocked(
       vaultConfigsModule.createVaultConfigFromRegistry,
     ).mockImplementation((vaultInfo, chainId) => {
-      // Return null for unsupported chains
-      const supportedChainIds: number[] = Object.values(SUPPORTED_CHAINS).map(
-        (chain) => chain.id,
-      );
-      if (!supportedChainIds.includes(chainId)) {
-        return null;
-      }
       return currentVaultConfig;
     });
 
@@ -171,16 +160,7 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         }
 
         // Return contracts for supported chains
-        return {
-          ...MOCK_SYSTEM_CONTRACTS,
-          vault: currentVaultConfig.address,
-          tokens: {
-            [currentVaultConfig.tokenX.symbol]:
-              currentVaultConfig.tokenX.address,
-            [currentVaultConfig.tokenY.symbol]:
-              currentVaultConfig.tokenY.address,
-          },
-        } as ReturnType<typeof contractsModule.getContracts>;
+        return MOCK_DEPLOYMENT_ADDRESSES;
       },
     );
 
@@ -206,11 +186,8 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
           tokenX: currentVaultConfig.tokenX.address,
           tokenY: currentVaultConfig.tokenY.address,
           name: currentVaultConfig.name,
-          symbol: currentVaultConfig.symbol,
-          deploymentTimestamp: BigInt(Date.now()),
-          deployer: "0x1234567890123456789012345678901234567890",
+          symbol: "ARCA-V1",
           isActive: true,
-          isProxy: true,
           queueHandler: MOCK_SYSTEM_CONTRACTS.queueHandler,
           rewardClaimer: MOCK_SYSTEM_CONTRACTS.rewardClaimer,
           feeManager: MOCK_SYSTEM_CONTRACTS.feeManager,
@@ -218,20 +195,13 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
       ],
       isLoading: false,
       error: null,
-      refetch: vi.fn(),
+      registryAddress: MOCK_SYSTEM_CONTRACTS.registry,
     });
 
     // Update createVaultConfigFromRegistry mock
     vi.mocked(
       vaultConfigsModule.createVaultConfigFromRegistry,
     ).mockImplementation((vaultInfo, chainId) => {
-      // Return null for unsupported chains
-      const supportedChainIds: number[] = Object.values(SUPPORTED_CHAINS).map(
-        (chain) => chain.id,
-      );
-      if (!supportedChainIds.includes(chainId)) {
-        return null;
-      }
       return currentVaultConfig;
     });
   }

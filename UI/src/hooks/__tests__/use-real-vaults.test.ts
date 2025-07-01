@@ -348,12 +348,17 @@ describe("useRealVaults - TDD Multi-Vault Support", () => {
       // Act
       const { result } = renderHook(() => useRealVaults());
 
-      // Assert - should still show other vaults
+      // Assert - should show all vaults (progressive enhancement)
       await waitFor(() => {
-        expect(result.current.vaults).toHaveLength(2); // Only 2 of 3 vaults work
+        expect(result.current.vaults).toHaveLength(3); // All 3 vaults shown
         expect(result.current.vaults[0].name).toBe("Arca wS-USDC.e Vault");
-        expect(result.current.vaults[1].name).toBe("Arca wS-METRO Vault");
-        // Vault2 is skipped due to error
+        // Vault 2 shown with partial data (missing symbols)
+        expect(result.current.vaults[1].name).toBe("Arca METRO-USDC.e Vault");
+        // When token symbols are missing from contract, uses symbols from vault config
+        // The mock uses abbreviated token names from createVaultConfigFromRegistry
+        expect(result.current.vaults[1].tokens[0]).toBe("TKX2");
+        expect(result.current.vaults[1].tokens[1]).toBe("TKY2");
+        expect(result.current.vaults[2].name).toBe("Arca wS-METRO Vault");
       });
     });
   });

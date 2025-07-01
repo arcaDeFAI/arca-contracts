@@ -2,14 +2,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { useRealVaults } from "../use-real-vaults";
 import * as useVaultRegistryModule from "../use-vault-registry";
-import * as useVaultModule from "../use-vault";
 import * as useVaultMetricsModule from "../use-vault-metrics";
 import { TestProviders } from "../../test-utils/test-providers";
-import { useAccount, useReadContracts } from "wagmi";
+import {
+  useAccount,
+  useReadContracts,
+  type UseAccountReturnType,
+  type UseReadContractsReturnType,
+} from "wagmi";
+import {
+  createMockUseAccount,
+  createMockUseReadContracts,
+} from "../../test-utils/mock-contracts";
 
 // Mock dependencies
 vi.mock("../use-vault-registry");
-vi.mock("../use-vault");
 vi.mock("../use-vault-metrics");
 vi.mock("wagmi", async () => {
   const actual = await vi.importActual("wagmi");
@@ -36,13 +43,68 @@ describe("useRealVaults - Decoupling Test", () => {
     isProxy: true,
   };
 
+  // Define mock vault data that useVault returns
+  const mockVaultData = {
+    vaultConfig: {
+      address: "0x123",
+      tokenX: { symbol: "wS", address: "0xabc", decimals: 18 },
+      tokenY: { symbol: "USDC.e", address: "0xdef", decimals: 6 },
+      name: "Test Vault",
+      platform: "DLMM",
+      chain: "Sonic",
+      isActive: true,
+    },
+    vaultAddress: "0x123",
+    userAddress: "0xUser123",
+    chainId: 146,
+    tokenXSymbol: "wS",
+    tokenYSymbol: "USDC.e",
+    vaultBalanceX: "1000.0",
+    vaultBalanceY: "2000.0",
+    userSharesX: "100.0",
+    userSharesY: "200.0",
+    pricePerShareX: "1.1",
+    pricePerShareY: "1.2",
+    userBalanceX: "50.0",
+    userBalanceY: "100.0",
+    pendingDeposits: "0",
+    pendingWithdraws: "0",
+    totalCompoundedX: "0.0",
+    totalCompoundedY: "0.0",
+    rewardClaimerAddress: "0xRewardClaimer",
+    rewardDataAvailable: false,
+    isWritePending: false,
+    isConfirming: false,
+    isConfirmed: false,
+    lastOperation: null,
+    hash: undefined,
+    approveTokenX: vi.fn(),
+    approveTokenY: vi.fn(),
+    depositTokenX: vi.fn(),
+    depositTokenY: vi.fn(),
+    withdrawShares: vi.fn(),
+    withdrawAll: vi.fn(),
+    hasAllowance: vi.fn(),
+    validateBalance: vi.fn(),
+    validateConnection: vi.fn(),
+    formatBalance: vi.fn(),
+    error: null,
+    clearError: vi.fn(),
+    // Legacy compatibility
+    userBalanceWS: "50.0",
+    userBalanceUSDC: "100.0",
+    approveWS: vi.fn(),
+    approveUSDC: vi.fn(),
+    depositWS: vi.fn(),
+    depositUSDC: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     // Setup default useAccount mock with user address
-    vi.mocked(useAccount).mockReturnValue({
-      chainId: 146,
-      address: "0xUser123",
-    } as ReturnType<typeof useAccount>);
+    vi.mocked(useAccount).mockReturnValue(
+      createMockUseAccount("0xUser123", 146),
+    );
   });
 
   it("should return vaults immediately without waiting for metrics", async () => {
@@ -55,8 +117,8 @@ describe("useRealVaults - Decoupling Test", () => {
     });
 
     // Mock useReadContracts to return vault data
-    vi.mocked(useReadContracts).mockReturnValue({
-      data: [
+    vi.mocked(useReadContracts).mockReturnValue(
+      createMockUseReadContracts([
         { result: 1000n }, // vaultBalanceX
         { result: 2000n }, // vaultBalanceY
         { result: 100n }, // userSharesX
@@ -67,13 +129,7 @@ describe("useRealVaults - Decoupling Test", () => {
         { result: "USDC.e" }, // tokenY symbol
         { result: 50n }, // userBalanceX
         { result: 100n }, // userBalanceY
-      ],
-      isLoading: false,
-    } as any);
-
-    // Setup vault data to be available
-    vi.mocked(useVaultModule.useVault).mockReturnValue(
-      mockVaultData as ReturnType<typeof useVaultModule.useVault>,
+      ]),
     );
 
     // Setup metrics to be loading (simulating slow price fetch)
@@ -97,8 +153,8 @@ describe("useRealVaults - Decoupling Test", () => {
 
     // Basic data should be available
     expect(vault.name).toBe("Test Vault");
-    expect(vault.vaultBalanceX).toBe("1000.0");
-    expect(vault.vaultBalanceY).toBe("2000.0");
+    expect(vault.vaultBalanceX).toBe("1000");
+    expect(vault.vaultBalanceY).toBe("2000");
 
     // Metrics data should be undefined (not loaded yet)
     expect(vault.totalTvl).toBeUndefined();
@@ -140,8 +196,20 @@ describe("useRealVaults - Decoupling Test", () => {
       registryAddress: "0xregistry",
     });
 
-    vi.mocked(useVaultModule.useVault).mockReturnValue(
-      mockVaultData as ReturnType<typeof useVaultModule.useVault>,
+    // Mock useReadContracts to return vault data
+    vi.mocked(useReadContracts).mockReturnValue(
+      createMockUseReadContracts([
+        { result: 1000n }, // vaultBalanceX
+        { result: 2000n }, // vaultBalanceY
+        { result: 100n }, // userSharesX
+        { result: 200n }, // userSharesY
+        { result: 1100000000000000000n }, // pricePerShareX (1.1 * 1e18)
+        { result: 1200000000000000000n }, // pricePerShareY (1.2 * 1e18)
+        { result: "wS" }, // tokenX symbol
+        { result: "USDC.e" }, // tokenY symbol
+        { result: 50n }, // userBalanceX
+        { result: 100n }, // userBalanceY
+      ]),
     );
 
     // Start with loading metrics
@@ -209,8 +277,20 @@ describe("useRealVaults - Decoupling Test", () => {
       registryAddress: "0xregistry",
     });
 
-    vi.mocked(useVaultModule.useVault).mockReturnValue(
-      mockVaultData as ReturnType<typeof useVaultModule.useVault>,
+    // Mock useReadContracts to return vault data
+    vi.mocked(useReadContracts).mockReturnValue(
+      createMockUseReadContracts([
+        { result: 1000n }, // vaultBalanceX
+        { result: 2000n }, // vaultBalanceY
+        { result: 100n }, // userSharesX
+        { result: 200n }, // userSharesY
+        { result: 1100000000000000000n }, // pricePerShareX (1.1 * 1e18)
+        { result: 1200000000000000000n }, // pricePerShareY (1.2 * 1e18)
+        { result: "wS" }, // tokenX symbol
+        { result: "USDC.e" }, // tokenY symbol
+        { result: 50n }, // userBalanceX
+        { result: 100n }, // userBalanceY
+      ]),
     );
 
     // Progressive enhancement: metrics returns partial data with error indicators
@@ -246,7 +326,7 @@ describe("useRealVaults - Decoupling Test", () => {
 
     // Basic vault data should be available
     expect(vault.name).toBe("Test Vault");
-    expect(vault.vaultBalanceX).toBe("1000.0");
+    expect(vault.vaultBalanceX).toBe("1000");
 
     // USD values should be undefined due to price error
     expect(vault.totalTvl).toBeUndefined();

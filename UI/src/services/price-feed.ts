@@ -140,9 +140,7 @@ class PriceFeedService {
 
       return result;
     } catch (error) {
-      console.warn(`Failed to fetch multiple prices:`, error);
-
-      // Return fallback prices for failed fetches
+      // Failed to fetch prices - return fallback prices for failed fetches
       for (const symbol of needsFetch) {
         result[symbol] = this.getFallbackPrice(
           symbol,

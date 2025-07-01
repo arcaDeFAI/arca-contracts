@@ -135,20 +135,7 @@ export function useVaultRegistry() {
       ? "No registry found for this network"
       : null;
 
-  // Debug logging
-  console.log("🔍 useVaultRegistry debug:", {
-    chainId,
-    registryAddress,
-    isLoadingAddresses,
-    isLoadingInfo,
-    isLoading,
-    vaultAddresses,
-    vaultCount: vaults.length,
-    error,
-    vaultAddressesError: vaultAddressesError?.message,
-  });
-
-  // CRITICAL DEBUG: Check if we have the right setup
+  // Development logging for critical registry issues
   if (!chainId) {
     console.error(
       "❌ CRITICAL: No chainId from useAccount() - wallet not connected or wrong network",
@@ -157,15 +144,9 @@ export function useVaultRegistry() {
     console.error(
       `❌ CRITICAL: No registry address found for chainId ${chainId}`,
     );
-  } else if (isLoadingAddresses) {
-    console.log("⏳ Waiting for registry.getActiveVaults() call...");
   } else if (!vaultAddresses || vaultAddresses.length === 0) {
-    console.error(
-      "❌ CRITICAL: Registry returned empty vaults array - vault not registered correctly",
-    );
-  } else {
-    console.log(
-      `✅ Registry working correctly on chain ${chainId}, vault discovery should succeed`,
+    console.warn(
+      "⚠️ Registry returned empty vaults array - no vaults registered yet",
     );
   }
 
