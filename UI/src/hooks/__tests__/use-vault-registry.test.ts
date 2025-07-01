@@ -15,10 +15,10 @@ vi.mock("../../lib/contracts", () => ({
 }));
 
 // Mock viem for direct contract calls
-vi.mock("viem", async (importOriginal) => {
-  const actual = await importOriginal();
+vi.mock("viem", async () => {
+  const actual = await vi.importActual("viem");
   return {
-    ...actual,
+    ...(actual as Record<string, unknown>),
     createPublicClient: vi.fn(),
     http: vi.fn(),
   };

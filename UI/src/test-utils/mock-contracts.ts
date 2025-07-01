@@ -90,45 +90,6 @@ export const createMockContracts = (
   feeManager: MOCK_SYSTEM_CONTRACTS.feeManager,
 });
 
-// Legacy mock contracts (for backward compatibility)
-export const MOCK_CONTRACTS = {
-  vault: "0x1234567890123456789012345678901234567890",
-  registry: MOCK_SYSTEM_CONTRACTS.registry,
-  tokens: {
-    wS: "0xwS00000000000000000000000000000000000000",
-    "USDC.e": "0xUSDCe11111111111111111111111111111111111",
-  },
-  rewardClaimer: MOCK_SYSTEM_CONTRACTS.rewardClaimer,
-  queueHandler: MOCK_SYSTEM_CONTRACTS.queueHandler,
-  feeManager: MOCK_SYSTEM_CONTRACTS.feeManager,
-};
-
-// Mock addresses
-export const MOCK_ADDRESSES = {
-  user: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  vault: MOCK_CONTRACTS.vault,
-  wS: MOCK_CONTRACTS.tokens.wS,
-  usdce: MOCK_CONTRACTS.tokens["USDC.e"],
-};
-
-// Mock vault data
-export const MOCK_VAULT_DATA = {
-  vaultBalanceX: parseEther("1000"), // 1000 wS in vault
-  vaultBalanceY: parseEther("1000"), // 1000 USDC.e in vault
-  userSharesX: parseEther("10"), // User has 10 wS shares
-  userSharesY: parseEther("10"), // User has 10 USDC.e shares
-  pricePerShareX: parseEther("1.1"), // 1.1 wS per share
-  pricePerShareY: parseEther("1.05"), // 1.05 USDC.e per share
-  userBalanceX: parseEther("100"), // User has 100 wS
-  userBalanceY: parseEther("100"), // User has 100 USDC.e
-  allowanceX: parseEther("1000"), // wS allowance
-  allowanceY: parseEther("1000"), // USDC.e allowance
-  pendingDeposits: 5n,
-  pendingWithdraws: 2n,
-  totalCompoundedX: parseEther("50"), // 50 wS compounded
-  totalCompoundedY: parseEther("75"), // 75 USDC.e compounded
-};
-
 // Mock transaction hash
 export const MOCK_TX_HASH =
   "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef";
@@ -175,34 +136,6 @@ export function createMockReadContract<T = unknown>(
 
 // Helper to create mock write contract return
 export function createMockWriteContract(
-  overrides: Partial<UseWriteContractReturnType> = {},
-) {
-  const mockWriteContract = vi.fn();
-  const mockWriteContractAsync = vi.fn().mockResolvedValue(MOCK_TX_HASH);
-  const mockVariables = undefined;
-
-  return {
-    writeContract: mockWriteContract,
-    writeContractAsync: mockWriteContractAsync,
-    data: undefined,
-    isPending: false,
-    isSuccess: false,
-    isError: false,
-    isIdle: true,
-    error: null,
-    variables: mockVariables,
-    reset: vi.fn(),
-    context: undefined,
-    status: "idle",
-    submittedAt: 0,
-    isPaused: false,
-    failureCount: 0,
-    failureReason: null,
-    ...overrides,
-  } as UseWriteContractReturnType;
-}
-
-export function createMockWriteContract2(
   overrides: Partial<UseWriteContractReturnType> & {
     writeContract?: ReturnType<typeof vi.fn>;
   } = {},
@@ -220,14 +153,14 @@ export function createMockWriteContract2(
     isError: overrides.isError || false,
     isIdle: overrides.isIdle !== undefined ? overrides.isIdle : !overrides.data,
     error: null,
-    failureCount: 0,
-    failureReason: null,
     variables: mockVariables,
     reset: vi.fn(),
-    submittedAt: Date.now(),
     context: undefined,
-    isPaused: false,
     status: overrides.status || (overrides.data ? "success" : "idle"),
+    submittedAt: overrides.data ? Date.now() : 0,
+    isPaused: false,
+    failureCount: 0,
+    failureReason: null,
     ...overrides,
   } as UseWriteContractReturnType;
 }
@@ -330,47 +263,6 @@ export function createMockUseAccount(
       isDisconnected: false,
     };
   }
-}
-
-// Mock vault hook data for testing
-export function createMockVaultHook(
-  overrides?: Partial<typeof MOCK_VAULT_DATA>,
-) {
-  const data = { ...MOCK_VAULT_DATA, ...overrides };
-
-  return {
-    contracts: MOCK_CONTRACTS,
-
-    // Formatted balances (as strings)
-    vaultBalanceX: parseEther("1000").toString(),
-    vaultBalanceY: parseEther("1000").toString(),
-    userSharesX: parseEther("10").toString(),
-    userSharesY: parseEther("10").toString(),
-    pricePerShareX: parseEther("1.1").toString(),
-    pricePerShareY: parseEther("1.05").toString(),
-    userBalanceWS: parseEther("100").toString(),
-    userBalanceUSDC: parseEther("100").toString(),
-
-    // Queue status
-    pendingDeposits: "5",
-    pendingWithdraws: "2",
-
-    // Transaction state
-    isWritePending: false,
-    isConfirming: false,
-    isConfirmed: false,
-    hash: undefined,
-
-    // Functions
-    approveWS: vi.fn(),
-    approveUSDC: vi.fn(),
-    depositWS: vi.fn(),
-    depositUSDC: vi.fn(),
-    withdrawShares: vi.fn(),
-    withdrawAll: vi.fn(),
-    hasAllowance: vi.fn().mockReturnValue(true),
-    formatBalance: vi.fn((val) => val?.toString() || "0"),
-  };
 }
 
 // Helper to create mock useReadContracts return

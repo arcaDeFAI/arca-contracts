@@ -723,6 +723,14 @@ describe("🎯 TDD: Token-Agnostic useVault Hook", () => {
         createMockUseAccount("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", 1), // Ethereum mainnet - not supported
       );
 
+      // Mock vault registry to return empty vaults for unsupported chain
+      vi.mocked(useVaultRegistry).mockReturnValue({
+        vaults: [],
+        isLoading: false,
+        error: null,
+        registryAddress: undefined,
+      });
+
       const { result } = renderHook(
         () => useVault(currentVaultConfig.address),
         {
