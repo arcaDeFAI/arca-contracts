@@ -4,8 +4,9 @@ import * as fs from "fs";
 import * as path from "path";
 
 /**
- * Comprehensive manual testing script for localhost deployment
+ * Comprehensive deployment testing script for any network
  * This script performs end-to-end testing of the Arca vault system
+ * Works with localhost, testnet, fork, and mainnet deployments
  */
 
 interface TestResult {
@@ -30,10 +31,11 @@ async function runManualTests(): Promise<void> {
   }
 
   try {
-    // Load deployment
-    const deploymentPath = path.join(__dirname, "../deployments/localhost/latest.json");
+    // Load deployment based on current network
+    const networkName = hre.network.name;
+    const deploymentPath = path.join(__dirname, `../deployments/${networkName}/latest.json`);
     if (!fs.existsSync(deploymentPath)) {
-      throw new Error("No localhost deployment found. Run 'npm run deploy:local' first.");
+      throw new Error(`No ${networkName} deployment found. Run 'npm run deploy --network ${networkName}' first.`);
     }
     
     const deployment = JSON.parse(fs.readFileSync(deploymentPath, "utf8"));
@@ -43,11 +45,16 @@ async function runManualTests(): Promise<void> {
     const vault = await hre.ethers.getContractAt("ArcaTestnetV1", deployment.contracts.vault);
     const feeManager = await hre.ethers.getContractAt("ArcaFeeManagerV1", deployment.contracts.feeManager);
     const queueHandler = await hre.ethers.getContractAt("ArcaQueueHandlerV1", deployment.contracts.queueHandler);
-    const tokenX = await hre.ethers.getContractAt("MockERC20", deployment.config.tokenX);
-    const tokenY = await hre.ethers.getContractAt("MockERC20", deployment.config.tokenY);
+    // Use IERC20 interface for testnet/mainnet, MockERC20 for localhost
+    const tokenContractName = hre.network.name === "localhost" ? "MockERC20" : "IERC20";
+    const tokenX = await hre.ethers.getContractAt(tokenContractName, deployment.config.tokenX);
+    const tokenY = await hre.ethers.getContractAt(tokenContractName, deployment.config.tokenY);
     
     // Get test accounts
-    const [, user1, user2] = await hre.ethers.getSigners();
+    const signers = await hre.ethers.getSigners();
+    const deployer = signers[0];
+    const user1 = signers[1] || deployer; // Use deployer if no second signer
+    const user2 = signers[2] || signers[1] || deployer; // Fallback chain
     
     console.log("\n=== SETUP VERIFICATION ===");
     addResult("Contracts Connected", true, "All contracts accessible", {
@@ -76,23 +83,49 @@ async function runManualTests(): Promise<void> {
     // Test 2: Fund Users
     console.log("\n=== TEST 2: FUNDING USERS ===");
     
-    const fundAmount = hre.ethers.parseEther("1000");
-    await tokenX.mint(user1.address, fundAmount);
-    await tokenY.mint(user1.address, fundAmount);
-    await tokenX.mint(user2.address, fundAmount);
-    await tokenY.mint(user2.address, fundAmount);
+    let user1BalanceX = await tokenX.balanceOf(user1.address);
+    let user1BalanceY = await tokenY.balanceOf(user1.address);
     
-    const user1BalanceX = await tokenX.balanceOf(user1.address);
-    const user1BalanceY = await tokenY.balanceOf(user1.address);
-    addResult("User Funding",
-      user1BalanceX >= fundAmount && user1BalanceY >= fundAmount,
-      `User1 now has ${hre.ethers.formatEther(user1BalanceX)} TokenX, ${hre.ethers.formatEther(user1BalanceY)} TokenY`
-    );
+    if (hre.network.name === "localhost") {
+      // Mint tokens on localhost
+      const fundAmount = hre.ethers.parseEther("1000");
+      await tokenX.mint(user1.address, fundAmount);
+      await tokenY.mint(user1.address, fundAmount);
+      await tokenX.mint(user2.address, fundAmount);
+      await tokenY.mint(user2.address, fundAmount);
+      
+      user1BalanceX = await tokenX.balanceOf(user1.address);
+      user1BalanceY = await tokenY.balanceOf(user1.address);
+      addResult("User Funding",
+        user1BalanceX >= fundAmount && user1BalanceY >= fundAmount,
+        `User1 now has ${hre.ethers.formatEther(user1BalanceX)} TokenX, ${hre.ethers.formatEther(user1BalanceY)} TokenY`
+      );
+    } else {
+      // On testnet/mainnet, users must have tokens already
+      addResult("User Balance Check",
+        user1BalanceX > 0n || user1BalanceY > 0n,
+        `User1 has ${hre.ethers.formatEther(user1BalanceX)} TokenX, ${hre.ethers.formatEther(user1BalanceY)} TokenY`,
+        { note: "On testnet/mainnet, users must fund accounts manually via faucet or transfers" }
+      );
+      
+      if (user1BalanceX === 0n && user1BalanceY === 0n) {
+        console.log("\n⚠️  WARNING: Test users have no tokens. Please:");
+        console.log("   1. Get testnet tokens from https://testnet.soniclabs.com/account");
+        console.log("   2. Send tokens to test addresses:");
+        console.log(`      - User1: ${user1.address}`);
+        console.log(`      - User2: ${user2.address}`);
+        console.log("   3. Re-run this test");
+        return;
+      }
+    }
     
     // Test 3: Deposit Workflow
     console.log("\n=== TEST 3: DEPOSIT WORKFLOW ===");
     
-    const depositAmount = hre.ethers.parseEther("100");
+    // Use smaller amounts on testnet or based on actual balance
+    const depositAmount = hre.network.name === "localhost" 
+      ? hre.ethers.parseEther("100")
+      : hre.ethers.parseEther("0.001"); // Tiny amount for testnet
     await tokenX.connect(user1).approve(vault.target, depositAmount);
     await tokenY.connect(user1).approve(vault.target, depositAmount);
     
