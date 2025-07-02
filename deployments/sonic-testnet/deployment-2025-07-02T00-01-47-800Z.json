@@ -2,16 +2,16 @@
   "network": "sonic-testnet",
   "chainId": 57054,
   "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
-  "timestamp": "2025-07-02T00:03:30.411Z",
+  "timestamp": "2025-07-02T00:01:47.800Z",
   "contracts": {
-    "vault": "0xc32F060B990Aa7A6adc0351E0348F57f25EeB43b",
-    "rewardClaimer": "0xB5529dAfb885BB80bdFf9BE004CdB345B20fd132",
-    "queueHandler": "0x3594736a34369bBb4b2F528B04990982D0449137",
-    "feeManager": "0xD2393d8724c41f66DAF71853261ac7e1B24914fb",
-    "registry": "0x55666BCAA4bDCE2C9Fc27154d1fEA46d3E977Ca4",
+    "vault": "0x7A2DCcFE36242cA9AFe80154a993057254879d84",
+    "rewardClaimer": "0x371EB22944a34619a2E27aF9de7A8bB978e3Dd70",
+    "queueHandler": "0x99f11C21ea9fefDf68F956a0883fbCAaf072381a",
+    "feeManager": "0xfE8B61C73c5E3D9Bd44E097008c9aBe7D5B3eB93",
+    "registry": "0x9018C2062aB2c7c11A08d0c35A849b9cEA2d5AD9",
     "beacons": {
-      "queueHandler": "0xDf98E1D8aD28504d0EFb291D89A0990266f94764",
-      "feeManager": "0xD84CF86005139C4D223f38Bf89F1608988C34C6b"
+      "queueHandler": "0x3F0eB66b6DE136e12669AC48829e42808C67D9F7",
+      "feeManager": "0x1Bbf34fCed8fF502994D2A4729e146f57D12383B"
     }
   },
   "config": {

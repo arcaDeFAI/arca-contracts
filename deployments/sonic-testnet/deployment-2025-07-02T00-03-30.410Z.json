@@ -1,9 +1,8 @@
 {
   "network": "sonic-testnet",
-  "chainId": 57054,
+  "timestamp": "2025-07-02T00:03:30.410Z",
   "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
-  "timestamp": "2025-07-02T00:03:30.411Z",
-  "contracts": {
+  "addresses": {
     "vault": "0xc32F060B990Aa7A6adc0351E0348F57f25EeB43b",
     "rewardClaimer": "0xB5529dAfb885BB80bdFf9BE004CdB345B20fd132",
     "queueHandler": "0x3594736a34369bBb4b2F528B04990982D0449137",
@@ -17,7 +16,7 @@
   "config": {
     "tokenX": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
     "tokenY": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
-    "binStep": 25,
+    "binStep": "25",
     "amountXMin": "1000000000000000",
     "amountYMin": "1000000000000000",
     "name": "Arca Testnet Vault",
@@ -32,5 +31,11 @@
     "idSlippage": "5",
     "feeRecipient": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98"
   },
-  "version": "1.0.0"
+  "contractVersions": {
+    "vault": "ArcaTestnetV1",
+    "rewardClaimer": "ArcaRewardClaimerV1",
+    "queueHandler": "ArcaQueueHandlerV1",
+    "feeManager": "ArcaFeeManagerV1",
+    "registry": "ArcaVaultRegistry"
+  }
 }
