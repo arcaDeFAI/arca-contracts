@@ -176,7 +176,7 @@ describe("useVaultRegistry - TDD Multi-Network & Multi-Vault Support", () => {
 
     it("should work with Sonic Blaze Testnet (chainId 57054)", async () => {
       // Arrange
-      const testnetRegistry = "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f";
+      const testnetRegistry = "0x9876543210987654321098765432109876543210";
       const { capturedQueryFn } = setupNetworkTest(
         57054,
         testnetRegistry,
@@ -400,7 +400,7 @@ describe("useVaultRegistry - TDD Multi-Network & Multi-Vault Support", () => {
       // Act - switch to testnet
       (useAccount as Mock).mockReturnValue({ chainId: 57054 });
       (getContracts as Mock).mockReturnValue({
-        registry: "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
+        registry: "0x9876543210987654321098765432109876543210",
       });
 
       rerender();
@@ -411,7 +411,7 @@ describe("useVaultRegistry - TDD Multi-Network & Multi-Vault Support", () => {
           expect.objectContaining({
             queryKey: [
               "activeVaults",
-              "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
+              "0x9876543210987654321098765432109876543210",
               57054,
             ],
           }),

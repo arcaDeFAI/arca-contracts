@@ -95,7 +95,7 @@ export class Web3ErrorBoundary extends Component<Props, State> {
             </button>
           </div>
 
-          {process.env.NODE_ENV === "development" && this.state.error && (
+          {import.meta.env.DEV && this.state.error && (
             <details className="mt-4 text-xs">
               <summary className="cursor-pointer text-arca-secondary hover:text-white">
                 Error Details (Development)
