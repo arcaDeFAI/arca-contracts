@@ -165,6 +165,6 @@ export function getPriceSourceInfo() {
     demoMode: DEMO_MODE.enabled,
     useFakeData: DEMO_MODE.useFakeData,
     shouldUseRealPrices: !DEMO_MODE.useFakeData,
-    environment: process.env.NODE_ENV,
+    environment: import.meta.env.MODE,
   };
 }

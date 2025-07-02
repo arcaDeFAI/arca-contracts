@@ -1,10 +1,42 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   createVaultConfigFromRegistry,
   getActiveVaultConfigs,
 } from "../vault-configs";
 import { getDeploymentAddresses } from "../deployment-loader";
 import type { RegistryVaultInfo } from "../../hooks/use-vault-registry";
+import {
+  MOCK_SYSTEM_CONTRACTS,
+  MOCK_DEPLOYMENT_ADDRESSES,
+} from "../../test-utils/mock-contracts";
+
+// Mock the deployments to use consistent test addresses
+vi.mock("../../../../exports/deployments", () => ({
+  deployments: {
+    localhost: {
+      vault: "0xLocalVault",
+      registry: "0x9876543210987654321098765432109876543210",
+      feeManager: "0xFEEDFACEFEEDFACEFEEDFACEFEEDFACEFEEDFACE",
+      queueHandler: "0x1234567890ABCDEF1234567890ABCDEF12345678",
+      rewardClaimer: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
+      config: {
+        tokenX: "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38", // wS - actual address from KNOWN_TOKENS
+        tokenY: "0x29219dd400f2Bf60E5a23d13Be72B486D4038894", // USDC.e - actual address from KNOWN_TOKENS
+      },
+    },
+    "sonic-testnet": {
+      vault: "0xTestnetVault",
+      registry: "0x9876543210987654321098765432109876543210",
+      feeManager: "0xFEEDFACEFEEDFACEFEEDFACEFEEDFACEFEEDFACE",
+      queueHandler: "0x1234567890ABCDEF1234567890ABCDEF12345678",
+      rewardClaimer: "0xABCDEF1234567890ABCDEF1234567890ABCDEF12",
+      config: {
+        tokenX: "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+        tokenY: "0x29219dd400f2Bf60E5a23d13Be72B486D4038894", // USDC.e - actual address from KNOWN_TOKENS
+      },
+    },
+  },
+}));
 
 describe("Multi-Vault Flow Integration", () => {
   describe("Complete Configuration Flow", () => {
@@ -13,14 +45,12 @@ describe("Multi-Vault Flow Integration", () => {
       const infrastructure = getDeploymentAddresses(57054);
 
       expect(infrastructure).toBeDefined();
-      expect(infrastructure?.registry).toBe(
-        "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
-      );
+      expect(infrastructure?.registry).toBe(MOCK_SYSTEM_CONTRACTS.registry);
       expect(infrastructure?.networkTokens.rewardToken).toBe(
-        "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321",
+        MOCK_DEPLOYMENT_ADDRESSES.networkTokens.rewardToken,
       ); // METRO
       expect(infrastructure?.networkTokens.wrappedNative).toBe(
-        "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+        MOCK_DEPLOYMENT_ADDRESSES.networkTokens.wrappedNative,
       ); // wS
       expect(infrastructure?.metropolis.lbRouter).toBeDefined();
 
@@ -148,17 +178,13 @@ describe("Multi-Vault Flow Integration", () => {
       // Localhost
       const localhost = getDeploymentAddresses(31337);
       expect(localhost?.registry).toBeDefined();
-      expect(localhost?.networkTokens.rewardToken).toBe(
-        "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-      ); // Mock METRO
+      expect(localhost?.registry).toBe(MOCK_SYSTEM_CONTRACTS.registry);
 
       // Testnet
       const testnet = getDeploymentAddresses(57054);
-      expect(testnet?.registry).toBe(
-        "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
-      );
+      expect(testnet?.registry).toBe(MOCK_SYSTEM_CONTRACTS.registry);
       expect(testnet?.networkTokens.rewardToken).toBe(
-        "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321",
+        MOCK_DEPLOYMENT_ADDRESSES.networkTokens.rewardToken,
       );
 
       // Mainnet (not deployed yet)

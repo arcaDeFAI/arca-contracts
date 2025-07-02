@@ -12,7 +12,10 @@ export const SUPPORTED_CHAINS = {
     },
     rpcUrls: {
       default: {
-        http: ["https://rpc.soniclabs.com"],
+        http: [
+          import.meta.env.VITE_SONIC_MAINNET_RPC_URL ||
+            "https://rpc.soniclabs.com",
+        ],
       },
     },
     blockExplorers: {
@@ -61,8 +64,8 @@ export const SUPPORTED_CHAINS = {
     rpcUrls: {
       default: {
         http: [
-          process.env.VITE_SONIC_TESTNET_RPC_URL ||
-            "https://sonic-blaze.g.alchemy.com/v2/ulHul-6EQCoEEQm7UzD1z_NWtREniPeU",
+          import.meta.env.VITE_SONIC_TESTNET_RPC_URL ||
+            "https://rpc.blaze.soniclabs.com",
         ],
       },
       public: {

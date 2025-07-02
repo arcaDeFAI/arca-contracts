@@ -22,7 +22,7 @@ vi.mock("../../../../exports/deployments", () => ({
     },
     "sonic-testnet": {
       vault: "0xTestnetVault",
-      registry: "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
+      registry: "0x9876543210987654321098765432109876543210",
       feeManager: "0xTestnetFeeManager",
       queueHandler: "0xTestnetQueueHandler",
       rewardClaimer: "0xTestnetRewardClaimer",
@@ -149,7 +149,7 @@ describe("deployment-loader - Infrastructure vs Vault Tokens Architecture", () =
       // Assert - Registry is the entry point for vault discovery
       expect(localhostDeployment?.registry).toBeDefined();
       expect(testnetDeployment?.registry).toBe(
-        "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
+        "0x9876543210987654321098765432109876543210",
       );
     });
 

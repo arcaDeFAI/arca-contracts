@@ -1,5 +1,5 @@
 // Auto-generated deployment addresses
-// Generated at: 2025-07-01T14:52:14.952Z
+// Generated at: 2025-07-02T00:17:24.506Z
 
 export const deployments = {
   "localhost": {
@@ -17,12 +17,12 @@ export const deployments = {
     }
   },
   "sonic-testnet": {
-    "vault": "0xf1C14D85E15a78122a19972b58e964eFd5F583F5",
-    "registry": "0xd8cF609ac86ddE8Bde1d41F53Ed2F94Ba173BF2f",
-    "feeManager": "0x173F32DCf921AcBd7a303f5FF071359fD23f9FA7",
-    "queueHandler": "0x0F910626713b40659851BA42c62D4ab82Bf860aB",
-    "rewardClaimer": "0xD0D944682F1012ad9a9DEB09516bD7EA4529A2C8",
-    "deploymentTime": "2025-06-30T14:55:09.986Z",
+    "vault": "0xc32F060B990Aa7A6adc0351E0348F57f25EeB43b",
+    "registry": "0x55666BCAA4bDCE2C9Fc27154d1fEA46d3E977Ca4",
+    "feeManager": "0xD2393d8724c41f66DAF71853261ac7e1B24914fb",
+    "queueHandler": "0x3594736a34369bBb4b2F528B04990982D0449137",
+    "rewardClaimer": "0xB5529dAfb885BB80bdFf9BE004CdB345B20fd132",
+    "deploymentTime": "2025-07-02T00:03:30.411Z",
     "config": {
       "name": "Arca Testnet Vault",
       "symbol": "ARCA-TEST",
