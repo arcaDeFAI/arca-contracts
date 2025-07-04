@@ -15,7 +15,7 @@
   "vaults": [
     {
       "id": "ws-usdc",
-      "enabled": true,
+      "enabled": false,
       "tokens": {
         "tokenX": {
           "address": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
@@ -49,24 +49,24 @@
       }
     },
     {
-      "id": "test1-test2",
+      "id": "test1-usdc",
       "enabled": true,
       "tokens": {
         "tokenX": {
-          "address": "DEPLOY_MOCK",
+          "address": "0x46e6B680eBae63e086e6D820529Aed187465aeDA",
           "symbol": "TEST1",
           "name": "Test Token 1",
           "decimals": 18,
-          "deployMock": true,
-          "_comment": "Custom test token deployed on testnet"
+          "deployMock": false,
+          "_comment": "Already deployed at this address"
         },
         "tokenY": {
-          "address": "DEPLOY_MOCK",
-          "symbol": "TEST2",
-          "name": "Test Token 2",
+          "address": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
+          "symbol": "USDC",
+          "name": "USD Coin",
           "decimals": 6,
-          "deployMock": true,
-          "_comment": "Custom test token deployed on testnet with 6 decimals"
+          "deployMock": false,
+          "_comment": "Using existing USDC on testnet as quote asset"
         }
       },
       "lbPair": {
@@ -77,8 +77,8 @@
         "_comment": "New LB pair will be created via Metropolis factory"
       },
       "deployment": {
-        "vaultName": "Arca TEST1-TEST2 Vault",
-        "vaultSymbol": "ARCA-TEST1-TEST2",
+        "vaultName": "Arca TEST1-USDC Vault",
+        "vaultSymbol": "ARCA-TEST1-USDC",
         "amountXMin": "1000000000000000",
         "amountYMin": "1000000",
         "idSlippage": "5",

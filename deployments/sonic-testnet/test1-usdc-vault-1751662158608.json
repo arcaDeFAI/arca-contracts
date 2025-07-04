@@ -1,0 +1,30 @@
+{
+  "network": "sonic-testnet",
+  "timestamp": "2025-07-04T20:49:18.608Z",
+  "contracts": {
+    "queueHandler": "0x15b9Be7C547EEfa8391Fb64D8Aeb377AFA4eA694",
+    "feeManager": "0x8907281dEd918358500230659AD90Caf0C5B0Cc5",
+    "rewardClaimer": "0x33E4Eac3DB8e2b7Ef457cC46417ff4404b28f4Cc",
+    "vault": "0x8f74E08606b8182a472645F2598C5D9a81bD8fdc"
+  },
+  "infrastructure": {
+    "test1": "0x46e6B680eBae63e086e6D820529Aed187465aeDA",
+    "usdc": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
+    "registry": "0x1D134fBA4456F9F1130dFc7d1b5C379a4C8abbb8",
+    "queueHandlerBeacon": "0xB6DB386354c1a74F5071B90B087db57c7C350Ac6",
+    "feeManagerBeacon": "0x7a075c7496c96AE220833aEA019EA1c9695d0685",
+    "lbRouter": "0xe77DA7F5B6927fD5E0e825B2B27aca526341069B",
+    "lbFactory": "0x90F28Fe6963cE929d4cBc3480Df1169b92DD22B7",
+    "metroToken": "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321",
+    "lbPair": "0xc1603bA905f4E268CDf451591eF51bdFb1185EEB",
+    "feeRecipient": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98"
+  },
+  "vaultConfig": {
+    "name": "Arca TEST1-USDC Vault",
+    "symbol": "ARCA-TEST1-USDC",
+    "tokenX": "0x46e6B680eBae63e086e6D820529Aed187465aeDA",
+    "tokenY": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
+    "binStep": 25,
+    "lbPair": "0xc1603bA905f4E268CDf451591eF51bdFb1185EEB"
+  }
+}

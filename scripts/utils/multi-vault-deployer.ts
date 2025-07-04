@@ -1,6 +1,7 @@
 import { ethers, upgrades } from "hardhat";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import type { NetworkConfig, VaultConfig, getEnabledVaults } from "../types/config";
+import type { NetworkConfig, VaultConfig } from "../types/config";
+import { getEnabledVaults } from "../types/config";
 import type { DeployedToken } from "./token-deployer";
 import { deployAllTokens } from "./token-deployer";
 import type { DeployedLBPair } from "./lb-pair-manager";

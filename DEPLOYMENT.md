@@ -12,6 +12,8 @@ The Arca deployment system follows a **three-tier testing strategy**:
 
 > **New**: Sonic Blaze Testnet now has full Metropolis DLMM contract support, enabling safe testing with real network conditions using free testnet tokens. Fork testing remains available as an alternative.
 
+> **Multi-Vault Support**: The deployment system now supports deploying multiple vaults in a single command, with shared infrastructure and token reuse across vaults.
+
 ## Quick Start
 
 ### Prerequisites
@@ -44,6 +46,10 @@ npm run deploy:local      # Deploy to localhost with mocks
 npm run deploy:testnet    # Deploy to Sonic Blaze Testnet
 npm run deploy:fork       # Deploy to mainnet fork
 npm run deploy:mainnet    # Deploy to Sonic mainnet
+
+# Multi-vault deployment options:
+npm run deploy --network <name> --vaults "ws-usdc,metro-usdc"  # Deploy specific vaults
+npm run deploy --network <name> --resume                       # Resume failed deployment
 ```
 
 ## Deployment Flow
@@ -261,6 +267,7 @@ config/networks/
 
 ### Configuration Structure
 
+#### Single Vault Configuration (Legacy)
 ```json
 {
   "name": "network-name",
@@ -280,14 +287,55 @@ config/networks/
 }
 ```
 
+#### Multi-Vault Configuration (Recommended)
+```json
+{
+  "name": "localhost",
+  "chainId": 31337,
+  "sharedContracts": {
+    "metroToken": "DEPLOY_MOCK",     // or address
+    "lbRouter": "DEPLOY_MOCK",        // or address
+    "lbFactory": "DEPLOY_MOCK"        // or address
+  },
+  "vaults": [
+    {
+      "id": "ws-usdc",
+      "enabled": true,
+      "tokens": {
+        "tokenX": { "symbol": "wS", "decimals": 18, "deployMock": true },
+        "tokenY": { "symbol": "USDC", "decimals": 6, "deployMock": true }
+      },
+      "lbPair": { "deployMock": true, "binStep": 25 },
+      "deployment": {
+        "vaultName": "Arca wS-USDC Vault",
+        "vaultSymbol": "ARCA-wS-USDC",
+        "feeRecipient": "0x..."
+      }
+    },
+    {
+      "id": "metro-usdc",
+      "enabled": true,
+      "tokens": {
+        "tokenX": { "symbol": "METRO", "decimals": 18, "deployMock": false },
+        "tokenY": { "symbol": "USDC", "decimals": 6, "deployMock": false }  // Reuses USDC
+      },
+      "lbPair": { "deployMock": true, "binStep": 25 },
+      "deployment": {
+        "vaultName": "Arca METRO-USDC Vault",
+        "vaultSymbol": "ARCA-METRO-USDC"
+      }
+    }
+  ]
+}
+```
+
 ## Environment Variables
 
 Create a `.env` file that's based off [.env.example](./.env.example).
 
 ## Architecture Overview
 
-The deployment creates the following contract structure:
-
+### Single Vault Structure
 ```
 ┌─────────────────────┐
 │   ArcaTestnetV1     │ ← Main Vault (UUPS Proxy)
@@ -303,10 +351,37 @@ The deployment creates the following contract structure:
  (Beacon)     (Beacon)     (UUPS)
 ```
 
+### Multi-Vault Architecture
+```
+                    ┌─────────────────┐
+                    │ Vault Registry  │ ← Tracks all vaults
+                    └────────┬────────┘
+                             │
+        ┌────────────────────┴────────────────────┐
+        │                                         │
+┌───────▼────────┐                      ┌────────▼────────┐
+│ Vault 1        │                      │ Vault 2         │
+│ (wS-USDC)      │                      │ (METRO-USDC)    │
+└───────┬────────┘                      └────────┬────────┘
+        │                                         │
+   ┌────┴────┬──────────┬──────────┐  ┌─────────┴──────────────┐
+   ▼         ▼          ▼          ▼  ▼                        ▼
+┌──────┐ ┌──────┐ ┌──────────┐ ┌──────┐                   ┌──────────┐
+│Queue │ │ Fee  │ │ Reward   │ │Queue │     Shared        │ Reward   │
+│Hand. │ │ Mgr  │ │ Claimer  │ │Hand. │    Beacons       │ Claimer  │
+└──────┘ └──────┘ └──────────┘ └──────┘                   └──────────┘
+                                                               
+                    Shared Infrastructure:
+                    - METRO Token (all vaults)
+                    - LB Router (all vaults)
+                    - Token reuse (e.g., USDC)
+```
+
 ### Proxy Patterns
 
 - **UUPS Proxies**: Main Vault and Reward Claimer (upgradeable by owner)
 - **Beacon Proxies**: Queue Handler and Fee Manager (batch upgradeable)
+- **Shared Beacons**: All queue handlers and fee managers share beacons for unified upgrades
 
 ## Command Reference
 
@@ -385,9 +460,12 @@ Before mainnet deployment:
 
 ### Getting Help
 
-1. Check deployment logs in `deployments/<network>/latest.json`
+1. Check deployment logs:
+   - Single vault: `deployments/<network>/latest.json`
+   - Multi-vault: `deployments/<network>/latest-multi-vault.json`
 2. Run verification script for detailed diagnostics
 3. Review error messages for specific contract failures
+4. Check deployment progress in multi-vault deployments
 
 ## Contract Addresses
 
@@ -412,6 +490,87 @@ Before mainnet deployment:
 | LB Pair (wS-USDC) | 0x11d899dec22fb03a0047212b1a20a7ad8d699420 |
 | METRO Token | 0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321 |
 
+## Multi-Vault Deployment Guide
+
+### Key Features
+
+1. **Deploy Multiple Vaults**: Deploy any number of vaults in a single command
+2. **Token Reuse**: Automatically reuses deployed tokens across vaults (e.g., USDC shared between multiple pairs)
+3. **Shared Infrastructure**: Single registry, shared beacon proxies for batch upgrades
+4. **Resume Capability**: Failed deployments can be resumed from where they left off
+5. **Progress Tracking**: Real-time deployment progress with detailed logging
+
+### Multi-Vault Commands
+
+```bash
+# Deploy all enabled vaults in config
+npm run deploy --network localhost
+
+# Deploy specific vaults only
+npm run deploy --network testnet --vaults "ws-usdc,metro-usdc"
+
+# Resume a failed deployment
+npm run deploy --network localhost --resume
+
+# Skip specific vaults
+npm run deploy --network mainnet --skip "test1-test2"
+```
+
+### Deployment Process
+
+1. **Shared Infrastructure**: Deploys registry, beacons, and shared contracts first
+2. **Token Deployment**: Deploys tokens once and reuses across vaults
+3. **Vault Deployment**: Deploys each vault with its supporting contracts
+4. **Registry Updates**: Registers all vaults for easy discovery
+5. **Progress Saving**: Saves progress after each step for resume capability
+
+### Testnet Deployment with Custom Tokens
+
+For testnet deployments with custom tokens:
+
+1. **Deploy Mock Tokens**: Set `deployMock: true` for test tokens
+2. **Create LB Pairs**: System will create pairs via factory if needed
+3. **Add Initial Liquidity**: Manually add liquidity through Metropolis UI
+4. **Test Operations**: Verify vault operations with test tokens
+
+### Example: Adding a New Vault
+
+1. Edit your network config file:
+```json
+{
+  "vaults": [
+    // ... existing vaults ...
+    {
+      "id": "new-token-usdc",
+      "enabled": true,
+      "tokens": {
+        "tokenX": { "symbol": "NEW", "decimals": 18, "deployMock": true },
+        "tokenY": { "symbol": "USDC", "decimals": 6, "deployMock": false }
+      },
+      "lbPair": { "deployMock": true, "binStep": 25 },
+      "deployment": {
+        "vaultName": "Arca NEW-USDC Vault",
+        "vaultSymbol": "ARCA-NEW-USDC"
+      }
+    }
+  ]
+}
+```
+
+2. Deploy the new vault:
+```bash
+npm run deploy --network localhost --vaults "new-token-usdc"
+```
+
+### Deployment Artifacts
+
+Multi-vault deployments save comprehensive artifacts:
+
+- **Deployment Log**: `deployments/<network>/latest-multi-vault.json`
+- **Progress File**: `deployments/<network>/multi-vault-progress.json`
+- **Individual Vaults**: Accessible via registry contract
+- **Shared Infrastructure**: Beacons, tokens, and registry addresses
+
 ## Best Practices
 
 1. **Always test on testnet first** - Safe testing with real network conditions using free tokens
@@ -421,6 +580,9 @@ Before mainnet deployment:
 5. **Save artifacts** - Keep deployment history for debugging
 6. **Verify immediately** - Ensure source code is public on both testnet and mainnet
 7. **Transfer ownership carefully** - Use multi-sig for production
+8. **Plan vault configurations** - Design token pairs and parameters before deployment
+9. **Monitor gas usage** - Multi-vault deployments can be gas-intensive
+10. **Use resume capability** - Don't restart failed deployments from scratch
 
 ---
 

@@ -1,35 +1,93 @@
 // Auto-generated deployment addresses
-// Generated at: 2025-07-02T00:17:24.506Z
+// Generated at: 2025-07-04T21:10:00.880Z
 
-export const deployments = {
-  "localhost": {
-    "vault": "0xD8a5a9b31c3C0232E196d518E89Fd8bF83AcAd43",
-    "registry": "0x8198f5d8F8CfFE8f9C413d98a0A55aEB8ab9FbB7",
-    "feeManager": "0x21dF544947ba3E8b3c32561399E88B52Dc8b2823",
-    "queueHandler": "0x4C4a2f8c81640e47606d3fd77B353E87Ba015584",
-    "rewardClaimer": "0x2E2Ed0Cfd3AD2f1d34481277b3204d807Ca2F8c2",
-    "deploymentTime": "2025-06-28T18:37:13.862Z",
-    "config": {
-      "name": "Arca Local Test Vault",
-      "symbol": "ARCA-LOCAL",
-      "tokenX": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528",
-      "tokenY": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF"
-    }
-  },
+export interface VaultInfo {
+  id: string;
+  vault: string;
+  queueHandler: string;
+  feeManager: string;
+  rewardClaimer: string;
+  tokenX: string;
+  tokenY: string;
+  lbPair: string;
+  name: string;
+  symbol: string;
+}
+
+export interface SharedInfrastructure {
+  queueHandlerBeacon: string;
+  feeManagerBeacon: string;
+  metroToken: string;
+  lbRouter: string;
+  lbFactory?: string;
+}
+
+export interface NetworkDeployment {
+  registry: string;
+  sharedInfrastructure: SharedInfrastructure;
+  vaults: VaultInfo[];
+  deploymentTime: string;
+  deployedTokens: Record<string, string>;
+}
+
+export const deployments: Record<string, NetworkDeployment> = {
   "sonic-testnet": {
-    "vault": "0xc32F060B990Aa7A6adc0351E0348F57f25EeB43b",
-    "registry": "0x55666BCAA4bDCE2C9Fc27154d1fEA46d3E977Ca4",
-    "feeManager": "0xD2393d8724c41f66DAF71853261ac7e1B24914fb",
-    "queueHandler": "0x3594736a34369bBb4b2F528B04990982D0449137",
-    "rewardClaimer": "0xB5529dAfb885BB80bdFf9BE004CdB345B20fd132",
-    "deploymentTime": "2025-07-02T00:03:30.411Z",
-    "config": {
-      "name": "Arca Testnet Vault",
-      "symbol": "ARCA-TEST",
-      "tokenX": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
-      "tokenY": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0"
+    "registry": "0x1D134fBA4456F9F1130dFc7d1b5C379a4C8abbb8",
+    "sharedInfrastructure": {
+      "queueHandlerBeacon": "0xB6DB386354c1a74F5071B90B087db57c7C350Ac6",
+      "feeManagerBeacon": "0x7a075c7496c96AE220833aEA019EA1c9695d0685",
+      "metroToken": "0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321",
+      "lbRouter": "0xe77DA7F5B6927fD5E0e825B2B27aca526341069B",
+      "lbFactory": "0x90F28Fe6963cE929d4cBc3480Df1169b92DD22B7"
+    },
+    "vaults": [
+      {
+        "id": "test1-usdc",
+        "vault": "0x8f74E08606b8182a472645F2598C5D9a81bD8fdc",
+        "queueHandler": "0x15b9Be7C547EEfa8391Fb64D8Aeb377AFA4eA694",
+        "feeManager": "0x8907281dEd918358500230659AD90Caf0C5B0Cc5",
+        "rewardClaimer": "0x33E4Eac3DB8e2b7Ef457cC46417ff4404b28f4Cc",
+        "tokenX": "0x46e6B680eBae63e086e6D820529Aed187465aeDA",
+        "tokenY": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
+        "lbPair": "0xc1603bA905f4E268CDf451591eF51bdFb1185EEB",
+        "name": "Arca TEST1-USDC Vault",
+        "symbol": "ARCA-TEST1-USDC"
+      }
+    ],
+    "deploymentTime": "2025-07-04T20:50:00.000Z",
+    "deployedTokens": {
+      "TEST1": "0x46e6B680eBae63e086e6D820529Aed187465aeDA",
+      "USDC": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0"
     }
   }
 } as const;
 
 export type DeploymentNetwork = keyof typeof deployments;
+
+// Helper functions
+export function getVaultById(network: DeploymentNetwork, vaultId: string): VaultInfo | undefined {
+  return deployments[network]?.vaults.find(v => v.id === vaultId);
+}
+
+export function getAllVaults(network: DeploymentNetwork): VaultInfo[] {
+  return deployments[network]?.vaults || [];
+}
+
+export function getRegistry(network: DeploymentNetwork): string | undefined {
+  return deployments[network]?.registry;
+}
+
+export function getSharedInfrastructure(network: DeploymentNetwork): SharedInfrastructure | undefined {
+  return deployments[network]?.sharedInfrastructure;
+}
+
+export function getTokenAddress(network: DeploymentNetwork, symbol: string): string | undefined {
+  return deployments[network]?.deployedTokens[symbol];
+}
+
+export function getVaultsByTokenPair(network: DeploymentNetwork, tokenX: string, tokenY: string): VaultInfo[] {
+  return getAllVaults(network).filter(v => 
+    (v.tokenX.toLowerCase() === tokenX.toLowerCase() && v.tokenY.toLowerCase() === tokenY.toLowerCase()) ||
+    (v.tokenX.toLowerCase() === tokenY.toLowerCase() && v.tokenY.toLowerCase() === tokenX.toLowerCase())
+  );
+}
