@@ -30,9 +30,9 @@ describe("Registry Deployment Flow Integration Testing", function () {
 
     // Step 2: Deploy mock infrastructure
     const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
-    const tokenX = await MockERC20.deploy("Test Token X", "TKX", 18);
-    const tokenY = await MockERC20.deploy("Test Token Y", "TKY", 18);
-    const metroToken = await MockERC20.deploy("METRO", "METRO", 18);
+    const tokenX = await MockERC20.deploy("Test Token X", "TKX", 18, owner.address);
+    const tokenY = await MockERC20.deploy("Test Token Y", "TKY", 18, owner.address);
+    const metroToken = await MockERC20.deploy("METRO", "METRO", 18, owner.address);
 
     const MockLBRouter = await hre.ethers.getContractFactory("MockLBRouter");
     const mockRouter = await MockLBRouter.deploy();

@@ -9,9 +9,15 @@ contract MockERC20 is ERC20 {
     constructor(
         string memory name,
         string memory symbol,
-        uint8 decimals_
+        uint8 decimals_,
+        address initialHolder
     ) ERC20(name, symbol) {
         _decimals = decimals_;
+
+        // Mint 1 billion tokens to initial holder (adjusted for decimals)
+        if (initialHolder != address(0)) {
+            _mint(initialHolder, 1_000_000_000 * (10 ** uint256(decimals_)));
+        }
     }
 
     function decimals() public view virtual override returns (uint8) {

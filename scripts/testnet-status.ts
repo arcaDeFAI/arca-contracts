@@ -1,5 +1,6 @@
 import { ethers, network } from "hardhat";
-import { loadNetworkConfig } from "./utils/network-config";
+import { loadNetworkConfig } from "./utils/multi-vault-config";
+import { getEnabledVaults, getTokenSymbolPair, shouldDeployToken } from "./types/config";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -13,12 +14,13 @@ async function main() {
 
   const [signer] = await ethers.getSigners();
   const networkConfig = loadNetworkConfig(network.name);
+  const enabledVaults = getEnabledVaults(networkConfig);
   
   console.log(`🔍 Network Information:`);
-  console.log(`Network: ${networkConfig.testnet?.documentation?.networkName}`);
+  console.log(`Network: ${networkConfig.testnet?.documentation?.networkName || networkConfig.name}`);
   console.log(`Chain ID: ${networkConfig.chainId}`);
-  console.log(`RPC URL: ${networkConfig.testnet?.documentation?.rpcUrl}`);
-  console.log(`Explorer: ${networkConfig.testnet?.explorerUrl}`);
+  console.log(`RPC URL: ${networkConfig.testnet?.documentation?.rpcUrl || networkConfig.rpcUrl || 'Default provider'}`);
+  console.log(`Explorer: ${networkConfig.testnet?.explorerUrl || networkConfig.blockExplorer || 'N/A'}`);
   
   console.log(`\n👤 Wallet Status:`);
   console.log(`Address: ${signer.address}`);
@@ -34,15 +36,29 @@ async function main() {
     console.log(`✅ Balance sufficient for deployment`);
   }
   
-  console.log(`\n🔗 Contract Status:`);
+  console.log(`\n🔗 Shared Contract Status:`);
   
-  // Check if contracts are configured
+  // Check shared contracts
+  const sharedContractsToCheck = [
+    { name: "LB Router", address: networkConfig.sharedContracts.lbRouter },
+    { name: "LB Factory", address: networkConfig.sharedContracts.lbFactory },
+    { name: "METRO Token", address: networkConfig.sharedContracts.metroToken }
+  ];
+  
+  // Gather all unique tokens from enabled vaults
+  const uniqueTokens = new Map<string, string>();
+  for (const vault of enabledVaults) {
+    if (!shouldDeployToken(vault.tokens.tokenX.address)) {
+      uniqueTokens.set(vault.tokens.tokenX.symbol, vault.tokens.tokenX.address);
+    }
+    if (!shouldDeployToken(vault.tokens.tokenY.address)) {
+      uniqueTokens.set(vault.tokens.tokenY.symbol, vault.tokens.tokenY.address);
+    }
+  }
+  
   const contractsToCheck = [
-    { name: "Token X (S)", address: networkConfig.contracts.tokenX },
-    { name: "Token Y (USDC)", address: networkConfig.contracts.tokenY },
-    { name: "LB Router", address: networkConfig.contracts.lbRouter },
-    { name: "LB Pair", address: networkConfig.contracts.lbpContract },
-    { name: "Reward Token (METRO)", address: networkConfig.contracts.rewardToken }
+    ...sharedContractsToCheck,
+    ...Array.from(uniqueTokens.entries()).map(([symbol, address]) => ({ name: `Token ${symbol}`, address }))
   ];
   
   for (const contract of contractsToCheck) {
@@ -78,6 +94,16 @@ async function main() {
     console.log(`No deployment directory found - first time deployment`);
   }
   
+  // Check vault configurations
+  console.log(`\n🏛️ Vault Configurations:`);
+  console.log(`Enabled vaults: ${enabledVaults.length}`);
+  for (const vault of enabledVaults) {
+    console.log(`\n  Vault: ${vault.id} (${getTokenSymbolPair(vault)})`);
+    console.log(`  - Token X: ${vault.tokens.tokenX.symbol} (${vault.tokens.tokenX.deployMock ? 'DEPLOY_MOCK' : vault.tokens.tokenX.address})`);
+    console.log(`  - Token Y: ${vault.tokens.tokenY.symbol} (${vault.tokens.tokenY.deployMock ? 'DEPLOY_MOCK' : vault.tokens.tokenY.address})`);
+    console.log(`  - LB Pair: ${vault.lbPair.deployMock ? 'DEPLOY_MOCK' : vault.lbPair.address}`);
+  }
+  
   console.log(`\n🚀 Ready to Deploy?`);
   
   // Check readiness
@@ -92,6 +118,9 @@ async function main() {
   // Check if essential contracts exist
   for (const contract of contractsToCheck) {
     try {
+      if (shouldDeployToken(contract.address)) {
+        continue; // Skip DEPLOY_MOCK addresses
+      }
       const code = await ethers.provider.getCode(contract.address);
       if (code === "0x") {
         readyToDeploy = false;

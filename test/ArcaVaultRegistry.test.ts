@@ -49,18 +49,18 @@ describe("ArcaVaultRegistry - Core Registry Testing", function () {
     const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
     
     // Vault 1: ETH/USDT pair
-    tokenX1 = await MockERC20.deploy("Ethereum", "ETH", 18);
-    tokenY1 = await MockERC20.deploy("Tether", "USDT", 6);
+    tokenX1 = await MockERC20.deploy("Ethereum", "ETH", 18, owner.address);
+    tokenY1 = await MockERC20.deploy("Tether", "USDT", 6, owner.address);
     
     // Vault 2: DAI/USDC pair  
-    tokenX2 = await MockERC20.deploy("DAI Stablecoin", "DAI", 18);
-    tokenY2 = await MockERC20.deploy("USD Coin", "USDC", 6);
+    tokenX2 = await MockERC20.deploy("DAI Stablecoin", "DAI", 18, owner.address);
+    tokenY2 = await MockERC20.deploy("USD Coin", "USDC", 6, owner.address);
     
     // Vault 3: LINK/WBTC pair
-    tokenX3 = await MockERC20.deploy("Chainlink", "LINK", 18);
-    tokenY3 = await MockERC20.deploy("Wrapped Bitcoin", "WBTC", 8);
+    tokenX3 = await MockERC20.deploy("Chainlink", "LINK", 18, owner.address);
+    tokenY3 = await MockERC20.deploy("Wrapped Bitcoin", "WBTC", 8, owner.address);
     
-    metroToken = await MockERC20.deploy("METRO", "METRO", 18);
+    metroToken = await MockERC20.deploy("METRO", "METRO", 18, owner.address);
     
     // Deploy mock infrastructure
     const MockLBRouter = await hre.ethers.getContractFactory("MockLBRouter");
