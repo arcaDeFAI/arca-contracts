@@ -68,15 +68,15 @@ describe("Multi-Vault Registry Integration Testing", function () {
     const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
     
     tokens = {
-      eth: await MockERC20.deploy("Ethereum", "ETH", 18),
-      usdt: await MockERC20.deploy("Tether USD", "USDT", 6),
-      dai: await MockERC20.deploy("DAI Stablecoin", "DAI", 18),
-      usdc: await MockERC20.deploy("USD Coin", "USDC", 6),
-      link: await MockERC20.deploy("Chainlink", "LINK", 18),
-      wbtc: await MockERC20.deploy("Wrapped Bitcoin", "WBTC", 8),
-      matic: await MockERC20.deploy("Polygon", "MATIC", 18),
-      weth: await MockERC20.deploy("Wrapped Ether", "WETH", 18),
-      metro: await MockERC20.deploy("METRO", "METRO", 18)
+      eth: await MockERC20.deploy("Ethereum", "ETH", 18, owner.address),
+      usdt: await MockERC20.deploy("Tether USD", "USDT", 6, owner.address),
+      dai: await MockERC20.deploy("DAI Stablecoin", "DAI", 18, owner.address),
+      usdc: await MockERC20.deploy("USD Coin", "USDC", 6, owner.address),
+      link: await MockERC20.deploy("Chainlink", "LINK", 18, owner.address),
+      wbtc: await MockERC20.deploy("Wrapped Bitcoin", "WBTC", 8, owner.address),
+      matic: await MockERC20.deploy("Polygon", "MATIC", 18, owner.address),
+      weth: await MockERC20.deploy("Wrapped Ether", "WETH", 18, owner.address),
+      metro: await MockERC20.deploy("METRO", "METRO", 18, owner.address)
     };
     
     // Deploy mock infrastructure

@@ -41,9 +41,9 @@ describe("ArcaRewardClaimerV1 Precise Tests", function () {
 
     // Deploy mock tokens
     const MockERC20Factory = await ethers.getContractFactory("MockERC20");
-    tokenX = await MockERC20Factory.deploy("TokenX", "TX", 18);
-    tokenY = await MockERC20Factory.deploy("TokenY", "TY", 18);
-    metroToken = await MockERC20Factory.deploy("METRO", "METRO", 18);
+    tokenX = await MockERC20Factory.deploy("TokenX", "TX", 18, owner.address);
+    tokenY = await MockERC20Factory.deploy("TokenY", "TY", 18, owner.address);
+    metroToken = await MockERC20Factory.deploy("METRO", "METRO", 18, owner.address);
 
     // Deploy mocks
     const MockLBRouterFactory = await ethers.getContractFactory("MockLBRouter");

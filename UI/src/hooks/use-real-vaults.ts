@@ -16,16 +16,7 @@ export function useRealVaults(): {
 } {
   const { chainId, address: userAddress } = useAccount();
 
-  // If no chainId, user needs to connect wallet or switch to supported network
-  if (!chainId) {
-    return {
-      vaults: [],
-      isLoading: false,
-      error: null, // Let parent components handle wallet connection UI
-    };
-  }
-
-  // Use registry to discover vaults
+  // Use registry to discover vaults - MUST be called before any conditional returns
   const {
     vaults: registryVaults,
     isLoading: registryLoading,
@@ -33,81 +24,86 @@ export function useRealVaults(): {
   } = useVaultRegistry();
 
   // Prepare contract calls for all vaults
-  const vaultContractCalls = registryVaults.flatMap((vault) => {
-    // Create config from registry data
-    const vaultConfig = createVaultConfigFromRegistry(vault, chainId);
+  const vaultContractCalls = useMemo(() => {
+    // Only prepare calls if we have chainId and vaults
+    if (!chainId || !registryVaults.length) return [];
 
-    return [
-      // Vault data
-      {
-        address: vault.vault as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: "tokenBalance" as const,
-        args: [0], // TokenX
-      },
-      {
-        address: vault.vault as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: "tokenBalance" as const,
-        args: [1], // TokenY
-      },
-      {
-        address: vault.vault as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: "getShares" as const,
-        args: userAddress ? [userAddress, 0] : undefined, // User shares for TokenX
-      },
-      {
-        address: vault.vault as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: "getShares" as const,
-        args: userAddress ? [userAddress, 1] : undefined, // User shares for TokenY
-      },
-      {
-        address: vault.vault as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: "getPricePerFullShare" as const,
-        args: [0], // TokenX
-      },
-      {
-        address: vault.vault as `0x${string}`,
-        abi: VAULT_ABI,
-        functionName: "getPricePerFullShare" as const,
-        args: [1], // TokenY
-      },
-      // Token symbols
-      {
-        address: vaultConfig.tokenX.address as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "symbol" as const,
-      },
-      {
-        address: vaultConfig.tokenY.address as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "symbol" as const,
-      },
-      // User balances
-      {
-        address: vaultConfig.tokenX.address as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "balanceOf" as const,
-        args: userAddress ? [userAddress] : undefined,
-      },
-      {
-        address: vaultConfig.tokenY.address as `0x${string}`,
-        abi: ERC20_ABI,
-        functionName: "balanceOf" as const,
-        args: userAddress ? [userAddress] : undefined,
-      },
-    ];
-  });
+    return registryVaults.flatMap((vault) => {
+      // Create config from registry data
+      const vaultConfig = createVaultConfigFromRegistry(vault, chainId);
 
-  // Read all contract data in parallel
+      return [
+        // Vault data
+        {
+          address: vault.vault as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "tokenBalance" as const,
+          args: [0], // TokenX
+        },
+        {
+          address: vault.vault as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "tokenBalance" as const,
+          args: [1], // TokenY
+        },
+        {
+          address: vault.vault as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "getShares" as const,
+          args: userAddress ? [userAddress, 0] : undefined, // User shares for TokenX
+        },
+        {
+          address: vault.vault as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "getShares" as const,
+          args: userAddress ? [userAddress, 1] : undefined, // User shares for TokenY
+        },
+        {
+          address: vault.vault as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "getPricePerFullShare" as const,
+          args: [0], // TokenX
+        },
+        {
+          address: vault.vault as `0x${string}`,
+          abi: VAULT_ABI,
+          functionName: "getPricePerFullShare" as const,
+          args: [1], // TokenY
+        },
+        // Token symbols
+        {
+          address: vaultConfig.tokenX.address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: "symbol" as const,
+        },
+        {
+          address: vaultConfig.tokenY.address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: "symbol" as const,
+        },
+        // User balances
+        {
+          address: vaultConfig.tokenX.address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: "balanceOf" as const,
+          args: userAddress ? [userAddress] : undefined,
+        },
+        {
+          address: vaultConfig.tokenY.address as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: "balanceOf" as const,
+          args: userAddress ? [userAddress] : undefined,
+        },
+      ];
+    });
+  }, [chainId, registryVaults, userAddress]);
+
+  // Read all contract data in parallel - MUST be called before any conditional returns
   const { data: contractData, isLoading: contractLoading } = useReadContracts({
     contracts: vaultContractCalls,
   });
 
-  // Get metrics - for now using shared metrics, but can be per-vault in future
+  // Get metrics - for now using shared metrics, but can be per-vault in future - MUST be called before any conditional returns
   const {
     metrics,
     isLoading: metricsLoading,
@@ -116,7 +112,8 @@ export function useRealVaults(): {
 
   // Process registry data and create RealVault objects with progressive enhancement
   const realVaults: RealVault[] = useMemo(() => {
-    if (registryVaults.length === 0) return [];
+    // If no chainId or no vaults, return empty array
+    if (!chainId || registryVaults.length === 0) return [];
 
     const vaults: RealVault[] = [];
     const resultsPerVault = 10; // Number of contract calls per vault
@@ -246,6 +243,16 @@ export function useRealVaults(): {
 
     return null;
   }, [registryError, registryVaults.length, chainId, registryLoading]);
+
+  // If no chainId, user needs to connect wallet or switch to supported network
+  // This MUST come after all hooks to avoid React hooks errors
+  if (!chainId) {
+    return {
+      vaults: [],
+      isLoading: false,
+      error: null, // Let parent components handle wallet connection UI
+    };
+  }
 
   return {
     vaults: realVaults,

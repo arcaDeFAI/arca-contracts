@@ -1,52 +1,122 @@
 {
   "name": "localhost",
   "chainId": 31337,
-  "deployment": {
-    "binStep": 25,
-    "amountXMin": "1000000000000000",
-    "amountYMin": "1000000000000000",
-    "vaultName": "Arca Local Test Vault",
-    "vaultSymbol": "ARCA-LOCAL",
-    "idSlippage": "5",
-    "feeRecipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-  },
-  "contracts": {
-    "tokenX": "DEPLOY_MOCK",
-    "tokenY": "DEPLOY_MOCK",
+  "sharedContracts": {
+    "metroToken": "DEPLOY_MOCK",
     "lbRouter": "DEPLOY_MOCK",
-    "lbpAMM": "DEPLOY_MOCK",
-    "lbpContract": "DEPLOY_MOCK",
-    "rewarder": "DEPLOY_MOCK",
-    "rewardToken": "DEPLOY_MOCK",
-    "nativeToken": "DEPLOY_MOCK",
-    "lbpContractUSD": "DEPLOY_MOCK"
-  },
-  "mockTokens": {
-    "tokenX": {
-      "name": "Mock Token X",
-      "symbol": "MTX",
-      "decimals": 18,
-      "initialSupply": "1000000000000000000000000"
-    },
-    "tokenY": {
-      "name": "Mock Token Y",
-      "symbol": "MTY",
-      "decimals": 18,
-      "initialSupply": "1000000000000000000000000"
-    },
-    "rewardToken": {
-      "name": "Mock METRO",
-      "symbol": "mMETRO",
-      "decimals": 18,
-      "initialSupply": "1000000000000000000000000"
-    }
+    "lbFactory": "DEPLOY_MOCK"
   },
   "testAccounts": {
-    "fundingAmounts": {
-      "tokenX": "10000000000000000000000",
-      "tokenY": "10000000000000000000000",
-      "native": "10000000000000000000"
-    },
+    "fundingAmount": "1000000",
     "count": 5
-  }
+  },
+  "vaults": [
+    {
+      "id": "ws-usdc",
+      "enabled": true,
+      "tokens": {
+        "tokenX": {
+          "address": "DEPLOY_MOCK",
+          "symbol": "wS",
+          "name": "Wrapped Sonic",
+          "decimals": 18,
+          "deployMock": true
+        },
+        "tokenY": {
+          "address": "DEPLOY_MOCK",
+          "symbol": "USDC",
+          "name": "USD Coin",
+          "decimals": 6,
+          "deployMock": true
+        }
+      },
+      "lbPair": {
+        "address": "DEPLOY_MOCK",
+        "deployMock": true,
+        "binStep": 25,
+        "activeId": 8388608
+      },
+      "deployment": {
+        "vaultName": "Arca wS-USDC Vault",
+        "vaultSymbol": "ARCA-wS-USDC",
+        "amountXMin": "1000000000000000",
+        "amountYMin": "1000000",
+        "idSlippage": "5",
+        "_comment": "feeRecipient is Hardhat's first default test account (account[0]) - automatically funded with 10,000 ETH for easy testing",
+        "feeRecipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      }
+    },
+    {
+      "id": "metro-usdc",
+      "enabled": true,
+      "tokens": {
+        "tokenX": {
+          "address": "DEPLOY_MOCK",
+          "symbol": "METRO",
+          "name": "Metropolis",
+          "decimals": 18,
+          "deployMock": false,
+          "_comment": "METRO token is shared across all vaults - will use the shared deployment"
+        },
+        "tokenY": {
+          "address": "DEPLOY_MOCK",
+          "symbol": "USDC",
+          "name": "USD Coin",
+          "decimals": 6,
+          "deployMock": false,
+          "_comment": "USDC will reuse the same deployment from ws-usdc vault"
+        }
+      },
+      "lbPair": {
+        "address": "DEPLOY_MOCK",
+        "deployMock": true,
+        "binStep": 25,
+        "activeId": 8388608
+      },
+      "deployment": {
+        "vaultName": "Arca METRO-USDC Vault",
+        "vaultSymbol": "ARCA-METRO-USDC",
+        "amountXMin": "1000000000000000",
+        "amountYMin": "1000000",
+        "idSlippage": "5",
+        "_comment": "feeRecipient is Hardhat's first default test account (account[0]) - automatically funded with 10,000 ETH for easy testing",
+        "feeRecipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      }
+    },
+    {
+      "id": "test1-test2",
+      "enabled": true,
+      "tokens": {
+        "tokenX": {
+          "address": "DEPLOY_MOCK",
+          "symbol": "TEST1",
+          "name": "Test Token 1",
+          "decimals": 18,
+          "deployMock": true
+        },
+        "tokenY": {
+          "address": "DEPLOY_MOCK",
+          "symbol": "TEST2",
+          "name": "Test Token 2",
+          "decimals": 18,
+          "deployMock": true
+        }
+      },
+      "lbPair": {
+        "address": "DEPLOY_MOCK",
+        "deployMock": true,
+        "binStep": 25,
+        "activeId": 8388608
+      },
+      "deployment": {
+        "vaultName": "Arca TEST1-TEST2 Vault",
+        "vaultSymbol": "ARCA-TEST1-TEST2",
+        "amountXMin": "1000000000000000",
+        "amountYMin": "1000000000000000",
+        "idSlippage": "5",
+        "_comment": "feeRecipient is Hardhat's first default test account (account[0]) - automatically funded with 10,000 ETH for easy testing",
+        "feeRecipient": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+      }
+    }
+  ]
 }

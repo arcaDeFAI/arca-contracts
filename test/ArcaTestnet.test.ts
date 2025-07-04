@@ -10,9 +10,9 @@ describe("ArcaTestnetV1 - Business Logic", function () {
     
     // Deploy mock tokens
     const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
-    const tokenX = await MockERC20.deploy("TokenX", "TX", 18);
-    const tokenY = await MockERC20.deploy("TokenY", "TY", 18);
-    const metroToken = await MockERC20.deploy("METRO", "METRO", 18);
+    const tokenX = await MockERC20.deploy("TokenX", "TX", 18, owner.address);
+    const tokenY = await MockERC20.deploy("TokenY", "TY", 18, owner.address);
+    const metroToken = await MockERC20.deploy("METRO", "METRO", 18, owner.address);
     
     // Deploy mocks
     const MockLBRouter = await hre.ethers.getContractFactory("MockLBRouter");

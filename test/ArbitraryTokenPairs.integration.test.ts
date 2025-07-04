@@ -78,7 +78,7 @@ describe("Arbitrary Token Pairs Integration Testing", function () {
     
     // Deploy METRO token
     const MockERC20 = await hre.ethers.getContractFactory("MockERC20");
-    metroToken = await MockERC20.deploy("METRO", "METRO", 18);
+    metroToken = await MockERC20.deploy("METRO", "METRO", 18, owner.address);
     
     // Deploy beacons for supporting contracts
     const FeeManager = await hre.ethers.getContractFactory("ArcaFeeManagerV1");
@@ -160,14 +160,16 @@ describe("Arbitrary Token Pairs Integration Testing", function () {
     const tokenX = await MockERC20.deploy(
       config.tokenX.name,
       config.tokenX.symbol,
-      config.tokenX.decimals
+      config.tokenX.decimals,
+      owner.address
     );
     await tokenX.waitForDeployment();
     
     const tokenY = await MockERC20.deploy(
       config.tokenY.name,
       config.tokenY.symbol,
-      config.tokenY.decimals
+      config.tokenY.decimals,
+      owner.address
     );
     await tokenY.waitForDeployment();
     
