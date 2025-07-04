@@ -1,0 +1,16 @@
+{
+  "network": "sonic-testnet",
+  "timestamp": "2025-07-04T20:10:02.767Z",
+  "sharedInfrastructure": {
+    "registry": "0x0d6E260639084fC1AE934F336fd0D8467FceE8Cb",
+    "queueHandlerBeacon": "0xeB797722a677f9B38f7fd466E8cB4625750dF04d",
+    "feeManagerBeacon": "0x727cE474865b8d95AE92478DB067500d6c2a1fB3",
+    "lbRouter": "0xe77DA7F5B6927fD5E0e825B2B27aca526341069B",
+    "lbFactory": "0x90F28Fe6963cE929d4cBc3480Df1169b92DD22B7"
+  },
+  "vaults": [],
+  "tokens": {
+    "TEST1": "0x46e6B680eBae63e086e6D820529Aed187465aeDA",
+    "TEST2": "0xC028d1710449C9b23697CC143aDEA9cf171E4E15"
+  }
+}

@@ -60,6 +60,26 @@
       "address": "0xc32F060B990Aa7A6adc0351E0348F57f25EeB43b",
       "txHash": "0xf46cace74eaa623dd3a7c2c6fc8e5c5d7720ec3f22dbe4680803e23f3b5ec2fb",
       "kind": "uups"
+    },
+    {
+      "address": "0x15b9Be7C547EEfa8391Fb64D8Aeb377AFA4eA694",
+      "txHash": "0xab4162590a067466d9e53f654b996c647b89b2b22150e3514691f4cd119ca073",
+      "kind": "beacon"
+    },
+    {
+      "address": "0x8907281dEd918358500230659AD90Caf0C5B0Cc5",
+      "txHash": "0x1dd5210d3ecd44afc6c4f0a1dde7c723cfd7c01ea17b0392273e250b135c0d91",
+      "kind": "beacon"
+    },
+    {
+      "address": "0x33E4Eac3DB8e2b7Ef457cC46417ff4404b28f4Cc",
+      "txHash": "0xf17a86d405e70e20947f4ed66b762d7bc5ca4706a361fb8fab7b0d4aca824a5b",
+      "kind": "uups"
+    },
+    {
+      "address": "0x8f74E08606b8182a472645F2598C5D9a81bD8fdc",
+      "txHash": "0x7e92f917aba627bc7f789404a1500b28d4c144144cd314cbd14de5c2fb903ec6",
+      "kind": "uups"
     }
   ],
   "impls": {
