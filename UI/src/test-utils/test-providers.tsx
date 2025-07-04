@@ -2,23 +2,54 @@ import type { ReactElement } from "react";
 import React from "react";
 import { render } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { WagmiProvider, createConfig, http } from "wagmi";
+import { WagmiProvider, createConfig } from "wagmi";
 import { mainnet, hardhat } from "wagmi/chains";
 import { mock } from "wagmi/connectors";
-import { type Config } from "wagmi";
+import type { Config } from "wagmi";
+import { createTransport } from "viem";
+import type { EIP1193RequestFn } from "viem";
+
+// Create a mock transport *factory* for Wagmi
+export const createMockTransport = () => {
+  const request = (async ({
+    method,
+  }: {
+    method: string;
+    params?: unknown[];
+  }) => {
+    if (method === "eth_getLogs") {
+      return [];
+    }
+    if (method === "eth_chainId") {
+      return "0x7a69";
+    }
+    if (method === "eth_blockNumber") {
+      return "0x1";
+    }
+    return null;
+  }) as EIP1193RequestFn;
+
+  return createTransport({
+    key: "mock",
+    name: "Mock Transport",
+    type: "mock", // ← required by TransportConfig
+    request,
+  });
+};
 
 // Create a mock wagmi config for testing
 export const mockConfig = createConfig({
   chains: [mainnet, hardhat],
   transports: {
-    [mainnet.id]: http(),
-    [hardhat.id]: http(),
+    // Pass the factory itself, not its result
+    [mainnet.id]: createMockTransport,
+    [hardhat.id]: createMockTransport,
   },
   connectors: [
     mock({
       accounts: [
-        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", // Default test account
-        "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", // Second test account
+        "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
       ],
     }),
   ],
