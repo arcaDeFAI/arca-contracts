@@ -3,7 +3,7 @@ import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signer
 import type { NetworkConfig, VaultConfig } from "../types/config";
 import { getEnabledVaults } from "../types/config";
 import type { DeployedToken } from "./token-deployer";
-import { deployAllTokens } from "./token-deployer";
+import { deployAllTokens, deploySpecificTokens, deployMockToken } from "./token-deployer";
 import type { DeployedLBPair } from "./lb-pair-manager";
 import { getOrCreateLBPair, addInitialLiquidity, deployMockLBRouter, deployMockLBFactory } from "./lb-pair-manager";
 import type { DeploymentAddresses} from "../deployArcaSystem";
@@ -33,6 +33,8 @@ export interface MultiVaultDeploymentResult {
   lbPairs: Map<string, DeployedLBPair>;
   vaults: Map<string, VaultDeployment>;
 }
+
+import type { TokenConfig } from "../types/config";
 
 export interface DeploymentProgress {
   network: string;
@@ -118,7 +120,7 @@ async function getRewarderFromLBPair(
 
   try {
     // Get the LB Pair contract
-    const lbPairContract = await ethers.getContractAt("ILBPair", lbPairAddress, deployer);
+    const lbPairContract = await ethers.getContractAt("lib/joe-v2/src/interfaces/ILBPair.sol:ILBPair", lbPairAddress, deployer);
     
     // Get hooks parameters
     const hooksParameters = await lbPairContract.getLBHooksParameters();
@@ -136,7 +138,7 @@ async function getRewarderFromLBPair(
       
       // Optionally verify it's a valid rewarder by checking if it has expected functions
       try {
-        const rewarder = await ethers.getContractAt("ILBHooksBaseRewarder", hooksAddress, deployer);
+        const rewarder = await ethers.getContractAt("lib/joe-v2/src/interfaces/ILBHooksBaseRewarder.sol:ILBHooksBaseRewarder", hooksAddress, deployer);
         await rewarder.getRewardToken(); // Test call
         return hooksAddress;
       } catch {
@@ -377,17 +379,201 @@ export async function deployAllVaults(
     }
     result.sharedInfrastructure = progress.sharedInfrastructure;
 
-    // Step 2: Deploy all tokens
-    console.log("\n=== Step 2: Deploying Tokens ===");
-    const deployedTokens = await deployAllTokens(deployer, networkConfig);
+    // Step 2: Deploy or restore tokens
+    console.log("\n=== Step 2: Setting up Tokens ===");
     
-    // Update progress with token addresses
-    deployedTokens.forEach((token, symbol) => {
-      progress!.deployedTokens[symbol] = token.address;
-      result.tokens.set(symbol, token);
-    });
-    saveProgress(networkConfig.name, progress);
+    // Check if we have tokens from previous progress
+    if (progress.deployedTokens && Object.keys(progress.deployedTokens).length > 0) {
+      console.log("Restoring tokens from previous deployment...");
+      
+      // Restore tokens from progress
+      for (const [symbol, address] of Object.entries(progress.deployedTokens)) {
+        const contract = await ethers.getContractAt("MockERC20", address, deployer);
+        
+        // Find token config from network config
+        let tokenConfig: TokenConfig | undefined;
+        for (const vault of networkConfig.vaults) {
+          if (vault.tokens.tokenX.symbol === symbol) {
+            tokenConfig = vault.tokens.tokenX;
+            break;
+          }
+          if (vault.tokens.tokenY.symbol === symbol) {
+            tokenConfig = vault.tokens.tokenY;
+            break;
+          }
+        }
+        
+        // Check shared tokens
+        if (!tokenConfig && symbol === "METRO" && networkConfig.sharedContracts.metroToken === "DEPLOY_MOCK") {
+          tokenConfig = {
+            address: "DEPLOY_MOCK",
+            symbol: "METRO",
+            name: "Metropolis",
+            decimals: 18,
+            deployMock: true
+          };
+        }
+        
+        if (tokenConfig) {
+          result.tokens.set(symbol, {
+            address,
+            contract: contract as any,
+            config: tokenConfig
+          });
+          console.log(`✓ Restored ${symbol} at ${address}`);
+        }
+      }
+      
+      // Check if we need to deploy any new tokens
+      const requiredTokens = new Set<string>();
+      
+      // Collect required token symbols - including existing tokens
+      for (const vault of getEnabledVaults(networkConfig)) {
+        // Add tokenX - whether it needs deployment or just tracking
+        requiredTokens.add(vault.tokens.tokenX.symbol);
+        // Add tokenY - whether it needs deployment or just tracking  
+        requiredTokens.add(vault.tokens.tokenY.symbol);
+      }
+      
+      // Add METRO if needed
+      if (networkConfig.sharedContracts.metroToken === "DEPLOY_MOCK") {
+        requiredTokens.add("METRO");
+      }
+      
+      // Deploy only missing tokens
+      const missingTokens = Array.from(requiredTokens).filter(symbol => !result.tokens.has(symbol));
+      
+      if (missingTokens.length > 0) {
+        console.log(`\nDeploying ${missingTokens.length} missing token(s): ${missingTokens.join(", ")}`);
+        
+        // Deploy or get missing tokens
+        for (const symbol of missingTokens) {
+          let handled = false;
+          
+          // Check if it's defined in vault configs with existing address
+          for (const vault of getEnabledVaults(networkConfig)) {
+            if (vault.tokens.tokenX.symbol === symbol && vault.tokens.tokenX.address !== "DEPLOY_MOCK") {
+              const contract = await ethers.getContractAt("MockERC20", vault.tokens.tokenX.address, deployer);
+              result.tokens.set(symbol, {
+                address: vault.tokens.tokenX.address,
+                contract: contract as any,
+                config: vault.tokens.tokenX
+              });
+              progress.deployedTokens[symbol] = vault.tokens.tokenX.address;
+              console.log(`✓ Using existing ${symbol} at ${vault.tokens.tokenX.address}`);
+              handled = true;
+              break;
+            }
+            if (vault.tokens.tokenY.symbol === symbol && vault.tokens.tokenY.address !== "DEPLOY_MOCK") {
+              const contract = await ethers.getContractAt("MockERC20", vault.tokens.tokenY.address, deployer);
+              result.tokens.set(symbol, {
+                address: vault.tokens.tokenY.address,
+                contract: contract as any,
+                config: vault.tokens.tokenY
+              });
+              progress.deployedTokens[symbol] = vault.tokens.tokenY.address;
+              console.log(`✓ Using existing ${symbol} at ${vault.tokens.tokenY.address}`);
+              handled = true;
+              break;
+            }
+          }
+          
+          // If not handled and needs deployment, deploy it
+          if (!handled) {
+            const newlyDeployedTokens = await deploySpecificTokens(deployer, networkConfig, [symbol]);
+            const token = newlyDeployedTokens.get(symbol);
+            if (token) {
+              progress.deployedTokens[symbol] = token.address;
+              result.tokens.set(symbol, token);
+            }
+          }
+        }
+        
+        saveProgress(networkConfig.name, progress);
+      } else {
+        console.log("✓ All required tokens already deployed");
+      }
+    } else {
+      // Fresh deployment - deploy or track all tokens
+      console.log("Setting up tokens...");
+      
+      // Process each vault's tokens
+      for (const vault of getEnabledVaults(networkConfig)) {
+        // Handle tokenX
+        if (!result.tokens.has(vault.tokens.tokenX.symbol)) {
+          if (vault.tokens.tokenX.deployMock && vault.tokens.tokenX.address === "DEPLOY_MOCK") {
+            // Deploy mock token
+            const token = await deployMockToken(deployer, vault.tokens.tokenX, networkConfig.name);
+            result.tokens.set(vault.tokens.tokenX.symbol, token);
+            progress.deployedTokens[vault.tokens.tokenX.symbol] = token.address;
+          } else if (vault.tokens.tokenX.address !== "DEPLOY_MOCK") {
+            // Use existing token
+            const contract = await ethers.getContractAt("MockERC20", vault.tokens.tokenX.address, deployer);
+            result.tokens.set(vault.tokens.tokenX.symbol, {
+              address: vault.tokens.tokenX.address,
+              contract: contract as any,
+              config: vault.tokens.tokenX
+            });
+            progress.deployedTokens[vault.tokens.tokenX.symbol] = vault.tokens.tokenX.address;
+            console.log(`✓ Using existing ${vault.tokens.tokenX.symbol} at ${vault.tokens.tokenX.address}`);
+          }
+        }
+        
+        // Handle tokenY
+        if (!result.tokens.has(vault.tokens.tokenY.symbol)) {
+          if (vault.tokens.tokenY.deployMock && vault.tokens.tokenY.address === "DEPLOY_MOCK") {
+            // Deploy mock token
+            const token = await deployMockToken(deployer, vault.tokens.tokenY, networkConfig.name);
+            result.tokens.set(vault.tokens.tokenY.symbol, token);
+            progress.deployedTokens[vault.tokens.tokenY.symbol] = token.address;
+          } else if (vault.tokens.tokenY.address !== "DEPLOY_MOCK") {
+            // Use existing token
+            const contract = await ethers.getContractAt("MockERC20", vault.tokens.tokenY.address, deployer);
+            result.tokens.set(vault.tokens.tokenY.symbol, {
+              address: vault.tokens.tokenY.address,
+              contract: contract as any,
+              config: vault.tokens.tokenY
+            });
+            progress.deployedTokens[vault.tokens.tokenY.symbol] = vault.tokens.tokenY.address;
+            console.log(`✓ Using existing ${vault.tokens.tokenY.symbol} at ${vault.tokens.tokenY.address}`);
+          }
+        }
+      }
+      
+      // Handle METRO token if needed
+      if (networkConfig.sharedContracts.metroToken === "DEPLOY_MOCK" && !result.tokens.has("METRO")) {
+        const metroConfig: TokenConfig = {
+          address: "DEPLOY_MOCK",
+          symbol: "METRO",
+          name: "Metropolis",
+          decimals: 18,
+          deployMock: true
+        };
+        const metroToken = await deployMockToken(deployer, metroConfig, networkConfig.name);
+        result.tokens.set("METRO", metroToken);
+        progress.deployedTokens["METRO"] = metroToken.address;
+      }
+      
+      saveProgress(networkConfig.name, progress);
+    }
 
+    // Restore LB pairs from progress
+    if (progress.deployedLBPairs && Object.keys(progress.deployedLBPairs).length > 0) {
+      console.log("\nRestoring LB pairs from previous deployment...");
+      for (const [vaultId, pairAddress] of Object.entries(progress.deployedLBPairs)) {
+        // Find the vault config to get bin step
+        const vaultConfig = networkConfig.vaults.find(v => v.id === vaultId);
+        if (vaultConfig) {
+          result.lbPairs.set(vaultId, {
+            address: pairAddress,
+            binStep: vaultConfig.lbPair.binStep,
+            isNew: false
+          });
+          console.log(`✓ Restored LB pair for ${vaultId} at ${pairAddress}`);
+        }
+      }
+    }
+    
     // Step 3: Deploy vaults
     console.log("\n=== Step 3: Deploying Vaults ===");
     
@@ -403,6 +589,11 @@ export async function deployAllVaults(
     vaultsToDeploy = vaultsToDeploy.filter(v => !progress!.deployedVaults.includes(v.id));
 
     console.log(`Deploying ${vaultsToDeploy.length} vault(s)...`);
+    
+    // If no vaults to deploy but we're resuming, restore already deployed vaults
+    if (vaultsToDeploy.length === 0 && options?.resume && progress.deployedVaults.length > 0) {
+      console.log("All vaults already deployed. Use --vaults flag to deploy specific new vaults.");
+    }
 
     for (let i = 0; i < vaultsToDeploy.length; i++) {
       const vaultConfig = vaultsToDeploy[i];
@@ -435,15 +626,20 @@ export async function deployAllVaults(
 
         // Add initial liquidity if needed
         if (lbPair.isNew && (networkConfig.name !== "localhost" && networkConfig.name !== "hardhat")) {
-          await addInitialLiquidity(
-            deployer,
-            result.sharedInfrastructure.lbRouter,
-            lbPair.address,
-            tokenX,
-            tokenY,
-            vaultConfig,
-            networkConfig.name
-          );
+          try {
+            await addInitialLiquidity(
+              deployer,
+              result.sharedInfrastructure.lbRouter,
+              lbPair.address,
+              tokenX,
+              tokenY,
+              vaultConfig,
+              networkConfig.name
+            );
+          } catch (error) {
+            console.log("⚠️  Failed to add initial liquidity:", error instanceof Error ? error.message : String(error));
+            console.log("   You'll need to add liquidity manually after deployment");
+          }
         }
 
         // Deploy vault contracts
@@ -486,13 +682,18 @@ export async function deployAllVaults(
         });
 
         progress.deployedVaults.push(vaultConfig.id);
+        // Remove from failed list if it was there
+        progress.failedVaults = progress.failedVaults.filter(id => id !== vaultConfig.id);
         saveProgress(networkConfig.name, progress);
 
         console.log(`\n✅ Vault ${vaultConfig.id} deployed successfully!`);
 
       } catch (error) {
         console.error(`\n❌ Failed to deploy vault ${vaultConfig.id}:`, error);
-        progress.failedVaults.push(vaultConfig.id);
+        // Only add to failed list if not already there
+        if (!progress.failedVaults.includes(vaultConfig.id)) {
+          progress.failedVaults.push(vaultConfig.id);
+        }
         saveProgress(networkConfig.name, progress);
         
         // Ask user if they want to continue

@@ -102,7 +102,7 @@ async function createRealLBPair(
   let lbFactory: ILBFactory;
   
   try {
-    lbFactory = await ethers.getContractAt("ILBFactory", lbFactoryAddress, deployer) as ILBFactory;
+    lbFactory = await ethers.getContractAt("lib/joe-v2/src/interfaces/ILBFactory.sol:ILBFactory", lbFactoryAddress, deployer) as ILBFactory;
   } catch (error) {
     throw new Error(`Failed to connect to LB Factory at ${lbFactoryAddress}: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -231,14 +231,15 @@ export async function addInitialLiquidity(
 
   let lbRouter: ILBRouter;
   try {
-    lbRouter = await ethers.getContractAt("ILBRouter", lbRouterAddress, deployer) as ILBRouter;
+    lbRouter = await ethers.getContractAt("lib/joe-v2/src/interfaces/ILBRouter.sol:ILBRouter", lbRouterAddress, deployer) as ILBRouter;
   } catch (error) {
     throw new Error(`Failed to connect to LB Router at ${lbRouterAddress}: ${error instanceof Error ? error.message : String(error)}`);
   }
   
   // Calculate liquidity amounts based on decimals
-  const amountX = ethers.parseUnits("100000", tokenX.config.decimals);
-  const amountY = ethers.parseUnits("100000", tokenY.config.decimals);
+  // For testnet, use small amounts: 0.1 tokenX and 0.1 USDC
+  const amountX = ethers.parseUnits("0.1", tokenX.config.decimals);
+  const amountY = ethers.parseUnits("0.1", tokenY.config.decimals);
 
   // Approve router to spend tokens
   console.log("Approving tokens for router...");

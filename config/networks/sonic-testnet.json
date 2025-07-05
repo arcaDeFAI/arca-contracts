@@ -122,6 +122,78 @@
         "_comment": "feeRecipient should be updated to your testnet wallet address before deployment",
         "feeRecipient": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98"
       }
+    },
+    {
+      "id": "test2-usdc",
+      "enabled": true,
+      "tokens": {
+        "tokenX": {
+          "address": "0xFc00C80b0000007B73004EDb00094CaD80626D8D",
+          "symbol": "TEST2",
+          "name": "Test Token 2",
+          "decimals": 18,
+          "deployMock": false,
+          "_comment": "Already deployed TEST2 token"
+        },
+        "tokenY": {
+          "address": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
+          "symbol": "USDC",
+          "name": "USD Coin",
+          "decimals": 6,
+          "deployMock": false
+        }
+      },
+      "lbPair": {
+        "address": "DEPLOY_MOCK",
+        "deployMock": true,
+        "binStep": 25,
+        "activeId": 8388608
+      },
+      "deployment": {
+        "vaultName": "Arca TEST2-USDC Vault",
+        "vaultSymbol": "ARCA-TEST2-USDC",
+        "amountXMin": "1000000000000000",
+        "amountYMin": "100000",
+        "idSlippage": "5",
+        "feeRecipient": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
+        "_comment": "amountYMin set to 0.1 USDC for testing"
+      }
+    },
+    {
+      "id": "funky1-usdc",
+      "enabled": true,
+      "tokens": {
+        "tokenX": {
+          "address": "DEPLOY_MOCK",
+          "symbol": "FUNKY1",
+          "name": "Funky Token 1",
+          "decimals": 18,
+          "deployMock": true,
+          "_comment": "New token to be deployed"
+        },
+        "tokenY": {
+          "address": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
+          "symbol": "USDC",
+          "name": "USD Coin",
+          "decimals": 6,
+          "deployMock": false
+        }
+      },
+      "lbPair": {
+        "address": "DEPLOY_MOCK",
+        "deployMock": true,
+        "binStep": 25,
+        "activeId": 8388608
+      },
+      "deployment": {
+        "vaultName": "Arca FUNKY1-USDC Vault",
+        "vaultSymbol": "ARCA-FUNKY1-USDC",
+        "amountXMin": "1000000000000000",
+        "amountYMin": "100000",
+        "idSlippage": "5",
+        "feeRecipient": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
+        "_comment": "amountYMin set to 0.1 USDC for testing"
+      }
     }
   ],
   "gasSettings": {

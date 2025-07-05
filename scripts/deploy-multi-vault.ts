@@ -7,23 +7,20 @@ import { deployAllVaults } from "./utils/multi-vault-deployer";
  * 
  * Usage:
  *   npm run deploy --network localhost
- *   npm run deploy --network sonic-testnet -- --vaults "ws-usdc,metro-usdc"
- *   npm run deploy --network sonic-testnet -- --resume
+ *   DEPLOY_VAULTS="ws-usdc,metro-usdc" npm run deploy --network sonic-testnet
+ *   DEPLOY_RESUME=true npm run deploy --network sonic-testnet
+ *   DEPLOY_RESUME=true DEPLOY_VAULTS="ws-usdc" npm run deploy --network sonic-testnet
  * 
  * Environment variable overrides:
  *   LOCALHOST_VAULT_WS_USDC_FEE_RECIPIENT=0x... npm run deploy --network localhost
  */
 async function main() {
-  // Parse command line arguments
-  const args = process.argv.slice(2);
-  const vaultsIndex = args.indexOf("--vaults");
-  const resumeIndex = args.indexOf("--resume");
-  
-  const vaultIds = vaultsIndex !== -1 && args[vaultsIndex + 1] 
-    ? args[vaultsIndex + 1].split(",").map(id => id.trim())
+  // Parse environment variables (Hardhat doesn't support passing args to scripts)
+  const vaultIds = process.env.DEPLOY_VAULTS 
+    ? process.env.DEPLOY_VAULTS.split(",").map(id => id.trim())
     : undefined;
   
-  const resume = resumeIndex !== -1;
+  const resume = process.env.DEPLOY_RESUME === "true";
   
   const network = process.env.HARDHAT_NETWORK || "hardhat";
   
