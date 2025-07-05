@@ -26,7 +26,7 @@ Request testnet S tokens (you'll receive ~100 S tokens).
 ### 2. Check Your Balances
 
 ```bash
-npx hardhat run scripts/debug/check-wallet-balances.ts --network sonic-testnet
+npm run testnet:balances
 ```
 
 This will show your native S, wrapped S (wS), and USDC balances.
@@ -36,7 +36,7 @@ This will show your native S, wrapped S (wS), and USDC balances.
 Use the automated script to wrap S tokens and swap for USDC:
 
 ```bash
-npx hardhat run scripts/debug/check-pool-and-swap.ts --network sonic-testnet
+npm run testnet:get-usdc
 ```
 
 The script will:

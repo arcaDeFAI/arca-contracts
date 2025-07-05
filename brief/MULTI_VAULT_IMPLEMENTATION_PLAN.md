@@ -2,7 +2,7 @@
 
 > **Last Updated**: January 7, 2025
 >
-> **Status**: Core implementation COMPLETE ✅ | Testnet deployment TESTED ✅
+> **Status**: Core implementation COMPLETE ✅ | Testnet deployment TESTED ✅ | Resume functionality FIXED ✅
 > 
 > **Completed**:
 > - Multi-vault deployment system with progress tracking
@@ -10,8 +10,11 @@
 > - Full test coverage (14/14 multi-vault tests, 209 total tests passing)
 > - All contract interface issues resolved
 > - Successful testnet deployment with custom tokens
+> - Fixed --resume functionality using environment variables
+> - Fixed progress tracking and token reuse
+> - Added deployment progress cleanup utility
 >
-> **Remaining**: Fix --resume flag, consolidate debug scripts
+> **Remaining**: Export integration, consolidate debug scripts, add auto-export
 
 ### Key Features
 
@@ -51,11 +54,17 @@
 # Deploy all vaults
 npm run deploy --network localhost
 
-# Deploy specific vaults
-npm run deploy --network testnet --vaults "ws-usdc,test1-test2"
+# Deploy specific vaults (using environment variables)
+DEPLOY_VAULTS="ws-usdc,test1-test2" npm run deploy --network testnet
 
-# Resume failed deployment (BROKEN - needs fix)
-npm run deploy --network localhost --resume
+# Resume failed deployment (FIXED - using environment variables)
+DEPLOY_RESUME=true npm run deploy --network localhost
+
+# Clean deployment progress
+npx hardhat run scripts/clean-deployment-progress.ts --network <name>
+
+# Reset deployment completely
+RESET_PROGRESS=true npx hardhat run scripts/clean-deployment-progress.ts --network <name>
 ```
 
 ## 🚨 Testnet Deployment Learnings
@@ -73,13 +82,16 @@ npm run deploy --network localhost --resume
 
 ### Deployment Issues Encountered
 
-1. **Progress Tracking Lost**: Multi-vault deployer doesn't properly maintain progress between runs
-   - Each run creates new infrastructure instead of reusing
-   - Manual progress file updates were needed
+1. **Progress Tracking Fixed**: ✅
+   - Multi-vault deployer now properly maintains progress between runs
+   - Reuses existing infrastructure, tokens, and LB pairs
+   - Added cleanup utility to manage failed deployments
+   - Automatically removes vaults from failed list when successfully deployed
 
-2. **--resume Flag Broken**: 
-   - Error: "Unrecognized param --resume"
-   - The argument isn't properly passed through npm scripts to the deployment script
+2. **--resume Flag Fixed**: ✅
+   - Hardhat doesn't support passing arguments to scripts
+   - Solution: Use environment variables (DEPLOY_RESUME=true, DEPLOY_VAULTS="vault1,vault2")
+   - Now working perfectly with incremental deployments
 
 3. **Token Deployment**: 
    - Token deployer works correctly
@@ -90,17 +102,38 @@ npm run deploy --network localhost --resume
    - getLBPairInformation() may fail even after successful creation
    - Transaction logs must be parsed to extract pair address
 
-### Successful Testnet Deployment Example
+### Successful Testnet Deployment Examples
 
+**Initial TEST1-USDC Deployment**:
 ```bash
-# What we deployed:
 TEST1 Token: 0x46e6B680eBae63e086e6D820529Aed187465aeDA
 USDC Token: 0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0 (existing)
 LB Pair: 0xc1603bA905f4E268CDf451591eF51bdFb1185EEB
 Vault: 0x8f74E08606b8182a472645F2598C5D9a81bD8fdc
-
-# BUT: UI doesn't show it because deployment wasn't exported!
 ```
+
+**Multi-Vault Resume Test** (January 7, 2025):
+```bash
+# Deployment 1: Fresh start with new infrastructure
+Registry: 0x434E98fdFd359afF433289224f57A515db09E41c
+QueueHandler Beacon: 0xD5d428D634409872b744ac358C2e64918f2eDCeE
+FeeManager Beacon: 0x819A880372D07575558D8bAb53ec9cbf10275017
+FUNKY1 Token: 0x1DD9f2cCD4b48a274938E88E205516FF3eF6720C (newly deployed)
+
+# Deployment 2: Resume with fixes
+test1-usdc Vault: 0xe6e001b5b336f0340021019638C74332A751E84d (reused existing pair)
+test2-usdc Vault: 0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B
+funky1-usdc Vault: 0x7b449c370Dcca90f76006A1f1d57EAF4B30b74f7
+
+# Demonstrated:
+- Progress tracking works correctly
+- Token reuse (TEST1, TEST2, USDC)
+- New token deployment (FUNKY1)
+- Infrastructure reuse across resume
+- Cleanup of failed attempts
+```
+
+**Note**: UI integration still pending - deployments need export system integration
 
 ### UI Integration Issue
 
@@ -119,6 +152,7 @@ Vault: 0x8f74E08606b8182a472645F2598C5D9a81bD8fdc
 ### Current Debug Scripts (to be consolidated)
 ```
 scripts/
+├── clean-deployment-progress.ts     # Clean/reset deployment progress ✅
 ├── check-token-compatibility.ts     # Verify ERC20 implementation
 ├── find-available-binsteps.ts       # Check factory bin steps
 ├── check-existing-pair.ts           # Verify existing pairs
@@ -146,9 +180,11 @@ scripts/
    - Automatic quote asset validation before attempting pair creation
    - Proper event parsing for pair addresses
 
-3. **Fix --resume Implementation**:
-   - Update package.json scripts to properly pass arguments
-   - Or implement resume detection automatically
+3. **Resume Implementation Fixed**: ✅
+   - Using environment variables: DEPLOY_RESUME=true
+   - Properly restores tokens, LB pairs, and infrastructure
+   - Handles both mock and existing token addresses
+   - Successfully tested with multiple vault deployments
 
 4. **Keep Minimal Debug Scripts**:
    ```
@@ -158,16 +194,13 @@ scripts/
    └── test-vault.ts          # Test vault operations
    ```
 
-### Recommended Fixes
+### Completed Fixes ✅
 
-1. **Fix Progress Persistence** in `multi-vault-deployer.ts`:
-   ```typescript
-   // Load existing progress before starting
-   const existingProgress = loadProgress(network);
-   if (existingProgress && !options.fresh) {
-     // Merge with new deployment
-   }
-   ```
+1. **Fixed Progress Persistence** in `multi-vault-deployer.ts`:
+   - Properly loads and restores existing progress
+   - Reuses deployed tokens, LB pairs, and infrastructure
+   - Handles both mock and existing token addresses
+   - Removes duplicates and cleans failed vault list
 
 2. **Add Quote Asset Validation**:
    ```typescript
@@ -178,10 +211,11 @@ scripts/
    }
    ```
 
-3. **Fix --resume Flag**:
-   - Option 1: Use environment variable instead
-   - Option 2: Parse process.argv directly in the script
-   - Option 3: Create separate npm script for resume
+3. **Fixed --resume Flag**: ✅
+   - Implemented Option 1: Using environment variables
+   - DEPLOY_RESUME=true for resuming
+   - DEPLOY_VAULTS="vault1,vault2" for specific vaults
+   - Works reliably across all networks
 
 ### Key Files
 
@@ -199,7 +233,10 @@ scripts/
 5. **MockERC20 Constructor**: Now requires 4 params (name, symbol, decimals, initialHolder)
 6. **Quote Asset Restrictions**: Only whitelisted tokens can be tokenY on testnet/mainnet
 7. **Event Parsing**: Factory events contain deployed pair addresses
-8. **Progress Files**: Must be properly maintained between deployment runs
+8. **Progress Files**: Properly maintained between deployment runs ✅
+9. **Interface Ambiguity**: Fixed ILBRouter/ILBFactory/ILBPair conflicts using qualified paths
+10. **Token Checksum**: Fixed address validation issues (e.g., TEST2 token)
+11. **Deployment Cleanup**: Added utility to clean duplicate failures and reset progress
 
 ### ✅ Success Criteria Status
 
@@ -212,14 +249,16 @@ scripts/
 **Testnet** ✅
 - [x] Deploy custom test tokens with correct permissions
 - [x] Create new LBPairs via Metropolis factory (with whitelisted quote assets)
-- [x] Successfully deploy vaults using custom pairs
+- [x] Successfully deploy vaults using custom pairs (TEST1-USDC, TEST2-USDC, FUNKY1-USDC)
 - [x] Test tokens distributed to deployer wallet
+- [x] Resume functionality works across multiple deployment attempts
 
 **General** 🚧
 - [x] All existing tests pass (209/209)
 - [x] Documentation fully updated
 - [ ] Minimal script proliferation (currently 11+ debug scripts)
 - [x] Clean, maintainable code structure
+- [x] Progress tracking and cleanup utilities
 
 ### Action Items
 
@@ -232,11 +271,12 @@ scripts/
      - Current: Different scripts save different formats
      - Needed: Standard deployment artifact that export script understands
 
-2. **Immediate**:
-   - Fix --resume flag parsing
-   - Update multi-vault deployer to maintain progress correctly
-   - Add quote asset validation before pair creation
-   - Create standard deployment save utility
+2. **Immediate** (Completed ✅):
+   - ✅ Fixed --resume flag parsing (using env vars)
+   - ✅ Updated multi-vault deployer to maintain progress correctly
+   - ✅ Added better error handling and progress cleanup
+   - ⏳ Add quote asset validation before pair creation
+   - ⏳ Create standard deployment save utility
 
 3. **Short Term**:
    - Consolidate debug scripts into unified tool

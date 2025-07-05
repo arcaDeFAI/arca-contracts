@@ -1,16 +1,27 @@
 {
   "network": "sonic-testnet",
-  "timestamp": 1751661687360,
-  "deployedTokens": {},
-  "deployedLBPairs": {},
-  "deployedVaults": [],
-  "failedVaults": [
-    "test1-usdc"
+  "timestamp": 1751672298339,
+  "deployedTokens": {
+    "TEST1": "0x46e6B680eBae63e086e6D820529Aed187465aeDA",
+    "USDC": "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0",
+    "TEST2": "0xFc00C80b0000007B73004EDb00094CaD80626D8D",
+    "FUNKY1": "0x1DD9f2cCD4b48a274938E88E205516FF3eF6720C"
+  },
+  "deployedLBPairs": {
+    "funky1-usdc": "0xE46d2bC68B23c680f717D40fC2E7CC68b2F2F8a5",
+    "test1-usdc": "0xc1603bA905f4E268CDf451591eF51bdFb1185EEB",
+    "test2-usdc": "0xf8a54e0045dd6be8F13D40dAe1d162f5e3Cd3bbB"
+  },
+  "deployedVaults": [
+    "test1-usdc",
+    "test2-usdc",
+    "funky1-usdc"
   ],
+  "failedVaults": [],
   "sharedInfrastructure": {
-    "registry": "0x1D134fBA4456F9F1130dFc7d1b5C379a4C8abbb8",
-    "queueHandlerBeacon": "0xB6DB386354c1a74F5071B90B087db57c7C350Ac6",
-    "feeManagerBeacon": "0x7a075c7496c96AE220833aEA019EA1c9695d0685",
+    "registry": "0x434E98fdFd359afF433289224f57A515db09E41c",
+    "queueHandlerBeacon": "0xD5d428D634409872b744ac358C2e64918f2eDCeE",
+    "feeManagerBeacon": "0x819A880372D07575558D8bAb53ec9cbf10275017",
     "lbRouter": "0xe77DA7F5B6927fD5E0e825B2B27aca526341069B",
     "lbFactory": "0x90F28Fe6963cE929d4cBc3480Df1169b92DD22B7"
   }

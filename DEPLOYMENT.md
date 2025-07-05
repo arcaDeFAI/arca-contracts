@@ -415,6 +415,12 @@ Create a `.env` file that's based off [.env.example](./.env.example).
 | `npm run dev:testnet:faucet` | Get testnet faucet info and check balance | Testnet setup |
 | `npm run dev:testnet:status` | Check testnet readiness and contract status | Before testnet deployment |
 
+### Deployment Progress Management
+| Command | Description | When to Use |
+|---------|-------------|-------------|
+| `npx hardhat run scripts/clean-deployment-progress.ts --network <name>` | Clean deployment progress (remove duplicates) | After failed deployments |
+| `RESET_PROGRESS=true npx hardhat run scripts/clean-deployment-progress.ts --network <name>` | Reset deployment progress completely | Start fresh deployment |
+
 ### 3. Contract Verification
 
 For testnet and mainnet deployments, verify on block explorer:
@@ -506,14 +512,14 @@ Before mainnet deployment:
 # Deploy all enabled vaults in config
 npm run deploy --network localhost
 
-# Deploy specific vaults only
-npm run deploy --network testnet --vaults "ws-usdc,metro-usdc"
+# Deploy specific vaults only (using environment variables)
+DEPLOY_VAULTS="ws-usdc,metro-usdc" npm run deploy --network testnet
 
 # Resume a failed deployment
-npm run deploy --network localhost --resume
+DEPLOY_RESUME=true npm run deploy --network localhost
 
-# Skip specific vaults
-npm run deploy --network mainnet --skip "test1-test2"
+# Combine resume and specific vaults
+DEPLOY_RESUME=true DEPLOY_VAULTS="test1-usdc" npm run deploy --network testnet
 ```
 
 ### Deployment Process
@@ -523,6 +529,21 @@ npm run deploy --network mainnet --skip "test1-test2"
 3. **Vault Deployment**: Deploys each vault with its supporting contracts
 4. **Registry Updates**: Registers all vaults for easy discovery
 5. **Progress Saving**: Saves progress after each step for resume capability
+
+### Progress Management
+
+The deployment system tracks progress in `deployments/<network>/multi-vault-progress.json`:
+- Successfully deployed vaults are tracked in `deployedVaults`
+- Failed vault attempts are recorded in `failedVaults`
+- Deployed tokens and LB pairs are saved for reuse
+- Shared infrastructure addresses are preserved
+
+**Handling Failed Deployments**:
+1. Failed vaults are automatically removed from the failed list when successfully deployed
+2. Use the cleanup script to remove duplicate entries: `npx hardhat run scripts/clean-deployment-progress.ts --network <name>`
+3. To start completely fresh: `RESET_PROGRESS=true npx hardhat run scripts/clean-deployment-progress.ts --network <name>`
+
+**Note on Rewarders**: Newly created LB pairs won't have METRO rewarders attached. Production pools typically have rewarders for METRO token distribution, but test pools created via factory won't have them initially.
 
 ### Testnet Deployment with Custom Tokens
 
@@ -559,7 +580,7 @@ For testnet deployments with custom tokens:
 
 2. Deploy the new vault:
 ```bash
-npm run deploy --network localhost --vaults "new-token-usdc"
+DEPLOY_VAULTS="new-token-usdc" npm run deploy --network localhost
 ```
 
 ### Deployment Artifacts
@@ -587,3 +608,13 @@ Multi-vault deployments save comprehensive artifacts:
 ---
 
 For development guidelines, see [CLAUDE.md](./CLAUDE.md)
+
+## Future Improvements
+
+### Developer Experience
+- **Convert deployment scripts to Hardhat tasks**: Currently using environment variables (DEPLOY_RESUME, DEPLOY_VAULTS) due to Hardhat's script limitations. Hardhat tasks would provide:
+  - Proper parameter validation
+  - Built-in help text (`npx hardhat help deploy-vaults`)
+  - Cleaner CLI interface
+  - Better error messages for invalid parameters
+  - Example: `npx hardhat deploy-vaults --resume --vaults "ws-usdc,metro-usdc" --network testnet`

@@ -44,7 +44,8 @@
       "Bash(npx vitest run:*)",
       "Bash(npx eslint:*)",
       "mcp__playwright__browser_take_screenshot",
-      "mcp__playwright__browser_press_key"
+      "mcp__playwright__browser_press_key",
+      "Bash(DEPLOY_RESUME=true npm run deploy:local)"
     ],
     "deny": []
   }

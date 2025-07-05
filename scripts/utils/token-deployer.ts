@@ -140,6 +140,55 @@ export async function fundNativeTokens(
 }
 
 /**
+ * Deploy specific tokens by symbol
+ */
+export async function deploySpecificTokens(
+  deployer: HardhatEthersSigner,
+  networkConfig: NetworkConfig,
+  tokenSymbols: string[]
+): Promise<Map<string, DeployedToken>> {
+  const deployedTokens = new Map<string, DeployedToken>();
+
+  for (const symbol of tokenSymbols) {
+    // Check if it's METRO (shared token)
+    if (symbol === "METRO" && networkConfig.sharedContracts.metroToken === "DEPLOY_MOCK") {
+      const metroConfig: TokenConfig = {
+        address: "DEPLOY_MOCK",
+        symbol: "METRO",
+        name: "Metropolis",
+        decimals: 18,
+        deployMock: true
+      };
+      const metroToken = await deployMockToken(deployer, metroConfig, networkConfig.name);
+      deployedTokens.set("METRO", metroToken);
+      continue;
+    }
+
+    // Find token config in vault configurations
+    let tokenConfig: TokenConfig | undefined;
+    for (const vault of networkConfig.vaults) {
+      if (vault.tokens.tokenX.symbol === symbol && vault.tokens.tokenX.deployMock) {
+        tokenConfig = vault.tokens.tokenX;
+        break;
+      }
+      if (vault.tokens.tokenY.symbol === symbol && vault.tokens.tokenY.deployMock) {
+        tokenConfig = vault.tokens.tokenY;
+        break;
+      }
+    }
+
+    if (tokenConfig) {
+      const deployedToken = await deployMockToken(deployer, tokenConfig, networkConfig.name);
+      deployedTokens.set(symbol, deployedToken);
+    } else {
+      console.warn(`⚠️  Token config not found for symbol: ${symbol}`);
+    }
+  }
+
+  return deployedTokens;
+}
+
+/**
  * Deploy all tokens needed for the network configuration
  */
 export async function deployAllTokens(
