@@ -1,6 +1,6 @@
 import type { RealVault } from "../types/vault";
 import TokenPairIcons from "./token-pair-icons";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useVault } from "../hooks/use-vault";
 import { ErrorDisplay } from "./web3-error-boundary";
 import { TransactionModal } from "./transaction-modal";
@@ -12,6 +12,7 @@ import { useVaultTransactionHistory } from "../hooks/use-vault-transaction-histo
 import { useAccount } from "wagmi";
 import { DemoDataWrapper, InlineWarning } from "./demo-warnings";
 import { CoinGeckoAttributionMinimal } from "./coingecko-attribution";
+import { formatTokenDisplay } from "../lib/utils";
 
 interface VaultCardProps {
   vault: RealVault;
@@ -63,7 +64,10 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     lastOperation,
     hash,
     error, // TDD: Get error from useVault hook
+    setError, // TDD: Get setError from useVault hook
     clearError, // TDD: Get clearError from useVault hook
+    pendingDeposits, // Get actual queue data from useVault
+    pendingWithdraws, // Get actual queue data from useVault
   } = useVault(vault.contractAddress);
 
   // Share validation - ensure user has enough shares to withdraw
@@ -91,15 +95,32 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
   const { address: userAddress, chainId } = useAccount();
 
-  // Vault-scoped transaction history with proper token context
-  const { addTransaction, updateTransactionStatus } =
-    useVaultTransactionHistory({
+  // Memoize the transaction history context to prevent re-renders
+  const transactionHistoryContext = useMemo(
+    () => ({
       vaultAddress: vault.contractAddress,
       tokenXSymbol: vault.tokens[0], // Dynamic: "wS", "METRO", "BTC", etc.
       tokenYSymbol: vault.tokens[1], // Dynamic: "USDC.e", "ETH", "USDT", etc.
       chainId: chainId || 31337,
       userAddress: userAddress || "0x0000000000000000000000000000000000000000",
-    });
+    }),
+    [vault.contractAddress, vault.tokens, chainId, userAddress]
+  );
+
+  // Vault-scoped transaction history with proper token context
+  const { addTransaction, updateTransactionStatus } =
+    useVaultTransactionHistory(transactionHistoryContext);
+
+  // Memoize pendingTransaction to prevent infinite loops
+  const memoizedPendingTransaction = useMemo(
+    () => pendingTransaction,
+    [
+      pendingTransaction?.type,
+      pendingTransaction?.tokenIndex,
+      pendingTransaction?.tokenSymbol,
+      pendingTransaction?.amount,
+    ],
+  );
 
   // Track transaction status changes
   useEffect(() => {
@@ -109,16 +130,16 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
       setShowProgressModal(true);
 
       // Add transaction to history
-      if (pendingTransaction) {
+      if (memoizedPendingTransaction) {
         addTransaction(
           hash,
-          pendingTransaction.type,
-          pendingTransaction.tokenSymbol, // Now uses actual token symbol (no type casting needed!)
-          pendingTransaction.amount,
+          memoizedPendingTransaction.type,
+          memoizedPendingTransaction.tokenSymbol, // Now uses actual token symbol (no type casting needed!)
+          memoizedPendingTransaction.amount,
         );
       }
     }
-  }, [hash, currentTxHash, addTransaction, pendingTransaction]);
+  }, [hash, currentTxHash, addTransaction, memoizedPendingTransaction]);
 
   useEffect(() => {
     if (currentTxHash) {
@@ -164,19 +185,61 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     if (onClick) onClick();
   };
 
+  // Helper function to get the correct balance label and value
+  const getBalanceDisplay = (tokenIndex: number, mode: "deposit" | "withdraw") => {
+    if (mode === "deposit") {
+      const balance = tokenIndex === 0 ? vault.userBalanceX : vault.userBalanceY;
+      return {
+        label: "Balance",
+        value: formatTokenDisplay(balance, 2)
+      };
+    } else {
+      const shares = tokenIndex === 0 ? vault.userSharesX : vault.userSharesY;
+      return {
+        label: "Shares",
+        value: shares
+      };
+    }
+  };
+
+  // Helper function to get the correct amount for 50% or MAX buttons
+  const getAmountForButton = (tokenIndex: number, mode: "deposit" | "withdraw", percentage: number) => {
+    if (mode === "deposit") {
+      const balance = tokenIndex === 0 ? vault.userBalanceX : vault.userBalanceY;
+      return percentage === 100 ? balance : (parseFloat(balance) * percentage / 100).toString();
+    } else {
+      const shares = tokenIndex === 0 ? vault.userSharesX : vault.userSharesY;
+      return percentage === 100 ? shares : (parseFloat(shares) * percentage / 100).toString();
+    }
+  };
+
   // Token-agnostic deposit handler using tokenIndex
   const handleDeposit = async (tokenIndex: number) => {
     const amount = tokenIndex === 0 ? depositAmountX : depositAmountY;
     const tokenSymbol = tokenIndex === 0 ? tokenXSymbol : tokenYSymbol;
-    if (!amount) return;
+    console.log("[handleDeposit] Called with:", { tokenIndex, amount, tokenSymbol });
+    
+    if (!amount) {
+      console.log("[handleDeposit] No amount, returning");
+      return;
+    }
 
-    // Validate connection and balance
-    if (!validateConnection()) return;
-    if (!validateBalance(tokenIndex, amount)) return;
+    // Validate connection
+    if (!validateConnection()) {
+      console.log("[handleDeposit] Connection validation failed");
+      setError("Please connect your wallet to continue");
+      return;
+    }
 
     // Check if approval is needed
-    if (!hasAllowance(tokenIndex, amount)) {
+    console.log("[handleDeposit] Checking allowance...");
+    const hasEnoughAllowance = hasAllowance(tokenIndex, amount);
+    console.log("[handleDeposit] Has allowance:", hasEnoughAllowance);
+    
+    if (!hasEnoughAllowance) {
+      // For approval, we don't need to validate balance
       // Show approval confirmation
+      console.log("[handleDeposit] Setting up approval transaction");
       setPendingTransaction({
         type: "approve",
         tokenIndex,
@@ -184,6 +247,13 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
         amount,
       });
       setShowConfirmModal(true);
+      return;
+    }
+
+    // Only validate balance for actual deposits (not approvals)
+    if (!validateBalance(tokenIndex, amount)) {
+      console.log("[handleDeposit] Balance validation failed");
+      setError(`Insufficient ${tokenSymbol} balance. You need ${amount} ${tokenSymbol} to deposit.`);
       return;
     }
 
@@ -264,6 +334,13 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     }
   };
 
+  // Check if token needs approval
+  const needsApproval = (tokenIndex: number) => {
+    const amount = tokenIndex === 0 ? depositAmountX : depositAmountY;
+    if (!amount || parseFloat(amount) === 0) return false;
+    return !hasAllowance(tokenIndex, amount);
+  };
+
   // Token-agnostic button text function
   const getButtonText = (tokenIndex: number) => {
     if (isWritePending && lastOperation === "deposit") return "Pending...";
@@ -274,10 +351,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
     if (!amount) return `Enter ${tokenSymbol} Amount`;
 
-    if (!hasAllowance(tokenIndex, amount)) {
-      return `Approve ${tokenSymbol}`;
-    }
-
+    // Always show "Deposit" as the main action
     return `Deposit ${tokenSymbol}`;
   };
 
@@ -342,7 +416,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
           {/* Queue Status */}
           <div className="flex items-center">
             <span className="text-white font-medium">
-              {vault.pendingDeposits}D / {vault.pendingWithdraws}W
+              {pendingDeposits || "0"}D / {pendingWithdraws || "0"}W
             </span>
           </div>
 
@@ -384,22 +458,17 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
           </div>
         </div>
 
-        {/* Error Display (Always Visible for Better UX) */}
-        {error && (
-          <div className="mx-4 mt-2">
-            <ErrorDisplay error={error} onDismiss={clearError} className="" />
-          </div>
-        )}
-
         {/* Expanded Details */}
         {isExpanded && (
           <div className="bg-arca-surface border border-arca-border border-t-0 rounded-b-xl px-6 py-6 -mt-1">
-            {/* Error Display */}
-            <ErrorDisplay
-              error={error}
-              onDismiss={clearError}
-              className="mb-4"
-            />
+            {/* Error Display - Only show when expanded */}
+            {error && (
+              <ErrorDisplay
+                error={error}
+                onDismiss={clearError}
+                className="mb-4"
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-8">
               {/* Left Side - Earnings */}
@@ -466,10 +535,8 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                           {activeTab === "deposit" ? "Add" : "Remove"}
                         </span>
                         <span className="text-arca-secondary text-sm">
-                          Balance:{" "}
-                          {tokenIndex === 0
-                            ? vault.userBalanceX
-                            : vault.userBalanceY}
+                          {getBalanceDisplay(tokenIndex, activeTab).label}:{" "}
+                          {getBalanceDisplay(tokenIndex, activeTab).value}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -508,10 +575,46 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                           className="flex-1 bg-transparent text-white text-lg font-medium border-none outline-none"
                         />
                         <div className="text-right">
-                          <button className="text-blue-400 text-xs hover:text-blue-300 transition-colors block">
+                          <button 
+                            onClick={() => {
+                              const amount = getAmountForButton(tokenIndex, activeTab, 50);
+                              if (activeTab === "deposit") {
+                                if (tokenIndex === 0) {
+                                  setDepositAmountX(amount);
+                                } else {
+                                  setDepositAmountY(amount);
+                                }
+                              } else {
+                                if (tokenIndex === 0) {
+                                  setWithdrawSharesX(amount);
+                                } else {
+                                  setWithdrawSharesY(amount);
+                                }
+                              }
+                            }}
+                            className="text-blue-400 text-xs hover:text-blue-300 transition-colors block"
+                          >
                             50%
                           </button>
-                          <button className="text-blue-400 text-xs hover:text-blue-300 transition-colors block">
+                          <button 
+                            onClick={() => {
+                              const amount = getAmountForButton(tokenIndex, activeTab, 100);
+                              if (activeTab === "deposit") {
+                                if (tokenIndex === 0) {
+                                  setDepositAmountX(amount);
+                                } else {
+                                  setDepositAmountY(amount);
+                                }
+                              } else {
+                                if (tokenIndex === 0) {
+                                  setWithdrawSharesX(amount);
+                                } else {
+                                  setWithdrawSharesY(amount);
+                                }
+                              }
+                            }}
+                            className="text-blue-400 text-xs hover:text-blue-300 transition-colors block"
+                          >
                             MAX
                           </button>
                         </div>
@@ -523,6 +626,15 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                   <div className="mt-4 space-y-2">
                     {activeTab === "deposit" && (
                       <>
+                        {/* Token X Deposit */}
+                        {depositAmountX && needsApproval(0) && (
+                          <div className="text-xs text-yellow-400 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {tokenXSymbol} requires approval first
+                          </div>
+                        )}
                         <button
                           onClick={() => handleDeposit(0)}
                           disabled={!depositAmountX || isWritePending}
@@ -530,6 +642,16 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                         >
                           {getButtonText(0)}
                         </button>
+                        
+                        {/* Token Y Deposit */}
+                        {depositAmountY && needsApproval(1) && (
+                          <div className="text-xs text-yellow-400 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {tokenYSymbol} requires approval first
+                          </div>
+                        )}
                         <button
                           onClick={() => handleDeposit(1)}
                           disabled={!depositAmountY || isWritePending}
@@ -622,7 +744,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
             <div>
               <div className="text-arca-secondary text-xs">QUEUE STATUS</div>
               <div className="text-white font-medium">
-                {vault.pendingDeposits}D / {vault.pendingWithdraws}W
+                {pendingDeposits || "0"}D / {pendingWithdraws || "0"}W
               </div>
             </div>
           </div>
@@ -632,11 +754,13 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
         {isExpanded && (
           <div className="bg-arca-surface border border-arca-border border-t-0 rounded-b-xl px-4 py-4 -mt-1">
             {/* Error Display */}
-            <ErrorDisplay
-              error={error}
-              onDismiss={clearError}
-              className="mb-4"
-            />
+            {error && (
+              <ErrorDisplay
+                error={error}
+                onDismiss={clearError}
+                className="mb-4"
+              />
+            )}
 
             <div className="space-y-4">
               {/* Earnings Section */}
@@ -703,10 +827,8 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                           {activeTab === "deposit" ? "Add" : "Remove"}
                         </span>
                         <span className="text-arca-secondary text-xs">
-                          Balance:{" "}
-                          {tokenIndex === 0
-                            ? vault.userBalanceX
-                            : vault.userBalanceY}
+                          {getBalanceDisplay(tokenIndex, activeTab).label}:{" "}
+                          {getBalanceDisplay(tokenIndex, activeTab).value}
                         </span>
                       </div>
                       <div className="flex items-center space-x-2">
@@ -745,10 +867,46 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                           className="flex-1 bg-transparent text-white text-sm font-medium border-none outline-none"
                         />
                         <div className="text-right">
-                          <button className="text-blue-400 text-xs hover:text-blue-300 transition-colors block">
+                          <button 
+                            onClick={() => {
+                              const amount = getAmountForButton(tokenIndex, activeTab, 50);
+                              if (activeTab === "deposit") {
+                                if (tokenIndex === 0) {
+                                  setDepositAmountX(amount);
+                                } else {
+                                  setDepositAmountY(amount);
+                                }
+                              } else {
+                                if (tokenIndex === 0) {
+                                  setWithdrawSharesX(amount);
+                                } else {
+                                  setWithdrawSharesY(amount);
+                                }
+                              }
+                            }}
+                            className="text-blue-400 text-xs hover:text-blue-300 transition-colors block"
+                          >
                             50%
                           </button>
-                          <button className="text-blue-400 text-xs hover:text-blue-300 transition-colors block">
+                          <button 
+                            onClick={() => {
+                              const amount = getAmountForButton(tokenIndex, activeTab, 100);
+                              if (activeTab === "deposit") {
+                                if (tokenIndex === 0) {
+                                  setDepositAmountX(amount);
+                                } else {
+                                  setDepositAmountY(amount);
+                                }
+                              } else {
+                                if (tokenIndex === 0) {
+                                  setWithdrawSharesX(amount);
+                                } else {
+                                  setWithdrawSharesY(amount);
+                                }
+                              }
+                            }}
+                            className="text-blue-400 text-xs hover:text-blue-300 transition-colors block"
+                          >
                             MAX
                           </button>
                         </div>
@@ -760,6 +918,15 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                   <div className="mt-3 space-y-2">
                     {activeTab === "deposit" && (
                       <>
+                        {/* Token X Deposit */}
+                        {depositAmountX && needsApproval(0) && (
+                          <div className="text-xs text-yellow-400 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {tokenXSymbol} requires approval first
+                          </div>
+                        )}
                         <button
                           onClick={() => handleDeposit(0)}
                           disabled={!depositAmountX || isWritePending}
@@ -767,6 +934,16 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                         >
                           {getButtonText(0)}
                         </button>
+                        
+                        {/* Token Y Deposit */}
+                        {depositAmountY && needsApproval(1) && (
+                          <div className="text-xs text-yellow-400 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            {tokenYSymbol} requires approval first
+                          </div>
+                        )}
                         <button
                           onClick={() => handleDeposit(1)}
                           disabled={!depositAmountY || isWritePending}

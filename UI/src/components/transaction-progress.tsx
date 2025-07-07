@@ -7,6 +7,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useAccount } from "wagmi";
+import { SUPPORTED_CHAINS } from "@/config/chains";
 
 export type TransactionStatus =
   | "idle"
@@ -38,6 +40,30 @@ export function TransactionProgress({
   error,
   onRetry,
 }: TransactionProgressProps) {
+  const { chainId } = useAccount();
+  
+  // Get the current chain configuration
+  const currentChain = Object.values(SUPPORTED_CHAINS).find(c => c.id === chainId);
+  
+  // Get the correct block explorer URL based on the current chain
+  const getExplorerUrl = (hash: string) => {
+    if (!currentChain) {
+      // Fallback to mainnet explorer if chain not found
+      return `https://sonicscan.org/tx/${hash}`;
+    }
+    
+    const baseUrl = currentChain.blockExplorers.default.url;
+    // Handle the different explorer URL formats
+    if (baseUrl.includes("testnet.sonicscan.org")) {
+      return `${baseUrl}/tx/${hash}`;
+    } else if (baseUrl.includes("explorer.soniclabs.com")) {
+      // Mainnet uses sonicscan.org for transactions
+      return `https://sonicscan.org/tx/${hash}`;
+    } else {
+      // For localhost/fork, just return a placeholder
+      return `${baseUrl}/tx/${hash}`;
+    }
+  };
   const getStatusIcon = () => {
     switch (status) {
       case "pending":
@@ -184,12 +210,12 @@ export function TransactionProgress({
                 {txHash}
               </div>
               <a
-                href={`https://sonicscan.org/tx/${txHash}`}
+                href={getExplorerUrl(txHash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 text-xs mt-2 inline-block"
               >
-                View on Sonicscan →
+                View on {currentChain?.blockExplorers.default.name || 'Explorer'} →
               </a>
             </div>
           )}
