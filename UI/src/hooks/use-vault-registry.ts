@@ -1,5 +1,6 @@
 import { useAccount, useReadContract } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { getContracts } from "../lib/contracts";
 import { REGISTRY_ABI } from "../lib/contracts";
 import { SUPPORTED_CHAINS } from "../config/chains";
@@ -80,6 +81,10 @@ export function useVaultRegistry() {
       abi: REGISTRY_ABI,
       functionName: "getVaultInfo" as const,
       args: [vaultAddress as `0x${string}`] as const,
+      query: {
+        staleTime: 30000, // Consider data fresh for 30 seconds
+        refetchInterval: 60000, // Refetch every 60 seconds
+      },
     };
   });
 
@@ -107,27 +112,31 @@ export function useVaultRegistry() {
 
   const isLoading = isLoadingAddresses || isLoadingInfo;
 
-  // Build vaults array from all vault info results
-  const vaults: RegistryVaultInfo[] = [];
-
-  if (vaultAddresses) {
-    vaultAddresses.forEach((vaultAddress, index) => {
-      const vaultInfo = vaultInfoResults[index]?.data;
-      if (vaultInfo) {
-        vaults.push({
-          vault: vaultInfo.vault,
-          rewardClaimer: vaultInfo.rewardClaimer,
-          queueHandler: vaultInfo.queueHandler,
-          feeManager: vaultInfo.feeManager,
-          tokenX: vaultInfo.tokenX,
-          tokenY: vaultInfo.tokenY,
-          name: vaultInfo.name,
-          symbol: vaultInfo.symbol,
-          isActive: vaultInfo.isActive,
-        });
-      }
-    });
-  }
+  // Build vaults array from all vault info results - MEMOIZED to prevent infinite loops
+  const vaults = useMemo(() => {
+    const result: RegistryVaultInfo[] = [];
+    
+    if (vaultAddresses) {
+      vaultAddresses.forEach((vaultAddress, index) => {
+        const vaultInfo = vaultInfoResults[index]?.data;
+        if (vaultInfo) {
+          result.push({
+            vault: vaultInfo.vault,
+            rewardClaimer: vaultInfo.rewardClaimer,
+            queueHandler: vaultInfo.queueHandler,
+            feeManager: vaultInfo.feeManager,
+            tokenX: vaultInfo.tokenX,
+            tokenY: vaultInfo.tokenY,
+            name: vaultInfo.name,
+            symbol: vaultInfo.symbol,
+            isActive: vaultInfo.isActive,
+          });
+        }
+      });
+    }
+    
+    return result;
+  }, [vaultAddresses, vaultInfoResults]);
 
   const error = vaultAddressesError
     ? vaultAddressesError.message || "Failed to fetch vaults from registry"

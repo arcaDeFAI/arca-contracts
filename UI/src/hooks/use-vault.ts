@@ -4,7 +4,7 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { parseEther, formatEther, type Address } from "viem";
+import { parseEther, formatEther, parseUnits, formatUnits, type Address } from "viem";
 import {
   getContracts,
   VAULT_ABI,
@@ -16,7 +16,7 @@ import {
   createVaultConfigFromRegistry,
   type VaultConfig,
 } from "../lib/vault-configs";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useVaultRegistry } from "./use-vault-registry";
 
 export function useVault(vaultAddress?: string) {
@@ -36,11 +36,11 @@ export function useVault(vaultAddress?: string) {
   const [error, setError] = useState<string | null>(null);
 
   // Update error state when write error occurs
-  useState(() => {
+  useEffect(() => {
     if (writeError) {
       setError(writeError.message || "Transaction failed");
     }
-  });
+  }, [writeError]);
 
   const clearError = () => {
     setError(null);
@@ -77,7 +77,11 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "tokenBalance",
     args: [0], // TokenX (first token in pair)
-    query: { enabled: shouldEnableQueries },
+    query: {
+      enabled: shouldEnableQueries,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   const { data: vaultBalanceY } = useReadContract({
@@ -85,7 +89,11 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "tokenBalance",
     args: [1], // TokenY (second token in pair)
-    query: { enabled: shouldEnableQueries },
+    query: {
+      enabled: shouldEnableQueries,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   // User share queries (token-agnostic)
@@ -94,7 +102,11 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "getShares",
     args: [userAddress as Address, 0],
-    query: { enabled: shouldEnableQueries && !!userAddress },
+    query: {
+      enabled: shouldEnableQueries && !!userAddress,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   const { data: userSharesY } = useReadContract({
@@ -102,7 +114,11 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "getShares",
     args: [userAddress as Address, 1],
-    query: { enabled: shouldEnableQueries && !!userAddress },
+    query: {
+      enabled: shouldEnableQueries && !!userAddress,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   // Share price queries (token-agnostic)
@@ -111,7 +127,11 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "getPricePerFullShare",
     args: [0],
-    query: { enabled: shouldEnableQueries },
+    query: {
+      enabled: shouldEnableQueries,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   const { data: pricePerShareY } = useReadContract({
@@ -119,7 +139,11 @@ export function useVault(vaultAddress?: string) {
     abi: VAULT_ABI,
     functionName: "getPricePerFullShare",
     args: [1],
-    query: { enabled: shouldEnableQueries },
+    query: {
+      enabled: shouldEnableQueries,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   // Token balance queries (dynamic based on vault config)
@@ -128,7 +152,11 @@ export function useVault(vaultAddress?: string) {
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [userAddress as Address],
-    query: { enabled: shouldEnableQueries && !!userAddress },
+    query: {
+      enabled: shouldEnableQueries && !!userAddress,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   const { data: userBalanceY } = useReadContract({
@@ -136,7 +164,11 @@ export function useVault(vaultAddress?: string) {
     abi: ERC20_ABI,
     functionName: "balanceOf",
     args: [userAddress as Address],
-    query: { enabled: shouldEnableQueries && !!userAddress },
+    query: {
+      enabled: shouldEnableQueries && !!userAddress,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   // Token allowance queries (dynamic based on vault config)
@@ -145,7 +177,11 @@ export function useVault(vaultAddress?: string) {
     abi: ERC20_ABI,
     functionName: "allowance",
     args: [userAddress as Address, vaultAddress as Address],
-    query: { enabled: shouldEnableQueries && !!userAddress },
+    query: {
+      enabled: shouldEnableQueries && !!userAddress,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   const { data: allowanceY } = useReadContract({
@@ -153,7 +189,11 @@ export function useVault(vaultAddress?: string) {
     abi: ERC20_ABI,
     functionName: "allowance",
     args: [userAddress as Address, vaultAddress as Address],
-    query: { enabled: shouldEnableQueries && !!userAddress },
+    query: {
+      enabled: shouldEnableQueries && !!userAddress,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   // Queue status queries
@@ -161,14 +201,22 @@ export function useVault(vaultAddress?: string) {
     address: vaultInfo?.queueHandler as Address,
     abi: QUEUE_HANDLER_ABI,
     functionName: "getPendingDepositsCount",
-    query: { enabled: shouldEnableQueries && !!vaultInfo?.queueHandler },
+    query: {
+      enabled: shouldEnableQueries && !!vaultInfo?.queueHandler,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   const { data: pendingWithdraws } = useReadContract({
     address: vaultInfo?.queueHandler as Address,
     abi: QUEUE_HANDLER_ABI,
     functionName: "getPendingWithdrawsCount",
-    query: { enabled: shouldEnableQueries && !!vaultInfo?.queueHandler },
+    query: {
+      enabled: shouldEnableQueries && !!vaultInfo?.queueHandler,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   // Reward claimer queries
@@ -177,7 +225,11 @@ export function useVault(vaultAddress?: string) {
     abi: REWARD_CLAIMER_ABI,
     functionName: "getTotalCompounded",
     args: [0], // TokenX (first token in pair)
-    query: { enabled: shouldEnableQueries && !!vaultInfo?.rewardClaimer },
+    query: {
+      enabled: shouldEnableQueries && !!vaultInfo?.rewardClaimer,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   const { data: totalCompoundedY } = useReadContract({
@@ -185,54 +237,62 @@ export function useVault(vaultAddress?: string) {
     abi: REWARD_CLAIMER_ABI,
     functionName: "getTotalCompounded",
     args: [1], // TokenY (second token in pair)
-    query: { enabled: shouldEnableQueries && !!vaultInfo?.rewardClaimer },
+    query: {
+      enabled: shouldEnableQueries && !!vaultInfo?.rewardClaimer,
+      staleTime: 10000, // Consider data fresh for 10 seconds
+      refetchInterval: 30000, // Refetch every 30 seconds
+    },
   });
 
   // Token-agnostic approve functions
   const approveTokenX = async (amount: string) => {
     if (!vaultConfig?.tokenX.address || !vaultAddress) return;
 
+    const decimals = vaultConfig.tokenX.decimals || 18;
     writeContract({
       address: vaultConfig.tokenX.address as Address,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [vaultAddress as Address, parseEther(amount)],
+      args: [vaultAddress as Address, parseUnits(amount, decimals)],
     });
   };
 
   const approveTokenY = async (amount: string) => {
     if (!vaultConfig?.tokenY.address || !vaultAddress) return;
 
+    const decimals = vaultConfig.tokenY.decimals || 18;
     writeContract({
       address: vaultConfig.tokenY.address as Address,
       abi: ERC20_ABI,
       functionName: "approve",
-      args: [vaultAddress as Address, parseEther(amount)],
+      args: [vaultAddress as Address, parseUnits(amount, decimals)],
     });
   };
 
   // Token-agnostic deposit functions
   const depositTokenX = async (amount: string) => {
-    if (!vaultAddress) return;
+    if (!vaultAddress || !vaultConfig) return;
 
+    const decimals = vaultConfig.tokenX.decimals || 18;
     setLastOperation("deposit");
     writeContract({
       address: vaultAddress as Address,
       abi: VAULT_ABI,
       functionName: "depositToken",
-      args: [parseEther(amount), 0], // TokenX (first token)
+      args: [parseUnits(amount, decimals), 0], // TokenX (first token)
     });
   };
 
   const depositTokenY = async (amount: string) => {
-    if (!vaultAddress) return;
+    if (!vaultAddress || !vaultConfig) return;
 
+    const decimals = vaultConfig.tokenY.decimals || 18;
     setLastOperation("deposit");
     writeContract({
       address: vaultAddress as Address,
       abi: VAULT_ABI,
       functionName: "depositToken",
-      args: [parseEther(amount), 1], // TokenY (second token)
+      args: [parseUnits(amount, decimals), 1], // TokenY (second token)
     });
   };
 
@@ -240,6 +300,7 @@ export function useVault(vaultAddress?: string) {
   const withdrawShares = async (sharesX: string, sharesY: string) => {
     if (!vaultAddress) return;
 
+    // Shares always use 18 decimals regardless of underlying token
     setLastOperation("withdraw");
     writeContract({
       address: vaultAddress as Address,
@@ -261,9 +322,9 @@ export function useVault(vaultAddress?: string) {
   };
 
   // Helper functions for formatting
-  const formatBalance = (balance: bigint | unknown) => {
+  const formatBalance = (balance: bigint | unknown, decimals: number = 18) => {
     if (!balance || typeof balance !== "bigint") return "0.0";
-    const formatted = formatEther(balance);
+    const formatted = formatUnits(balance, decimals);
     // Ensure consistent decimal display for UX
     return formatted.includes(".") ? formatted : `${formatted}.0`;
   };
@@ -271,13 +332,19 @@ export function useVault(vaultAddress?: string) {
   const hasAllowance = (tokenIndex: number, amount: string) => {
     const allowance = tokenIndex === 0 ? allowanceX : allowanceY;
     if (!allowance || typeof allowance !== "bigint") return false;
-    return allowance >= parseEther(amount);
+    const decimals = tokenIndex === 0 
+      ? vaultConfig?.tokenX.decimals || 18 
+      : vaultConfig?.tokenY.decimals || 18;
+    return allowance >= parseUnits(amount, decimals);
   };
 
   const validateBalance = (tokenIndex: number, amount: string) => {
     const balance = tokenIndex === 0 ? userBalanceX : userBalanceY;
     if (!balance || typeof balance !== "bigint") return false;
-    return parseFloat(amount) <= parseFloat(formatEther(balance));
+    const decimals = tokenIndex === 0 
+      ? vaultConfig?.tokenX.decimals || 18 
+      : vaultConfig?.tokenY.decimals || 18;
+    return parseFloat(amount) <= parseFloat(formatUnits(balance, decimals));
   };
 
   const validateConnection = () => {
@@ -296,16 +363,16 @@ export function useVault(vaultAddress?: string) {
     tokenYSymbol: vaultConfig?.tokenY.symbol || "",
 
     // Vault data (token-agnostic)
-    vaultBalanceX: formatBalance(vaultBalanceX),
-    vaultBalanceY: formatBalance(vaultBalanceY),
-    userSharesX: formatBalance(userSharesX),
-    userSharesY: formatBalance(userSharesY),
-    pricePerShareX: formatBalance(pricePerShareX),
-    pricePerShareY: formatBalance(pricePerShareY),
+    vaultBalanceX: formatBalance(vaultBalanceX, vaultConfig?.tokenX.decimals),
+    vaultBalanceY: formatBalance(vaultBalanceY, vaultConfig?.tokenY.decimals),
+    userSharesX: formatBalance(userSharesX), // Shares always use 18 decimals
+    userSharesY: formatBalance(userSharesY), // Shares always use 18 decimals
+    pricePerShareX: formatBalance(pricePerShareX), // Price per share is 18 decimals
+    pricePerShareY: formatBalance(pricePerShareY), // Price per share is 18 decimals
 
     // User balances (token-agnostic)
-    userBalanceX: formatBalance(userBalanceX),
-    userBalanceY: formatBalance(userBalanceY),
+    userBalanceX: formatBalance(userBalanceX, vaultConfig?.tokenX.decimals),
+    userBalanceY: formatBalance(userBalanceY, vaultConfig?.tokenY.decimals),
 
     // Queue status
     pendingDeposits: pendingDeposits?.toString() || "0",
@@ -341,6 +408,7 @@ export function useVault(vaultAddress?: string) {
 
     // Error handling
     error,
+    setError,
     clearError,
 
     // Legacy compatibility (for backward compatibility during transition)
