@@ -58,7 +58,24 @@ async function exportAddresses() {
           lbRouter: deployment.sharedInfrastructure.lbRouter,
           lbFactory: deployment.sharedInfrastructure.lbFactory
         },
-        vaults: deployment.vaults.map((v: any) => ({
+        vaults: deployment.vaults.map((v: {
+          id: string;
+          contracts: {
+        vault: string;
+        queueHandler: string;
+        feeManager: string;
+        rewardClaimer: string;
+        lbPair: string;
+          };
+          tokens: {
+        tokenX: string;
+        tokenY: string;
+          };
+          config: {
+        vaultName: string;
+        vaultSymbol: string;
+          };
+        }) => ({
           id: v.id,
           vault: v.contracts.vault,
           queueHandler: v.contracts.queueHandler,

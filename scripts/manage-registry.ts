@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import fs from "fs";
 import path from "path";
+import type { ArcaVaultRegistry } from "../typechain-types/contracts/deployment/ArcaVaultRegistry.ts";
 
 /**
  * Registry management utility
@@ -51,15 +52,30 @@ async function main() {
   }
 }
 
-async function listVaults(registry: any) {
+async function listVaults(registry: ArcaVaultRegistry) {
   console.log("\n📋 Registered Vaults:");
   console.log("=".repeat(80));
   
   const vaultCount = await registry.getVaultCount();
   console.log(`Total vaults: ${vaultCount}`);
   
+  type VaultData = {
+    index: number;
+    address: string;
+    name: string;
+    symbol: string;
+    tokenX: string;
+    tokenY: string;
+    tokenXSymbol: string;
+    tokenYSymbol: string;
+    deploymentId: number;
+    isActive: boolean;
+    deployer: string;
+    owner?: string;
+  };
+
   // Group vaults by token pair
-  const vaultsByPair = new Map<string, any[]>();
+  const vaultsByPair = new Map<string, VaultData[]>();
   
   for (let i = 0; i < vaultCount; i++) {
     const vaultAddress = await registry.vaultList(i);
@@ -135,7 +151,7 @@ async function listVaults(registry: any) {
   }
 }
 
-async function removeVault(registry: any, vaultAddress: string) {
+async function removeVault(registry: ArcaVaultRegistry, vaultAddress: string) {
   console.log(`\n🗑️  Removing vault from registry: ${vaultAddress}`);
   
   // Find vault index

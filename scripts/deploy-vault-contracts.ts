@@ -21,7 +21,14 @@ async function deployVaultContracts() {
     feeRecipient: "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98"
   };
   
-  const deployedContracts: any = {};
+  type DeployedContracts = {
+    queueHandler?: string;
+    feeManager?: string;
+    rewardClaimer?: string;
+    vault?: string;
+  };
+
+  const deployedContracts: DeployedContracts = {};
   
   try {
     // Step 1: Deploy Queue Handler (Beacon Proxy)
@@ -205,4 +212,4 @@ async function main() {
   }
 }
 
-main();
+main().catch(x => console.error(x));
