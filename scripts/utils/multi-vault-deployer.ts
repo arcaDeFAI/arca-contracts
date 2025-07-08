@@ -1,4 +1,5 @@
 import { ethers, upgrades } from "hardhat";
+import { Contract } from "ethers";
 import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
 import type { NetworkConfig, VaultConfig } from "../types/config";
 import { getEnabledVaults } from "../types/config";
@@ -35,6 +36,7 @@ export interface MultiVaultDeploymentResult {
 }
 
 import type { TokenConfig } from "../types/config";
+import { IERC20, MockERC20 } from "typechain-types";
 
 export interface DeploymentProgress {
   network: string;
@@ -417,7 +419,7 @@ export async function deployAllVaults(
         if (tokenConfig) {
           result.tokens.set(symbol, {
             address,
-            contract: contract as any,
+            contract: contract,
             config: tokenConfig
           });
           console.log(`✓ Restored ${symbol} at ${address}`);
@@ -456,7 +458,7 @@ export async function deployAllVaults(
               const contract = await ethers.getContractAt("MockERC20", vault.tokens.tokenX.address, deployer);
               result.tokens.set(symbol, {
                 address: vault.tokens.tokenX.address,
-                contract: contract as any,
+                contract: contract,
                 config: vault.tokens.tokenX
               });
               progress.deployedTokens[symbol] = vault.tokens.tokenX.address;
@@ -468,7 +470,7 @@ export async function deployAllVaults(
               const contract = await ethers.getContractAt("MockERC20", vault.tokens.tokenY.address, deployer);
               result.tokens.set(symbol, {
                 address: vault.tokens.tokenY.address,
-                contract: contract as any,
+                contract: contract,
                 config: vault.tokens.tokenY
               });
               progress.deployedTokens[symbol] = vault.tokens.tokenY.address;
@@ -511,7 +513,7 @@ export async function deployAllVaults(
             const contract = await ethers.getContractAt("MockERC20", vault.tokens.tokenX.address, deployer);
             result.tokens.set(vault.tokens.tokenX.symbol, {
               address: vault.tokens.tokenX.address,
-              contract: contract as any,
+              contract: contract,
               config: vault.tokens.tokenX
             });
             progress.deployedTokens[vault.tokens.tokenX.symbol] = vault.tokens.tokenX.address;
@@ -531,7 +533,7 @@ export async function deployAllVaults(
             const contract = await ethers.getContractAt("MockERC20", vault.tokens.tokenY.address, deployer);
             result.tokens.set(vault.tokens.tokenY.symbol, {
               address: vault.tokens.tokenY.address,
-              contract: contract as any,
+              contract: contract,
               config: vault.tokens.tokenY
             });
             progress.deployedTokens[vault.tokens.tokenY.symbol] = vault.tokens.tokenY.address;
@@ -567,7 +569,9 @@ export async function deployAllVaults(
           result.lbPairs.set(vaultId, {
             address: pairAddress,
             binStep: vaultConfig.lbPair.binStep,
-            isNew: false
+            isNew: false,
+            tokenX: vaultConfig.tokens.tokenX.address,
+            tokenY: vaultConfig.tokens.tokenY.address
           });
           console.log(`✓ Restored LB pair for ${vaultId} at ${pairAddress}`);
         }

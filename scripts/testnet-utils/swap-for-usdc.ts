@@ -1,5 +1,6 @@
 import { ethers } from "hardhat";
 import type { IERC20, ILBPair } from "../../typechain-types";
+import * as readline from 'node:readline';
 
 // Testnet addresses
 const ADDRESSES = {
@@ -84,15 +85,15 @@ async function main() {
     }
     
     // Ask user how much to wrap
-    const readline = require('readline').createInterface({
+    const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout
     });
 
     const amountToWrap = await new Promise<string>((resolve) => {
-      readline.question(`\nHow much S to wrap and swap? (max: ${ethers.formatEther(nativeBalance - ethers.parseEther("0.1"))}): `, resolve);
+      rl.question(`\nHow much S to wrap and swap? (max: ${ethers.formatEther(nativeBalance - ethers.parseEther("0.1"))}): `, resolve);
     });
-    readline.close();
+    rl.close();
     
     const wrapAmount = ethers.parseEther(amountToWrap);
     if (wrapAmount > nativeBalance - ethers.parseEther("0.1")) {
@@ -163,8 +164,13 @@ async function main() {
     console.log(`USDC: ${ethers.formatUnits(usdcBalanceAfter, 6)}`);
     console.log(`\n✨ Received: ${ethers.formatUnits(usdcReceived, 6)} USDC`);
 
-  } catch (error: any) {
-    console.error("❌ Swap failed:", error?.reason || error?.message || error);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("❌ Swap failed:", error.message || error);
+    }
+    else {
+      console.error("❌ Swap failed:", error);
+    }
   }
 }
 
