@@ -311,12 +311,26 @@ describe("Multi-Vault VaultCard (TDD)", () => {
       const inputs = screen.getAllByPlaceholderText("0.0");
       await user.type(inputs[0], "50");
 
-      // Should show approve button for wS (tokenX) - first match is desktop
+      // Should show deposit button (approval happens in modal)
       await waitFor(() => {
-        const approveButtons = screen.getAllByRole("button", {
-          name: /approve ws/i,
+        const depositButtons = screen.getAllByRole("button", {
+          name: /deposit ws/i,
         });
-        expect(approveButtons[0]).toBeInTheDocument();
+        expect(depositButtons[0]).toBeInTheDocument();
+      });
+
+      // Click deposit to trigger approval modal
+      await user.click(
+        screen.getAllByRole("button", { name: /deposit ws/i })[0],
+      );
+
+      // Modal should show approval needed
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            /You need to approve the vault contract to spend your wS tokens/i,
+          ),
+        ).toBeInTheDocument();
       });
     });
 
@@ -509,23 +523,33 @@ describe("Multi-Vault VaultCard (TDD)", () => {
       const inputs = screen.getAllByPlaceholderText("0.0");
       await user.type(inputs[0], "50");
 
-      // Click approve button for first token (desktop version)
-      const approveButtons = screen.getAllByRole("button", {
-        name: /approve ws/i,
+      // Click deposit button (approval happens in modal)
+      const depositButtons = screen.getAllByRole("button", {
+        name: /deposit ws/i,
       });
-      await user.click(approveButtons[0]);
+      await user.click(depositButtons[0]);
 
-      // Should show transaction confirmation modal for approval
+      // Modal should show approval is needed
       await waitFor(() => {
-        expect(screen.getByRole("dialog")).toBeInTheDocument();
+        expect(
+          screen.getByText(
+            /You need to approve the vault contract to spend your wS tokens/i,
+          ),
+        ).toBeInTheDocument();
+        expect(
+          screen.getByRole("button", { name: /confirm approval/i }),
+        ).toBeInTheDocument();
       });
 
       // Click confirm button to complete approval
-      const confirmButton = screen.getByRole("button", { name: /confirm/i });
-      await user.click(confirmButton);
+      await user.click(
+        screen.getByRole("button", { name: /confirm approval/i }),
+      );
 
       // Should call approveTokenX after confirmation
-      expect(mockApproveTokenX).toHaveBeenCalledWith("50");
+      await waitFor(() => {
+        expect(mockApproveTokenX).toHaveBeenCalledWith("50");
+      });
     });
   });
 

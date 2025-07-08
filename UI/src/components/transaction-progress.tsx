@@ -41,17 +41,19 @@ export function TransactionProgress({
   onRetry,
 }: TransactionProgressProps) {
   const { chainId } = useAccount();
-  
+
   // Get the current chain configuration
-  const currentChain = Object.values(SUPPORTED_CHAINS).find(c => c.id === chainId);
-  
+  const currentChain = Object.values(SUPPORTED_CHAINS).find(
+    (c) => c.id === chainId,
+  );
+
   // Get the correct block explorer URL based on the current chain
   const getExplorerUrl = (hash: string) => {
     if (!currentChain) {
       // Fallback to mainnet explorer if chain not found
       return `https://sonicscan.org/tx/${hash}`;
     }
-    
+
     const baseUrl = currentChain.blockExplorers.default.url;
     // Handle the different explorer URL formats
     if (baseUrl.includes("testnet.sonicscan.org")) {
@@ -215,7 +217,8 @@ export function TransactionProgress({
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 text-xs mt-2 inline-block"
               >
-                View on {currentChain?.blockExplorers.default.name || 'Explorer'} →
+                View on{" "}
+                {currentChain?.blockExplorers.default.name || "Explorer"} →
               </a>
             </div>
           )}

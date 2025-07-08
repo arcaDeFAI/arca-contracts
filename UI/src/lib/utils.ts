@@ -29,15 +29,15 @@ export function formatCurrency(amount: number | undefined): string {
  */
 export function formatTokenDisplay(
   displayAmount: string | undefined,
-  displayDecimals: number = 2
+  displayDecimals: number = 2,
 ): string {
   if (!displayAmount || displayAmount === "0.0") {
     return "0.00";
   }
-  
+
   // Parse the string to a number
   const numAmount = parseFloat(displayAmount);
-  
+
   // Format with proper decimals and thousand separators
   return new Intl.NumberFormat("en-US", {
     minimumFractionDigits: displayDecimals,

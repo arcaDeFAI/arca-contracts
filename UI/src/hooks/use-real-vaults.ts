@@ -194,11 +194,17 @@ export function useRealVaults(): {
 
         contractAddress: registryVault.vault,
         isActive: true,
-        description: `Automated liquidity provision for ${tokenXSymbol}/${tokenYSymbol} on Metropolis DLMM with Metro reward compounding`,
+        description: `Automated liquidity provision for ${finalTokenXSymbol}/${finalTokenYSymbol} on Metropolis DLMM with Metro reward compounding`,
 
         // User balances for deposit/withdraw UI - format with proper decimals
-        userBalanceX: userBalanceX && vaultConfig ? formatUnits(userBalanceX, vaultConfig.tokenX.decimals) : "0.0",
-        userBalanceY: userBalanceY && vaultConfig ? formatUnits(userBalanceY, vaultConfig.tokenY.decimals) : "0.0",
+        userBalanceX:
+          userBalanceX && vaultConfig
+            ? formatUnits(userBalanceX, vaultConfig.tokenX.decimals)
+            : "0.0",
+        userBalanceY:
+          userBalanceY && vaultConfig
+            ? formatUnits(userBalanceY, vaultConfig.tokenY.decimals)
+            : "0.0",
 
         // Queue status - TODO: fetch these from queue handler
         pendingDeposits: "0",

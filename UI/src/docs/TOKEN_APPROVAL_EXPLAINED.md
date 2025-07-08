@@ -11,11 +11,13 @@
 ## What This Means for UX
 
 ✅ **Good UX**:
+
 - Check existing allowance when user connects wallet
 - Skip approval if allowance >= deposit amount
 - Show "Deposit" button directly if already approved
 
 ❌ **Bad UX** (current issue):
+
 - Always showing "Approve" even when already approved
 - Not refreshing allowance after approval
 - Confusing users with unnecessary approval steps
@@ -23,6 +25,7 @@
 ## The Real Problem
 
 Looking at the logs, the issue is:
+
 ```
 [handleDeposit] Has allowance: false  // <-- This is wrong after approval!
 ```
@@ -74,22 +77,27 @@ After Approval Confirms → Invalidate cache → Refetch → Update UI
 ### 4. Handle Common Scenarios
 
 **Scenario 1: User Previously Approved**
+
 - Mount → Check allowance → Find existing approval → Show "Deposit"
 
 **Scenario 2: User Approves in Another Tab**
+
 - refetchOnWindowFocus → Detect new allowance → Update UI
 
 **Scenario 3: User Switches Accounts**
+
 - Account change → Clear cache → Check new account's allowance
 
 ## Implementation Fixes Needed
 
 1. **Fix useVault hook**:
+
    - Remove aggressive caching for allowance
    - Add proper invalidation after approval
    - Ensure allowance updates after confirmation
 
 2. **Fix hasAllowance function**:
+
    - Make sure it's checking the right values
    - Handle edge cases (undefined, loading states)
 
@@ -101,16 +109,19 @@ After Approval Confirms → Invalidate cache → Refetch → Update UI
 ## Common Patterns in DeFi
 
 ### 1. Exact Approval
+
 - Approve only what's needed for current transaction
 - Safer but requires approval for each deposit
 - Example: Uniswap V3
 
 ### 2. Infinite Approval
+
 - Approve MAX_UINT256 once
 - Never need to approve again
 - Example: Many yield farms
 
 ### 3. Batched Approval
+
 - Approve a larger amount (e.g., 10x deposit)
 - Reduces approval frequency
 - Example: Aave
@@ -118,11 +129,13 @@ After Approval Confirms → Invalidate cache → Refetch → Update UI
 ## The Fix Summary
 
 The current implementation is checking allowance but:
+
 1. Not refreshing after approval
 2. Using stale cached data
 3. Not waiting for blockchain confirmation
 
 The solution ensures:
+
 1. ✅ Fresh allowance check on mount
 2. ✅ Automatic refresh after approval
 3. ✅ Proper state management
