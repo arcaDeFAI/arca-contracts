@@ -115,7 +115,7 @@ export function useVaultRegistry() {
   // Build vaults array from all vault info results - MEMOIZED to prevent infinite loops
   const vaults = useMemo(() => {
     const result: RegistryVaultInfo[] = [];
-    
+
     if (vaultAddresses) {
       vaultAddresses.forEach((vaultAddress, index) => {
         const vaultInfo = vaultInfoResults[index]?.data;
@@ -134,7 +134,7 @@ export function useVaultRegistry() {
         }
       });
     }
-    
+
     return result;
   }, [vaultAddresses, vaultInfoResults]);
 

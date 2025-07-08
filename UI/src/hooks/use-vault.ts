@@ -4,7 +4,13 @@ import {
   useWriteContract,
   useWaitForTransactionReceipt,
 } from "wagmi";
-import { parseEther, formatEther, parseUnits, formatUnits, type Address } from "viem";
+import {
+  parseEther,
+  formatEther,
+  parseUnits,
+  formatUnits,
+  type Address,
+} from "viem";
 import {
   getContracts,
   VAULT_ABI,
@@ -332,18 +338,20 @@ export function useVault(vaultAddress?: string) {
   const hasAllowance = (tokenIndex: number, amount: string) => {
     const allowance = tokenIndex === 0 ? allowanceX : allowanceY;
     if (!allowance || typeof allowance !== "bigint") return false;
-    const decimals = tokenIndex === 0 
-      ? vaultConfig?.tokenX.decimals || 18 
-      : vaultConfig?.tokenY.decimals || 18;
+    const decimals =
+      tokenIndex === 0
+        ? vaultConfig?.tokenX.decimals || 18
+        : vaultConfig?.tokenY.decimals || 18;
     return allowance >= parseUnits(amount, decimals);
   };
 
   const validateBalance = (tokenIndex: number, amount: string) => {
     const balance = tokenIndex === 0 ? userBalanceX : userBalanceY;
     if (!balance || typeof balance !== "bigint") return false;
-    const decimals = tokenIndex === 0 
-      ? vaultConfig?.tokenX.decimals || 18 
-      : vaultConfig?.tokenY.decimals || 18;
+    const decimals =
+      tokenIndex === 0
+        ? vaultConfig?.tokenX.decimals || 18
+        : vaultConfig?.tokenY.decimals || 18;
     return parseFloat(amount) <= parseFloat(formatUnits(balance, decimals));
   };
 
