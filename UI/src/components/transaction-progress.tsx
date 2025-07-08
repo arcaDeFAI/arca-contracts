@@ -56,9 +56,9 @@ export function TransactionProgress({
 
     const baseUrl = currentChain.blockExplorers.default.url;
     // Handle the different explorer URL formats
-    if (baseUrl.includes("testnet.sonicscan.org")) {
+    if (new URL(baseUrl).host === "testnet.sonicscan.org") {
       return `${baseUrl}/tx/${hash}`;
-    } else if (baseUrl.includes("explorer.soniclabs.com")) {
+    } else if (new URL(baseUrl).host === "explorer.soniclabs.com") {
       // Mainnet uses sonicscan.org for transactions
       return `https://sonicscan.org/tx/${hash}`;
     } else {
