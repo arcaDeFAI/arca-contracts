@@ -9,18 +9,31 @@ dotenv.config();
 
 const config: HardhatUserConfig = {
   solidity: {
-    version: "0.8.28",
-    settings: {
-      viaIR: true,
-      optimizer: {
-        enabled: true,
-        details: {
-          yulDetails: {
-            optimizerSteps: "u",
+    compilers: [
+      {
+        version: "0.8.28",
+        settings: {
+          viaIR: true,
+          optimizer: {
+            enabled: true,
+            details: {
+              yulDetails: {
+                optimizerSteps: "u",
+              },
+            },
           },
-        },
+        }
       },
-    }
+      {
+        version: "0.8.10",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200
+          },
+        }
+      }
+    ]
   },
   paths: {
     sources: "./contracts",

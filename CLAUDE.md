@@ -3,31 +3,9 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## CRITICAL: Use Type Safety
-**Never use the "any" type in TypeScript files**, that defeats the purpose of using TypeScript. Type saafety protects us from mistakes. Use proper types.
+**Never use the "any" type in TypeScript files**, that defeats the purpose of using TypeScript. Type safety protects us from mistakes. Use proper types.
 
-## CRITICAL: Test-Driven Development (TDD) Methodology
-
-**ALWAYS follow TDD principles when working on this codebase.** This is the primary development methodology and has proven essential for this project's success.
-
-### TDD Workflow (MANDATORY)
-1. **Requirements First**: Understand what the code should do based on business logic
-2. **Tests Define Behavior**: Write or examine tests to understand expected behavior  
-3. **Code Follows Tests**: Implement code to satisfy test requirements
-4. **Never Hack Tests**: Fix code to meet test expectations, not the reverse
-
-### Why TDD is Critical for This Project
-- **Prevented Production Bugs**: TDD caught a critical fee initialization bug that would have caused complete fee revenue loss
-- **Better Design Decisions**: Led to the elegant hybrid queue design (view + processing functions)
-- **Accurate Implementation**: Tests define the real-world contract behavior, ensuring correctness
-- **Upgradeable Contract Safety**: OpenZeppelin upgrade validation integrated into test suite catches breaking changes
-
-### TDD Success Examples from This Project
-- **ArcaFeeManagerV1**: TDD revealed fee initialization wasn't happening in proxy deployment
-- **ArcaQueueHandlerV1**: Tests demanded clean separation of view vs state-changing functions
-- **ArcaRewardClaimerV1**: Test expectations revealed business logic bug in reward claiming flow
-- **ArcaTestnetV1 Division by Zero**: Production workflow test revealed critical division by zero bugs in `getPricePerFullShare` and withdrawal processing when token balances hit edge cases
-
-### Critical TDD Lesson: Failing Tests Reveal Production Bugs
+### Critical Lesson: Failing Tests Reveal Production Bugs
 
 **Never rush to "fix" a failing test by changing test data** - investigate the root cause first. A systematic production workflow test revealed multiple division by zero vulnerabilities:
 
@@ -40,15 +18,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Remember**: When tests fail, ask "What should the code do?" not "How can I make the test pass?"
 
-### Critical TDD Lesson: Tests Define Business Requirements, Not Implementation Constraints
+### Critical Lesson: Tests Define Business Requirements, Not Implementation Constraints
 
 **When your implementation reveals better business practices than what tests expect, update the TESTS to reflect the improved requirements.**
-
-**Example from Multi-Vault VaultCard Refactoring**:
-- **Initial Tests**: Expected direct function calls when clicking deposit button
-- **Better Implementation**: Added confirmation modals for transaction safety
-- **Correct TDD Response**: Updated tests to expect modal → confirm → function call flow
-- **Wrong TDD Response**: ❌ Removing modals to make poor tests pass
 
 **The Principle**: Tests should enforce good business requirements. If implementation demonstrates better practices (UX, security, efficiency, maintainability), those practices should become the new business requirements, and tests should be updated accordingly.
 
@@ -140,10 +112,6 @@ npx hardhat test test/*.integration.test.ts
 
 # Run precision tests
 npx hardhat test test/*.precise.test.ts
-
-# Test on mainnet fork
-npm run fork:deploy
-npm run fork:verify
 
 # Generate test data
 npx hardhat test-data:network-config
@@ -306,6 +274,5 @@ import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
 ## Development Workflow Notes
 
 ### Best Practices
-- **TDD FIRST**: Always understand requirements through tests before changing code
 - As a habit, you should run "npm run lint:fix", "npm run compile" and "npm run test" after making major code changes
 - When debugging failures, ask "What should this code do?" based on business logic and test expectations
