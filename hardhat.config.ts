@@ -3,9 +3,27 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
 import "hardhat-interface-generator";
+import "@nomicfoundation/hardhat-foundry";
 import * as dotenv from "dotenv";
+import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
+import { subtask } from "hardhat/config";
+import * as glob from "glob";
+import * as path from "path";
 
 dotenv.config();
+
+// Override the compilation subtask to include multiple source directories
+subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, { config }, runSuper) => {
+  // Get the default source paths (from the 'contracts' directory)
+  const paths: string[] = await runSuper();
+  
+  // Add Metropolis contracts directory
+  const metropolisGlob = path.join(config.paths.root, "contracts-metropolis", "src", "**", "*.sol");
+  const metropolisPaths = glob.sync(metropolisGlob);
+  
+  // Combine all paths
+  return [...paths, ...metropolisPaths];
+});
 
 const config: HardhatUserConfig = {
   solidity: {
