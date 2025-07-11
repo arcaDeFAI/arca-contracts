@@ -1,5 +1,5 @@
 joe-v2/=contracts-metropolis/lib/joe-v2/src/
 joe-v2-periphery/=contracts-metropolis/lib/joe-v2-periphery/src/
-openzeppelin-upgradeable/=contracts-metropolis/lib/openzeppelin-contracts-upgradeable/contracts/
-openzeppelin/=contracts-metropolis/lib/openzeppelin-contracts/contracts/
-forge-std/=lib/forge-std/src/
+openzeppelin-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/
+openzeppelin/=node_modules/@openzeppelin/contracts/
+forge-std/=lib/joe-v2/lib/forge-std/src/
