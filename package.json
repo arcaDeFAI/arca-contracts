@@ -29,6 +29,7 @@
     "dev:discover": "hardhat run scripts/discover-rewarder.ts --network sonic-fork",
     "dev:testnet:faucet": "hardhat run scripts/testnet-faucet-helper.ts --network sonic-testnet",
     "dev:testnet:status": "hardhat run scripts/testnet-status.ts --network sonic-testnet",
+    "dev:testnet:discover-pairs": "hardhat run scripts/discover-all-lb-pairs.ts --network sonic-testnet",
     "testnet:balances": "hardhat run scripts/testnet-utils/check-balances.ts --network sonic-testnet",
     "testnet:get-usdc": "hardhat run scripts/testnet-utils/swap-for-usdc.ts --network sonic-testnet"
   },
