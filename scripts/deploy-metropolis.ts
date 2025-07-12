@@ -128,6 +128,7 @@ async function main() {
   const deployment = {
     network: network.name,
     timestamp: new Date().toISOString(),
+    deployer: deployer.address,
     addresses: {
       vaultFactory: proxyAddress,
       vaultFactoryImpl: await vaultFactoryImpl.getAddress(),
