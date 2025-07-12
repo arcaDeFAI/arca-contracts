@@ -16,7 +16,7 @@ contract HybridPriceLens is IPriceLens, Ownable {
     uint256 private constant PRICE_DECIMALS = 18;
     uint256 private constant LB_PRECISION = 128;
     uint256 private constant MIN_PRICE = 1e6; // 0.000001 in 18 decimals
-    uint256 private constant MAX_PRICE = 1e30; // 1e12 in 18 decimals
+    uint256 private constant MAX_PRICE = 1e36; // 1e18 in 18 decimals (allows up to 1 quintillion)
     
     address public immutable wnative;
     
