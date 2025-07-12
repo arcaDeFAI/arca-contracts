@@ -5396,8 +5396,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/HybridPriceLens.sol": {
-      "lastModificationDate": 1752349529996,
-      "contentHash": "e07e65a192e7a20ba71a8eb78b776e1a",
+      "lastModificationDate": 1752352054518,
+      "contentHash": "e5589e492984169958c517684730f639",
       "sourceName": "contracts-metropolis/src/HybridPriceLens.sol",
       "solcConfig": {
         "version": "0.8.10",
