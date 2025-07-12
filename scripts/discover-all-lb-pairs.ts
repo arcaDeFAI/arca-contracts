@@ -212,7 +212,7 @@ async function getPairInfo(
   pairAddress: string,
   pairABI: string[],
   erc20ABI: string[],
-  signer: any
+  signer: ethers.Signer
 ): Promise<LBPairInfo | null> {
   try {
     const pair = new ethers.Contract(pairAddress, pairABI, signer);

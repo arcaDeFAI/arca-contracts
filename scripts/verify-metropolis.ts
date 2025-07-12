@@ -146,10 +146,11 @@ async function main() {
           });
           console.log(`✅ ${verification.name} verified successfully!`);
           successCount++;
-        } catch (cmdError: any) {
+        } catch (cmdError) {
           // Check if already verified
-          if (cmdError.toString().includes("Already Verified") || 
-              cmdError.toString().includes("already been verified")) {
+          const errorMessage = cmdError instanceof Error ? cmdError.message : String(cmdError);
+          if (errorMessage.includes("Already Verified") || 
+              errorMessage.includes("already been verified")) {
             console.log(`✅ ${verification.name} is already verified`);
             successCount++;
           } else {
@@ -167,13 +168,14 @@ async function main() {
         console.log(`✅ ${verification.name} verified successfully!`);
         successCount++;
       }
-    } catch (error: any) {
-      if (error.message.includes("Already Verified") || 
-          error.message.includes("already been verified")) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("Already Verified") || 
+          errorMessage.includes("already been verified")) {
         console.log(`✅ ${verification.name} is already verified`);
         successCount++;
       } else {
-        console.error(`❌ Failed to verify ${verification.name}:`, error.message);
+        console.error(`❌ Failed to verify ${verification.name}:`, errorMessage);
         failCount++;
       }
     }
