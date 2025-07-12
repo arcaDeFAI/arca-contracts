@@ -413,7 +413,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @return vault The address of the new vault.
      * @return strategy The address of the new strategy.
      */
-    function createMarketMakerOracleVault(ILBPair lbPair, uint16 aumFee) external payable returns (address vault, address strategy) {
+    function createMarketMakerOracleVault(ILBPair lbPair, uint16 aumFee) external payable onlyOwner returns (address vault, address strategy) {
         if (!_pairWhitelist[address(lbPair)]) revert VaultFactory__VaultNotWhitelisted();
         // charge creation fee
         if (msg.value != _creationFee) revert VaultFactory__InvalidCreationFee();
