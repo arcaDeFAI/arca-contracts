@@ -107,6 +107,7 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
+    // Sonic requires network-specific API keys
     apiKey: {
       "sonic-mainnet": process.env.SONIC_SCAN_API_KEY || "placeholder",
       "sonic-testnet": process.env.SONIC_TESTNET_SCAN_API_KEY || "placeholder",

@@ -1,0 +1,13 @@
+{
+  "network": "sonic-testnet",
+  "timestamp": "2025-07-11T23:57:10.461Z",
+  "addresses": {
+    "vaultFactory": "0x62229756781fE58a098467C9511086918b907cf5",
+    "vaultFactoryImpl": "0xd13D93FEB29d32A5E7058F695e40B5d019fE3c4D",
+    "proxyAdmin": "0x72DDC6C7B618a608450C0852CbDD5a9b54F60fc3",
+    "oracleVaultImpl": "0x7557ceE40CA3877b3e1d81e307f46C1D49c464c8",
+    "oracleRewardVaultImpl": "0xB33D36c51b9Fb19E17C5E2b027587A0C16829601",
+    "strategyImpl": "0xFa6ac97acF11Fb0e5941BdC2a66cF0467940B446",
+    "wnative": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"
+  }
+}
