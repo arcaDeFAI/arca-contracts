@@ -1,4 +1,4 @@
-import { ethers, upgrades, network } from "hardhat";
+import { ethers, network } from "hardhat";
 
 async function main() {
   console.log(`Deploying Metropolis contracts to ${network.name}...`);
@@ -67,7 +67,7 @@ async function main() {
   console.log("VaultFactory proxy deployed at:", proxyAddress);
 
   // Get the VaultFactory interface at the proxy address
-  const vaultFactory = VaultFactory.attach(proxyAddress) as any;
+  const vaultFactory = VaultFactory.attach(proxyAddress);
 
   // Deploy implementation contracts
   console.log("Deploying implementation contracts...");
