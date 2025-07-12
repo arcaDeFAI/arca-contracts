@@ -16,7 +16,8 @@ async function main() {
   
   // Test addresses (Sonic testnet)
   const wS = "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38";
-  const USDC = "0x29219dd400f2Bf60E5a23d13Be72B486D4038894";
+  const USDC = "0x1570300e9cFEC66c9Fb0C8bc14366C86EB170Ad0"; // Actual USDC from wS-USDC pair
+  const WETH = "0xed06734629e22277D395d8EB8b67Cc75c27Cb6A2";
   
   console.log("\n--- Price Feed Tests ---");
   
@@ -61,10 +62,37 @@ async function main() {
     }
   }
   
+  // Test WETH
+  try {
+    const wethPrice = await priceLens.getTokenPriceNative(WETH);
+    console.log("✓ WETH price in wS:", ethers.formatEther(wethPrice), "wS");
+    
+    // Get feed configuration
+    const wethFeed = await priceLens.getPriceFeed(WETH);
+    console.log("  Source:", wethFeed.useExternal ? "External Oracle" : "LB Pair");
+    if (!wethFeed.useExternal) {
+      console.log("  LB Pair:", wethFeed.lbPair);
+      console.log("  Is Token X:", wethFeed.isTokenX);
+      console.log("  Reference Token:", wethFeed.referenceToken === ethers.ZeroAddress ? "Direct wS pair" : wethFeed.referenceToken);
+    }
+  } catch (error) {
+    console.error("✗ Failed to get WETH price:");
+    if (error instanceof Error) {
+      console.error("  Error:", error.message);
+      if ('reason' in error) {
+        console.error("  Reason:", error.reason);
+      }
+    } else {
+      console.error("  Error:", String(error));
+    }
+  }
+  
   // Check reference token status
   console.log("\n--- Reference Token Status ---");
   const isUSDCReference = await priceLens.isReferenceToken(USDC);
   console.log("USDC is reference token:", isUSDCReference);
+  const isWETHReference = await priceLens.isReferenceToken(WETH);
+  console.log("WETH is reference token:", isWETHReference);
   
   // Check staleness settings
   const defaultStaleness = await priceLens.defaultMaxStaleness();
