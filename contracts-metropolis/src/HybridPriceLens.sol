@@ -6,6 +6,7 @@ import "./interfaces/IPriceLens.sol";
 import "./interfaces/IAggregatorV3.sol";
 import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 import {Ownable} from "openzeppelin/access/Ownable.sol";
+import {IERC20Metadata} from "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title HybridPriceLens

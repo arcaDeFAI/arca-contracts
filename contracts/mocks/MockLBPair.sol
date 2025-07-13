@@ -10,6 +10,9 @@ contract MockLBPair {
     IERC20 private tokenY;
     uint128 private reserveX;
     uint128 private reserveY;
+    
+    // Mock price storage
+    mapping(uint24 => uint256) private binPrices;
 
     // Mock liquidity tracking
     mapping(address => mapping(uint256 => uint256)) private userLiquidity;
@@ -45,10 +48,24 @@ contract MockLBPair {
         return tokenY;
     }
 
-    function getPriceFromId(uint24 id) external pure returns (uint256) {
-        // Mock price calculation - return a fixed price for testing
-        // In real LB pairs, this would be (1 + binStep/10000)^(id - 2^23)
-        return 2 ** 128; // 1.0 in 128.128 fixed point
+    function getPriceFromId(uint24 id) external view returns (uint256) {
+        // Return stored price or default to 1.0 in 128.128 fixed point
+        uint256 storedPrice = binPrices[id];
+        if (storedPrice == 0) {
+            return 2 ** 128; // 1.0 in 128.128 fixed point as default
+        }
+        return storedPrice;
+    }
+    
+    // Helper function to set custom prices for testing
+    function setPrice(uint24 id, uint256 price) external {
+        binPrices[id] = price;
+    }
+    
+    // Helper function to set tokens for testing
+    function setTokens(IERC20 _tokenX, IERC20 _tokenY) external {
+        tokenX = _tokenX;
+        tokenY = _tokenY;
     }
 
     function getReserves() external view returns (uint128, uint128) {

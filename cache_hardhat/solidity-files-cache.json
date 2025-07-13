@@ -2285,8 +2285,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts/mocks/MockLBPair.sol": {
-      "lastModificationDate": 1751669640751,
-      "contentHash": "74637e4ae7c24f641fd00244c91e2461",
+      "lastModificationDate": 1752373198810,
+      "contentHash": "ef04981d2b0f332a20baa297f89ac577",
       "sourceName": "contracts/mocks/MockLBPair.sol",
       "solcConfig": {
         "version": "0.8.28",
@@ -5396,8 +5396,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/HybridPriceLens.sol": {
-      "lastModificationDate": 1752352054518,
-      "contentHash": "e5589e492984169958c517684730f639",
+      "lastModificationDate": 1752373324363,
+      "contentHash": "6aa16d6dd64e60c89489686740fbeecb",
       "sourceName": "contracts-metropolis/src/HybridPriceLens.sol",
       "solcConfig": {
         "version": "0.8.10",
@@ -5427,13 +5427,59 @@
         "./interfaces/IPriceLens.sol",
         "./interfaces/IAggregatorV3.sol",
         "joe-v2/interfaces/ILBPair.sol",
-        "openzeppelin/access/Ownable.sol"
+        "openzeppelin/access/Ownable.sol",
+        "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol"
       ],
       "versionPragmas": [
         "0.8.10"
       ],
       "artifacts": [
         "HybridPriceLens"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+      "lastModificationDate": 1752242104752,
+      "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
+      "sourceName": "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20Metadata"
       ]
     }
   }
