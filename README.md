@@ -3,6 +3,9 @@
 Open the folder in VS Code, and select "Reopen in Container".  
 For a first time setup, you will need to run `git submodule update --init --recursive` to clone the required joe-v2 library.
 
+### Build Tools
+This project primarily uses Hardhat for development. Additionally, Foundry is required alongside the `hardhat-foundry` plugin to enable Foundry-style import remappings for the Metropolis contracts located in `/contracts-metropolis`.
+
 ## 📋 Project Overview
 
 **Arca** is a decentralized application (dApp) that operates as an intelligent vault system for automated liquidity provision on the Sonic blockchain. The project focuses on yield optimization through strategic liquidity management in Metropolis DLMM (Dynamic Liquidity Market Maker) pools.
