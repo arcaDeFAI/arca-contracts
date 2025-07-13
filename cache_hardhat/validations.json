@@ -5,6 +5,469 @@
       "contracts-metropolis/src/HybridPriceLens.sol:HybridPriceLens": {
         "src": "contracts-metropolis/src/HybridPriceLens.sol:16",
         "version": {
+          "withMetadata": "5a644a5f6f35b09efd8cacc39ffb38c6cde6b5978a175dd651c2af3d8f57714b",
+          "withoutMetadata": "456bc7b98b1019bfdf9858db12cec215a8885106d7e5e45c0220ebab5a99fe1c",
+          "linkedWithoutMetadata": "456bc7b98b1019bfdf9858db12cec215a8885106d7e5e45c0220ebab5a99fe1c"
+        },
+        "inherit": [
+          "openzeppelin/access/Ownable.sol:Ownable",
+          "openzeppelin/utils/Context.sol:Context",
+          "contracts-metropolis/src/interfaces/IPriceLens.sol:IPriceLens"
+        ],
+        "libraries": [],
+        "methods": [
+          "(address)",
+          "getTokenPriceNative(address)",
+          "setExternalOracle(address,address,uint8,uint32)",
+          "setLBPairRoute(address,address,address,bool)",
+          "setReferenceToken(address,bool)",
+          "setDefaultMaxStaleness(uint32)",
+          "removePriceFeed(address)",
+          "getPriceFeed(address)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "HybridPriceLens",
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:65"
+          },
+          {
+            "kind": "state-variable-immutable",
+            "name": "wnative",
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:22"
+          },
+          {
+            "kind": "state-variable-assignment",
+            "name": "defaultMaxStaleness",
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:49"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "Ownable",
+              "src": "openzeppelin/access/Ownable.sol:21"
+            },
+            {
+              "label": "priceFeeds",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_mapping(t_address,t_struct(PriceFeed)48_storage)",
+              "contract": "HybridPriceLens",
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:43"
+            },
+            {
+              "label": "isReferenceToken",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_mapping(t_address,t_bool)",
+              "contract": "HybridPriceLens",
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:46"
+            },
+            {
+              "label": "defaultMaxStaleness",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_uint32",
+              "contract": "HybridPriceLens",
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:49"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_enum(OracleType)32": {
+              "label": "enum HybridPriceLens.OracleType",
+              "members": [
+                "None",
+                "Chainlink",
+                "Pyth"
+              ],
+              "numberOfBytes": "1"
+            },
+            "t_mapping(t_address,t_bool)": {
+              "label": "mapping(address => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_struct(PriceFeed)48_storage)": {
+              "label": "mapping(address => struct HybridPriceLens.PriceFeed)",
+              "numberOfBytes": "32"
+            },
+            "t_struct(PriceFeed)48_storage": {
+              "label": "struct HybridPriceLens.PriceFeed",
+              "members": [
+                {
+                  "label": "externalFeed",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "lbPair",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "1"
+                },
+                {
+                  "label": "referenceToken",
+                  "type": "t_address",
+                  "offset": 0,
+                  "slot": "2"
+                },
+                {
+                  "label": "maxStaleness",
+                  "type": "t_uint32",
+                  "offset": 20,
+                  "slot": "2"
+                },
+                {
+                  "label": "oracleType",
+                  "type": "t_enum(OracleType)32",
+                  "offset": 24,
+                  "slot": "2"
+                },
+                {
+                  "label": "useExternal",
+                  "type": "t_bool",
+                  "offset": 25,
+                  "slot": "2"
+                },
+                {
+                  "label": "isTokenX",
+                  "type": "t_bool",
+                  "offset": 26,
+                  "slot": "2"
+                }
+              ],
+              "numberOfBytes": "96"
+            },
+            "t_uint32": {
+              "label": "uint32",
+              "numberOfBytes": "4"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "contracts-metropolis/src/interfaces/IAggregatorV3.sol:IAggregatorV3": {
+        "src": "contracts-metropolis/src/interfaces/IAggregatorV3.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "decimals()",
+          "description()",
+          "version()",
+          "getRoundData(uint80)",
+          "latestRoundData()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "contracts-metropolis/src/interfaces/IPriceLens.sol:IPriceLens": {
+        "src": "contracts-metropolis/src/interfaces/IPriceLens.sol:5",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "getTokenPriceNative(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "joe-v2/interfaces/ILBFactory.sol:ILBFactory": {
+        "src": "joe-v2/interfaces/ILBFactory.sol:15",
+        "inherit": [
+          "joe-v2/interfaces/IPendingOwnable.sol:IPendingOwnable"
+        ],
+        "libraries": [],
+        "methods": [
+          "getMinBinStep()",
+          "getFeeRecipient()",
+          "getMaxFlashLoanFee()",
+          "getFlashLoanFee()",
+          "getLBPairImplementation()",
+          "getNumberOfLBPairs()",
+          "getLBPairAtIndex(uint256)",
+          "getNumberOfQuoteAssets()",
+          "getQuoteAssetAtIndex(uint256)",
+          "isQuoteAsset(address)",
+          "getLBPairInformation(address,address,uint256)",
+          "getPreset(uint256)",
+          "getAllBinSteps()",
+          "getOpenBinSteps()",
+          "getAllLBPairs(address,address)",
+          "setLBPairImplementation(address)",
+          "createLBPair(address,address,uint24,uint16)",
+          "setLBPairIgnored(address,address,uint16,bool)",
+          "setPreset(uint16,uint16,uint16,uint16,uint16,uint24,uint16,uint24,bool)",
+          "setPresetOpenState(uint16,bool)",
+          "removePreset(uint16)",
+          "setFeesParametersOnPair(address,address,uint16,uint16,uint16,uint16,uint16,uint24,uint16,uint24)",
+          "setFeeRecipient(address)",
+          "setFlashLoanFee(uint256)",
+          "addQuoteAsset(address)",
+          "removeQuoteAsset(address)",
+          "forceDecay(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "joe-v2/interfaces/ILBFlashLoanCallback.sol:ILBFlashLoanCallback": {
+        "src": "joe-v2/interfaces/ILBFlashLoanCallback.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "LBFlashLoanCallback(address,address,address,bytes32,bytes32,bytes)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "joe-v2/interfaces/ILBPair.sol:ILBPair": {
+        "src": "joe-v2/interfaces/ILBPair.sol:11",
+        "inherit": [
+          "joe-v2/interfaces/ILBToken.sol:ILBToken"
+        ],
+        "libraries": [],
+        "methods": [
+          "initialize(uint16,uint16,uint16,uint16,uint24,uint16,uint24,uint24)",
+          "getFactory()",
+          "getTokenX()",
+          "getTokenY()",
+          "getBinStep()",
+          "getReserves()",
+          "getActiveId()",
+          "getBin(uint24)",
+          "getNextNonEmptyBin(bool,uint24)",
+          "getProtocolFees()",
+          "getStaticFeeParameters()",
+          "getVariableFeeParameters()",
+          "getOracleParameters()",
+          "getOracleSampleAt(uint40)",
+          "getPriceFromId(uint24)",
+          "getIdFromPrice(uint256)",
+          "getSwapIn(uint128,bool)",
+          "getSwapOut(uint128,bool)",
+          "swap(bool,address)",
+          "flashLoan(address,bytes32,bytes)",
+          "mint(address,bytes32[],address)",
+          "burn(address,address,uint256[],uint256[])",
+          "collectProtocolFees()",
+          "increaseOracleLength(uint16)",
+          "setStaticFeeParameters(uint16,uint16,uint16,uint16,uint24,uint16,uint24)",
+          "forceDecay()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "joe-v2/interfaces/ILBToken.sol:ILBToken": {
+        "src": "joe-v2/interfaces/ILBToken.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "name()",
+          "symbol()",
+          "totalSupply(uint256)",
+          "balanceOf(address,uint256)",
+          "balanceOfBatch(address[],uint256[])",
+          "isApprovedForAll(address,address)",
+          "approveForAll(address,bool)",
+          "batchTransferFrom(address,address,uint256[],uint256[])"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "joe-v2/interfaces/IPendingOwnable.sol:IPendingOwnable": {
+        "src": "joe-v2/interfaces/IPendingOwnable.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "owner()",
+          "pendingOwner()",
+          "setPendingOwner(address)",
+          "revokePendingOwner()",
+          "becomeOwner()",
+          "renounceOwnership()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "openzeppelin/access/Ownable.sol:Ownable": {
+        "src": "openzeppelin/access/Ownable.sol:20",
+        "inherit": [
+          "openzeppelin/utils/Context.sol:Context"
+        ],
+        "libraries": [],
+        "methods": [
+          "owner()",
+          "renounceOwnership()",
+          "transferOwnership(address)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "Ownable",
+            "src": "openzeppelin/access/Ownable.sol:28"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "_owner",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "Ownable",
+              "src": "openzeppelin/access/Ownable.sol:21"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "openzeppelin/token/ERC20/IERC20.sol:IERC20": {
+        "src": "openzeppelin/token/ERC20/IERC20.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "totalSupply()",
+          "balanceOf(address)",
+          "transfer(address,uint256)",
+          "allowance(address,address)",
+          "approve(address,uint256)",
+          "transferFrom(address,address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol:IERC20Metadata": {
+        "src": "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol:13",
+        "inherit": [
+          "openzeppelin/token/ERC20/IERC20.sol:IERC20"
+        ],
+        "libraries": [],
+        "methods": [
+          "name()",
+          "symbol()",
+          "decimals()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      },
+      "openzeppelin/utils/Context.sol:Context": {
+        "src": "openzeppelin/utils/Context.sol:16",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.10"
+      }
+    },
+    {
+      "contracts-metropolis/src/HybridPriceLens.sol:HybridPriceLens": {
+        "src": "contracts-metropolis/src/HybridPriceLens.sol:16",
+        "version": {
           "withMetadata": "0a1cc70efd21ea8fdda215974afd2c36562854e17d95e43b32af76b6b10ccb45",
           "withoutMetadata": "eee168ff314ff309a9064a99c36a04bfd06f3dd81b92663cb71ea45bf1da7f81",
           "linkedWithoutMetadata": "eee168ff314ff309a9064a99c36a04bfd06f3dd81b92663cb71ea45bf1da7f81"

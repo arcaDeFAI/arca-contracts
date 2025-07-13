@@ -69,40 +69,32 @@ describe("HybridPriceLens", function () {
       });
 
       it("Should calculate correct price when 1 USDC = 1 wS", async function () {
-        // Mock bin price for 1:1 ratio
-        // For 1 USDC = 1 wS, with USDC as tokenY (6 decimals) and wS as tokenX (18 decimals)
-        // binPrice = tokenX/tokenY = wS/USDC
-        // We want: price = USDC/wS = 1
-        // Since USDC is tokenY, we invert: (10^18 << 128) / binPrice
-        // So: 1 = (10^18 << 128) / binPrice
-        // Therefore: binPrice = 10^18 << 128 = 10^18 * 2^128
-        
+        // For USDC (6 decimals, tokenY): binPrice = (10^6 << 128) / targetPrice
         const targetPrice = ethers.parseEther("1"); // 1 wS per USDC
-        const binPrice = (ethers.parseEther("1") << 128n); // 1 wS/USDC in 128.128 format
-        await mockLBPair.setPrice(8388608, binPrice); // activeId, binPrice
+        const binPrice = (10n**6n << 128n) / targetPrice; // Formula for decimal-aware USDC
+        await mockLBPair.setPrice(8388608, binPrice);
         
         const price = await hybridPriceLens.getTokenPriceNative(await mockUSDC.getAddress());
         expect(price).to.be.closeTo(targetPrice, ethers.parseEther("0.01")); // 1% tolerance
       });
 
       it("Should calculate correct price when 1 USDC = 0.5 wS", async function () {
-        // For 0.5 wS per USDC
-        // binPrice = wS/USDC = 0.5 in 128.128 format
-        const binPrice = (ethers.parseEther("0.5") << 128n);
+        // For USDC (6 decimals, tokenY): binPrice = (10^6 << 128) / targetPrice
+        const expectedPrice = ethers.parseEther("0.5");
+        const binPrice = (10n**6n << 128n) / expectedPrice; // Formula for decimal-aware USDC
         await mockLBPair.setPrice(8388608, binPrice);
         
         const price = await hybridPriceLens.getTokenPriceNative(await mockUSDC.getAddress());
-        const expectedPrice = ethers.parseEther("0.5");
         expect(price).to.be.closeTo(expectedPrice, ethers.parseEther("0.01"));
       });
 
       it("Should calculate correct price when 1 USDC = 2 wS", async function () {
-        // For 2 wS per USDC
-        const binPrice = (ethers.parseEther("2") << 128n);
+        // For USDC (6 decimals, tokenY): binPrice = (10^6 << 128) / targetPrice
+        const expectedPrice = ethers.parseEther("2");
+        const binPrice = (10n**6n << 128n) / expectedPrice; // Formula for decimal-aware USDC
         await mockLBPair.setPrice(8388608, binPrice);
         
         const price = await hybridPriceLens.getTokenPriceNative(await mockUSDC.getAddress());
-        const expectedPrice = ethers.parseEther("2");
         expect(price).to.be.closeTo(expectedPrice, ethers.parseEther("0.01"));
       });
     });
@@ -122,12 +114,12 @@ describe("HybridPriceLens", function () {
       });
 
       it("Should calculate correct price when 1 WETH = 3000 wS", async function () {
-        // binPrice = tokenX/tokenY = WETH/wS = 1/3000 in 128.128 format
-        const binPrice = (ethers.parseEther("1") << 128n) / 3000n;
+        // For WETH (18 decimals, tokenX): binPrice = (targetPrice << 128) / 10^18
+        const expectedPrice = ethers.parseEther("3000");
+        const binPrice = (expectedPrice << 128n) / 10n**18n; // Formula for same-decimal tokenX
         await mockLBPair.setPrice(8388608, binPrice);
         
         const price = await hybridPriceLens.getTokenPriceNative(await mockWETH.getAddress());
-        const expectedPrice = ethers.parseEther("3000");
         expect(price).to.be.closeTo(expectedPrice, ethers.parseEther("30")); // 1% tolerance
       });
     });
@@ -143,8 +135,9 @@ describe("HybridPriceLens", function () {
       });
 
       it("Should handle very small prices", async function () {
-        // 0.000001 wS per USDC
-        const binPrice = (ethers.parseEther("0.000001") << 128n);
+        // 0.000001 wS per USDC using decimal-aware formula
+        const targetPrice = ethers.parseEther("0.000001");
+        const binPrice = (10n**6n << 128n) / targetPrice; // Formula for USDC
         await mockLBPair.setPrice(8388608, binPrice);
         
         const price = await hybridPriceLens.getTokenPriceNative(await mockUSDC.getAddress());
@@ -152,8 +145,9 @@ describe("HybridPriceLens", function () {
       });
 
       it("Should handle very large prices", async function () {
-        // 1000 wS per USDC
-        const binPrice = (ethers.parseEther("1000") << 128n);
+        // 1000 wS per USDC using decimal-aware formula
+        const targetPrice = ethers.parseEther("1000");
+        const binPrice = (10n**6n << 128n) / targetPrice; // Formula for USDC
         await mockLBPair.setPrice(8388608, binPrice);
         
         const price = await hybridPriceLens.getTokenPriceNative(await mockUSDC.getAddress());
@@ -180,7 +174,7 @@ describe("HybridPriceLens", function () {
       
       await expect(
         hybridPriceLens.getTokenPriceNative(await mockUSDC.getAddress())
-      ).to.be.revertedWith("PriceLens__InvalidPrice");
+      ).to.be.revertedWithCustomError(hybridPriceLens, "PriceLens__PriceOutOfBounds");
     });
 
     it("Should revert for prices above maximum", async function () {
@@ -190,11 +184,16 @@ describe("HybridPriceLens", function () {
       
       await expect(
         hybridPriceLens.getTokenPriceNative(await mockUSDC.getAddress())
-      ).to.be.revertedWith("PriceLens__InvalidPrice");
+      ).to.be.revertedWithCustomError(hybridPriceLens, "PriceLens__PriceOutOfBounds");
     });
   });
 
   describe("Configuration", function () {
+    beforeEach(async function () {
+      // Set up mock pair for configuration tests
+      await mockLBPair.setTokens(await mockWS.getAddress(), await mockUSDC.getAddress());
+    });
+
     it("Should set and get price feed configuration", async function () {
       await hybridPriceLens.setLBPairRoute(
         await mockUSDC.getAddress(),
@@ -234,9 +233,9 @@ describe("HybridPriceLens", function () {
         false // USDC is tokenY
       );
       
-      // Set a realistic 1:1 price ratio
-      // binPrice should represent wS/USDC accounting for decimals
-      const binPrice = (ethers.parseEther("1") << 128n);
+      // Set a realistic 1:1 price ratio using decimal-aware formula
+      const targetPrice = ethers.parseEther("1");
+      const binPrice = (10n**6n << 128n) / targetPrice; // Formula for USDC (6 decimals)
       await mockLBPair.setPrice(8388608, binPrice);
       
       const price = await hybridPriceLens.getTokenPriceNative(await mockUSDC.getAddress());

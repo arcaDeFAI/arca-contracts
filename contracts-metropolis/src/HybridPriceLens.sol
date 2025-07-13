@@ -155,7 +155,7 @@ contract HybridPriceLens is IPriceLens, Ownable {
     
     /**
      * @notice Get price from direct LB Pair with native
-     * @dev LB Pair prices already account for token decimals internally
+     * @dev LB Pair prices account for token decimals - we need to normalize for consistent 18-decimal output
      */
     function _getDirectLBPrice(address _token, address pairAddress, bool isTokenX) internal view returns (uint256) {
         ILBPair pair = ILBPair(pairAddress);
@@ -166,21 +166,50 @@ contract HybridPriceLens is IPriceLens, Ownable {
         if (isTokenX && tokenX != _token) revert PriceLens__InvalidLBPair();
         if (!isTokenX && tokenY != _token) revert PriceLens__InvalidLBPair();
         
+        // Get token decimals to handle LB pair's decimal normalization
+        uint8 tokenDecimals = IERC20Metadata(_token).decimals();
+        uint8 nativeDecimals = IERC20Metadata(wnative).decimals();
+        
         uint24 activeId = pair.getActiveId();
         uint256 binPrice = pair.getPriceFromId(activeId);
         
-        // The LB price represents the price of tokenX in tokenY, accounting for decimals
-        // binPrice is in 128.128 fixed point format
+        // LB pair getPriceFromId returns decimal-adjusted prices
+        // We need to account for this in our calculation
+        uint256 rawPrice;
         
         if (isTokenX) {
             // Token is X, native is Y
-            // binPrice = X/Y = token/native (what we want)
-            return (binPrice * 10**PRICE_DECIMALS) >> LB_PRECISION;
+            // binPrice = X/Y = token/native (already decimal-adjusted)
+            rawPrice = (binPrice * 10**PRICE_DECIMALS) >> LB_PRECISION;
+            
+            // Adjust for decimal differences since LB pair already normalized
+            if (tokenDecimals != nativeDecimals) {
+                if (tokenDecimals < nativeDecimals) {
+                    // Token has fewer decimals, price needs scaling up
+                    rawPrice = rawPrice * 10**(nativeDecimals - tokenDecimals);
+                } else {
+                    // Token has more decimals, price needs scaling down  
+                    rawPrice = rawPrice / 10**(tokenDecimals - nativeDecimals);
+                }
+            }
         } else {
             // Token is Y, native is X
-            // binPrice = X/Y = native/token, need to invert to get token/native
-            return (10**PRICE_DECIMALS << LB_PRECISION) / binPrice;
+            // binPrice = X/Y = native/token (already decimal-adjusted)
+            rawPrice = (10**PRICE_DECIMALS << LB_PRECISION) / binPrice;
+            
+            // Adjust for decimal differences since LB pair already normalized
+            if (tokenDecimals != nativeDecimals) {
+                if (tokenDecimals < nativeDecimals) {
+                    // Token has fewer decimals, inverse price needs scaling down
+                    rawPrice = rawPrice / 10**(nativeDecimals - tokenDecimals);
+                } else {
+                    // Token has more decimals, inverse price needs scaling up
+                    rawPrice = rawPrice * 10**(tokenDecimals - nativeDecimals);
+                }
+            }
         }
+        
+        return rawPrice;
     }
     
     /**
