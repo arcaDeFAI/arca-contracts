@@ -169,7 +169,7 @@ async function main() {
   // Set reference tokens
   console.log("\nConfiguring reference tokens...");
   for (const refToken of networkConfig.referenceTokens) {
-    const tx = await priceLens.setReferenceToken(refToken, true);
+    const tx = await priceLens.setReferenceToken(refToken, true, { gasLimit: 200000 });
     await tx.wait();
     console.log(`✓ Set ${refToken} as reference token`);
   }
@@ -186,7 +186,8 @@ async function main() {
           tokenConfig.address,
           tokenConfig.oracle.feed,
           tokenConfig.oracle.type,
-          tokenConfig.oracle.maxStaleness || 0
+          tokenConfig.oracle.maxStaleness || 0,
+          { gasLimit: 300000 }
         );
         await tx.wait();
         console.log(`✓ Configured external ${OracleType[tokenConfig.oracle.type]} oracle`);
@@ -206,7 +207,8 @@ async function main() {
           tokenConfig.address,
           tokenConfig.lbPair.address,
           tokenConfig.lbPair.referenceToken || ethers.ZeroAddress,
-          tokenConfig.lbPair.isTokenX
+          tokenConfig.lbPair.isTokenX,
+          { gasLimit: 500000 } // Explicit gas limit to avoid estimation issues
         );
         await tx.wait();
         console.log(`✓ Configured LB Pair route${tokenConfig.lbPair.referenceToken ? ' via reference token' : ' (direct)'}`);
