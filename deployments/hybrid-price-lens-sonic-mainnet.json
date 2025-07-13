@@ -1,0 +1,23 @@
+{
+  "network": "sonic-mainnet",
+  "timestamp": "2025-07-13T01:00:00.000Z",
+  "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
+  "addresses": {
+    "hybridPriceLens": "0xb35EC128DBBefb262A2188F6E55443f187eA428b",
+    "wnative": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"
+  },
+  "configuration": {
+    "referenceTokens": [
+      "0x29219dd400f2Bf60E5a23d13Be72B486D4038894"
+    ],
+    "tokens": {
+      "usdc": {
+        "address": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
+        "lbPair": {
+          "address": "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC",
+          "isTokenX": false
+        }
+      }
+    }
+  }
+}

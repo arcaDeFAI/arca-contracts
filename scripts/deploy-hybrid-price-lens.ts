@@ -71,10 +71,21 @@ async function main() {
       }
     },
     "sonic-mainnet": {
-      wnative: "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
-      referenceTokens: [],
-      tokens: {}
-      // TODO: Add mainnet configuration with real oracle feeds
+      wnative: "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38", // wS
+      referenceTokens: [
+        "0x29219dd400f2Bf60E5a23d13Be72B486D4038894"  // USDC on mainnet
+      ],
+      tokens: {
+        usdc: {
+          address: "0x29219dd400f2Bf60E5a23d13Be72B486D4038894", // USDC on Sonic mainnet
+          // For now use LB Pair pricing, add Chainlink oracle when available
+          lbPair: {
+            address: "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC", // S-USDC pair
+            isTokenX: false // Need to verify, but USDC is usually tokenY
+          }
+        }
+        // Add more tokens as needed
+      }
     },
     "localhost": {
       wnative: "0x0000000000000000000000000000000000000000", // Will be set from mock deployment

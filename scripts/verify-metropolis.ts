@@ -77,7 +77,7 @@ async function main() {
     {
       name: "ProxyAdmin",
       address: addresses.proxyAdmin,
-      constructorArguments: ["0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98"], // Deployer address as initial owner
+      constructorArguments: [deployerAddress], // Use actual deployer from deployment file
       contract: "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
     },
     {
@@ -126,36 +126,89 @@ async function main() {
       if (verification.isProxy) {
         console.log("Using direct verification for proxy contract...");
         
-        // Build the command with proper argument formatting
         const args = verification.constructorArguments;
-        const cmd = [
-          "npx hardhat verify",
-          `--network ${network.name}`,
-          verification.address,
-          args[0], // implementation address
-          args[1], // proxy admin address
-          `'${args[2]}'`, // init data (wrapped in quotes)
-          `--contract "${verification.contract}"`
-        ].join(" ");
         
-        try {
-          // Execute the command
-          execSync(cmd, { 
-            stdio: 'inherit', // Show output in real-time
-            encoding: 'utf-8'
-          });
-          console.log(`✅ ${verification.name} verified successfully!`);
-          successCount++;
-        } catch (cmdError) {
-          // Check if already verified
-          const errorMessage = cmdError instanceof Error ? cmdError.message : String(cmdError);
-          if (errorMessage.includes("Already Verified") || 
-              errorMessage.includes("already been verified")) {
-            console.log(`✅ ${verification.name} is already verified`);
-            successCount++;
-          } else {
-            throw cmdError;
+        // Try multiple approaches since proxy verification is complex
+        const attempts = [
+          // Attempt 1: Force with explicit contract
+          {
+            name: "Force with explicit contract",
+            cmd: [
+              "npx", "hardhat", "verify",
+              "--network", network.name,
+              "--contract", verification.contract,
+              "--force",
+              verification.address,
+              args[0],
+              args[1],
+              args[2]
+            ]
+          },
+          // Attempt 2: Force without explicit contract path
+          {
+            name: "Force without contract path",
+            cmd: [
+              "npx", "hardhat", "verify", 
+              "--network", network.name,
+              "--force",
+              verification.address,
+              args[0],
+              args[1],
+              args[2]
+            ]
+          },
+          // Attempt 3: String command with quotes
+          {
+            name: "String command with quotes", 
+            cmd: `npx hardhat verify --network ${network.name} --contract "${verification.contract}" --force ${verification.address} ${args[0]} ${args[1]} '${args[2]}'`
           }
+        ];
+        
+        let success = false;
+        
+        for (const attempt of attempts) {
+          if (success) break;
+          
+          // Add delay to avoid rate limiting
+          await delay(2000);
+          
+          console.log(`\n🔧 Trying: ${attempt.name}`);
+          
+          try {
+            if (typeof attempt.cmd === 'string') {
+              execSync(attempt.cmd, { 
+                stdio: 'inherit',
+                encoding: 'utf-8'
+              });
+            } else {
+              execSync(attempt.cmd.join(" "), { 
+                stdio: 'inherit',
+                encoding: 'utf-8'
+              });
+            }
+            
+            console.log(`✅ ${verification.name} verified successfully!`);
+            successCount++;
+            success = true;
+            
+          } catch (cmdError) {
+            const errorMessage = cmdError instanceof Error ? cmdError.message : String(cmdError);
+            
+            if (errorMessage.includes("Already Verified") || 
+                errorMessage.includes("already been verified") ||
+                errorMessage.includes("already verified")) {
+              console.log(`✅ ${verification.name} is already verified`);
+              successCount++;
+              success = true;
+            } else {
+              console.log(`❌ ${attempt.name} failed:`, errorMessage.split('\n')[0]);
+            }
+          }
+        }
+        
+        if (!success) {
+          console.log(`❌ All attempts failed for ${verification.name}`);
+          failCount++;
         }
       } else {
         // Regular verification for other contracts
@@ -190,7 +243,9 @@ async function main() {
   
   if (failCount > 0) {
     console.log(`\n💡 Troubleshooting tips:`);
-    console.log(`1. Make sure your API key is set in .env: SONIC_TESTNET_SCAN_API_KEY`);
+    console.log(`1. Make sure your API key is set in .env:`);
+    console.log(`   - For testnet: SONIC_TESTNET_SCAN_API_KEY`);
+    console.log(`   - For mainnet: SONIC_SCAN_API_KEY`);
     console.log(`2. Wait a few minutes after deployment before verifying`);
     console.log(`3. Check the explorer manually: ${getExplorerUrl(network.name)}`);
     console.log(`4. For proxy contracts, the linking might fail due to rate limits but the contract itself should be verified`);
