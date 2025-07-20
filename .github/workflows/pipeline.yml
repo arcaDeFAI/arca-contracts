@@ -24,7 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Checout the git submodule (joe-v2 lib)
+      # Checkout the git submodule (joe-v2 lib)
       - name: Checkout submodules
         run: git submodule update --init --recursive
 
@@ -32,6 +32,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Download foundry
+        run: curl -L https://foundry.paradigm.xyz | bash
+
+      - name: Add foundry to path
+        run: export PATH="$PATH:$HOME/.foundry/bin"
+
+      - name: Install foundry
+        run: export PATH="$PATH:$HOME/.foundry/bin" && foundryup
 
       - name: Install deps (root)
         run: npm ci
@@ -42,10 +51,10 @@ jobs:
 
       # Hardhat compile & tests
       - name: Compile Contracts
-        run: npm run compile
+        run: export PATH="$PATH:$HOME/.foundry/bin" && npm run compile
 
       - name: Run Hardhat Tests
-        run: npm run test:sol
+        run: export PATH="$PATH:$HOME/.foundry/bin" && npm run test:sol
 
       # UI part starts here
       - name: Install deps (UI)
