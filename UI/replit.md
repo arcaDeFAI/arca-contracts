@@ -7,6 +7,7 @@ Arca is a decentralized finance (DeFi) vault management platform built as a full
 ## System Architecture
 
 ### Frontend Architecture
+
 - **Framework**: React 18 with TypeScript
 - **Routing**: Wouter for client-side routing
 - **State Management**: TanStack Query (React Query) for server state
@@ -16,12 +17,14 @@ Arca is a decentralized finance (DeFi) vault management platform built as a full
 - **Build Tool**: Vite with custom configuration for development and production
 
 ### Backend Architecture
+
 - **Runtime**: Node.js with Express.js server
 - **Language**: TypeScript with ES modules
 - **Development**: TSX for TypeScript execution in development
 - **Production**: ESBuild for server bundling
 
 ### Database Layer
+
 - **ORM**: Drizzle ORM with PostgreSQL dialect
 - **Schema Management**: Drizzle Kit for migrations
 - **Development Storage**: In-memory storage with interface abstraction
@@ -30,17 +33,20 @@ Arca is a decentralized finance (DeFi) vault management platform built as a full
 ## Key Components
 
 ### Frontend Pages
+
 1. **Vaults** (`/`, `/vaults`) - Main vault browsing and management interface
 2. **Dashboard** (`/dashboard`) - Portfolio overview with charts and statistics
 3. **Staking** (`/staking`) - Token staking interface with multiple tiers
 4. **Navigation** - Responsive navigation with wallet connection
 
 ### Backend Services
+
 - **Storage Interface**: Abstracted storage layer ready for Web3-specific caching needs
 - **Routes**: RESTful API structure with `/api` prefix for future endpoints
 - **Middleware**: Request logging, JSON parsing, error handling
 
 ### Web3 Integration
+
 - **Supported Chains**: Ethereum Mainnet, Polygon, Arbitrum, Sonic
 - **Wallet Support**: MetaMask, WalletConnect, Safe, and injected wallets
 - **Custom Chain**: Sonic blockchain configuration (Chain ID: 146)
@@ -56,6 +62,7 @@ Arca is a decentralized finance (DeFi) vault management platform built as a full
 ## External Dependencies
 
 ### Core Dependencies
+
 - **React Ecosystem**: React, React DOM, Wouter for routing
 - **Web3 Stack**: Wagmi, RainbowKit, Viem for blockchain interactions
 - **UI Framework**: Radix UI primitives, Tailwind CSS, Lucide icons
@@ -63,6 +70,7 @@ Arca is a decentralized finance (DeFi) vault management platform built as a full
 - **Backend**: Express.js, Drizzle ORM, Neon Database serverless
 
 ### Development Tools
+
 - **Build Tools**: Vite, ESBuild, TypeScript compiler
 - **Database**: Drizzle Kit for schema management and migrations
 - **Styling**: PostCSS, Autoprefixer, Tailwind CSS
@@ -70,19 +78,22 @@ Arca is a decentralized finance (DeFi) vault management platform built as a full
 ## Deployment Strategy
 
 ### Development Environment
+
 - **Runtime**: Replit with Node.js 20, Web, and PostgreSQL 16 modules
 - **Development Server**: Vite dev server with HMR on port 5000
 - **Database**: PostgreSQL development instance
 
 ### Production Deployment
+
 - **Target**: Autoscale deployment on Replit
-- **Build Process**: 
+- **Build Process**:
   1. Vite builds frontend to `dist/public`
   2. ESBuild bundles server to `dist/index.js`
 - **Runtime**: Production server serves static files and API routes
 - **Port Configuration**: Internal port 5000, external port 80
 
 ### Environment Configuration
+
 - **Database**: Configurable via `DATABASE_URL` environment variable
 - **Web3**: WalletConnect project ID via `VITE_WALLET_CONNECT_PROJECT_ID`
 - **Development**: Automatic Replit integration with cartographer plugin

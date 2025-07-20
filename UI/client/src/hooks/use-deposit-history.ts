@@ -1,8 +1,7 @@
-
-import { useReadContract, useWatchContractEvent } from 'wagmi';
-import { useAccount } from 'wagmi';
-import { useState, useEffect } from 'react';
-import { VAULT_ABI } from '@/lib/contracts';
+import { useReadContract, useWatchContractEvent } from "wagmi";
+import { useAccount } from "wagmi";
+import { useState, useEffect } from "react";
+import { VAULT_ABI } from "@/lib/contracts";
 
 export interface DepositEvent {
   vaultAddress: string;
@@ -19,7 +18,7 @@ export function useDepositHistory(vaultAddress: string) {
   useWatchContractEvent({
     address: vaultAddress as `0x${string}`,
     abi: VAULT_ABI,
-    eventName: 'Deposit',
+    eventName: "Deposit",
     onLogs: (logs) => {
       logs.forEach((log) => {
         if (log.args.from?.toLowerCase() === address?.toLowerCase()) {
@@ -29,7 +28,7 @@ export function useDepositHistory(vaultAddress: string) {
             timestamp: Date.now(),
             blockNumber: Number(log.blockNumber),
           };
-          setDeposits(prev => [...prev, newDeposit]);
+          setDeposits((prev) => [...prev, newDeposit]);
         }
       });
     },

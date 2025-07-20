@@ -1,5 +1,5 @@
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Link, useLocation } from 'wouter';
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { Link, useLocation } from "wouter";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -20,69 +20,81 @@ export default function Navigation() {
             <span className="text-xl font-semibold text-white">arca</span>
           </div>
         </Link>
-        
+
         {/* Navigation Tabs - Centered */}
         <div className="hidden sm:flex items-center space-x-6">
           <Link href="/">
-            <button className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
-              isActive('/') || isActive('/vaults') 
-                ? 'bg-arca-primary text-black nav-button-glow' 
-                : 'text-arca-secondary hover:text-white'
-            }`}>
+            <button
+              className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
+                isActive("/") || isActive("/vaults")
+                  ? "bg-arca-primary text-black nav-button-glow"
+                  : "text-arca-secondary hover:text-white"
+              }`}
+            >
               Vaults
             </button>
           </Link>
           <Link href="/staking">
-            <button className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
-              isActive('/staking') 
-                ? 'bg-arca-primary text-black nav-button-glow' 
-                : 'text-arca-secondary hover:text-white'
-            }`}>
+            <button
+              className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
+                isActive("/staking")
+                  ? "bg-arca-primary text-black nav-button-glow"
+                  : "text-arca-secondary hover:text-white"
+              }`}
+            >
               Staking
             </button>
           </Link>
           <Link href="/dashboard">
-            <button className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
-              isActive('/dashboard') 
-                ? 'bg-arca-primary text-black nav-button-glow' 
-                : 'text-arca-secondary hover:text-white'
-            }`}>
+            <button
+              className={`px-6 py-2 rounded-full font-medium transition-all duration-300 ${
+                isActive("/dashboard")
+                  ? "bg-arca-primary text-black nav-button-glow"
+                  : "text-arca-secondary hover:text-white"
+              }`}
+            >
               Dashboard
             </button>
           </Link>
         </div>
-        
+
         {/* Mobile Navigation */}
         <div className="sm:hidden flex items-center space-x-1">
           <Link href="/">
-            <button className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
-              isActive('/') || isActive('/vaults') 
-                ? 'bg-arca-primary text-black nav-button-glow' 
-                : 'text-arca-secondary hover:text-white'
-            }`}>
+            <button
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                isActive("/") || isActive("/vaults")
+                  ? "bg-arca-primary text-black nav-button-glow"
+                  : "text-arca-secondary hover:text-white"
+              }`}
+            >
               Vaults
             </button>
           </Link>
           <Link href="/staking">
-            <button className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
-              isActive('/staking') 
-                ? 'bg-arca-primary text-black nav-button-glow' 
-                : 'text-arca-secondary hover:text-white'
-            }`}>
+            <button
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                isActive("/staking")
+                  ? "bg-arca-primary text-black nav-button-glow"
+                  : "text-arca-secondary hover:text-white"
+              }`}
+            >
               Staking
             </button>
           </Link>
           <Link href="/dashboard">
-            <button className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
-              isActive('/dashboard') 
-                ? 'bg-arca-primary text-black nav-button-glow' 
-                : 'text-arca-secondary hover:text-white'
-            }`}>
+            <button
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+                isActive("/dashboard")
+                  ? "bg-arca-primary text-black nav-button-glow"
+                  : "text-arca-secondary hover:text-white"
+              }`}
+            >
               Dashboard
             </button>
           </Link>
         </div>
-        
+
         {/* Wallet Connection */}
         <ConnectButton.Custom>
           {({
@@ -94,30 +106,30 @@ export default function Navigation() {
             authenticationStatus,
             mounted,
           }) => {
-            const ready = mounted && authenticationStatus !== 'loading';
+            const ready = mounted && authenticationStatus !== "loading";
             const connected =
               ready &&
               account &&
               chain &&
               (!authenticationStatus ||
-                authenticationStatus === 'authenticated');
+                authenticationStatus === "authenticated");
 
             return (
               <div
                 {...(!ready && {
-                  'aria-hidden': true,
-                  'style': {
+                  "aria-hidden": true,
+                  style: {
                     opacity: 0,
-                    pointerEvents: 'none',
-                    userSelect: 'none',
+                    pointerEvents: "none",
+                    userSelect: "none",
                   },
                 })}
               >
                 {(() => {
                   if (!connected) {
                     return (
-                      <button 
-                        onClick={openConnectModal} 
+                      <button
+                        onClick={openConnectModal}
                         className="bg-arca-primary text-black px-2 sm:px-6 py-1 sm:py-2 rounded-full font-medium hover:bg-green-400 transition-colors text-xs sm:text-base"
                       >
                         <span className="hidden sm:inline">Connect Wallet</span>
@@ -128,8 +140,8 @@ export default function Navigation() {
 
                   if (chain.unsupported) {
                     return (
-                      <button 
-                        onClick={openChainModal} 
+                      <button
+                        onClick={openChainModal}
                         className="bg-red-500 text-white px-2 sm:px-6 py-1 sm:py-2 rounded-full font-medium hover:bg-red-600 transition-colors text-xs sm:text-base"
                       >
                         <span className="hidden sm:inline">Wrong network</span>
@@ -148,7 +160,7 @@ export default function Navigation() {
                           <div className="w-6 h-6 mr-2 inline-block">
                             {chain.iconUrl && (
                               <img
-                                alt={chain.name ?? 'Chain icon'}
+                                alt={chain.name ?? "Chain icon"}
                                 src={chain.iconUrl}
                                 className="w-6 h-6"
                               />
@@ -158,15 +170,15 @@ export default function Navigation() {
                         {chain.name}
                       </button>
 
-                      <button 
-                        onClick={openAccountModal} 
+                      <button
+                        onClick={openAccountModal}
                         className="bg-arca-primary text-black px-2 sm:px-6 py-1 sm:py-2 rounded-full font-medium hover:bg-green-400 transition-colors text-xs sm:text-base"
                       >
                         <span className="hidden sm:inline">
                           {account.displayName}
                           {account.displayBalance
                             ? ` (${account.displayBalance})`
-                            : ''}
+                            : ""}
                         </span>
                         <span className="sm:hidden">
                           {account.displayName?.slice(0, 4)}...
