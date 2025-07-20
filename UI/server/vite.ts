@@ -5,7 +5,6 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
-import rateLimit from "express-rate-limit";
 
 const viteLogger = createLogger();
 
@@ -37,25 +36,19 @@ export async function setupVite(app: Express, server: Server) {
         process.exit(1);
       },
     },
-    server: {
-      ...serverOptions,
-      allowedHosts: true as const,
-    },
+    server: serverOptions,
     appType: "custom",
   });
 
   app.use(vite.middlewares);
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // max 100 requests per windowMs
-  });
-  app.use("*", limiter, async (req, res, next) => {
+  app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,
         "..",
+        "client",
         "index.html",
       );
 
@@ -86,11 +79,7 @@ export function serveStatic(app: Express) {
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
-  const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // max 100 requests per windowMs
-  });
-  app.use("*", limiter, (_req, res) => {
+  app.use("*", (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
