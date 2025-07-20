@@ -33,14 +33,10 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Download foundry
-        run: curl -L https://foundry.paradigm.xyz | bash
-
-      - name: Add foundry to path
-        run: export PATH="$PATH:$HOME/.foundry/bin"
-
-      - name: Install foundry
-        run: export PATH="$PATH:$HOME/.foundry/bin" && foundryup
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
 
       - name: Install deps (root)
         run: npm ci
@@ -51,10 +47,10 @@ jobs:
 
       # Hardhat compile & tests
       - name: Compile Contracts
-        run: export PATH="$PATH:$HOME/.foundry/bin" && npm run compile
+        run: npm run compile
 
       - name: Run Hardhat Tests
-        run: export PATH="$PATH:$HOME/.foundry/bin" && npm run test:sol
+        run: npm run test:sol
 
       # UI part starts here
       - name: Install deps (UI)
