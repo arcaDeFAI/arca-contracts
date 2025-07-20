@@ -51,7 +51,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
   });
 
     const { data: usdcAllowance, refetch: refetchUsdcAllowance } = useReadContract({
-    address: TOKEN_ADDRESSES.usdc as `0x${string}`,
+    address: TOKEN_ADDRESSES.USDC as `0x${string}`,
     abi: ERC20_ABI,
     functionName: 'allowance',
     args: [address as `0x${string}`, vaultAddress as `0x${string}`],
@@ -209,7 +209,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
       try {
         setApprovalStep('approving');
         await writeApprove({
-          address: TOKEN_ADDRESSES.usdc as `0x${string}`,
+          address: TOKEN_ADDRESSES.USDC as `0x${string}`,
           abi: ERC20_ABI,
           functionName: 'approve',
           args: [VAULT_CONTRACT_ADDRESS as `0x${string}`, parseUnits('1000000000', 6)], // Approve a large amount
