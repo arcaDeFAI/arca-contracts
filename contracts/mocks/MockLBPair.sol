@@ -10,7 +10,7 @@ contract MockLBPair {
     IERC20 private tokenY;
     uint128 private reserveX;
     uint128 private reserveY;
-    
+
     // Mock price storage
     mapping(uint24 => uint256) private binPrices;
 
@@ -56,12 +56,12 @@ contract MockLBPair {
         }
         return storedPrice;
     }
-    
+
     // Helper function to set custom prices for testing
     function setPrice(uint24 id, uint256 price) external {
         binPrices[id] = price;
     }
-    
+
     // Helper function to set tokens for testing
     function setTokens(IERC20 _tokenX, IERC20 _tokenY) external {
         tokenX = _tokenX;

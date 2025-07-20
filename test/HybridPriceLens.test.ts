@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
-import { HybridPriceLens, MockERC20, MockLBPair } from "../typechain-types";
+import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signers";
+import type { HybridPriceLens, MockERC20, MockLBPair } from "../typechain-types";
 
 describe("HybridPriceLens", function () {
   let hybridPriceLens: HybridPriceLens;
