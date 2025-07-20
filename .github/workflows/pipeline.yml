@@ -21,6 +21,8 @@ jobs:
   contracts-and-ui:
     name: Contract-lint-compile-test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
