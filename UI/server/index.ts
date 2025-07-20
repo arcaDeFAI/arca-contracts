@@ -1,5 +1,4 @@
-import type { Response, NextFunction } from "express";
-import express, { type Request } from "express";
+import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -10,7 +9,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, unknown> | undefined = undefined;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -37,39 +36,16 @@ app.use((req, res, next) => {
   next();
 });
 
-function isErrorWithStatus(
-  err: unknown,
-): err is Error & { status?: number; statusCode?: number } {
-  return (
-    err instanceof Error &&
-    (typeof (err as { status?: unknown }).status === "number" ||
-      typeof (err as { statusCode?: unknown }).statusCode === "number")
-  );
-}
-
-export function errorHandler(
-  err: unknown,
-  _req: Request,
-  res: Response,
-  _next: NextFunction,
-): void {
-  let status = 500;
-  let message = "Internal Server Error";
-
-  if (isErrorWithStatus(err)) {
-    message = err.message;
-    status = err.status ?? err.statusCode ?? 500;
-  } else if (err instanceof Error) {
-    message = err.message;
-  }
-
-  res.status(status).json({ message });
-}
-
-await (async () => {
+(async () => {
   const server = await registerRoutes(app);
 
-  app.use(errorHandler);
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    res.status(status).json({ message });
+    throw err;
+  });
 
   // importantly only setup vite in development and after
   // setting up all the other routes so the catch-all route
@@ -84,14 +60,11 @@ await (async () => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = 5000;
-  server.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true,
+  }, () => {
+    log(`serving on port ${port}`);
+  });
 })();
