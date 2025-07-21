@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import rateLimit from "express-rate-limit";
 
 const viteLogger = createLogger();
 
@@ -40,8 +41,17 @@ export async function setupVite(app: Express, server: Server) {
     appType: "custom",
   });
 
+  // Create rate limiter for the Vite middleware
+  const viteLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute window
+    max: 60, // Limit each IP to 60 requests per windowMs
+    message: "Too many requests from this IP, please try again later.",
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  });
+
   app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
+  app.use("*", viteLimiter, async (req, res, next) => {
     const url = req.originalUrl;
 
     try {

@@ -16,7 +16,9 @@ describe("cn utility function", () => {
 
   it("should handle conditional classes", () => {
     expect(cn("base-class", false && "conditional-class")).toBe("base-class");
-    expect(cn("base-class", true && "active-class")).toBe("base-class active-class");
+    expect(cn("base-class", true && "active-class")).toBe(
+      "base-class active-class",
+    );
   });
 
   it("should handle undefined and null values", () => {
