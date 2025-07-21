@@ -86,10 +86,22 @@ export function serveStatic(app: Express) {
     );
   }
 
+  // Create rate limiter for static file serving
+  const staticLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute window
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: "Too many requests for static files, please try again later.",
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    skipSuccessfulRequests: true, // Don't count successful requests (200 OK)
+  });
+
+  // Apply rate limiting to static file serving
+  app.use(staticLimiter);
   app.use(express.static(distPath));
 
   // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  app.use("*", staticLimiter, (_req, res) => {
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
