@@ -21,8 +21,13 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, { config }, 
   const metropolisGlob = path.join(config.paths.root, "contracts-metropolis", "src", "**", "*.sol");
   const metropolisPaths = glob.sync(metropolisGlob);
   
+  // Add Shadow contracts directory (only our files)
+  const shadowStrategyPath = path.join(config.paths.root, "contracts-shadow", "src", "ShadowStrategy.sol");
+  const shadowInterfacesGlob = path.join(config.paths.root, "contracts-shadow", "src", "interfaces", "*.sol");
+  const shadowPaths = [...glob.sync(shadowStrategyPath), ...glob.sync(shadowInterfacesGlob)];
+  
   // Combine all paths
-  return [...paths, ...metropolisPaths];
+  return [...paths, ...metropolisPaths, ...shadowPaths];
 });
 
 const config: HardhatUserConfig = {
