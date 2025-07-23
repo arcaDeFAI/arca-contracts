@@ -62,7 +62,6 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
 2. **Pool Address Calculation**
    - Need PoolAddress library or equivalent
    - Currently using placeholder address(0) in _getPoolAddress()
-
 3. **Factory Integration**
    - Need to add NPM and Voter addresses to VaultFactory
    - Need deployment functions for Shadow strategies
@@ -350,7 +349,6 @@ contract ShadowStrategy { // No inheritance
 2. Update factory with NPM/Voter/Deployer addresses
 3. Fix _getPoolAddress() - needs deployer from NPM
 4. Decide on version solution and implement
-
 ### What's Working
 - Position management (_exitPosition, _enterPosition)
 - Rebalancing flow (rebalanceShadow)

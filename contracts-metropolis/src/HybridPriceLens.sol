@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.26;
 
 import "./interfaces/IPriceLens.sol";
 import "./interfaces/IAggregatorV3.sol";

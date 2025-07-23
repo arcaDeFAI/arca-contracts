@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.26;
 
 import {IOracleVault} from "./IOracleVault.sol";
 import {IERC20} from "joe-v2/interfaces/ILBPair.sol";
