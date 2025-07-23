@@ -46,7 +46,7 @@ interface IStrategy {
 
     event PendingAumAnnualFeeReset();
 
-    event RangeSet(uint24 low, uint24 upper);
+    event RangeSet(int32 low, int32 upper);
 
     function getFactory() external view returns (IVaultFactory);
 
@@ -58,7 +58,7 @@ interface IStrategy {
 
     function getTokenY() external pure returns (IERC20Upgradeable);
 
-    function getRange() external view returns (uint24 low, uint24 upper);
+    function getRange() external view returns (int32 low, int32 upper);
 
     function getAumAnnualFee() external view returns (uint256 aumAnnualFee);
 
@@ -87,10 +87,10 @@ interface IStrategy {
     function withdrawAll() external;
 
     function rebalance(
-        uint24 newLower,
-        uint24 newUpper,
-        uint24 desiredActiveId,
-        uint24 slippageActiveId,
+        int32 newLower,
+        int32 newUpper,
+        int32 desiredActiveId,
+        int32 slippageActiveId,
         uint256 amountX,
         uint256 amountY,
         bytes calldata distributions
