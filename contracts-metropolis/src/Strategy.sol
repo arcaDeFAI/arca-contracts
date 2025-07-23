@@ -182,8 +182,8 @@ contract Strategy is Clone, ReentrancyGuardUpgradeable, IStrategy {
      * @return lower The lower bound of the range.
      * @return upper The upper bound of the range.
      */
-    function getRange() external view override returns (uint24 lower, uint24 upper) {
-        return (_lowerRange, _upperRange);
+    function getRange() external view virtual override returns (int32 lower, int32 upper) {
+        return (int32(uint32(_lowerRange)), int32(uint32(_upperRange)));
     }
 
     /**
@@ -272,7 +272,7 @@ contract Strategy is Clone, ReentrancyGuardUpgradeable, IStrategy {
      * This function will only be called during the migration of strategies and during emergency withdrawals.
      * @dev Only the vault can call this function.
      */
-    function withdrawAll() external override onlyVault {
+    function withdrawAll() external virtual override onlyVault {
         address vault = _vault();
 
         // Withdraw all the tokens from the LB pool and return the amounts and the queued withdrawals.
@@ -320,14 +320,14 @@ contract Strategy is Clone, ReentrancyGuardUpgradeable, IStrategy {
      * @param amountY The amount of token Y to deposit.
      */
     function rebalance(
-        uint24 newLower,
-        uint24 newUpper,
-        uint24 desiredActiveId,
-        uint24 slippageActiveId,
+        int32 newLower,
+        int32 newUpper,
+        int32 desiredActiveId,
+        int32 slippageActiveId,
         uint256 amountX,
         uint256 amountY,
         bytes calldata distributions
-    ) external override onlyOperators {
+    ) external virtual override onlyOperators {
 
         // check if the cool down period has passed
         if (_lastRebalance > 0 && block.timestamp < _lastRebalance + _rebalanceCoolDown) revert Strategy__RebalanceCoolDown();
@@ -347,21 +347,30 @@ contract Strategy is Clone, ReentrancyGuardUpgradeable, IStrategy {
             }
         }
 
+        // Validate non-negative for Metropolis bins
+        require(newLower >= 0 && newUpper >= 0 && desiredActiveId >= 0 && slippageActiveId >= 0, "Strategy__NegativeRange");
+        
+        // Convert to uint24 for Metropolis
+        uint24 lower = uint24(uint32(newLower));
+        uint24 upper = uint24(uint32(newUpper));
+        uint24 desiredId = uint24(uint32(desiredActiveId));
+        uint24 slippageId = uint24(uint32(slippageActiveId));
+        
         // Check if the operator wants to deposit tokens.
-        if (desiredActiveId > 0 || slippageActiveId > 0) {
+        if (desiredId > 0 || slippageId > 0) {
 
             // check price;  will revert if not in deviation
             _checkPrice();
 
             // Adjust the range and get the active id, in case the active id changed.
             uint24 activeId;
-            (activeId, newLower, newUpper) = _adjustRange(newLower, newUpper, desiredActiveId, slippageActiveId);
+            (activeId, lower, upper) = _adjustRange(lower, upper, desiredId, slippageId);
 
             // Get the distributions and the amounts to deposit
-            bytes32[] memory liquidityConfigs = _getLiquidityConfigs(newLower, newUpper, distributions);
+            bytes32[] memory liquidityConfigs = _getLiquidityConfigs(lower, upper, distributions);
 
             // Deposit the tokens to the LB pool.
-            _depositToLB(newLower, newUpper, liquidityConfigs, amountX, amountY);
+            _depositToLB(lower, upper, liquidityConfigs, amountX, amountY);
         }
     }
 
@@ -485,7 +494,7 @@ contract Strategy is Clone, ReentrancyGuardUpgradeable, IStrategy {
      * @return amountX The balance of token X.
      * @return amountY The balance of token Y.
      */
-    function _getBalances() internal view returns (uint256 amountX, uint256 amountY) {
+    function _getBalances() internal view virtual returns (uint256 amountX, uint256 amountY) {
         // Get the balances of the tokens in the contract.
         amountX = _tokenX().balanceOf(address(this));
         amountY = _tokenY().balanceOf(address(this));
@@ -605,7 +614,7 @@ contract Strategy is Clone, ReentrancyGuardUpgradeable, IStrategy {
         _lowerRange = newLower;
         _upperRange = newUpper;
 
-        emit RangeSet(newLower, newUpper);
+        emit RangeSet(int32(uint32(newLower)), int32(uint32(newUpper)));
     }
 
     /**
@@ -931,7 +940,7 @@ contract Strategy is Clone, ReentrancyGuardUpgradeable, IStrategy {
         return IHooksRewarder(address(0));
     }
 
-    function hasRewards() external view override returns (bool) {
+    function hasRewards() external view virtual override returns (bool) {
         return address(_getRewarder()) != address(0);
     }
 

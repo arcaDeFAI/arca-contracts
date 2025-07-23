@@ -96,7 +96,7 @@ interface IBaseVault is IERC20Upgradeable {
 
     function getAumAnnualFee() external view returns (uint256);
 
-    function getRange() external view returns (uint24 low, uint24 upper);
+    function getRange() external view returns (int32 low, int32 upper);
 
     function getOperators() external view returns (address defaultOperator, address operator);
 

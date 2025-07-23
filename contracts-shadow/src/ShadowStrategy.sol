@@ -202,22 +202,20 @@ contract ShadowStrategy is Strategy {
         _validateTicks(tickLower, tickUpper, tickSpacing);
         
         INonfungiblePositionManager npm = getNonfungiblePositionManager();
-        IERC20Upgradeable token0 = _tokenX();
-        IERC20Upgradeable token1 = _tokenY();
         
         // Approve tokens to NPM
         if (amount0Desired > 0) {
-            token0.safeApprove(address(npm), amount0Desired);
+            _tokenX().safeApprove(address(npm), amount0Desired);
         }
         if (amount1Desired > 0) {
-            token1.safeApprove(address(npm), amount1Desired);
+            _tokenY().safeApprove(address(npm), amount1Desired);
         }
         
-        // Mint new position
-        INonfungiblePositionManager.MintParams memory params = 
+        // Mint new position - build params inline to avoid stack too deep
+        (tokenId, liquidity, amount0, amount1) = npm.mint(
             INonfungiblePositionManager.MintParams({
-                token0: address(token0),
-                token1: address(token1),
+                token0: address(_tokenX()),
+                token1: address(_tokenY()),
                 tickSpacing: tickSpacing,
                 tickLower: tickLower,
                 tickUpper: tickUpper,
@@ -227,9 +225,8 @@ contract ShadowStrategy is Strategy {
                 amount1Min: amount1Min,
                 recipient: address(this),
                 deadline: block.timestamp
-            });
-        
-        (tokenId, liquidity, amount0, amount1) = npm.mint(params);
+            })
+        );
         
         // Store position info
         _positionTokenId = tokenId;
@@ -238,11 +235,11 @@ contract ShadowStrategy is Strategy {
         _tickSpacing = tickSpacing;
         
         // Remove any remaining approvals
-        if (token0.allowance(address(this), address(npm)) > 0) {
-            token0.safeApprove(address(npm), 0);
+        if (_tokenX().allowance(address(this), address(npm)) > 0) {
+            _tokenX().safeApprove(address(npm), 0);
         }
-        if (token1.allowance(address(this), address(npm)) > 0) {
-            token1.safeApprove(address(npm), 0);
+        if (_tokenY().allowance(address(this), address(npm)) > 0) {
+            _tokenY().safeApprove(address(npm), 0);
         }
         
         emit PositionMinted(tokenId, tickLower, tickUpper, liquidity);
@@ -250,70 +247,78 @@ contract ShadowStrategy is Strategy {
 
     /**
      * @notice Override rebalance for Shadow strategy
-     * @dev Simplified version that always does full exit/enter
+     * @dev This completely replaces the parent's bin-based rebalance with tick-based logic
+     * @param newLower The lower tick of the new position (as int32)
+     * @param newUpper The upper tick of the new position (as int32)
+     * @param desiredActiveId The desired active tick (as int32)
+     * @param slippageActiveId The allowed tick slippage (as int32)
+     * @param amountX The amount of token X to deposit
+     * @param amountY The amount of token Y to deposit
+     * @param distributions Not used for Shadow (ignored)
      */
     function rebalance(
-        uint24 newLower,
-        uint24 newUpper,
-        uint24 desiredActiveId,
-        uint24 slippageActiveId,
+        int32 newLower,
+        int32 newUpper,
+        int32 desiredActiveId,
+        int32 slippageActiveId,
         uint256 amountX,
         uint256 amountY,
         bytes calldata distributions
     ) external override onlyOperators {
-        // For Shadow, we need tick parameters instead of bin IDs
-        // This function should be called by a different interface
-        revert("ShadowStrategy: use rebalanceShadow instead");
-    }
-
-    /**
-     * @notice Rebalances the Shadow strategy to a new tick range
-     * @param tickLower The lower tick of the new position
-     * @param tickUpper The upper tick of the new position
-     * @param tickSpacing The tick spacing of the pool
-     * @param amount0Min Minimum amount of token0 (slippage protection)
-     * @param amount1Min Minimum amount of token1 (slippage protection)
-     */
-    function rebalanceShadow(
-        int24 tickLower,
-        int24 tickUpper,
-        int24 tickSpacing,
-        uint256 amount0Min,
-        uint256 amount1Min
-    ) external onlyOperators {
-        // Check cooldown
-        if (_lastRebalance > 0 && block.timestamp < _lastRebalance + _rebalanceCoolDown) {
+        // Check cooldown using parent's getter
+        uint256 lastRebalance = this.getLastRebalance();
+        if (lastRebalance > 0 && block.timestamp < lastRebalance + 5 seconds) {
             revert Strategy__RebalanceCoolDown();
         }
 
-        // Withdraw and apply AUM fees (inherited from Strategy)
-        (uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY) = _withdrawAndApplyAumAnnualFee();
-        
-        // For Shadow, we need to exit the current position if it exists
+        // For Shadow, we need to exit the current position first if it exists
         _exitPosition();
         
+        // Now we can use parent's AUM fee logic since we've already exited our position
+        // This will handle fee calculation and reset the range
+        (uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY) = _withdrawAndApplyAumAnnualFee();
+        
         // Execute queued withdrawals
-        _transferAndExecuteQueuedAmounts(queuedShares, queuedAmountX, queuedAmountY);
+        _transferAndExecuteQueuedAmountsShadow(queuedShares, queuedAmountX, queuedAmountY);
         
         // Try to harvest rewards
         try this.harvestRewards() {} catch {}
         
+        // Validate tick range
+        require(newLower >= TickMath.MIN_TICK && newUpper <= TickMath.MAX_TICK, "ShadowStrategy: tick out of range");
+        
+        // Convert to int24 for Shadow ticks
+        int24 tickLower = int24(newLower);
+        int24 tickUpper = int24(newUpper);
+        
         // Check if we should enter a new position
-        if (tickUpper > 0) {
+        if (tickUpper > tickLower) {
+            // Get tick spacing from the pool
+            address pool = _getPoolAddress();
+            int24 tickSpacing = 0;
+            if (pool != address(0)) {
+                tickSpacing = IRamsesV3Pool(pool).tickSpacing();
+            }
+            
+            // Validate ticks
+            _validateTicks(tickLower, tickUpper, tickSpacing);
+            
             // Get current balances
             uint256 balance0 = _tokenX().balanceOf(address(this));
             uint256 balance1 = _tokenY().balanceOf(address(this));
             
             // Enter new position if we have tokens
             if (balance0 > 0 || balance1 > 0) {
+                // For Shadow, we don't use distributions, just deposit all available balance
+                // Min amounts are set to 0 for simplicity (can be calculated based on slippage)
                 _enterPosition(
                     tickLower,
                     tickUpper,
                     tickSpacing,
                     balance0,
                     balance1,
-                    amount0Min,
-                    amount1Min
+                    0, // amount0Min
+                    0  // amount1Min
                 );
             }
         }
@@ -346,7 +351,7 @@ contract ShadowStrategy is Strategy {
         }
         
         // Execute queued withdrawals
-        _transferAndExecuteQueuedAmounts(queuedShares, queuedAmount0, queuedAmount1);
+        _transferAndExecuteQueuedAmountsShadow(queuedShares, queuedAmount0, queuedAmount1);
         
         // Transfer remaining tokens to vault
         balance0 = _tokenX().balanceOf(address(this));
@@ -362,13 +367,9 @@ contract ShadowStrategy is Strategy {
     /**
      * @notice Override to hide Metropolis range methods
      */
-    function getRange() external view override returns (uint24 lower, uint24 upper) {
-        // Convert int24 ticks to uint24 for compatibility
-        // This is a hack for interface compatibility
-        if (_currentTickLower >= 0 && _currentTickUpper >= 0) {
-            return (uint24(int256(_currentTickLower)), uint24(int256(_currentTickUpper)));
-        }
-        return (0, 0);
+    function getRange() external view override returns (int32 lower, int32 upper) {
+        // Direct conversion from int24 to int32
+        return (int32(_currentTickLower), int32(_currentTickUpper));
     }
 
     /**
@@ -432,16 +433,18 @@ contract ShadowStrategy is Strategy {
 
     /**
      * @notice Helper to transfer and execute queued amounts
+     * @dev Duplicated from parent Strategy since it's private there
      */
-    function _transferAndExecuteQueuedAmounts(uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY) private {
+    function _transferAndExecuteQueuedAmountsShadow(uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY)
+        private
+    {
         if (queuedShares > 0) {
             address vault = _vault();
             
-            // Transfer tokens to vault
+            // Transfer the tokens to the vault and execute the queued withdrawals
             if (queuedAmountX > 0) _tokenX().safeTransfer(vault, queuedAmountX);
             if (queuedAmountY > 0) _tokenY().safeTransfer(vault, queuedAmountY);
             
-            // Execute queued withdrawals
             IBaseVault(vault).executeQueuedWithdrawals();
         }
     }

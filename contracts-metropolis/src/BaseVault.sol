@@ -225,10 +225,10 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @return low The lower bound of the range.
      * @return upper The upper bound of the range.
      */
-    function getRange() public view virtual override returns (uint24 low, uint24 upper) {
+    function getRange() public view virtual override returns (int32 low, int32 upper) {
         IStrategy strategy = _strategy;
 
-        return address(strategy) == address(0) ? (0, 0) : strategy.getRange();
+        return address(strategy) == address(0) ? (int32(0), int32(0)) : strategy.getRange();
     }
 
     /**
