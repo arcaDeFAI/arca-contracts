@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.26;
 
 import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
 

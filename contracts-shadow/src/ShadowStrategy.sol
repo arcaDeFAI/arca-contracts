@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.26;
 
 import {Strategy} from "../../contracts-metropolis/src/Strategy.sol";
 import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";

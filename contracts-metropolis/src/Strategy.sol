@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.8.10;
+pragma solidity 0.8.26;
 
 import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
 import {PriceHelper} from "joe-v2/libraries/PriceHelper.sol";
