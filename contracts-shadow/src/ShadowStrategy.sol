@@ -55,20 +55,18 @@ contract ShadowStrategy is Strategy {
 
     /**
      * @notice Returns the Nonfungible Position Manager address
-     * @dev This should be configured in the factory
+     * @dev Gets the address from the factory configuration
      */
     function getNonfungiblePositionManager() public view returns (INonfungiblePositionManager) {
-        // TODO: Add this to factory configuration
-        return INonfungiblePositionManager(address(0));
+        return INonfungiblePositionManager(this.getFactory().getNonfungiblePositionManager());
     }
 
     /**
      * @notice Returns the voter address for gauge lookups
-     * @dev This should be configured in the factory
+     * @dev Gets the address from the factory configuration
      */
     function getVoter() public view returns (IMinimalVoter) {
-        // TODO: Add this to factory configuration
-        return IMinimalVoter(address(0));
+        return IMinimalVoter(this.getFactory().getShadowVoter());
     }
 
     /**

@@ -4,7 +4,7 @@ import type { HardhatEthersSigner } from "@nomicfoundation/hardhat-ethers/signer
 import * as fs from "fs";
 import * as path from "path";
 import { loadNetworkConfig, networkConfigToDeploymentConfig, validateDeploymentConfig } from "./utils/network-config";
-import { deployMockContracts } from "./utils/deploy-mocks";
+import { deployMockContracts } from "./archive/utils/deploy-mocks";
 
 export interface DeploymentConfig {
   tokenX: string;
