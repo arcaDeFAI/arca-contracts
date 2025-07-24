@@ -4,7 +4,7 @@
 
 This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity support to the existing Arca vault system. The approach maximizes code reuse from the audited Metropolis contracts while adapting to Shadow's NFT-based position management. This MVP prioritizes simplicity and correctness over gas optimization.
 
-**Current Status**: Core implementation complete. Solidity version and parameter type issues resolved. Compilation successful. Ready for factory integration and testing.
+**Current Status**: Factory integration complete. Deployment scripts updated. Critical architectural issues identified that need resolution before production use.
 
 ## Critical Issues & Decisions Required
 
@@ -64,16 +64,40 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
    - ✅ Strategy.sol - Accepts int32, validates non-negative, converts to uint24
    - ✅ ShadowStrategy.sol - Accepts int32, validates tick bounds, converts to int24
 
-### Remaining Work
+### Completed Work (Phase 2)
 
-1. **Factory Integration**
-   - Need to add NPM and Voter addresses to VaultFactory
-   - Need deployment functions for Shadow strategies
-   - Currently using placeholder address(0) in getNonfungiblePositionManager() and getVoter()
+4. **Factory Integration** ✅
+   - [x] Added NPM and Voter addresses to VaultFactory interface and implementation
+   - [x] Added getShadowNonfungiblePositionManager() and getShadowVoter() getters
+   - [x] Added setShadowNonfungiblePositionManager() and setShadowVoter() setters
+   - [x] Added createShadowStrategy() and createOracleVaultAndShadowStrategy() functions
+   - [x] Added Shadow to StrategyType enum
 
-2. **License Headers**
-   - Update all MIT SPDX headers to GPL-3.0 across the codebase
-   - Delete all BUSL-1.1 files from contracts-shadow/
+5. **Deployment Scripts** ✅
+   - [x] Enhanced deploy-metropolis.ts to deploy ShadowStrategy implementation
+   - [x] Added Shadow protocol address configuration
+   - [x] Updated deployment artifacts to include Shadow addresses
+   - [x] Created create-shadow-vault.ts template script
+   - [x] Updated verify-metropolis.ts to verify Shadow contracts
+
+### Critical Issues Discovered
+
+1. **LBPair Interface Mismatch**
+   - VaultFactory expects ILBPair for all vaults, but Shadow uses different pool interface
+   - createOracleVaultAndShadowStrategy() takes ILBPair parameter that doesn't exist for Shadow
+   - OracleVault contract may make LBPair-specific calls that fail on Shadow pools
+
+2. **Missing Pool Factory Address**
+   - Need to store Shadow pool factory address in VaultFactory
+   - Required for pool address calculation in _getPoolAddress()
+
+3. **Vault Contract Compatibility**
+   - OracleVault assumes Metropolis-specific interfaces
+   - May need separate vault type or abstraction layer
+
+4. **Pool vs Pair Abstraction**
+   - Need unified interface that both LBPair and Shadow pools can implement
+   - Current architecture too tightly coupled to Metropolis concepts
 
 ## Architecture Overview
 
@@ -175,111 +199,48 @@ rebalance(int24 tickLower, int24 tickUpper, uint24 slippageActiveId)
 - Graceful handling of missing gauges
 - Emergency withdrawal without burning NFT
 
-## Implementation Steps
+## Implementation Progress
 
-### Phase 1: Core Strategy Implementation
+### Phase 1: Core Strategy Implementation ✅
+- [x] ShadowStrategy contract fully implemented
+- [x] Position management (enter/exit/rebalance)
+- [x] NFT lifecycle management
+- [x] Value calculations using LiquidityAmounts
+- [x] Reward claiming structure
 
-#### Step 1.1: Create ShadowStrategy Base Contract ✅
-- [x] Create `contracts-shadow/src/ShadowStrategy.sol`
-- [x] Import and adapt from existing Strategy.sol
-- [x] Add NFT position tracking variables
-- [x] Implement IStrategy interface with int32 parameters
+### Phase 2: Factory Integration ✅
+- [x] VaultFactory updated with Shadow support
+- [x] Deployment scripts enhanced
+- [x] Verification scripts updated
 
-#### Step 1.2: Implement Position Management ✅
-- [x] Add `_exitPosition()` internal function
-  - [x] Decrease liquidity to 0
-  - [x] Collect all fees and tokens
-  - [x] Claim gauge rewards if available
-  - [x] Burn NFT
-- [x] Add `_enterPosition()` internal function
-  - [x] Approve tokens to NPM
-  - [x] Mint new NFT position
-  - [x] Store position ID
-  - [x] Remove approvals after mint
+### Phase 3: Architecture Resolution 🚧
 
-#### Step 1.3: Implement Core Functions ✅
-- [x] `rebalance()` - Shadow-specific rebalancing with int32 params
-  - [x] Exit current position if exists
-  - [x] Process queued withdrawals
-  - [x] Apply AUM fees (inherited)
-  - [x] Enter new position
-  - [x] Emit events
-- [x] `withdrawAll()` - Emergency withdrawal
-  - [x] Exit position completely
-  - [x] Transfer all tokens to vault
-  - [x] Execute queued withdrawals
-- [x] `_getBalances()` - Calculate total value
-  - [x] Query position liquidity from NFT
-  - [x] Add idle balances
-  - [x] Use LiquidityAmounts library for calculation
+#### Step 3.1: Resolve Interface Mismatch
+- [ ] Create IPairOrPool abstraction interface
+- [ ] Update VaultFactory to accept generic pool/pair address
+- [ ] Modify OracleVault to handle both LBPair and Shadow pools
 
-#### Step 1.4: Implement Helper Functions ✅
-- [x] `getRange()` - Return current tick range as int32
-- [x] `hasRewards()` - Check if gauge exists
-- [x] `_claimRewards()` - Basic reward claiming
-- [x] `_validateTicks()` - Tick range validation
-- [x] `_getPoolAddress()` - Pool address calculation (needs factory config)
+#### Step 3.2: Add Missing Configuration
+- [ ] Add Shadow pool factory address to VaultFactory
+- [ ] Update ShadowStrategy._getPoolAddress() to use factory config
+- [ ] Add pool factory setter/getter functions
 
-### Phase 2: Factory Integration
+#### Step 3.3: Vault Compatibility
+- [ ] Analyze OracleVault for LBPair-specific calls
+- [ ] Create compatibility layer or separate vault type
+- [ ] Test vault interactions with Shadow pools
 
-#### Step 2.1: Update VaultFactory
-- [ ] Add Shadow strategy deployment logic
-- [ ] Create `deployVaultAndShadowStrategy()` function
-- [ ] Add Shadow-specific configuration parameters
+### Phase 4: Testing Infrastructure
+- [ ] Mock contracts for Shadow components
+- [ ] Unit tests for position lifecycle
+- [ ] Integration tests with vault
+- [ ] Gas optimization analysis
 
-#### Step 2.2: Create Deployment Helpers
-- [ ] Add `IShadowStrategy` interface
-- [ ] Update deployment scripts
-- [ ] Add Shadow pool verification logic
-
-### Phase 3: Testing Infrastructure
-
-#### Step 3.1: Create Mock Contracts
-- [ ] `MockNonfungiblePositionManager.sol`
-- [ ] `MockShadowV3Pool.sol`
-- [ ] `MockGaugeV3.sol`
-
-#### Step 3.2: Write Unit Tests
-- [ ] Position lifecycle tests
-- [ ] Rebalancing scenarios
-- [ ] Reward claiming tests
-- [ ] Emergency withdrawal tests
-- [ ] Edge cases and error conditions
-
-#### Step 3.3: Integration Tests
-- [ ] Full vault + strategy integration
-- [ ] Multi-user scenarios
-- [ ] Fee calculation accuracy
-- [ ] Gas optimization tests
-
-### Phase 4: Deployment & Integration
-
-#### Step 4.1: Testnet Deployment
-- [ ] Deploy ShadowStrategy implementation
-- [ ] Deploy test vaults with Shadow strategies
-- [ ] Verify contract interactions
-
-#### Step 4.2: Bot Integration
-- [ ] Update Python bot for Shadow rebalancing
-- [ ] Add tick calculation logic
-- [ ] Test rebalancing automation
-
-#### Step 4.3: UI Integration
-- [ ] Add Shadow vault display
-- [ ] Show position ranges in UI
-- [ ] Display gauge rewards
-
-### Phase 5: Documentation & Audit Prep
-
-#### Step 5.1: Technical Documentation
-- [ ] Document Shadow-specific functions
-- [ ] Create integration guide
-- [ ] Add code comments
-
-#### Step 5.2: Audit Preparation
-- [ ] Prepare diff report vs Metropolis
-- [ ] Document security considerations
-- [ ] Create test scenarios document
+### Phase 5: Production Readiness
+- [ ] Resolve all critical issues
+- [ ] Complete testing suite
+- [ ] Security review
+- [ ] Documentation update
 
 ## Risk Analysis
 
@@ -325,41 +286,33 @@ rebalance(int24 tickLower, int24 tickUpper, uint24 slippageActiveId)
    - [ ] No high/critical audit findings
    - [ ] Clean integration with existing system
 
-## Timeline Estimate
-
-- **Phase 1**: ✅ Complete - Core implementation 
-- **Phase 2**: 3 days - Factory integration  
-- **Phase 3**: 1 week - Testing
-- **Phase 4**: 3 days - Deployment
-- **Phase 5**: 3 days - Documentation
-
-**Total**: ~2 weeks remaining
-
 ## Next Steps
 
-### 1. Factory Integration (Priority)
-- Add Shadow configuration to VaultFactory
-- Create deployment function for Shadow strategies
-- Wire up NPM/Voter addresses
+### Priority 1: Architecture Resolution
+1. **Interface Abstraction**
+   - Design IPairOrPool interface
+   - Implement in both LBPair wrapper and Shadow pool wrapper
+   - Update VaultFactory function signatures
 
-### 2. Testing Infrastructure
-- Mock contracts for local testing
-- Unit tests for position lifecycle
-- Integration tests with vault
+2. **Pool Factory Configuration**
+   - Add poolFactory address to VaultFactory storage
+   - Implement getter/setter functions
+   - Update deployment scripts
 
-### 3. Deployment
-- Scripts for testnet deployment
-- Bot integration for rebalancing
-- UI updates for Shadow vaults
+3. **Vault Compatibility Analysis**
+   - Audit OracleVault for DEX-specific assumptions
+   - Design compatibility solution
 
-### What's Working
-- Full ShadowStrategy implementation
-- int32 parameter solution
-- Position lifecycle (enter/exit/rebalance)
-- Math libraries integrated
-- Compilation successful
+### Priority 2: Testing
+- Implement comprehensive test suite once architecture issues resolved
+- Focus on integration testing with mock contracts
 
-### Technical Notes
+### Priority 3: Production Deployment
+- Complete security review
+- Deploy to testnet
+- Mainnet deployment
+
+## Technical Notes
 - **Tick Range**: -887,272 to +887,272 (validated in _validateTicks)
 - **Gas**: NFT operations more expensive than bin adjustments
-- **Rebalancing**: Full exit then re-enter (simpler but gas intensive)
+- **Architecture**: Current design too coupled to Metropolis patterns

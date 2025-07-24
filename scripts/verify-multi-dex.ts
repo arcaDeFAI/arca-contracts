@@ -14,6 +14,9 @@ interface DeploymentFile {
     oracleVaultImpl: string;
     oracleRewardVaultImpl: string;
     strategyImpl: string;
+    shadowStrategyImpl: string;
+    shadowNPM: string;
+    shadowVoter: string;
     wnative: string;
   };
 }
@@ -43,7 +46,7 @@ async function getDeployerAddress(deployment: DeploymentFile): Promise<string> {
 }
 
 async function main() {
-  console.log(`\n📝 Verifying Metropolis contracts on ${network.name}...\n`);
+  console.log(`\n📝 Verifying Multi-DEX contracts (Metropolis & Shadow) on ${network.name}...\n`);
 
   // Load deployment addresses
   const deploymentPath = `./deployments/metropolis-${network.name}.json`;
@@ -108,6 +111,12 @@ async function main() {
       address: addresses.strategyImpl,
       constructorArguments: [addresses.vaultFactory, 51], // maxRange = 51
       contract: "contracts-metropolis/src/Strategy.sol:Strategy"
+    },
+    {
+      name: "ShadowStrategy Implementation",
+      address: addresses.shadowStrategyImpl,
+      constructorArguments: [addresses.vaultFactory, 887272], // maxRange = 887272 for Shadow
+      contract: "contracts-shadow/src/ShadowStrategy.sol:ShadowStrategy"
     },
   ];
 
@@ -254,6 +263,12 @@ async function main() {
   console.log(`\n📌 Contract Addresses:`);
   console.log(`VaultFactory Proxy: ${addresses.vaultFactory}`);
   console.log(`View on Explorer: ${getExplorerUrl(network.name)}/address/${addresses.vaultFactory}#code`);
+  
+  console.log(`\n📌 Shadow Configuration:`);
+  console.log(`Shadow NPM: ${addresses.shadowNPM}`);
+  console.log(`Shadow Voter: ${addresses.shadowVoter}`);
+  console.log(`ShadowStrategy Implementation: ${addresses.shadowStrategyImpl}`);
+  console.log(`View ShadowStrategy: ${getExplorerUrl(network.name)}/address/${addresses.shadowStrategyImpl}#code`);
 }
 
 main()

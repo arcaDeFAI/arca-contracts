@@ -86,6 +86,10 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     /// @dev cooldown time between deposit and withdrawal
     uint16 private _depositToWithdrawCooldown;
 
+    /// @dev Shadow protocol addresses
+    address private _shadowNonfungiblePositionManager;
+    address private _shadowVoter;
+
     
     /**
      * @dev Modifier to check if the type id is valid.
@@ -257,6 +261,22 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
+     * @notice Returns the address of the Shadow Nonfungible Position Manager.
+     * @return The address of the Shadow NPM.
+     */
+    function getNonfungiblePositionManager() external view override returns (address) {
+        return _shadowNonfungiblePositionManager;
+    }
+
+    /**
+     * @notice Returns the address of the Shadow Voter.
+     * @return The address of the Shadow Voter.
+     */
+    function getShadowVoter() external view override returns (address) {
+        return _shadowVoter;
+    }
+
+    /**
      * Check if address is ingored for rewards (e.g strategy, or other addresses)
      * @param _address address
      */
@@ -406,6 +426,34 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
+     * @notice Creates a new oracle vault and a Shadow strategy for the given LBPair.
+     * @dev The oracle vault will be linked to the Shadow strategy.
+     * @param lbPair The address of the LBPair.
+     * @param dataFeedX The address of the data feed for token X.
+     * @param dataFeedY The address of the data feed for token Y.
+     * @return vault The address of the new vault.
+     * @return strategy The address of the new strategy.
+     * @param heartbeatX The heartbeat of the data feed for token X.
+     * @param heartbeatY The heartbeat of the data feed for token Y.
+     */
+    function createOracleVaultAndShadowStrategy(ILBPair lbPair, IAggregatorV3 dataFeedX, IAggregatorV3 dataFeedY, uint24 heartbeatX, uint24 heartbeatY)
+        external
+        override
+        onlyOwner
+        returns (address vault, address strategy)
+    {
+        if (dataFeedX.decimals() != dataFeedY.decimals()) revert VaultFactory__InvalidDecimals();
+
+        address tokenX = address(lbPair.getTokenX());
+        address tokenY = address(lbPair.getTokenY());
+
+        vault = _createOracleVault(lbPair, tokenX, tokenY, dataFeedX, dataFeedY, heartbeatX, heartbeatY);
+        strategy = _createShadowStrategy(vault, lbPair, tokenX, tokenY);
+
+        _linkVaultToStrategy(IBaseVault(vault), strategy);
+    }
+
+    /**
      * @notice Creates a new oracle vault and a default strategy for the given LBPair.
      * @dev LBPair must be whitelisted.
      * @param lbPair The address of the LBPair.
@@ -520,6 +568,19 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
+     * @notice Creates a new Shadow strategy for the given vault.
+     * @param vault The address of the vault.
+     * @return strategy The address of the new strategy.
+     */
+    function createShadowStrategy(IBaseVault vault) external override onlyOwner returns (address strategy) {
+        ILBPair lbPair = vault.getPair();
+        address tokenX = address(lbPair.getTokenX());
+        address tokenY = address(lbPair.getTokenY());
+
+        return _createShadowStrategy(address(vault), lbPair, tokenX, tokenY);
+    }
+
+    /**
      * @notice Links the given vault to the given strategy.
      * @param vault The address of the vault.
      * @param strategy The address of the strategy.
@@ -609,6 +670,22 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _depositToWithdrawCooldown = cooldown;
 
         emit DepositToWithdrawCooldownSet(cooldown);
+    }
+
+    /**
+     * @notice Sets the Shadow Nonfungible Position Manager address.
+     * @param nonfungiblePositionManager The address of the Shadow NPM.
+     */
+    function setShadowNonfungiblePositionManager(address nonfungiblePositionManager) external override onlyOwner {
+        _shadowNonfungiblePositionManager = nonfungiblePositionManager;
+    }
+
+    /**
+     * @notice Sets the Shadow Voter address.
+     * @param voter The address of the Shadow Voter.
+     */
+    function setShadowVoter(address voter) external override onlyOwner {
+        _shadowVoter = voter;
     }
 
     /**
@@ -740,6 +817,22 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
+     * @dev Internal function to create a new Shadow strategy for the given vault.
+     * @param vault The address of the vault.
+     * @param lbPair The address of the LBPair.
+     * @param tokenX The address of token X.
+     * @param tokenY The address of token Y.
+     */
+    function _createShadowStrategy(address vault, ILBPair lbPair, address tokenX, address tokenY)
+        internal
+        returns (address strategy)
+    {
+        bytes memory strategyImmutableData = abi.encodePacked(vault, lbPair, tokenX, tokenY);
+
+        return _createStrategy(StrategyType.Shadow, address(vault), lbPair, strategyImmutableData);
+    }
+
+    /**
      * @dev Internal function to create a new strategy of the given type.
      * @param sType The type of the strategy.
      * @param vault The address of the vault.
@@ -802,5 +895,5 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @dev This is a gap filler to allow us to add new variables in the future without breaking
      *      the storage layout of the contract.
      */
-    uint256[36] private __gap;
+    uint256[34] private __gap;
 }

@@ -1,7 +1,7 @@
 import { ethers, network } from "hardhat";
 import { deployArcaSystem } from "./deployArcaSystem";
 import { loadNetworkConfig, networkConfigToDeploymentConfig, validateDeploymentConfig } from "./utils/network-config";
-import { deployMockContracts } from "./utils/deploy-mocks";
+import { deployMockContracts } from "./archive/utils/deploy-mocks";
 import * as fs from "fs";
 import * as path from "path";
 

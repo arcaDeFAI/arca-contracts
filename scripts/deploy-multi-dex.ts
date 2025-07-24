@@ -1,7 +1,7 @@
 import { ethers, network } from "hardhat";
 
 async function main() {
-  console.log(`Deploying Metropolis contracts to ${network.name}...`);
+  console.log(`Deploying Metropolis & Shadow contracts to ${network.name}...`);
 
   // Get the deployer account
   const [deployer] = await ethers.getSigners();
@@ -10,6 +10,22 @@ async function main() {
   // Configure parameters based on network
   let wnative: string;
   const creationFee = 0n; // Default 0 for testnet
+  
+  // Shadow protocol addresses configuration
+  const shadowConfig: { [key: string]: { npm: string; voter: string } } = {
+    "sonic-mainnet": {
+      npm: "0x0000000000000000000000000000000000000000", // TODO: Add actual Shadow NPM address
+      voter: "0x0000000000000000000000000000000000000000" // TODO: Add actual Shadow Voter address
+    },
+    "sonic-testnet": {
+      npm: "0x0000000000000000000000000000000000000000", // TODO: Add testnet Shadow NPM address
+      voter: "0x0000000000000000000000000000000000000000" // TODO: Add testnet Shadow Voter address
+    },
+    "localhost": {
+      npm: "0x0000000000000000000000000000000000000000", // Will be set from mock deployment
+      voter: "0x0000000000000000000000000000000000000000" // Will be set from mock deployment
+    }
+  };
   
   if (network.name === "localhost" || network.name === "hardhat") {
     // For localhost, deploy a mock wS
@@ -88,11 +104,20 @@ async function main() {
   await strategyImpl.waitForDeployment();
   console.log("Strategy implementation deployed at:", await strategyImpl.getAddress());
 
+  // Deploy Shadow Strategy implementation
+  console.log("Deploying ShadowStrategy implementation...");
+  const maxRangeShadow = 887272; // Max tick range for Shadow (from SHADOW_INTEGRATION_PLAN.md)
+  const ShadowStrategy = await ethers.getContractFactory("ShadowStrategy");
+  const shadowStrategyImpl = await ShadowStrategy.deploy(proxyAddress, maxRangeShadow);
+  await shadowStrategyImpl.waitForDeployment();
+  console.log("ShadowStrategy implementation deployed at:", await shadowStrategyImpl.getAddress());
+
   // Set vault and strategy implementations
   console.log("Setting vault and strategy implementations...");
   
   const VAULT_TYPE_ORACLE = 2;
   const STRATEGY_TYPE_DEFAULT = 1;
+  const STRATEGY_TYPE_SHADOW = 2;
 
   const tx1 = await vaultFactory.setVaultImplementation(VAULT_TYPE_ORACLE, await oracleRewardVaultImpl.getAddress());
   await tx1.wait();
@@ -102,24 +127,63 @@ async function main() {
   await tx2.wait();
   console.log("Strategy implementation set");
 
+  const tx3 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, await shadowStrategyImpl.getAddress());
+  await tx3.wait();
+  console.log("Shadow strategy implementation set");
+
+  // Configure Shadow protocol addresses
+  if (shadowConfig[network.name]) {
+    console.log("Configuring Shadow protocol addresses...");
+    
+    const { npm, voter } = shadowConfig[network.name];
+    
+    if (npm !== "0x0000000000000000000000000000000000000000") {
+      const tx4 = await vaultFactory.setShadowNonfungiblePositionManager(npm);
+      await tx4.wait();
+      console.log("Shadow NPM address set:", npm);
+    } else {
+      console.log("⚠️  Warning: Shadow NPM address not configured for", network.name);
+    }
+
+    if (voter !== "0x0000000000000000000000000000000000000000") {
+      const tx5 = await vaultFactory.setShadowVoter(voter);
+      await tx5.wait();
+      console.log("Shadow Voter address set:", voter);
+    } else {
+      console.log("⚠️  Warning: Shadow Voter address not configured for", network.name);
+    }
+  }
+
   // Verify the configuration
   console.log("\nVerifying configuration...");
   const owner = await vaultFactory.owner();
   const oracleVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_ORACLE);
   const strategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_DEFAULT);
+  const shadowStrategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_SHADOW);
+  const npmFromFactory = await vaultFactory.getNonfungiblePositionManager();
+  const voterFromFactory = await vaultFactory.getShadowVoter();
 
   console.log("Configuration verified:");
   console.log("Owner:", owner);
   console.log("Oracle vault implementation matches:", oracleVaultImplFromFactory === await oracleRewardVaultImpl.getAddress());
   console.log("Strategy implementation matches:", strategyImplFromFactory === await strategyImpl.getAddress());
+  console.log("Shadow strategy implementation matches:", shadowStrategyImplFromFactory === await shadowStrategyImpl.getAddress());
+  console.log("Shadow NPM configured:", npmFromFactory);
+  console.log("Shadow Voter configured:", voterFromFactory);
 
   console.log("\n✅ Deployment complete!");
+  console.log("\n=== Metropolis Contracts ===");
   console.log("VaultFactory (Proxy):", proxyAddress);
   console.log("VaultFactory (Implementation):", await vaultFactoryImpl.getAddress());
   console.log("ProxyAdmin:", await proxyAdmin.getAddress());
   console.log("OracleVault Implementation:", await oracleVaultImpl.getAddress());
   console.log("OracleRewardVault Implementation:", await oracleRewardVaultImpl.getAddress());
   console.log("Strategy Implementation:", await strategyImpl.getAddress());
+  
+  console.log("\n=== Shadow Contracts ===");
+  console.log("ShadowStrategy Implementation:", await shadowStrategyImpl.getAddress());
+  console.log("Shadow NPM:", npmFromFactory);
+  console.log("Shadow Voter:", voterFromFactory);
   
   console.log("\n📝 Note: Only the ProxyAdmin owner can upgrade the VaultFactory implementation");
   console.log("ProxyAdmin is owned by:", deployer.address);
@@ -136,7 +200,15 @@ async function main() {
       oracleVaultImpl: await oracleVaultImpl.getAddress(),
       oracleRewardVaultImpl: await oracleRewardVaultImpl.getAddress(),
       strategyImpl: await strategyImpl.getAddress(),
+      shadowStrategyImpl: await shadowStrategyImpl.getAddress(),
+      shadowNPM: npmFromFactory,
+      shadowVoter: voterFromFactory,
       wnative: wnative,
+    },
+    configuration: {
+      metropolisMaxRange: maxRange,
+      shadowMaxRange: maxRangeShadow,
+      shadowConfig: shadowConfig[network.name] || null
     }
   };
 
