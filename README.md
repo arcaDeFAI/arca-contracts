@@ -53,3 +53,15 @@ ArcaTestnetV1 (Main Vault)
 - **Share-based ownership**: Users receive vault shares proportional to deposits
 - **Compound growth**: METRO rewards are reinvested, increasing share value
 - **Professional management**: Bot optimization potentially outperforms manual LP management
+
+## License
+
+arca is licensed under the **GNU General Public License v3.0 or later (GPLv3)**.
+
+This project includes components from:
+- Code originally licensed under the [MIT License](https://opensource.org/licenses/MIT). See individual files for SPDX license headers and the NOTICE file for details.
+- Code originally licensed under the [GNU General Public License v3.0](https://www.gnu.org/licenses/gpl-3.0.html). See individual files for SPDX license headers.
+
+All modifications and new contributions made as part of arca are licensed under GPLv3.
+
+See the [LICENSE](./LICENSE) and [NOTICE](./NOTICE) files for more information.

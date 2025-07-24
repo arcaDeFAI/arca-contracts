@@ -1,0 +1,17 @@
+arca Finance
+Copyright © [arca] [2025]
+Licensed under the GNU General Public License v3.0 or later.
+
+This project includes and modifies third-party open source software, including:
+
+1. Code licensed under the MIT License, originally from:
+   - Metropolis DEX (https://app.metropolis.exchange/info)
+   - OpenZeppelin Contracts (https://github.com/OpenZeppelin)
+   These components retain their original license headers. See individual files for details.
+
+2. Code licensed under the GNU General Public License v3.0 or later, originally from:
+   - SHADOW DEX (https://www.shadow.so/)
+
+All original contributions to this project are licensed under the GPLv3. This project as a whole is therefore governed by the terms of the GNU General Public License v3.0 or later.
+
+For complete license terms, see the LICENSE file.
