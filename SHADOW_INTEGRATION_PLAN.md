@@ -10,11 +10,7 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
 
 ### 1. Solidity Version Compatibility (RESOLVED ✅)
 - **Issue**: Metropolis contracts use Solidity 0.8.10, Shadow uses ^0.8.26
-- **Solution Implemented**: Upgraded all contracts to 0.8.26
-  - No breaking changes between 0.8.10 and 0.8.26
-  - Maintains audit validity (no logic changes, only pragma update)
-  - All tests pass with upgraded version
-- **Status**: ✅ Complete - All contracts now use 0.8.26
+- **Solution Implemented**: Upgraded all contracts to 0.8.26. Complete.
 
 ### 2. Parameter Type Mismatch (RESOLVED ✅)
 - **Issue**: Metropolis uses uint24 for bins, Shadow uses int24 for ticks (can be negative)
@@ -28,14 +24,13 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
   - Python bot can send negative ticks for Shadow vaults
   - Future-proof for any tick/bin range
 
-### 3. License Compatibility (PARTIALLY RESOLVED)
+### 3. License Compatibility (RESOLVED ✅)
 - **Issue**: Shadow uses GPL-3.0 and BUSL-1.1, project was MIT
 - **Solution**: 
   - Changed project to GPL-3.0
   - Created clean-room minimal interfaces to avoid BUSL-1.1 dependencies
   - Must delete all BUSL-1.1 files from repo
-- **Status**: ✅ Minimal interfaces created (IMinimalVoter, IMinimalGauge)
-- **TODO**: Update all MIT SPDX headers to GPL-3.0 across the codebase
+- **Status**: ✅ Minimal interfaces created (IMinimalVoter, IMinimalGauge). Complete.
 
 ## Current Implementation Status
 
@@ -50,6 +45,7 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
    - ✅ _getBalances() - position value calculation with math libraries
    - ✅ Tick validation helpers
    - ✅ Basic reward claiming structure
+   - ⚠️ ISSUE: Inherits from Strategy which expects LBPair immutable data
 
 2. **Minimal Interfaces** (contracts-shadow/src/interfaces/)
    - ✅ IMinimalVoter.sol - GPL-3.0 replacement for BUSL-1.1 IVoter
@@ -87,20 +83,20 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
    - BaseShadowVault uses IRamsesV3Pool instead of ILBPair
    - Factory will deploy appropriate vault type based on DEX
 
-2. **Missing Pool Factory Address** (PENDING)
-   - **Solution**: Add shadowPoolFactory to VaultFactory storage
-   - Add setShadowPoolFactory() configuration method
-   - Update ShadowStrategy to use factory-provided pool factory address
+2. **Missing Pool Factory Address** (RESOLVED ✅)
+   - **Solution**: No additional storage needed
+   - Pool factory address is obtained from `npm.deployer()` 
+   - ShadowStrategy correctly implements this in `_getPoolAddress()`
 
 3. **Vault Contract Compatibility** (RESOLVED ✅)
    - **Solution**: Separate vault implementations for Shadow
    - No modifications to audited Metropolis vaults
    - Clean separation of concerns
 
-4. **Factory Function Parameters** (PENDING)
-   - **Issue**: createOracleVaultAndShadowStrategy() expects ILBPair parameter
-   - **Solution**: Update to accept pool address directly
-   - Add validation to ensure correct pool type
+4. **Strategy Inheritance Issue** (NEW)
+   - **Issue**: ShadowStrategy inherits from Strategy which expects LBPair data
+   - **Solution**: Create new interface hierarchy
+   - ShadowStrategy should not inherit from Strategy
 
 ## Architecture Overview - Updated
 
@@ -235,15 +231,23 @@ rebalance(int24 tickLower, int24 tickUpper, uint24 slippageActiveId)
 - [x] Created IShadowVault interface extending IBaseVault
 - [x] Implemented proper _harvestRewards() in ShadowStrategy using gauge rewards
 
-#### Step 3.2: Factory Integration (IN PROGRESS)
+#### Step 3.2: Factory Integration ✅
 - [x] Add ShadowOracle and ShadowOracleReward to VaultType enum
-- [ ] Add Shadow vault implementations to factory
-- [ ] Create deployment functions for Shadow vaults
-- [ ] Add Shadow pool factory address storage and configuration
+- [x] Add Shadow NPM and Voter address storage and setters
+- [x] Pool factory configuration (not needed - obtained from NPM)
+- [x] Remove half-baked Shadow methods from factory
 
-#### Step 3.3: Remaining Tasks
-- [ ] Update createOracleVaultAndShadowStrategy to use Shadow vault types
-- [ ] Add setShadowPoolFactory() method
+#### Step 3.3: Strategy Refactoring (NEW)
+- [ ] Create IStrategyCommon interface with shared methods
+- [ ] Rename IStrategy to IStrategyMetropolis
+- [ ] Create IShadowStrategy interface
+- [ ] Update ShadowStrategy to implement IShadowStrategy directly (no inheritance)
+- [ ] Update VaultFactory to use IStrategyCommon where appropriate
+- [ ] Update vault interfaces to return IStrategyCommon
+
+#### Step 3.4: Factory Methods
+- [ ] Create proper Shadow vault creation methods
+- [ ] Add Shadow strategy creation that doesn't expect LBPair
 - [ ] Update deployment scripts for Shadow vaults
 - [ ] Create comprehensive test suite for Shadow components
 
@@ -305,21 +309,27 @@ rebalance(int24 tickLower, int24 tickUpper, uint24 slippageActiveId)
 
 ## Next Steps
 
-### Priority 1: Complete Factory Integration
-1. **Update VaultFactory**
-   - Add ShadowOracle and ShadowOracleReward to VaultType enum
-   - Add shadowPoolFactory storage and configuration methods
-   - Update createOracleVaultAndShadowStrategy() to deploy Shadow vaults
-   - Add Shadow vault implementation setters
+### Priority 1: Strategy Refactoring
+1. **Create Interface Hierarchy**
+   - Extract IStrategyCommon from current IStrategy
+   - Create IStrategyMetropolis and IShadowStrategy
+   - Update existing contracts to use new interfaces
 
-2. **Update ShadowStrategy**
-   - Modify _getPoolAddress() to use factory-provided pool factory
-   - Add validation for pool factory configuration
+2. **Fix ShadowStrategy**
+   - Remove inheritance from Strategy base class
+   - Implement IShadowStrategy directly
+   - Define proper immutable data layout for Shadow
 
-3. **Deployment Scripts**
+### Priority 2: Factory Integration
+1. **Create Shadow Methods**
+   - Add createShadowOracleVault() that accepts pool address
+   - Add createShadowStrategy() with correct data layout
+   - Ensure no LBPair dependencies
+
+2. **Deployment Scripts**
    - Deploy Shadow vault implementations
    - Configure factory with Shadow addresses
-   - Add Shadow pool factory configuration
+   - Complete create-shadow-vault.ts script
 
 ### Priority 2: Testing
 - Implement comprehensive test suite once architecture issues resolved
