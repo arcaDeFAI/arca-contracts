@@ -80,30 +80,33 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
    - [x] Created create-shadow-vault.ts template script
    - [x] Updated verify-metropolis.ts to verify Shadow contracts
 
-### Critical Issues Discovered
+### Critical Issues - Resolution Status
 
-1. **LBPair Interface Mismatch**
-   - VaultFactory expects ILBPair for all vaults, but Shadow uses different pool interface
-   - createOracleVaultAndShadowStrategy() takes ILBPair parameter that doesn't exist for Shadow
-   - OracleVault contract may make LBPair-specific calls that fail on Shadow pools
+1. **LBPair Interface Mismatch** (RESOLVED ✅)
+   - **Solution**: Created separate Shadow vault contracts instead of forcing abstraction
+   - BaseShadowVault uses IRamsesV3Pool instead of ILBPair
+   - Factory will deploy appropriate vault type based on DEX
 
-2. **Missing Pool Factory Address**
-   - Need to store Shadow pool factory address in VaultFactory
-   - Required for pool address calculation in _getPoolAddress()
+2. **Missing Pool Factory Address** (PENDING)
+   - **Solution**: Add shadowPoolFactory to VaultFactory storage
+   - Add setShadowPoolFactory() configuration method
+   - Update ShadowStrategy to use factory-provided pool factory address
 
-3. **Vault Contract Compatibility**
-   - OracleVault assumes Metropolis-specific interfaces
-   - May need separate vault type or abstraction layer
+3. **Vault Contract Compatibility** (RESOLVED ✅)
+   - **Solution**: Separate vault implementations for Shadow
+   - No modifications to audited Metropolis vaults
+   - Clean separation of concerns
 
-4. **Pool vs Pair Abstraction**
-   - Need unified interface that both LBPair and Shadow pools can implement
-   - Current architecture too tightly coupled to Metropolis concepts
+4. **Factory Function Parameters** (PENDING)
+   - **Issue**: createOracleVaultAndShadowStrategy() expects ILBPair parameter
+   - **Solution**: Update to accept pool address directly
+   - Add validation to ensure correct pool type
 
-## Architecture Overview
+## Architecture Overview - Updated
 
 ### Core Design Principles
 
-1. **Minimal Changes to Audited Code**: Reuse existing vault contracts without modification
+1. **Separate Vault Implementations**: Shadow has its own vault contracts to avoid modifying audited code
 2. **NFT Position Management**: Each strategy owns one active NFT position at a time
 3. **Unified Interface**: Shadow strategies implement the same IStrategy interface as Metropolis
 4. **Direct Integration**: Use Shadow's deployed NonfungiblePositionManager directly
@@ -111,10 +114,10 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
 ### Key Components
 
 ```
-┌──────────────────┐     ┌──────────────────┐
-│ OracleRewardVault│     │ OracleRewardVault│
-│   (Unchanged)    │     │   (Unchanged)    │
-└────────┬─────────┘     └────────┬─────────┘
+┌──────────────────┐     ┌──────────────────────┐
+│ OracleRewardVault│     │OracleRewardShadowVault│
+│   (Metropolis)   │     │      (Shadow)         │
+└────────┬─────────┘     └────────┬───────────┘
          │                        │
          │ Uses                   │ Uses
          ▼                        ▼
@@ -134,8 +137,16 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
                                    ▼
                         ┌─────────────────┐
                         │ Shadow V3 Pool  │
+                        │   + Gauge       │
                         └─────────────────┘
 ```
+
+### Vault Architecture Decision
+
+**Approach**: Separate Shadow vault implementations
+- **Rationale**: Avoids modifying audited Metropolis contracts
+- **Benefits**: Clean separation, protocol-specific optimizations
+- **Trade-off**: Some code duplication, mitigated by shared libraries
 
 ## Design Considerations
 
@@ -163,11 +174,13 @@ This document outlines the plan to add Shadow (Ramses V3) concentrated liquidity
 - Claimed via `NonfungiblePositionManager.getReward(tokenId, tokens[])`
 - Rewards accrue to specific NFT positions
 - Must claim before burning NFT
+- Gauge address obtained from Voter contract using pool address
 
-**Integration Plan**:
-- Claim rewards during each rebalance
-- Forward rewards to vault for distribution
-- Support multiple reward tokens like Metropolis
+**Implementation Details**:
+- ShadowStrategy owns NFT and claims rewards from gauge
+- Rewards forwarded to OracleRewardShadowVault
+- Vault distributes rewards to users using phantom shares accounting
+- Same distribution pattern as Metropolis, different reward source
 
 ### 4. Rebalancing Interface
 
@@ -213,22 +226,26 @@ rebalance(int24 tickLower, int24 tickUpper, uint24 slippageActiveId)
 - [x] Deployment scripts enhanced
 - [x] Verification scripts updated
 
-### Phase 3: Architecture Resolution 🚧
+### Phase 3: Architecture Resolution - Revised Approach 🚧
 
-#### Step 3.1: Resolve Interface Mismatch
-- [ ] Create IPairOrPool abstraction interface
-- [ ] Update VaultFactory to accept generic pool/pair address
-- [ ] Modify OracleVault to handle both LBPair and Shadow pools
+#### Step 3.1: Shadow Vault Implementation ✅
+- [x] Created BaseShadowVault.sol - Core vault functionality adapted for Shadow pools
+- [x] Created OracleShadowVault.sol - Oracle pricing for Shadow vaults  
+- [x] Created OracleRewardShadowVault.sol - Reward distribution for Shadow
+- [x] Created IShadowVault interface extending IBaseVault
+- [x] Implemented proper _harvestRewards() in ShadowStrategy using gauge rewards
 
-#### Step 3.2: Add Missing Configuration
-- [ ] Add Shadow pool factory address to VaultFactory
-- [ ] Update ShadowStrategy._getPoolAddress() to use factory config
-- [ ] Add pool factory setter/getter functions
+#### Step 3.2: Factory Integration (IN PROGRESS)
+- [x] Add ShadowOracle and ShadowOracleReward to VaultType enum
+- [ ] Add Shadow vault implementations to factory
+- [ ] Create deployment functions for Shadow vaults
+- [ ] Add Shadow pool factory address storage and configuration
 
-#### Step 3.3: Vault Compatibility
-- [ ] Analyze OracleVault for LBPair-specific calls
-- [ ] Create compatibility layer or separate vault type
-- [ ] Test vault interactions with Shadow pools
+#### Step 3.3: Remaining Tasks
+- [ ] Update createOracleVaultAndShadowStrategy to use Shadow vault types
+- [ ] Add setShadowPoolFactory() method
+- [ ] Update deployment scripts for Shadow vaults
+- [ ] Create comprehensive test suite for Shadow components
 
 ### Phase 4: Testing Infrastructure
 - [ ] Mock contracts for Shadow components
@@ -288,20 +305,21 @@ rebalance(int24 tickLower, int24 tickUpper, uint24 slippageActiveId)
 
 ## Next Steps
 
-### Priority 1: Architecture Resolution
-1. **Interface Abstraction**
-   - Design IPairOrPool interface
-   - Implement in both LBPair wrapper and Shadow pool wrapper
-   - Update VaultFactory function signatures
+### Priority 1: Complete Factory Integration
+1. **Update VaultFactory**
+   - Add ShadowOracle and ShadowOracleReward to VaultType enum
+   - Add shadowPoolFactory storage and configuration methods
+   - Update createOracleVaultAndShadowStrategy() to deploy Shadow vaults
+   - Add Shadow vault implementation setters
 
-2. **Pool Factory Configuration**
-   - Add poolFactory address to VaultFactory storage
-   - Implement getter/setter functions
-   - Update deployment scripts
+2. **Update ShadowStrategy**
+   - Modify _getPoolAddress() to use factory-provided pool factory
+   - Add validation for pool factory configuration
 
-3. **Vault Compatibility Analysis**
-   - Audit OracleVault for DEX-specific assumptions
-   - Design compatibility solution
+3. **Deployment Scripts**
+   - Deploy Shadow vault implementations
+   - Configure factory with Shadow addresses
+   - Add Shadow pool factory configuration
 
 ### Priority 2: Testing
 - Implement comprehensive test suite once architecture issues resolved
