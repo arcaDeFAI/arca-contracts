@@ -33,12 +33,14 @@ interface IVaultFactory {
     enum VaultType {
         None,
         Simple,
-        Oracle
+        Oracle,
+        ShadowOracle,
+        ShadowOracleReward
     }
 
     enum StrategyType {
         None,
-        Default,
+        Default, // Default for Metropolis Maker Vaults
         Shadow
     }
 

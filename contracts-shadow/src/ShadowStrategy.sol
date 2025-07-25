@@ -16,6 +16,8 @@ import {TickMath} from "../CL/core/libraries/TickMath.sol";
 import {FullMath} from "../CL/core/libraries/FullMath.sol";
 import {FixedPoint128} from "../CL/core/libraries/FixedPoint128.sol";
 import {PoolAddress} from "../CL/periphery/libraries/PoolAddress.sol";
+import {IERC20} from "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
+import {IOracleRewardVault} from "../../contracts-metropolis/src/interfaces/IOracleRewardVault.sol";
 
 /**
  * @title Shadow Strategy Contract
@@ -427,6 +429,57 @@ contract ShadowStrategy is Strategy {
         if (pool == address(0)) return false;
         
         return voter.gaugeForPool(pool) != address(0);
+    }
+
+    /**
+     * @dev Harvests the rewards from the Shadow position NFT via the gauge system.
+     * Overrides the parent's implementation to work with Shadow's gauge rewards.
+     */
+    function _harvestRewards() internal override {
+        if (_positionTokenId == 0) return;
+        
+        IMinimalVoter voter = getVoter();
+        if (address(voter) == address(0)) return;
+        
+        // Get gauge address for the pool
+        address pool = _getPoolAddress();
+        if (pool == address(0)) return;
+        
+        address gauge = voter.gaugeForPool(pool);
+        if (gauge == address(0)) return;
+        
+        // Get the reward token from the gauge
+        address rewardToken = IMinimalGauge(gauge).rewardToken();
+        if (rewardToken == address(0)) return;
+        
+        // Track balance before claiming
+        uint256 balanceBefore = IERC20(rewardToken).balanceOf(address(this));
+        
+        // Claim rewards for the NFT position
+        address[] memory tokens = new address[](1);
+        tokens[0] = rewardToken;
+        
+        try getNonfungiblePositionManager().getReward(_positionTokenId, tokens) {} catch {
+            // Silently fail if rewards can't be claimed
+            return;
+        }
+        
+        // Calculate reward amount
+        uint256 balanceAfter = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmount = balanceAfter - balanceBefore;
+        
+        if (rewardAmount > 0) {
+            // Notify the vault about the reward token
+            _notifyVault(IERC20(rewardToken));
+            
+            // Transfer rewards to the vault
+            IERC20(rewardToken).safeTransfer(_vault(), rewardAmount);
+            
+            // Update vault's reward accounting
+            if (this.getFactory().getVaultType(_vault()) != IVaultFactory.VaultType.Simple) {
+                IOracleRewardVault(_vault()).updateAccRewardsPerShare();
+            }
+        }
     }
 
     /**
