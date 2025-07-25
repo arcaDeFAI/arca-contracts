@@ -178,11 +178,4 @@ interface IVaultFactory {
     function setShadowNonfungiblePositionManager(address nonfungiblePositionManager) external;
 
     function setShadowVoter(address voter) external;
-
-    function createShadowStrategy(IBaseVault vault) external returns (address strategy);
-
-    function createOracleVaultAndShadowStrategy(ILBPair lbPair, IAggregatorV3 dataFeedX, IAggregatorV3 dataFeedY, uint24 heartbeatX, uint24 heartbeatY)
-        external
-        returns (address vault, address strategy);
-
 }

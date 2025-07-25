@@ -425,33 +425,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _linkVaultToStrategy(IBaseVault(vault), strategy);
     }
 
-    /**
-     * @notice Creates a new oracle vault and a Shadow strategy for the given LBPair.
-     * @dev The oracle vault will be linked to the Shadow strategy.
-     * @param lbPair The address of the LBPair.
-     * @param dataFeedX The address of the data feed for token X.
-     * @param dataFeedY The address of the data feed for token Y.
-     * @return vault The address of the new vault.
-     * @return strategy The address of the new strategy.
-     * @param heartbeatX The heartbeat of the data feed for token X.
-     * @param heartbeatY The heartbeat of the data feed for token Y.
-     */
-    function createOracleVaultAndShadowStrategy(ILBPair lbPair, IAggregatorV3 dataFeedX, IAggregatorV3 dataFeedY, uint24 heartbeatX, uint24 heartbeatY)
-        external
-        override
-        onlyOwner
-        returns (address vault, address strategy)
-    {
-        if (dataFeedX.decimals() != dataFeedY.decimals()) revert VaultFactory__InvalidDecimals();
-
-        address tokenX = address(lbPair.getTokenX());
-        address tokenY = address(lbPair.getTokenY());
-
-        vault = _createOracleVault(lbPair, tokenX, tokenY, dataFeedX, dataFeedY, heartbeatX, heartbeatY);
-        strategy = _createShadowStrategy(vault, lbPair, tokenX, tokenY);
-
-        _linkVaultToStrategy(IBaseVault(vault), strategy);
-    }
 
     /**
      * @notice Creates a new oracle vault and a default strategy for the given LBPair.
@@ -567,18 +540,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         return _createDefaultStrategy(address(vault), lbPair, tokenX, tokenY);
     }
 
-    /**
-     * @notice Creates a new Shadow strategy for the given vault.
-     * @param vault The address of the vault.
-     * @return strategy The address of the new strategy.
-     */
-    function createShadowStrategy(IBaseVault vault) external override onlyOwner returns (address strategy) {
-        ILBPair lbPair = vault.getPair();
-        address tokenX = address(lbPair.getTokenX());
-        address tokenY = address(lbPair.getTokenY());
-
-        return _createShadowStrategy(address(vault), lbPair, tokenX, tokenY);
-    }
 
     /**
      * @notice Links the given vault to the given strategy.
@@ -721,6 +682,8 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
         if (vType == VaultType.Simple) vName = "Simple";
         else if (vType == VaultType.Oracle) vName = "Oracle";
+        else if (vType == VaultType.ShadowOracle) vName = "Shadow Oracle";
+        else if (vType == VaultType.ShadowOracleReward) vName = "Shadow Oracle Reward";
         else revert VaultFactory__InvalidType();
 
         return string(abi.encodePacked("Maker Vault Token - ", vName, " Vault #", vaultId.toString()));
@@ -816,21 +779,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         return _createStrategy(StrategyType.Default, address(vault), lbPair, strategyImmutableData);
     }
 
-    /**
-     * @dev Internal function to create a new Shadow strategy for the given vault.
-     * @param vault The address of the vault.
-     * @param lbPair The address of the LBPair.
-     * @param tokenX The address of token X.
-     * @param tokenY The address of token Y.
-     */
-    function _createShadowStrategy(address vault, ILBPair lbPair, address tokenX, address tokenY)
-        internal
-        returns (address strategy)
-    {
-        bytes memory strategyImmutableData = abi.encodePacked(vault, lbPair, tokenX, tokenY);
-
-        return _createStrategy(StrategyType.Shadow, address(vault), lbPair, strategyImmutableData);
-    }
 
     /**
      * @dev Internal function to create a new strategy of the given type.
