@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
 
 import {OracleVault} from "./OracleVault.sol";
-import {IStrategy} from "./interfaces/IStrategy.sol";
+import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";

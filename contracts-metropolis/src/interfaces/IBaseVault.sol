@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 
-import {IStrategy} from "./IStrategy.sol";
+import {IStrategyCommon} from "./IStrategyCommon.sol";
 import {IVaultFactory} from "./IVaultFactory.sol";
 
 /**
@@ -66,7 +66,7 @@ interface IBaseVault is IERC20Upgradeable {
 
     event WithdrawalExecuted(uint256 indexed round, uint256 totalQueuedQhares, uint256 amountX, uint256 amountY);
 
-    event StrategySet(IStrategy strategy);
+    event StrategySet(IStrategyCommon strategy);
 
     event Recovered(address token, address recipient, uint256 amount);
 
@@ -92,7 +92,7 @@ interface IBaseVault is IERC20Upgradeable {
 
     function getTokenY() external view returns (IERC20Upgradeable);
 
-    function getStrategy() external view returns (IStrategy);
+    function getStrategy() external view returns (IStrategyCommon);
 
     function getAumAnnualFee() external view returns (uint256);
 
@@ -151,7 +151,7 @@ interface IBaseVault is IERC20Upgradeable {
 
     function initialize(string memory name, string memory symbol) external;
 
-    function setStrategy(IStrategy newStrategy) external;
+    function setStrategy(IStrategyCommon newStrategy) external;
 
     function pauseDeposits() external;
 

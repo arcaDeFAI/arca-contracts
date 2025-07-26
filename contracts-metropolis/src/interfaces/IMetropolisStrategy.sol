@@ -10,7 +10,7 @@ import {IStrategyCommon} from "./IStrategyCommon.sol";
  * @author Arca
  * @notice Interface for Metropolis-specific strategy functionality
  */
-interface IStrategyMetropolis is IStrategyCommon {
+interface IMetropolisStrategy is IStrategyCommon {
     // Metropolis-specific errors
     error Strategy__InvalidRange();
     error Strategy__ActiveIdSlippage();

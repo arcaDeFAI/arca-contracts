@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
 
 import {BaseVault} from "./BaseVault.sol";
-import {IStrategy} from "./interfaces/IStrategy.sol";
+import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
@@ -78,7 +78,7 @@ contract OracleVault is BaseVault, IOracleVault {
      * @return effectiveY The effective amount of token Y that will be deposited.
      */
     function _previewShares(
-        IStrategy strategy,
+        IStrategyCommon strategy,
         uint256 amountX,
         uint256 amountY
     )
