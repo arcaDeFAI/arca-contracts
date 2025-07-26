@@ -9,7 +9,7 @@ import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 import {Ownable2StepUpgradeable} from "openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {StringsUpgradeable} from "openzeppelin-upgradeable/utils/StringsUpgradeable.sol";
 
-import {IStrategy} from "./interfaces/IStrategy.sol";
+import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
@@ -325,7 +325,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @param strategy The address of the strategy.
      * @param operator The address of the operator.
      */
-    function setOperator(IStrategy strategy, address operator) external override onlyOwner {
+    function setOperator(IStrategyCommon strategy, address operator) external override onlyOwner {
         address oldOperator = strategy.getOperator();
 
         address vault = strategy.getVault();
@@ -458,7 +458,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _linkVaultToStrategy(IBaseVault(vault), strategy);
 
         // set operator
-        IStrategy(strategy).setOperator(msg.sender);
+        IStrategyCommon(strategy).setOperator(msg.sender);
 
         // set twap interval to 120 seconds and deviation threshold to 5%
         IOracleVault(vault).getOracleHelper().setTwapParams(true, 120, 5);
@@ -596,7 +596,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @param coolDown The rebalance cool down in seconds.
      */
     function setRebalanceCoolDown(address strategy, uint256 coolDown) external override onlyOwner {
-        IStrategy(strategy).setRebalanceCoolDown(coolDown);
+        IStrategyCommon(strategy).setRebalanceCoolDown(coolDown);
     }
 
     /**
@@ -803,7 +803,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _strategies[sType].push(strategy);
         _strategyType[strategy] = sType;
 
-        IStrategy(strategy).initialize();
+        IStrategyCommon(strategy).initialize();
 
         emit StrategyCreated(sType, strategy, vault, lbPair, strategyId);
     }
@@ -836,7 +836,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @param strategy The address of the strategy.
      */
     function _linkVaultToStrategy(IBaseVault vault, address strategy) internal {
-        vault.setStrategy(IStrategy(strategy));
+        vault.setStrategy(IStrategyCommon(strategy));
     }
 
     /**

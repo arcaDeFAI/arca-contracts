@@ -14,7 +14,7 @@ import {Clone} from "joe-v2/libraries/Clone.sol";
 import {ReentrancyGuardUpgradeable} from "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {SafeERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
-import {IStrategy} from "./interfaces/IStrategy.sol";
+import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {Math} from "./libraries/Math.sol";
@@ -38,7 +38,7 @@ import {console} from "forge-std/console.sol";
  * - 0x3C: 20 bytes: The address of the token Y.
  * - 0x50: 2 bytes: The bin step of the lb pair.
  */
-contract Strategy is Clone, ReentrancyGuardUpgradeable, IStrategy {
+contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using LiquidityAmounts for address;
     using Math for uint256;

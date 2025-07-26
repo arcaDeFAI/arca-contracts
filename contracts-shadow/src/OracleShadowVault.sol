@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {Uint256x256Math} from "../../contracts-metropolis/lib/joe-v2/src/libraries/math/Uint256x256Math.sol";
 
 import {BaseShadowVault} from "./BaseShadowVault.sol";
-import {IStrategy} from "../../contracts-metropolis/src/interfaces/IStrategy.sol";
+import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
 import {IOracleVault} from "../../contracts-metropolis/src/interfaces/IOracleVault.sol";
 import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "../../contracts-metropolis/src/interfaces/IAggregatorV3.sol";
@@ -78,7 +78,7 @@ contract OracleShadowVault is BaseShadowVault, IOracleVault {
      * @return effectiveY The effective amount of token Y that will be deposited.
      */
     function _previewShares(
-        IStrategy strategy,
+        IStrategyCommon strategy,
         uint256 amountX,
         uint256 amountY
     )

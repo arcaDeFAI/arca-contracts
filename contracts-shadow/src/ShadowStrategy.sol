@@ -2,7 +2,6 @@
 
 pragma solidity 0.8.26;
 
-import {Strategy} from "../../contracts-metropolis/src/Strategy.sol";
 import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
 import {IBaseVault} from "../../contracts-metropolis/src/interfaces/IBaseVault.sol";
 import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";

@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {Uint256x256Math} from "../../contracts-metropolis/lib/joe-v2/src/libraries/math/Uint256x256Math.sol";
 
 import {OracleShadowVault} from "./OracleShadowVault.sol";
-import {IStrategy} from "../../contracts-metropolis/src/interfaces/IStrategy.sol";
+import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
 import {IOracleRewardVault} from "../../contracts-metropolis/src/interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "../../contracts-metropolis/src/interfaces/IAggregatorV3.sol";
