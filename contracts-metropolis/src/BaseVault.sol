@@ -12,7 +12,7 @@ import {SafeERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/utils/S
 import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
 
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
-import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
+import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IWNative} from "./interfaces/IWNative.sol";
 
@@ -39,7 +39,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
     IVaultFactory internal immutable _factory;
     address private immutable _wnative;
 
-    IStrategyCommon private _strategy;
+    IMetropolisStrategy private _strategy;
     bool private _depositsPaused;
 
     QueuedWithdrawal[] private _queuedWithdrawalsByRound;
@@ -206,7 +206,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @dev Returns the address of the current strategy.
      * @return The address of the strategy
      */
-    function getStrategy() public view virtual override returns (IStrategyCommon) {
+    function getStrategy() public view virtual override returns (IMetropolisStrategy) {
         return _strategy;
     }
 
@@ -215,7 +215,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @return
      */
     function getAumAnnualFee() public view virtual override returns (uint256) {
-        IStrategyCommon strategy = _strategy;
+        IMetropolisStrategy strategy = _strategy;
 
         return address(strategy) == address(0) ? 0 : strategy.getAumAnnualFee();
     }
@@ -226,7 +226,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @return upper The upper bound of the range.
      */
     function getRange() public view virtual override returns (int32 low, int32 upper) {
-        IStrategyCommon strategy = _strategy;
+        IMetropolisStrategy strategy = _strategy;
 
         return address(strategy) == address(0) ? (int32(0), int32(0)) : strategy.getRange();
     }
@@ -237,7 +237,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @return operator The operator.
      */
     function getOperators() public view virtual override returns (address defaultOperator, address operator) {
-        IStrategyCommon strategy = _strategy;
+        IMetropolisStrategy strategy = _strategy;
 
         defaultOperator = _factory.getDefaultOperator();
         operator = address(strategy) == address(0) ? address(0) : strategy.getOperator();
@@ -407,7 +407,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
         _updatePool();
 
         // Calculate the shares and effective amounts, also returns the strategy to save gas.
-        IStrategyCommon strategy;
+        IMetropolisStrategy strategy;
         (strategy, shares, effectiveX, effectiveY) = _deposit(amountX, amountY);
 
         if (shares < minShares) revert BaseVault__InsufficientShares();
@@ -450,7 +450,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
         _updatePool();
 
         // Calculate the shares and effective amounts
-        IStrategyCommon strategy;
+        IMetropolisStrategy strategy;
         (strategy, shares, effectiveX, effectiveY) = _deposit(amountX, amountY);
 
         if (shares < minShares) revert BaseVault__InsufficientShares();
@@ -638,7 +638,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
 
         // Get the balances of the vault and the total shares.
         // The balances of the vault will not contain the executed withdrawals.
-        (uint256 balanceX, uint256 balanceY) = _getBalances(IStrategyCommon(address(0)));
+        (uint256 balanceX, uint256 balanceY) = _getBalances(IMetropolisStrategy(address(0)));
         uint256 totalShares = totalSupply();
 
         // Calculate the amounts to be withdrawn.
@@ -705,8 +705,8 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * Will send all tokens to the new strategy.
      * @param newStrategy The address of the new strategy.
      */
-    function setStrategy(IStrategyCommon newStrategy) public virtual override onlyFactory {
-        IStrategyCommon currentStrategy = _strategy;
+    function setStrategy(IMetropolisStrategy newStrategy) public virtual override onlyFactory {
+        IMetropolisStrategy currentStrategy = _strategy;
 
         // Verify that the strategy is not the same as the current strategy
         if (currentStrategy == newStrategy) revert BaseVault__SameStrategy();
@@ -719,11 +719,11 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
 
         // Check if there is a strategy currently set, if so, withdraw all tokens from it.
         if (address(currentStrategy) != address(0)) {
-            IStrategyCommon(currentStrategy).withdrawAll();
+            currentStrategy.withdrawAll();
         }
 
         // Get the balances of the vault, this will not contain the executed withdrawals.
-        (uint256 balanceX, uint256 balanceY) = _getBalances(IStrategyCommon(address(0)));
+        (uint256 balanceX, uint256 balanceY) = _getBalances(IMetropolisStrategy(address(0)));
 
         // Transfer all balances to the new strategy
         if (balanceX > 0) _tokenX().safeTransfer(address(newStrategy), balanceX);
@@ -771,7 +771,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
         _beforeEmergencyMode();
 
         // Sets the strategy to the zero address, this will prevent any deposits.
-        _setStrategy(IStrategyCommon(address(0)));
+        _setStrategy(IMetropolisStrategy(address(0)));
 
         emit EmergencyMode();
     }
@@ -884,7 +884,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @return effectiveX The amount of token X to be deposited.
      * @return effectiveY The amount of token Y to be deposited.
      */
-    function _previewShares(IStrategyCommon strategy, uint256 amountX, uint256 amountY)
+    function _previewShares(IMetropolisStrategy strategy, uint256 amountX, uint256 amountY)
         internal
         view
         virtual
@@ -898,7 +898,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @return amountX The amount of token X to be withdrawn.
      * @return amountY The amount of token Y to be withdrawn.
      */
-    function _previewAmounts(IStrategyCommon strategy, uint256 shares, uint256 totalShares)
+    function _previewAmounts(IMetropolisStrategy strategy, uint256 shares, uint256 totalShares)
         internal
         view
         virtual
@@ -924,7 +924,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @return amountX The amount of token X held in the strategy.
      * @return amountY The amount of token Y held in the strategy.
      */
-    function _getBalances(IStrategyCommon strategy) internal view virtual returns (uint256 amountX, uint256 amountY) {
+    function _getBalances(IMetropolisStrategy strategy) internal view virtual returns (uint256 amountX, uint256 amountY) {
         return address(strategy) == address(0)
             ? (_tokenX().balanceOf(address(this)) - _totalAmountX - _rewardX(), _tokenY().balanceOf(address(this)) - _totalAmountY - _rewardY())
             : strategy.getBalances();
@@ -934,7 +934,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @dev Sets the address of the strategy.
      * @param strategy The address of the strategy.
      */
-    function _setStrategy(IStrategyCommon strategy) internal virtual {
+    function _setStrategy(IMetropolisStrategy strategy) internal virtual {
         _strategy = strategy;
 
         emit StrategySet(strategy);
@@ -954,7 +954,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
         internal
         virtual
         depositsAllowed
-        returns (IStrategyCommon strategy, uint256 shares, uint256 effectiveX, uint256 effectiveY)
+        returns (IMetropolisStrategy strategy, uint256 shares, uint256 effectiveX, uint256 effectiveY)
     {
         // Check that at least one token is being deposited
         if (amountX == 0 && amountY == 0) revert BaseVault__ZeroAmount();

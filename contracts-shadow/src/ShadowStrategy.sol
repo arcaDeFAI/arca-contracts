@@ -239,7 +239,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         return (_positionTokenId, _currentTickLower, _currentTickUpper);
     }
 
-    function getNonfungiblePositionManager() external view override returns (INonfungiblePositionManager) {
+    function getShadowNonfungiblePositionManager() external view override returns (INonfungiblePositionManager) {
         return INonfungiblePositionManager(_factory.getShadowNonfungiblePositionManager());
     }
 

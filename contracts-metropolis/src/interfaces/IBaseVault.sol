@@ -5,15 +5,16 @@ pragma solidity 0.8.26;
 import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 
-import {IStrategyCommon} from "./IStrategyCommon.sol";
+import {IMetropolisStrategy} from "./IMetropolisStrategy.sol";
 import {IVaultFactory} from "./IVaultFactory.sol";
+import {IMinimalVault} from "./IMinimalVault.sol";
 
 /**
  * @title Base Vault Interface
  * @author Trader Joe
  * @notice Interface used to interact with Liquidity Book Vaults
  */
-interface IBaseVault is IERC20Upgradeable {
+interface IBaseVault is IMinimalVault, IERC20Upgradeable {
     error BaseVault__AlreadyWhitelisted(address user);
     error BaseVault__BurnMinShares();
     error BaseVault__DepositsPaused();
@@ -66,7 +67,7 @@ interface IBaseVault is IERC20Upgradeable {
 
     event WithdrawalExecuted(uint256 indexed round, uint256 totalQueuedQhares, uint256 amountX, uint256 amountY);
 
-    event StrategySet(IStrategyCommon strategy);
+    event StrategySet(IMetropolisStrategy strategy);
 
     event Recovered(address token, address recipient, uint256 amount);
 
@@ -92,7 +93,7 @@ interface IBaseVault is IERC20Upgradeable {
 
     function getTokenY() external view returns (IERC20Upgradeable);
 
-    function getStrategy() external view returns (IStrategyCommon);
+    function getStrategy() external view returns (IMetropolisStrategy);
 
     function getAumAnnualFee() external view returns (uint256);
 
@@ -151,15 +152,11 @@ interface IBaseVault is IERC20Upgradeable {
 
     function initialize(string memory name, string memory symbol) external;
 
-    function setStrategy(IStrategyCommon newStrategy) external;
+    function setStrategy(IMetropolisStrategy newStrategy) external;
 
     function pauseDeposits() external;
 
     function resumeDeposits() external;
-
-    function setEmergencyMode() external;
-
-    function recoverERC20(IERC20Upgradeable token, address recipient, uint256 amount) external;
 
     function isFlaggedForShutdown() external view returns (bool);
 

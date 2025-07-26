@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
 
 import {OracleVault} from "./OracleVault.sol";
-import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
+import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
@@ -42,6 +42,13 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
      */
     constructor(IVaultFactory factory) OracleVault(factory) {}
 
+    /**
+     * @dev Returns the type of the vault.
+     * @return vaultType The type of the vault
+     */
+    function getVaultType() public pure virtual override returns (IVaultFactory.VaultType) {
+        return IVaultFactory.VaultType.OracleReward;
+    }
 
     function getUserInfo(address user) external view override returns (UserInfo memory userInfo) {
         userInfo.phantomAmount = _users[user].phantomAmount;

@@ -18,7 +18,7 @@ interface IShadowStrategy is IStrategyCommon {
 
     // Shadow-specific getters
     function getPosition() external view returns (uint256 tokenId, int24 tickLower, int24 tickUpper);
-    function getNonfungiblePositionManager() external view returns (INonfungiblePositionManager);
+    function getShadowNonfungiblePositionManager() external view returns (INonfungiblePositionManager);
     function getVoter() external view returns (IMinimalVoter);
     
     // Shadow-specific rebalance - clean interface without unused parameters

@@ -10,7 +10,11 @@ import {Ownable2StepUpgradeable} from "openzeppelin-upgradeable/access/Ownable2S
 import {StringsUpgradeable} from "openzeppelin-upgradeable/utils/StringsUpgradeable.sol";
 
 import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
+import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
+import {IShadowStrategy} from "../../contracts-shadow/src/interfaces/IShadowStrategy.sol";
+import {IMinimalVault} from "./interfaces/IMinimalVault.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
+import {IOracleRewardShadowVault} from "../../contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
@@ -264,7 +268,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @notice Returns the address of the Shadow Nonfungible Position Manager.
      * @return The address of the Shadow NPM.
      */
-    function getNonfungiblePositionManager() external view override returns (address) {
+    function getShadowNonfungiblePositionManager() external view override returns (address) {
         return _shadowNonfungiblePositionManager;
     }
 
@@ -357,7 +361,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @param vault The address of the vault.
      * @param pendingAumAnnualFee The pending AUM annual fee.
      */
-    function setPendingAumAnnualFee(IBaseVault vault, uint16 pendingAumAnnualFee) external override onlyOwner {
+    function setPendingAumAnnualFee(IMinimalVault vault, uint16 pendingAumAnnualFee) external override onlyOwner {
         vault.getStrategy().setPendingAumAnnualFee(pendingAumAnnualFee);
     }
 
@@ -365,7 +369,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @notice Resets the pending AUM annual fee of the given vault's strategy.
      * @param vault The address of the vault.
      */
-    function resetPendingAumAnnualFee(IBaseVault vault) external override onlyOwner {
+    function resetPendingAumAnnualFee(IMinimalVault vault) external override onlyOwner {
         vault.getStrategy().resetPendingAumAnnualFee();
     }
 
@@ -422,7 +426,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         vault = _createOracleVault(lbPair, tokenX, tokenY, dataFeedX, dataFeedY, heartbeatX, heartbeatY);
         strategy = _createDefaultStrategy(vault, lbPair, tokenX, tokenY);
 
-        _linkVaultToStrategy(IBaseVault(vault), strategy);
+        _linkVaultToStrategy(IMinimalVault(vault), strategy);
     }
 
 
@@ -455,7 +459,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         vault = _createOracleVault(lbPair, tokenX, tokenY, dataFeedX, dataFeedY, 24 hours, 24 hours);
         strategy = _createDefaultStrategy(vault, lbPair, tokenX, tokenY);
 
-        _linkVaultToStrategy(IBaseVault(vault), strategy);
+        _linkVaultToStrategy(IMinimalVault(vault), strategy);
 
         // set operator
         IStrategyCommon(strategy).setOperator(msg.sender);
@@ -546,7 +550,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @param vault The address of the vault.
      * @param strategy The address of the strategy.
      */
-    function linkVaultToStrategy(IBaseVault vault, address strategy) external override onlyOwner {
+    function linkVaultToStrategy(IMinimalVault vault, address strategy) external override onlyOwner {
         if (_strategyType[strategy] == StrategyType.None) revert VaultFactory__InvalidStrategy();
 
         _linkVaultToStrategy(vault, strategy);
@@ -578,7 +582,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @notice Sets the vault to emergency mode.
      * @param vault The address of the vault.
      */
-    function setEmergencyMode(IBaseVault vault) external override onlyOwner {
+    function setEmergencyMode(IMinimalVault vault) external override onlyOwner {
         vault.setEmergencyMode();
     }
 
@@ -606,7 +610,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @param recipient The address of the recipient.
      * @param amount The amount of tokens to recover.
      */
-    function recoverERC20(IBaseVault vault, IERC20Upgradeable token, address recipient, uint256 amount)
+    function recoverERC20(IMinimalVault vault, IERC20Upgradeable token, address recipient, uint256 amount)
         external
         override
         onlyOwner
@@ -835,8 +839,32 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @param vault The address of the vault.
      * @param strategy The address of the strategy.
      */
-    function _linkVaultToStrategy(IBaseVault vault, address strategy) internal {
-        vault.setStrategy(IStrategyCommon(strategy));
+    function _linkVaultToStrategy(IMinimalVault minimalVault, address strategy) internal {
+        // First cast to IStrategyCommon to get the strategy type
+        IStrategyCommon strategyCommon = IStrategyCommon(strategy);
+        StrategyType strategyType = strategyCommon.getStrategyType();
+        
+        // Cast vault to IMinimalVault to get vault type
+        VaultType vaultType = minimalVault.getVaultType();
+        
+        // Based on vault and strategy types, perform appropriate linking
+        if (vaultType == VaultType.Oracle || vaultType == VaultType.OracleReward) {
+            // Metropolis vaults expect IMetropolisStrategy
+            if (strategyType == StrategyType.Default) {
+                IBaseVault(address(minimalVault)).setStrategy(IMetropolisStrategy(strategy));
+            } else {
+                revert("Cannot link Shadow strategy to Metropolis vault");
+            }
+        } else if (vaultType == VaultType.ShadowOracleReward) {
+            // Shadow vaults need different handling
+            if (strategyType == StrategyType.Shadow) {
+                IOracleRewardShadowVault(address(minimalVault)).setStrategy(IShadowStrategy(strategy));
+            } else {
+                revert("Cannot link Metropolis strategy to Shadow vault");
+            }
+        } else {
+            revert("Unknown or unsupported vault type");
+        }
     }
 
     /**
