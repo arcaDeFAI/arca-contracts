@@ -267,6 +267,13 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
     }
 
     /**
+     * @notice Returns the strategy type
+     */
+    function getStrategyType() external pure override returns (IVaultFactory.StrategyType) {
+        return IVaultFactory.StrategyType.Default;
+    }
+
+    /**
      * @notice Withdraws all the tokens from the LB pool and sends the entire balance of the strategy to the vault.
      * The queued withdrawals will be executed.
      * This function will only be called during the migration of strategies and during emergency withdrawals.
