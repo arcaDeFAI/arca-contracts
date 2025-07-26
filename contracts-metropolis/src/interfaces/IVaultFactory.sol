@@ -34,6 +34,7 @@ interface IVaultFactory {
         None,
         Simple,
         Oracle,
+        OracleReward,
         ShadowOracle,
         ShadowOracleReward
     }
@@ -171,7 +172,7 @@ interface IVaultFactory {
 
     function setRebalanceCoolDown(address strategy, uint256 coolDown) external;
 
-    function getNonfungiblePositionManager() external view returns (address);
+    function getShadowNonfungiblePositionManager() external view returns (address);
 
     function getShadowVoter() external view returns (address);
 

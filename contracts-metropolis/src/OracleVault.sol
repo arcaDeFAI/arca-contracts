@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
 
 import {BaseVault} from "./BaseVault.sol";
-import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
+import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
@@ -66,6 +66,14 @@ contract OracleVault is BaseVault, IOracleVault {
         return _getOracleHelper();
     }
 
+    /**
+     * @dev Returns the type of the vault.
+     * @return vaultType The type of the vault
+     */
+    function getVaultType() public pure virtual override returns (IVaultFactory.VaultType) {
+        return IVaultFactory.VaultType.Oracle;
+    }
+
 
     /**
      * @dev Returns the shares that will be minted when depositing `expectedAmountX` of token X and
@@ -78,7 +86,7 @@ contract OracleVault is BaseVault, IOracleVault {
      * @return effectiveY The effective amount of token Y that will be deposited.
      */
     function _previewShares(
-        IStrategyCommon strategy,
+        IMetropolisStrategy strategy,
         uint256 amountX,
         uint256 amountY
     )

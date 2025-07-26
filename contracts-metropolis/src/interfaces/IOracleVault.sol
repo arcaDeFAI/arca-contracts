@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 
-import {IStrategyCommon} from "./IStrategyCommon.sol";
+import {IMetropolisStrategy} from "./IMetropolisStrategy.sol";
 import {IBaseVault} from "./IBaseVault.sol";
 import {IAggregatorV3} from "./IAggregatorV3.sol";
 import {IOracleHelper} from "./IOracleHelper.sol";
