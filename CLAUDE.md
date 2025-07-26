@@ -39,30 +39,48 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Arca is a decentralized vault system for automated liquidity provision on the Sonic blockchain. It provides intelligent vault management for Metropolis DLMM (Dynamic Liquidity Market Maker) pools with automated reward compounding and yield optimization through Python bot rebalancing.
+Arca is a multi-protocol decentralized vault system for automated liquidity provision on the Sonic blockchain. Originally built for Metropolis DLMM (Dynamic Liquidity Market Maker) pools, the system is expanding to support multiple DEX protocols including Shadow (Ramses V3) concentrated liquidity pools. The project leverages battle-tested code from audited Metropolis Maker Vaults as its foundation, providing intelligent vault management with automated reward compounding and yield optimization through Python bot rebalancing.
 
 ## Repository Structure
 
 This is a full-stack DeFi project with:
-- **Smart Contracts** (`/contracts/`) - Solidity vault system
+- **Metropolis Contracts** (`/contracts-metropolis/`) - Core vault system for DLMM pools
+- **Shadow Contracts** (`/contracts-shadow/`) - Shadow/Ramses V3 integration (GPL-3.0 licensed)
 - **Frontend dApp** (`/UI/`) - React-based user interface  
 - **Testing Suite** (`/test/`) - Comprehensive test coverage
 - **Deployment System** (`/scripts/`) - TypeScript deployment infrastructure
 - **External Dependencies** (`/lib/`) - Git submodules (joe-v2)
+- **Archive** (`/archive/`) - Previous implementation for reference
 
 ## Core Architecture
 
-### Smart Contract Structure
-- **ArcaTestnetV1**: Main vault contract handling deposits, withdrawals, and liquidity management
-- **ArcaQueueHandlerV1**: Manages deposit/withdrawal queues for batched processing
-- **ArcaRewardClaimerV1**: Handles METRO reward claiming and automatic compounding
-- **ArcaFeeManagerV1**: Manages fee configuration and collection (0.5% deposit/withdraw, 10% performance)
+### Multi-Protocol Support
+The system supports multiple DEX protocols through a modular architecture:
+
+**Metropolis (DLMM)**:
+- `BaseVault`, `OracleVault`, `OracleRewardVault` - Vault implementations
+- `Strategy` - Manages bin-based liquidity positions
+- Uses `ILBPair` interface for liquidity book pairs
+
+**Shadow (Concentrated Liquidity)**:
+- `BaseShadowVault`, `OracleShadowVault`, `OracleRewardShadowVault` - Shadow-specific vaults
+- `ShadowStrategy` - Manages NFT-based concentrated liquidity positions
+- Uses `IRamsesV3Pool` and `INonfungiblePositionManager` interfaces
+
+### Factory System
+- `VaultFactory` - Central factory supporting multiple vault and strategy types
+- Handles deployment of protocol-specific implementations
+- Manages cross-protocol configuration (NPM addresses, voters, etc.)
 
 ### Key Design Patterns
-- **Upgradeable Proxy Pattern**: All contracts use OpenZeppelin's upgradeable contracts
-- **Queue-Based Processing**: Deposits and withdrawals are queued and processed during rebalance operations
+- **Upgradeable Proxy Pattern**: All contracts use OpenZeppelin's UUPS upgradeable contracts
+- **Protocol-Agnostic Interfaces**: Common interfaces (`IStrategyCommon`) with protocol-specific extensions
+- **Immutable Clone Pattern**: Strategies use immutable data for gas-efficient deployments
+- **Queue-Based Processing**: Deposits and withdrawals are queued and processed during rebalance
 - **Dual Token Shares**: Separate share tracking for TokenX and TokenY with proportional ownership
-- **Modular Architecture**: Fee management, queue handling, and reward claiming are separated into dedicated contracts
+- **Position Management**: 
+  - Metropolis: Direct bin management with add/remove liquidity
+  - Shadow: NFT-based positions with mint/burn lifecycle
 
 ## Development Commands
 
@@ -150,10 +168,11 @@ npm run dev:testnet:status  # Check testnet readiness and contract status
 ## Code Conventions
 
 ### Solidity Standards
-- Solidity version: 0.8.28
+- Solidity version: 0.8.26 (unified across all contracts)
 - Use OpenZeppelin contracts for standard functionality
-- Follow upgradeable proxy patterns with proper initialization
+- Follow UUPS upgradeable proxy patterns with proper initialization
 - Implement comprehensive validation with custom modifiers
+- License compliance: GPL-3.0 for Shadow integration, MIT for Metropolis base
 
 ### Testing Standards
 - **FOLLOW TDD**: Tests define requirements, code implements them
@@ -179,10 +198,11 @@ npm run dev:testnet:status  # Check testnet readiness and contract status
 ## External Dependencies
 
 ### Blockchain Integrations
-- **Joe V2 (Trader Joe)**: Used for LB Router and Pair interfaces (submodule at `lib/joe-v2/`)
-- **Metropolis DLMM**: Primary liquidity provision target
-- **SHADOW Exchange**: Future integration planned
+- **Joe V2 (Trader Joe)**: Core library for Metropolis DLMM interfaces (submodule at `lib/joe-v2/`)
+- **Metropolis DLMM**: Bin-based liquidity provision with hooks and rewards
+- **Shadow (Ramses V3)**: Concentrated liquidity with NFT positions and gauge rewards
 - **OpenZeppelin**: Standard library for upgradeable contracts and security
+- **Chainlink**: Oracle price feeds for multi-token vault deposits
 
 ### Development Dependencies
 - Hardhat with TypeScript toolbox
@@ -234,16 +254,29 @@ Run the full test suite before making changes to ensure system integrity.
 - Fee collection happens before share calculations
 - Emergency functions for stuck token recovery
 - Owner-only functions for critical operations
+- Protocol-specific position management ensures proper cleanup (NFT burns for Shadow)
+- Slippage protection through activeId/tick validation during rebalance
 
 ### Operational Flow
 1. Users deposit tokens → added to deposit queue
 2. Rebalance operation processes queues in order:
-   - Remove existing liquidity if needed
-   - Claim and compound METRO rewards
+   - Remove existing liquidity (protocol-specific: bins for Metropolis, NFT for Shadow)
+   - Claim and compound rewards (METRO for Metropolis, gauge rewards for Shadow)
    - Process withdrawal queue (calculate shares, apply fees)
    - Process deposit queue (mint shares based on current balance)
    - Add new liquidity with remaining tokens
 3. Python bot triggers rebalance based on external oracle data
+
+### Protocol-Specific Differences
+**Metropolis DLMM**:
+- Positions defined by bin ranges (discrete price levels)
+- Direct liquidity add/remove operations
+- METRO rewards through hooks system
+
+**Shadow Concentrated Liquidity**:
+- Positions are NFTs with immutable tick ranges
+- Must burn and mint new NFT to change range
+- Rewards through gauge/voter system
 
 ### Queue Management
 - Deposits are queued until next rebalance to optimize gas costs
@@ -269,10 +302,19 @@ import {ArcaFeeManagerV1} from "./ArcaFeeManagerV1.sol";
 import {IArcaFeeManagerV1} from "./interfaces/IArcaFeeManagerV1.sol";
 ```
 
-**Solution**: The project uses TypeScript deployment scripts (`scripts/deployArcaSystem.ts`) with OpenZeppelin's upgrades plugin for complex deployments, completely avoiding contract size limits.
+**Solution**: The project uses TypeScript deployment scripts with OpenZeppelin's upgrades plugin for complex deployments, completely avoiding contract size limits. Each protocol has its own deployment script (e.g., `deploy-metropolis.ts`) that handles protocol-specific configurations.
 
 ## Development Workflow Notes
 
 ### Best Practices
 - As a habit, you should run "npm run lint:fix", "npm run compile" and "npm run test" after making major code changes
 - When debugging failures, ask "What should this code do?" based on business logic and test expectations
+- Always verify protocol-specific implementations match their respective interfaces
+- Ensure cross-protocol compatibility when modifying shared components (factory, interfaces)
+- Test both Metropolis and Shadow flows when updating core functionality
+
+### Architecture Considerations
+- **Interface Hierarchy**: Common functionality in `IStrategyCommon`, protocol-specific in `IStrategyMetropolis`/`IShadowStrategy`
+- **Immutable Data Layout**: Each strategy type has specific data requirements (LBPair for Metropolis, pool address for Shadow)
+- **Factory Pattern**: VaultFactory handles multi-protocol deployments through type enums
+- **Reward Systems**: Different reward mechanisms require protocol-specific handling
