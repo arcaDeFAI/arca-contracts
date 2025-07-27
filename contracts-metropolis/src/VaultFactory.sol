@@ -432,6 +432,61 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
 
     /**
+     * @notice Creates a new Shadow oracle reward vault and strategy for market makers.
+     * @dev Pool must be whitelisted. Uses pool-based TWAP oracle.
+     * @param pool The address of the Ramses V3 Pool.
+     * @param aumFee The AUM annual fee.
+     * @param twapInterval The TWAP interval (0 for spot price, >0 for TWAP).
+     * @return vault The address of the new vault.
+     * @return strategy The address of the new strategy.
+     */
+    function createMarketMakerShadowOracleRewardVault(
+        address pool, 
+        uint16 aumFee,
+        uint32 twapInterval
+    ) external payable onlyOwner returns (address vault, address strategy) {
+        if (!_pairWhitelist[pool]) revert VaultFactory__VaultNotWhitelisted();
+        // charge creation fee
+        if (msg.value != _creationFee) revert VaultFactory__InvalidCreationFee();
+        if (aumFee > MAX_AUM_FEE) revert VaultFactory__InvalidAumFee();
+
+        // Get tokens from the pool
+        IRamsesV3Pool ramsesPool = IRamsesV3Pool(pool);
+        address tokenX = ramsesPool.token0();
+        address tokenY = ramsesPool.token1();
+        
+        // Validate pool has sufficient observation cardinality for TWAP
+        if (twapInterval > 0) {
+            (,, uint16 observationCardinality,,,,) = ramsesPool.slot0();
+            
+            // Require at least 10 observation slots for TWAP
+            if (observationCardinality < 10) revert VaultFactory__TwapInvalidOracleSize();
+        }
+
+        // Create vault and strategy
+        vault = _createShadowOracleRewardVault(pool, tokenX, tokenY);
+        strategy = _createShadowStrategy(vault, pool, tokenX, tokenY);
+
+        _linkVaultToStrategy(IMinimalVault(vault), strategy);
+
+        // Set operator
+        IStrategyCommon(strategy).setOperator(msg.sender);
+
+        // Set TWAP interval
+        IOracleRewardShadowVault(vault).setTwapInterval(twapInterval);
+
+        // Set pending aum fee
+        IStrategyCommon(strategy).setPendingAumAnnualFee(aumFee);
+
+        _vaultsByMarketMaker[msg.sender].push(vault);
+        _marketMakerByVaults[vault] = msg.sender;
+
+        _makerVaults.push(vault);
+
+        TokenHelper.safeTransfer(IERC20(address(0)), payable(_feeRecipient), msg.value);
+    }
+
+    /**
      * @notice Creates a new oracle vault and a default strategy for the given LBPair.
      * @dev LBPair must be whitelisted.
      * @param lbPair The address of the LBPair.
@@ -549,33 +604,23 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @notice Creates a new Shadow oracle reward vault and Shadow strategy for the given pool.
      * @dev The Shadow vault will be linked to the Shadow strategy.
      * @param pool The address of the Ramses V3 Pool.
-     * @param dataFeedX The address of the data feed for token X.
-     * @param dataFeedY The address of the data feed for token Y.
-     * @param heartbeatX The heartbeat of the data feed for token X.
-     * @param heartbeatY The heartbeat of the data feed for token Y.
      * @return vault The address of the new Shadow vault.
      * @return strategy The address of the new Shadow strategy.
      */
     function createShadowOracleRewardVaultAndStrategy(
-        address pool,
-        IAggregatorV3 dataFeedX,
-        IAggregatorV3 dataFeedY,
-        uint24 heartbeatX,
-        uint24 heartbeatY
+        address pool
     )
         external
         override
         onlyOwner
         returns (address vault, address strategy)
     {
-        if (dataFeedX.decimals() != dataFeedY.decimals()) revert VaultFactory__InvalidDecimals();
-
         // Get tokens from the pool
         IRamsesV3Pool ramsesPool = IRamsesV3Pool(pool);
         address tokenX = ramsesPool.token0();
         address tokenY = ramsesPool.token1();
 
-        vault = _createShadowOracleRewardVault(pool, tokenX, tokenY, dataFeedX, dataFeedY, heartbeatX, heartbeatY);
+        vault = _createShadowOracleRewardVault(pool, tokenX, tokenY);
         strategy = _createShadowStrategy(vault, pool, tokenX, tokenY);
 
         _linkVaultToStrategy(IMinimalVault(vault), strategy);
@@ -813,19 +858,11 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @param pool The address of the Ramses V3 Pool.
      * @param tokenX The address of token X.
      * @param tokenY The address of token Y.
-     * @param dataFeedX The address of the data feed for token X.
-     * @param dataFeedY The address of the data feed for token Y.
-     * @param heartbeatX The heartbeat of the data feed for token X.
-     * @param heartbeatY The heartbeat of the data feed for token Y.
      */
     function _createShadowOracleRewardVault(
         address pool,
         address tokenX,
-        address tokenY,
-        IAggregatorV3 dataFeedX,
-        IAggregatorV3 dataFeedY,
-        uint24 heartbeatX,
-        uint24 heartbeatY
+        address tokenY
     ) internal returns (address vault) {
         VaultType vType = VaultType.ShadowOracleReward;
         
@@ -834,33 +871,25 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
         uint256 vaultId = _vaults[vType].length;
         
-        // Shadow vault immutable data layout:
+        // Shadow vault immutable data layout (simplified - no external oracles):
         // - 0x00: 20 bytes: The address of the Shadow pool
         // - 0x14: 20 bytes: The address of token 0
         // - 0x28: 20 bytes: The address of token 1
-        // - 0x3C: 20 bytes: The address of the data feed for token 0
-        // - 0x50: 20 bytes: The address of the data feed for token 1
-        // - 0x64: 1 byte: The decimals of token 0
-        // - 0x65: 1 byte: The decimals of token 1
-        // - 0x66: 3 bytes: The heartbeat of the data feed for token 0
-        // - 0x69: 3 bytes: The heartbeat of the data feed for token 1
+        // - 0x3C: 1 byte: The decimals of token 0
+        // - 0x3D: 1 byte: The decimals of token 1
         bytes memory vaultImmutableData = abi.encodePacked(
             pool,
             tokenX,
             tokenY,
-            dataFeedX,
-            dataFeedY,
             IERC20MetadataUpgradeable(tokenX).decimals(),
-            IERC20MetadataUpgradeable(tokenY).decimals(),
-            heartbeatX,
-            heartbeatY
+            IERC20MetadataUpgradeable(tokenY).decimals()
         );
 
         vault = ImmutableClone.cloneDeterministic(
             vaultImplementation,
             vaultImmutableData,
-            keccak256(abi.encodePacked(vType, vaultId)) // salt calculation inlined to reduce stack pressure
-            );
+            keccak256(abi.encodePacked(vType, vaultId))
+        );
 
         _vaults[vType].push(vault);
         _vaultType[vault] = vType;

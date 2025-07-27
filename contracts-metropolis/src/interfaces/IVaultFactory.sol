@@ -161,11 +161,7 @@ interface IVaultFactory {
     function createDefaultStrategy(IBaseVault vault) external returns (address strategy);
 
     function createShadowOracleRewardVaultAndStrategy(
-        address pool,
-        IAggregatorV3 dataFeedX,
-        IAggregatorV3 dataFeedY,
-        uint24 heartbeatX,
-        uint24 heartbeatY
+        address pool
     ) external returns (address vault, address strategy);
 
     function linkVaultToStrategy(IMinimalVault vault, address strategy) external;

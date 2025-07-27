@@ -7,7 +7,6 @@ import {IRamsesV3Pool} from "../../CL/core/interfaces/IRamsesV3Pool.sol";
 import {IMinimalVault} from "../../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
 import {IStrategyCommon} from "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
 import {IVaultFactory} from "../../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
-import {IOracleHelper} from "../../../contracts-metropolis/src/interfaces/IOracleHelper.sol";
 import {IERC20} from "../../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
 
 /**
@@ -108,7 +107,8 @@ interface IOracleRewardShadowVault is IMinimalVault, IERC20Upgradeable {
     function getTokenX() external pure returns (IERC20Upgradeable);
     function getTokenY() external pure returns (IERC20Upgradeable);
     function getStrategy() external view returns (IStrategyCommon);
-    function getOracleHelper() external view returns (IOracleHelper);
+    function getTwapInterval() external view returns (uint32);
+    function setTwapInterval(uint32 twapInterval) external;
     function getAumAnnualFee() external view returns (uint256);
     function getOperators() external view returns (address defaultOperator, address operator);
     function getBalances() external view returns (uint256 amountX, uint256 amountY);
