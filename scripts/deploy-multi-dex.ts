@@ -1,9 +1,223 @@
-import type { Contract} from "ethers";
+import type { Contract, TransactionReceipt, TransactionResponse } from "ethers";
 import { ethers, network } from "hardhat";
 import type { OracleHelperFactory, ShadowPriceHelper } from "typechain-types";
 
+// Gas tracking utility
+interface GasTransaction {
+  name: string;
+  gasUsed: bigint;
+  gasPrice: bigint;
+  cost: bigint;
+  category: "deployment" | "configuration";
+}
+
+class GasTracker {
+  private transactions: GasTransaction[] = [];
+  
+  async trackDeployment(name: string, contract: Contract): Promise<void> {
+    const deployTx = contract.deploymentTransaction();
+    if (!deployTx) {
+      console.warn(`⚠️  No deployment transaction found for ${name}`);
+      return;
+    }
+    
+    const receipt = await deployTx.wait();
+    if (!receipt) {
+      throw new Error(`Failed to get receipt for deployment: ${name}`);
+    }
+    
+    this.addTransaction(name, receipt, "deployment");
+  }
+  
+  async trackTransaction(name: string, txResponse: TransactionResponse): Promise<TransactionReceipt> {
+    const receipt = await txResponse.wait();
+    if (!receipt) {
+      throw new Error(`Failed to get receipt for transaction: ${name}`);
+    }
+    
+    this.addTransaction(name, receipt, "configuration");
+    return receipt;
+  }
+  
+  private addTransaction(name: string, receipt: TransactionReceipt, category: "deployment" | "configuration") {
+    const gasUsed = receipt.gasUsed;
+    const gasPrice = receipt.gasPrice || 0n;
+    const cost = gasUsed * gasPrice;
+    
+    this.transactions.push({
+      name,
+      gasUsed,
+      gasPrice,
+      cost,
+      category
+    });
+    
+    console.log(`  ⛽ Gas used: ${gasUsed.toString()}, Cost: ${ethers.formatEther(cost)} S`);
+  }
+  
+  getReport() {
+    console.log("\n=== 🔥 Gas Usage Report 🔥 ===");
+    console.log("Network:", network.name);
+    console.log("Total Transactions:", this.transactions.length);
+    
+    // Separate by category
+    const deployments = this.transactions.filter(tx => tx.category === "deployment");
+    const configurations = this.transactions.filter(tx => tx.category === "configuration");
+    
+    // Deployment costs
+    if (deployments.length > 0) {
+      console.log("\n📦 Contract Deployments:");
+      console.log("-".repeat(90));
+      console.log("Contract".padEnd(45) + "Gas Used".padEnd(15) + "Gas Price (Gwei)".padEnd(17) + "Cost (S)");
+      console.log("-".repeat(90));
+      
+      let deploymentGas = 0n;
+      let deploymentCost = 0n;
+      
+      for (const tx of deployments) {
+        const gasPriceGwei = ethers.formatUnits(tx.gasPrice, "gwei");
+        const costInS = ethers.formatEther(tx.cost);
+        
+        console.log(
+          tx.name.padEnd(45) +
+          tx.gasUsed.toString().padEnd(15) +
+          gasPriceGwei.padEnd(17) +
+          costInS
+        );
+        
+        deploymentGas += tx.gasUsed;
+        deploymentCost += tx.cost;
+      }
+      
+      console.log("-".repeat(90));
+      console.log("Subtotal".padEnd(45) + deploymentGas.toString().padEnd(15) + " ".padEnd(17) + ethers.formatEther(deploymentCost));
+    }
+    
+    // Configuration costs
+    if (configurations.length > 0) {
+      console.log("\n⚙️  Configuration Transactions:");
+      console.log("-".repeat(90));
+      console.log("Transaction".padEnd(45) + "Gas Used".padEnd(15) + "Gas Price (Gwei)".padEnd(17) + "Cost (S)");
+      console.log("-".repeat(90));
+      
+      let configGas = 0n;
+      let configCost = 0n;
+      
+      for (const tx of configurations) {
+        const gasPriceGwei = ethers.formatUnits(tx.gasPrice, "gwei");
+        const costInS = ethers.formatEther(tx.cost);
+        
+        console.log(
+          tx.name.padEnd(45) +
+          tx.gasUsed.toString().padEnd(15) +
+          gasPriceGwei.padEnd(17) +
+          costInS
+        );
+        
+        configGas += tx.gasUsed;
+        configCost += tx.cost;
+      }
+      
+      console.log("-".repeat(90));
+      console.log("Subtotal".padEnd(45) + configGas.toString().padEnd(15) + " ".padEnd(17) + ethers.formatEther(configCost));
+    }
+    
+    // Total summary
+    const totalGas = this.transactions.reduce((sum, tx) => sum + tx.gasUsed, 0n);
+    const totalCost = this.transactions.reduce((sum, tx) => sum + tx.cost, 0n);
+    
+    console.log("\n💰 TOTAL DEPLOYMENT SUMMARY");
+    console.log("=".repeat(90));
+    console.log(`Total Gas Used: ${totalGas.toLocaleString()}`);
+    console.log(`Total Cost: ${ethers.formatEther(totalCost)} S`);
+    
+    if (this.transactions.length > 0 && this.transactions[0].gasPrice > 0n) {
+      const avgGasPrice = this.transactions.reduce((sum, tx) => sum + tx.gasPrice, 0n) / BigInt(this.transactions.length);
+      console.log(`Average Gas Price: ${ethers.formatUnits(avgGasPrice, "gwei")} Gwei`);
+    }
+    
+    console.log("=".repeat(90));
+    
+    return {
+      totalGas,
+      totalCost,
+      totalCostInS: ethers.formatEther(totalCost),
+      transactionCount: this.transactions.length,
+      deploymentCount: deployments.length,
+      configurationCount: configurations.length
+    };
+  }
+  
+  getTotalCostInS(): string {
+    const totalCost = this.transactions.reduce((sum, tx) => sum + tx.cost, 0n);
+    return ethers.formatEther(totalCost);
+  }
+}
+
+// Helper function to deploy contract with gas tracking
+async function deployContract<T extends Contract>(
+  displayName: string,
+  factory: { deploy: (...args: unknown[]) => Promise<T> },
+  args: unknown[],
+  gasTracker: GasTracker,
+  options?: { gasLimit?: number }
+): Promise<T> {
+  console.log(`\nDeploying ${displayName}...`);
+  
+  const deployOptions = options?.gasLimit ? { gasLimit: options.gasLimit } : {};
+  const contract = await factory.deploy(...args, deployOptions);
+  await contract.waitForDeployment();
+  
+  const address = await contract.getAddress();
+  console.log(`✓ ${displayName} deployed at: ${address}`);
+  
+  await gasTracker.trackDeployment(displayName, contract);
+  
+  return contract as T;
+}
+
+// Helper function to deploy contract with linked libraries
+async function deployContractWithLibraries<T extends Contract>(
+  displayName: string,
+  contractName: string,
+  libraries: Record<string, string>,
+  args: unknown[],
+  gasTracker: GasTracker,
+  options?: { gasLimit?: number }
+): Promise<T> {
+  console.log(`\nDeploying ${displayName}...`);
+  
+  const factory = await ethers.getContractFactory(contractName, { libraries });
+  const deployOptions = options?.gasLimit ? { gasLimit: options.gasLimit } : {};
+  const contract = await factory.deploy(...args, deployOptions);
+  await contract.waitForDeployment();
+  
+  const address = await contract.getAddress();
+  console.log(`✓ ${displayName} deployed at: ${address}`);
+  
+  await gasTracker.trackDeployment(displayName, contract);
+  
+  return contract as T;
+}
+
+// Helper function to send transaction with gas tracking
+async function sendTransaction(
+  name: string,
+  txPromise: Promise<TransactionResponse>,
+  gasTracker: GasTracker
+): Promise<TransactionReceipt> {
+  console.log(`\n${name}...`);
+  const tx = await txPromise;
+  const receipt = await gasTracker.trackTransaction(name, tx);
+  console.log(`✓ ${name} completed`);
+  return receipt;
+}
+
 async function main() {
   console.log(`Deploying Metropolis & Shadow contracts to ${network.name}...`);
+
+  // Initialize gas tracker
+  const gasTracker = new GasTracker();
 
   // Get the deployer account
   const [deployer] = await ethers.getSigners();
@@ -37,18 +251,20 @@ async function main() {
 
   if (network.name === "localhost" || network.name === "hardhat") {
     // For localhost, deploy a mock wS
-    console.log("Deploying Mock wS token...");
     const MockERC20 = await ethers.getContractFactory("MockERC20");
-    const mockWS = await MockERC20.deploy("Wrapped Sonic", "wS", 18, deployer.address);
-    await mockWS.waitForDeployment();
+    const mockWS = await deployContract(
+      "MockERC20 (wS)",
+      MockERC20,
+      ["Wrapped Sonic", "wS", 18, deployer.address],
+      gasTracker
+    );
     wnative = await mockWS.getAddress();
-    console.log("Mock wS deployed at:", wnative);
 
     // For localhost, always deploy the shadow price helper address
-    [, shadowPriceHelperAddress] = await deployShadowPriceHelper();
+    [, shadowPriceHelperAddress] = await deployShadowPriceHelper(gasTracker);
 
     // For localhost, always deploy a oracle helper factory contract
-    [, oracleHelperFactoryAddress] = await deployOracleHelperFactory();
+    [, oracleHelperFactoryAddress] = await deployOracleHelperFactory(gasTracker);
   } else if (network.name === "sonic-testnet") {
     // For testnet, use the testnet wS address
     wnative = "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"; // Actual testnet wS
@@ -66,31 +282,34 @@ async function main() {
 
   if (oracleHelperFactoryAddress === "0x0000000000000000000000000000000000000000") {
     // Deploy OracleHelperFactory
-    [,oracleHelperFactoryAddress] = await deployOracleHelperFactory();
+    [,oracleHelperFactoryAddress] = await deployOracleHelperFactory(gasTracker);
   }
 
   if (shadowPriceHelperAddress === "0x0000000000000000000000000000000000000000") {
-    [,shadowPriceHelperAddress] = await deployShadowPriceHelper();
+    [,shadowPriceHelperAddress] = await deployShadowPriceHelper(gasTracker);
   }
 
   // Deploy VaultFactory implementation
-  console.log("Deploying VaultFactory implementation...");
   const VaultFactory = await ethers.getContractFactory("VaultFactory");
-  const vaultFactoryImpl = await VaultFactory.deploy(wnative, oracleHelperFactoryAddress);
-  await vaultFactoryImpl.waitForDeployment();
-  console.log("VaultFactory implementation deployed at:", await vaultFactoryImpl.getAddress());
+  const vaultFactoryImpl = await deployContract(
+    "VaultFactory Implementation",
+    VaultFactory,
+    [wnative, oracleHelperFactoryAddress],
+    gasTracker
+  );
 
   // Deploy ProxyAdmin to control upgrades
-  console.log("Deploying ProxyAdmin...");
   const ProxyAdmin = await ethers.getContractFactory(
     "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
   );
-  const proxyAdmin = await ProxyAdmin.deploy(deployer.address);
-  await proxyAdmin.waitForDeployment();
-  console.log("ProxyAdmin deployed at:", await proxyAdmin.getAddress());
+  const proxyAdmin = await deployContract(
+    "ProxyAdmin",
+    ProxyAdmin,
+    [deployer.address],
+    gasTracker
+  );
 
   // Deploy TransparentUpgradeableProxy with ProxyAdmin
-  console.log("Deploying VaultFactory proxy...");
   const TransparentUpgradeableProxy = await ethers.getContractFactory(
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy"
   );
@@ -101,16 +320,18 @@ async function main() {
     creationFee
   ]);
   
-  const proxy = await TransparentUpgradeableProxy.deploy(
-    await vaultFactoryImpl.getAddress(),
-    await proxyAdmin.getAddress(),
-    initData, {
-      gasLimit: 10000000
-    }
+  const proxy = await deployContract(
+    "VaultFactory Proxy",
+    TransparentUpgradeableProxy,
+    [
+      await vaultFactoryImpl.getAddress(),
+      await proxyAdmin.getAddress(),
+      initData
+    ],
+    gasTracker,
+    { gasLimit: 10000000 }
   );
-  await proxy.waitForDeployment();
   const proxyAddress = await proxy.getAddress();
-  console.log("VaultFactory proxy deployed at:", proxyAddress);
 
   // Get the VaultFactory interface at the proxy address
   const vaultFactory = VaultFactory.attach(proxyAddress);
@@ -135,15 +356,16 @@ async function main() {
   console.log("⚠️  Skipping OracleVault deployment (not needed for current use case)");
   const oracleVaultImpl: Contract | null = null;
 
-  console.log("\nDeploying OracleRewardVault...");
   let oracleRewardVaultImpl: Contract;
   try {
     const OracleRewardVault = await ethers.getContractFactory("OracleRewardVault");
-    oracleRewardVaultImpl = await OracleRewardVault.deploy(proxyAddress, {
-      gasLimit: 10000000  // Explicit gas limit for mainnet
-    });
-    await oracleRewardVaultImpl.waitForDeployment();
-    console.log("✓ OracleRewardVault implementation deployed at:", await oracleRewardVaultImpl.getAddress());
+    oracleRewardVaultImpl = await deployContract(
+      "OracleRewardVault Implementation",
+      OracleRewardVault,
+      [proxyAddress],
+      gasTracker,
+      { gasLimit: 10000000 }
+    );
     
     // Verify the deployment worked
     const implAddress = await oracleRewardVaultImpl.getAddress();
@@ -166,19 +388,16 @@ async function main() {
     throw error;
   }
 
-  console.log("\nDeploying OracleRewardShadowVault...");
   let oracleRewardShadowVaultImpl: Contract;
   try {
-    const OracleRewardShadowVault = await ethers.getContractFactory("OracleRewardShadowVault", {
-      libraries: {
-        ShadowPriceHelper: shadowPriceHelperAddress,
-      },
-    });
-    oracleRewardShadowVaultImpl = await OracleRewardShadowVault.deploy(proxyAddress, {
-      gasLimit: 10000000  // Higher gas limit for Shadow vault with libraries
-    });
-    await oracleRewardShadowVaultImpl.waitForDeployment();
-    console.log("✓ OracleRewardShadowVault implementation deployed at:", await oracleRewardShadowVaultImpl.getAddress());
+    oracleRewardShadowVaultImpl = await deployContractWithLibraries(
+      "OracleRewardShadowVault Implementation",
+      "OracleRewardShadowVault",
+      { ShadowPriceHelper: shadowPriceHelperAddress },
+      [proxyAddress],
+      gasTracker,
+      { gasLimit: 10000000 }
+    );
     
     // Verify the deployment
     const implAddress = await oracleRewardShadowVaultImpl.getAddress();
@@ -190,26 +409,28 @@ async function main() {
     throw error;
   }
 
-  console.log("\nDeploying MetropolisStrategy...");
   const maxRange = 51; // Default max range for Sonic
   const Strategy = await ethers.getContractFactory("MetropolisStrategy");
-  const strategyImpl = await Strategy.deploy(proxyAddress, maxRange, {
-      gasLimit: 10000000
-  });
-  await strategyImpl.waitForDeployment();
+  const strategyImpl = await deployContract(
+    "MetropolisStrategy Implementation",
+    Strategy,
+    [proxyAddress, maxRange],
+    gasTracker,
+    { gasLimit: 10000000 }
+  );
   const strategyImplAddress = await strategyImpl.getAddress();
-  console.log("✓ MetropolisStrategy implementation deployed at:", strategyImplAddress);
 
   // Deploy Shadow Strategy implementation
-  console.log("\nDeploying ShadowStrategy implementation...");
   const maxRangeShadow = 887272; // Max tick range for Shadow (from SHADOW_INTEGRATION_PLAN.md)
   const ShadowStrategy = await ethers.getContractFactory("ShadowStrategy");
-  const shadowStrategyImpl = await ShadowStrategy.deploy(proxyAddress, maxRangeShadow, {
-      gasLimit: 10000000
-  });
-  await shadowStrategyImpl.waitForDeployment();
+  const shadowStrategyImpl = await deployContract(
+    "ShadowStrategy Implementation",
+    ShadowStrategy,
+    [proxyAddress, maxRangeShadow],
+    gasTracker,
+    { gasLimit: 10000000 }
+  );
   const shadowStrategyImplAddress = await shadowStrategyImpl.getAddress();
-  console.log("✓ ShadowStrategy implementation deployed at:", shadowStrategyImplAddress);
 
   // Set vault and strategy implementations
   console.log("\n=== Setting Factory Implementations ===");
@@ -227,22 +448,25 @@ async function main() {
 
   console.log("\nSetting vault implementations...");
   const oracleRewardVaultAddress = await oracleRewardVaultImpl.getAddress();
-  console.log("Setting VAULT_TYPE_ORACLE =", VAULT_TYPE_ORACLE, "to:", oracleRewardVaultAddress);
-  const tx1 = await vaultFactory.setVaultImplementation(VAULT_TYPE_ORACLE, oracleRewardVaultAddress);
-  await tx1.wait();
-  console.log("✓ Oracle vault implementation set");
+  await sendTransaction(
+    `Set VAULT_TYPE_ORACLE (${VAULT_TYPE_ORACLE}) to ${oracleRewardVaultAddress}`,
+    vaultFactory.setVaultImplementation(VAULT_TYPE_ORACLE, oracleRewardVaultAddress),
+    gasTracker
+  );
 
   const oracleRewardShadowVaultAddress = await oracleRewardShadowVaultImpl.getAddress();
-  console.log("Setting VAULT_TYPE_SHADOW_ORACLE_REWARD =", VAULT_TYPE_SHADOW_ORACLE_REWARD, "to:", oracleRewardShadowVaultAddress);
-  const tx2 = await vaultFactory.setVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD, oracleRewardShadowVaultAddress);
-  await tx2.wait();
-  console.log("✓ Oracle reward shadow vault implementation set");
+  await sendTransaction(
+    `Set VAULT_TYPE_SHADOW_ORACLE_REWARD (${VAULT_TYPE_SHADOW_ORACLE_REWARD}) to ${oracleRewardShadowVaultAddress}`,
+    vaultFactory.setVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD, oracleRewardShadowVaultAddress),
+    gasTracker
+  );
 
   console.log("\nSetting strategy implementations...");
-  console.log("Setting STRATEGY_TYPE_DEFAULT =", STRATEGY_TYPE_DEFAULT, "to:", strategyImplAddress);
-  const tx3 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_DEFAULT, strategyImplAddress);
-  const receipt3 = await tx3.wait();
-  console.log("✓ Strategy implementation set - Gas used:", receipt3.gasUsed.toString(), "Status:", receipt3.status);
+  await sendTransaction(
+    `Set STRATEGY_TYPE_DEFAULT (${STRATEGY_TYPE_DEFAULT}) to ${strategyImplAddress}`,
+    vaultFactory.setStrategyImplementation(STRATEGY_TYPE_DEFAULT, strategyImplAddress),
+    gasTracker
+  );
   
   // Immediately verify it was set correctly
   const verifyStrategy = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_DEFAULT);
@@ -250,10 +474,11 @@ async function main() {
   console.log("  Immediate verification - Actual  :", verifyStrategy);
   console.log("  Immediate verification - Match   :", verifyStrategy === strategyImplAddress);
 
-  console.log("Setting STRATEGY_TYPE_SHADOW =", STRATEGY_TYPE_SHADOW, "to:", shadowStrategyImplAddress);
-  const tx4 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, shadowStrategyImplAddress);
-  const receipt4 = await tx4.wait();
-  console.log("✓ Shadow strategy implementation set - Gas used:", receipt4.gasUsed.toString(), "Status:", receipt4.status);
+  await sendTransaction(
+    `Set STRATEGY_TYPE_SHADOW (${STRATEGY_TYPE_SHADOW}) to ${shadowStrategyImplAddress}`,
+    vaultFactory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, shadowStrategyImplAddress),
+    gasTracker
+  );
   
   // Immediately verify it was set correctly
   const verifyShadowStrategy = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_SHADOW);
@@ -268,17 +493,21 @@ async function main() {
     const { npm, voter } = shadowConfig[network.name];
     
     if (npm !== "0x0000000000000000000000000000000000000000") {
-      const tx5 = await vaultFactory.setShadowNonfungiblePositionManager(npm);
-      await tx5.wait();
-      console.log("Shadow NPM address set:", npm);
+      await sendTransaction(
+        `Set Shadow NPM to ${npm}`,
+        vaultFactory.setShadowNonfungiblePositionManager(npm),
+        gasTracker
+      );
     } else {
       console.log("⚠️  Warning: Shadow NPM address not configured for", network.name);
     }
 
     if (voter !== "0x0000000000000000000000000000000000000000") {
-      const tx6 = await vaultFactory.setShadowVoter(voter);
-      await tx6.wait();
-      console.log("Shadow Voter address set:", voter);
+      await sendTransaction(
+        `Set Shadow Voter to ${voter}`,
+        vaultFactory.setShadowVoter(voter),
+        gasTracker
+      );
     } else {
       console.log("⚠️  Warning: Shadow Voter address not configured for", network.name);
     }
@@ -356,6 +585,9 @@ async function main() {
   console.log("\n📝 Note: Only the ProxyAdmin owner can upgrade the VaultFactory implementation");
   console.log("ProxyAdmin is owned by:", deployer.address);
 
+  // Generate gas report
+  const gasReport = gasTracker.getReport();
+
   // Save deployment addresses
   const deployment = {
     network: network.name,
@@ -397,27 +629,28 @@ main()
     process.exit(1);
   });
 
-async function deployOracleHelperFactory() : Promise<[OracleHelperFactory, string]> {
-  console.log("Deploying OracleHelperFactory...");
+async function deployOracleHelperFactory(gasTracker: GasTracker) : Promise<[OracleHelperFactory, string]> {
   const OracleHelperFactoryContract = await ethers.getContractFactory("OracleHelperFactory");
-  const oracleHelperFactory = await OracleHelperFactoryContract.deploy({
-      gasLimit: 10000000
-  });
-  await oracleHelperFactory.waitForDeployment();
+  const oracleHelperFactory = await deployContract<OracleHelperFactory>(
+    "OracleHelperFactory",
+    OracleHelperFactoryContract,
+    [],
+    gasTracker,
+    { gasLimit: 10000000 }
+  );
   const oracleHelperFactoryAddress = await oracleHelperFactory.getAddress();
-  console.log("OracleHelperFactory deployed at:", oracleHelperFactoryAddress);
   return [oracleHelperFactory, oracleHelperFactoryAddress];
-
 }
 
-async function deployShadowPriceHelper() : Promise<[ShadowPriceHelper, string]> {
-  console.log("Deploying Shadow price helper...");
+async function deployShadowPriceHelper(gasTracker: GasTracker) : Promise<[ShadowPriceHelper, string]> {
   const contract = await ethers.getContractFactory("ShadowPriceHelper");
-  const contractDeployed = await contract.deploy({
-      gasLimit: 10000000
-  });
-  await contractDeployed.waitForDeployment();
+  const contractDeployed = await deployContract<ShadowPriceHelper>(
+    "ShadowPriceHelper",
+    contract,
+    [],
+    gasTracker,
+    { gasLimit: 10000000 }
+  );
   const contractAddress = await contractDeployed.getAddress();
-  console.log("ShadowPriceHelper deployed at:", contractAddress);
   return [contractDeployed, contractAddress];
 }
