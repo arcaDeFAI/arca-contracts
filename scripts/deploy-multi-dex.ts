@@ -1,7 +1,6 @@
-import { Contract, ContractFactory } from "ethers";
+import type { Contract} from "ethers";
 import { ethers, network } from "hardhat";
-import { OracleHelperFactory, ShadowPriceHelper } from "typechain-types";
-type Libraries = Record<string, string>;
+import type { OracleHelperFactory, ShadowPriceHelper } from "typechain-types";
 
 async function main() {
   console.log(`Deploying Metropolis & Shadow contracts to ${network.name}...`);
@@ -65,12 +64,12 @@ async function main() {
     throw new Error(`Unsupported network: ${network.name}`);
   }
 
-  if (oracleHelperFactoryAddress == "0x0000000000000000000000000000000000000000") {
+  if (oracleHelperFactoryAddress === "0x0000000000000000000000000000000000000000") {
     // Deploy OracleHelperFactory
     [,oracleHelperFactoryAddress] = await deployOracleHelperFactory();
   }
 
-  if (shadowPriceHelperAddress == "0x0000000000000000000000000000000000000000") {
+  if (shadowPriceHelperAddress === "0x0000000000000000000000000000000000000000") {
     [,shadowPriceHelperAddress] = await deployShadowPriceHelper();
   }
 
@@ -374,6 +373,8 @@ async function main() {
       shadowNPM: npmFromFactory,
       shadowVoter: voterFromFactory,
       wnative: wnative,
+      oracleHelperFactory: oracleHelperFactoryAddress,
+      shadowPriceHelper: shadowPriceHelperAddress,
     },
     configuration: {
       metropolisMaxRange: maxRange,
