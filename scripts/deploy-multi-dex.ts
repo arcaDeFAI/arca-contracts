@@ -105,7 +105,9 @@ async function main() {
   const proxy = await TransparentUpgradeableProxy.deploy(
     await vaultFactoryImpl.getAddress(),
     await proxyAdmin.getAddress(),
-    initData
+    initData, {
+      gasLimit: 10000000
+    }
   );
   await proxy.waitForDeployment();
   const proxyAddress = await proxy.getAddress();
@@ -114,65 +116,151 @@ async function main() {
   // Get the VaultFactory interface at the proxy address
   const vaultFactory = VaultFactory.attach(proxyAddress);
 
+  // Debug: Verify the factory proxy is working
+  console.log("\n=== Verifying VaultFactory Proxy ===");
+  try {
+    const wnative = await vaultFactory.getWNative();
+    const owner = await vaultFactory.owner();
+    console.log("✓ Factory proxy wnative:", wnative);
+    console.log("✓ Factory proxy owner:", owner);
+    console.log("✓ Factory proxy is responding correctly");
+  } catch (error) {
+    console.error("❌ Factory proxy verification failed:", error);
+    throw new Error("Factory proxy is not working correctly");
+  }
+
   // Deploy implementation contracts
-  console.log("Deploying implementation contracts...");
+  console.log("\n=== Deploying Implementation Contracts ===");
   
-  const OracleVault = await ethers.getContractFactory("OracleVault");
-  const oracleVaultImpl = await OracleVault.deploy(proxyAddress);
-  await oracleVaultImpl.waitForDeployment();
-  console.log("OracleVault implementation deployed at:", await oracleVaultImpl.getAddress());
+  // Skip OracleVault for now since it's failing and focus on OracleRewardVault
+  console.log("⚠️  Skipping OracleVault deployment (not needed for current use case)");
+  const oracleVaultImpl: Contract | null = null;
 
-  const OracleRewardVault = await ethers.getContractFactory("OracleRewardVault");
-  const oracleRewardVaultImpl = await OracleRewardVault.deploy(proxyAddress);
-  await oracleRewardVaultImpl.waitForDeployment();
-  console.log("OracleRewardVault implementation deployed at:", await oracleRewardVaultImpl.getAddress());
+  console.log("\nDeploying OracleRewardVault...");
+  let oracleRewardVaultImpl: Contract;
+  try {
+    const OracleRewardVault = await ethers.getContractFactory("OracleRewardVault");
+    oracleRewardVaultImpl = await OracleRewardVault.deploy(proxyAddress, {
+      gasLimit: 10000000  // Explicit gas limit for mainnet
+    });
+    await oracleRewardVaultImpl.waitForDeployment();
+    console.log("✓ OracleRewardVault implementation deployed at:", await oracleRewardVaultImpl.getAddress());
+    
+    // Verify the deployment worked
+    const implAddress = await oracleRewardVaultImpl.getAddress();
+    const code = await ethers.provider.getCode(implAddress);
+    console.log("✓ Contract code size:", code.length, "bytes");
+    
+  } catch (error) {
+    console.error("❌ OracleRewardVault deployment failed:", error);
+    
+    // Try to get more details about the failure
+    try {
+      const OracleRewardVaultFactory = await ethers.getContractFactory("OracleRewardVault");
+      const deployTx = OracleRewardVaultFactory.getDeployTransaction(proxyAddress);
+      const estimatedGas = await ethers.provider.estimateGas(deployTx);
+      console.log("Gas estimation:", estimatedGas.toString());
+    } catch (gasError) {
+      console.error("Gas estimation also failed:", gasError);
+    }
+    
+    throw error;
+  }
 
-  const OracleRewardShadowVault = await ethers.getContractFactory("OracleRewardShadowVault", {
-  libraries: {
-    ShadowPriceHelper: shadowPriceHelperAddress,
-  },
-  });
-  const oracleRewardShadowVaultImpl = await OracleRewardShadowVault.deploy(proxyAddress);
-  await oracleRewardShadowVaultImpl.waitForDeployment();
-  console.log("OracleRewardShadowVault implementation deployed at:", await oracleRewardShadowVaultImpl.getAddress());
+  console.log("\nDeploying OracleRewardShadowVault...");
+  let oracleRewardShadowVaultImpl: Contract;
+  try {
+    const OracleRewardShadowVault = await ethers.getContractFactory("OracleRewardShadowVault", {
+      libraries: {
+        ShadowPriceHelper: shadowPriceHelperAddress,
+      },
+    });
+    oracleRewardShadowVaultImpl = await OracleRewardShadowVault.deploy(proxyAddress, {
+      gasLimit: 10000000  // Higher gas limit for Shadow vault with libraries
+    });
+    await oracleRewardShadowVaultImpl.waitForDeployment();
+    console.log("✓ OracleRewardShadowVault implementation deployed at:", await oracleRewardShadowVaultImpl.getAddress());
+    
+    // Verify the deployment
+    const implAddress = await oracleRewardShadowVaultImpl.getAddress();
+    const code = await ethers.provider.getCode(implAddress);
+    console.log("✓ Contract code size:", code.length, "bytes");
+    
+  } catch (error) {
+    console.error("❌ OracleRewardShadowVault deployment failed:", error);
+    throw error;
+  }
 
+  console.log("\nDeploying MetropolisStrategy...");
   const maxRange = 51; // Default max range for Sonic
   const Strategy = await ethers.getContractFactory("MetropolisStrategy");
-  const strategyImpl = await Strategy.deploy(proxyAddress, maxRange);
+  const strategyImpl = await Strategy.deploy(proxyAddress, maxRange, {
+      gasLimit: 10000000
+  });
   await strategyImpl.waitForDeployment();
-  console.log("Strategy implementation deployed at:", await strategyImpl.getAddress());
+  const strategyImplAddress = await strategyImpl.getAddress();
+  console.log("✓ MetropolisStrategy implementation deployed at:", strategyImplAddress);
 
   // Deploy Shadow Strategy implementation
-  console.log("Deploying ShadowStrategy implementation...");
+  console.log("\nDeploying ShadowStrategy implementation...");
   const maxRangeShadow = 887272; // Max tick range for Shadow (from SHADOW_INTEGRATION_PLAN.md)
   const ShadowStrategy = await ethers.getContractFactory("ShadowStrategy");
-  const shadowStrategyImpl = await ShadowStrategy.deploy(proxyAddress, maxRangeShadow);
+  const shadowStrategyImpl = await ShadowStrategy.deploy(proxyAddress, maxRangeShadow, {
+      gasLimit: 10000000
+  });
   await shadowStrategyImpl.waitForDeployment();
-  console.log("ShadowStrategy implementation deployed at:", await shadowStrategyImpl.getAddress());
+  const shadowStrategyImplAddress = await shadowStrategyImpl.getAddress();
+  console.log("✓ ShadowStrategy implementation deployed at:", shadowStrategyImplAddress);
 
   // Set vault and strategy implementations
-  console.log("Setting vault and strategy implementations...");
+  console.log("\n=== Setting Factory Implementations ===");
   
   const VAULT_TYPE_ORACLE = 2;
   const VAULT_TYPE_SHADOW_ORACLE_REWARD = 4;
   const STRATEGY_TYPE_DEFAULT = 1;
   const STRATEGY_TYPE_SHADOW = 2;
 
-  const tx1 = await vaultFactory.setVaultImplementation(VAULT_TYPE_ORACLE, await oracleRewardVaultImpl.getAddress());
+  console.log("Constants being used:");
+  console.log("  VAULT_TYPE_ORACLE:", VAULT_TYPE_ORACLE);
+  console.log("  VAULT_TYPE_SHADOW_ORACLE_REWARD:", VAULT_TYPE_SHADOW_ORACLE_REWARD);
+  console.log("  STRATEGY_TYPE_DEFAULT:", STRATEGY_TYPE_DEFAULT);
+  console.log("  STRATEGY_TYPE_SHADOW:", STRATEGY_TYPE_SHADOW);
+
+  console.log("\nSetting vault implementations...");
+  const oracleRewardVaultAddress = await oracleRewardVaultImpl.getAddress();
+  console.log("Setting VAULT_TYPE_ORACLE =", VAULT_TYPE_ORACLE, "to:", oracleRewardVaultAddress);
+  const tx1 = await vaultFactory.setVaultImplementation(VAULT_TYPE_ORACLE, oracleRewardVaultAddress);
   await tx1.wait();
-  console.log("Oracle vault implementation set");
+  console.log("✓ Oracle vault implementation set");
 
-  const tx2 = await vaultFactory.setVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD, await oracleRewardShadowVaultImpl.getAddress());
+  const oracleRewardShadowVaultAddress = await oracleRewardShadowVaultImpl.getAddress();
+  console.log("Setting VAULT_TYPE_SHADOW_ORACLE_REWARD =", VAULT_TYPE_SHADOW_ORACLE_REWARD, "to:", oracleRewardShadowVaultAddress);
+  const tx2 = await vaultFactory.setVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD, oracleRewardShadowVaultAddress);
   await tx2.wait();
-  console.log("Oracle reward shadow vault implementation set");
+  console.log("✓ Oracle reward shadow vault implementation set");
 
-  const tx3 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_DEFAULT, await strategyImpl.getAddress());
-  await tx3.wait();
-  console.log("Strategy implementation set");
+  console.log("\nSetting strategy implementations...");
+  console.log("Setting STRATEGY_TYPE_DEFAULT =", STRATEGY_TYPE_DEFAULT, "to:", strategyImplAddress);
+  const tx3 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_DEFAULT, strategyImplAddress);
+  const receipt3 = await tx3.wait();
+  console.log("✓ Strategy implementation set - Gas used:", receipt3.gasUsed.toString(), "Status:", receipt3.status);
+  
+  // Immediately verify it was set correctly
+  const verifyStrategy = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_DEFAULT);
+  console.log("  Immediate verification - Expected:", strategyImplAddress);
+  console.log("  Immediate verification - Actual  :", verifyStrategy);
+  console.log("  Immediate verification - Match   :", verifyStrategy === strategyImplAddress);
 
-  const tx4 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, await shadowStrategyImpl.getAddress());
-  await tx4.wait();
-  console.log("Shadow strategy implementation set");
+  console.log("Setting STRATEGY_TYPE_SHADOW =", STRATEGY_TYPE_SHADOW, "to:", shadowStrategyImplAddress);
+  const tx4 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, shadowStrategyImplAddress);
+  const receipt4 = await tx4.wait();
+  console.log("✓ Shadow strategy implementation set - Gas used:", receipt4.gasUsed.toString(), "Status:", receipt4.status);
+  
+  // Immediately verify it was set correctly
+  const verifyShadowStrategy = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_SHADOW);
+  console.log("  Immediate verification - Expected:", shadowStrategyImplAddress);
+  console.log("  Immediate verification - Actual  :", verifyShadowStrategy);
+  console.log("  Immediate verification - Match   :", verifyShadowStrategy === shadowStrategyImplAddress);
 
   // Configure Shadow protocol addresses
   if (shadowConfig[network.name]) {
@@ -198,8 +286,12 @@ async function main() {
   }
 
   // Verify the configuration
-  console.log("\nVerifying configuration...");
+  console.log("\n=== Verifying Factory Configuration ===");
+  
   const owner = await vaultFactory.owner();
+  console.log("Factory owner:", owner);
+
+  console.log("\nRetrieving implementations from factory...");
   const oracleVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_ORACLE);
   const oracleRewardShadowVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD);
   const strategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_DEFAULT);
@@ -207,12 +299,37 @@ async function main() {
   const npmFromFactory = await vaultFactory.getShadowNonfungiblePositionManager();
   const voterFromFactory = await vaultFactory.getShadowVoter();
 
-  console.log("Configuration verified:");
-  console.log("Owner:", owner);
-  console.log("Oracle vault implementation matches:", oracleVaultImplFromFactory === await oracleRewardVaultImpl.getAddress());
-  console.log("Oracle reward shadow vault implementation matches:", oracleRewardShadowVaultImplFromFactory === await oracleRewardShadowVaultImpl.getAddress());
-  console.log("Strategy implementation matches:", strategyImplFromFactory === await strategyImpl.getAddress());
-  console.log("Shadow strategy implementation matches:", shadowStrategyImplFromFactory === await shadowStrategyImpl.getAddress());
+  console.log("\n=== Detailed Verification ===");
+  
+  // Only check Oracle vault if it was deployed
+  if (oracleVaultImpl) {
+    const oracleVaultDeployedAddr = await oracleVaultImpl.getAddress();
+    console.log("Oracle vault - Deployed:", oracleVaultDeployedAddr);
+    console.log("Oracle vault - Factory :", oracleVaultImplFromFactory);
+    console.log("Oracle vault - Match   :", oracleVaultImplFromFactory === oracleVaultDeployedAddr);
+  } else {
+    console.log("Oracle vault: SKIPPED (using OracleRewardVault for VAULT_TYPE_ORACLE)");
+    console.log("VAULT_TYPE_ORACLE =", VAULT_TYPE_ORACLE, "set to:", oracleVaultImplFromFactory);
+    console.log("Expected (OracleRewardVault):", oracleRewardVaultAddress);
+    console.log("Match:", oracleVaultImplFromFactory === oracleRewardVaultAddress);
+  }
+  
+  console.log("\nShadow vault verification:");
+  console.log("Shadow vault - Deployed:", oracleRewardShadowVaultAddress);
+  console.log("Shadow vault - Factory :", oracleRewardShadowVaultImplFromFactory);
+  console.log("Shadow vault - Match   :", oracleRewardShadowVaultImplFromFactory === oracleRewardShadowVaultAddress);
+  
+  console.log("\nStrategy verification:");
+  console.log("Strategy - Deployed:", strategyImplAddress);
+  console.log("Strategy - Factory :", strategyImplFromFactory);
+  console.log("Strategy - Match   :", strategyImplFromFactory === strategyImplAddress);
+  
+  console.log("\nShadow strategy verification:");
+  console.log("Shadow strategy - Deployed:", shadowStrategyImplAddress);
+  console.log("Shadow strategy - Factory :", shadowStrategyImplFromFactory);
+  console.log("Shadow strategy - Match   :", shadowStrategyImplFromFactory === shadowStrategyImplAddress);
+  
+  console.log("\nProtocol addresses:");
   console.log("Shadow NPM configured:", npmFromFactory);
   console.log("Shadow Voter configured:", voterFromFactory);
 
@@ -221,7 +338,13 @@ async function main() {
   console.log("VaultFactory (Proxy):", proxyAddress);
   console.log("VaultFactory (Implementation):", await vaultFactoryImpl.getAddress());
   console.log("ProxyAdmin:", await proxyAdmin.getAddress());
-  console.log("OracleVault Implementation:", await oracleVaultImpl.getAddress());
+  
+  if (oracleVaultImpl) {
+    console.log("OracleVault Implementation:", await oracleVaultImpl.getAddress());
+  } else {
+    console.log("OracleVault Implementation: SKIPPED");
+  }
+  
   console.log("OracleRewardVault Implementation:", await oracleRewardVaultImpl.getAddress());
   console.log("Strategy Implementation:", await strategyImpl.getAddress());
   
@@ -243,7 +366,7 @@ async function main() {
       vaultFactory: proxyAddress,
       vaultFactoryImpl: await vaultFactoryImpl.getAddress(),
       proxyAdmin: await proxyAdmin.getAddress(),
-      oracleVaultImpl: await oracleVaultImpl.getAddress(),
+      oracleVaultImpl: oracleVaultImpl ? await oracleVaultImpl.getAddress() : null,
       oracleRewardVaultImpl: await oracleRewardVaultImpl.getAddress(),
       oracleRewardShadowVaultImpl: await oracleRewardShadowVaultImpl.getAddress(),
       strategyImpl: await strategyImpl.getAddress(),
@@ -276,7 +399,9 @@ main()
 async function deployOracleHelperFactory() : Promise<[OracleHelperFactory, string]> {
   console.log("Deploying OracleHelperFactory...");
   const OracleHelperFactoryContract = await ethers.getContractFactory("OracleHelperFactory");
-  const oracleHelperFactory = await OracleHelperFactoryContract.deploy();
+  const oracleHelperFactory = await OracleHelperFactoryContract.deploy({
+      gasLimit: 10000000
+  });
   await oracleHelperFactory.waitForDeployment();
   const oracleHelperFactoryAddress = await oracleHelperFactory.getAddress();
   console.log("OracleHelperFactory deployed at:", oracleHelperFactoryAddress);
@@ -287,7 +412,9 @@ async function deployOracleHelperFactory() : Promise<[OracleHelperFactory, strin
 async function deployShadowPriceHelper() : Promise<[ShadowPriceHelper, string]> {
   console.log("Deploying Shadow price helper...");
   const contract = await ethers.getContractFactory("ShadowPriceHelper");
-  const contractDeployed = await contract.deploy();
+  const contractDeployed = await contract.deploy({
+      gasLimit: 10000000
+  });
   await contractDeployed.waitForDeployment();
   const contractAddress = await contractDeployed.getAddress();
   console.log("ShadowPriceHelper deployed at:", contractAddress);

@@ -1,19 +1,19 @@
 {
   "network": "localhost",
-  "timestamp": "2025-07-27T21:52:47.926Z",
+  "timestamp": "2025-07-27T22:27:56.528Z",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   "addresses": {
-    "vaultFactory": "0x998abeb3E57409262aE5b751f60747921B33613E",
-    "vaultFactoryImpl": "0xf5059a5D33d5853360D16C683c16e67980206f36",
-    "proxyAdmin": "0x95401dc811bb5740090279Ba06cfA8fcF6113778",
-    "oracleVaultImpl": "0x70e0bA845a1A0F2DA3359C97E0285013525FFC49",
-    "oracleRewardVaultImpl": "0x4826533B4897376654Bb4d4AD88B7faFD0C98528",
-    "oracleRewardShadowVaultImpl": "0x99bbA657f2BbC93c02D617f8bA121cB8Fc104Acf",
-    "strategyImpl": "0x0E801D84Fa97b50751Dbf25036d067dCf18858bF",
-    "shadowStrategyImpl": "0x8f86403A4DE0BB5791fa46B8e795C547942fE4Cf",
+    "vaultFactory": "0x5bf5b11053e734690269C6B9D438F8C9d48F528A",
+    "vaultFactoryImpl": "0x3347B4d90ebe72BeFb30444C9966B2B990aE9FcB",
+    "proxyAdmin": "0x3155755b79aA083bd953911C92705B7aA82a18F9",
+    "oracleVaultImpl": null,
+    "oracleRewardVaultImpl": "0xffa7CA1AEEEbBc30C874d32C7e22F052BbEa0429",
+    "oracleRewardShadowVaultImpl": "0x3aAde2dCD2Df6a8cAc689EE797591b2913658659",
+    "strategyImpl": "0xab16A69A5a8c12C732e0DEFF4BE56A70bb64c926",
+    "shadowStrategyImpl": "0xE3011A37A904aB90C8881a99BD1F6E21401f1522",
     "shadowNPM": "0x0000000000000000000000000000000000000000",
     "shadowVoter": "0x0000000000000000000000000000000000000000",
-    "wnative": "0xa82fF9aFd8f496c3d6ac40E2a0F282E47488CFc9"
+    "wnative": "0xA7c59f010700930003b33aB25a7a0679C860f29c"
   },
   "configuration": {
     "metropolisMaxRange": 51,
