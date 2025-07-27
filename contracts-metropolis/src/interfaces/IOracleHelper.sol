@@ -25,7 +25,7 @@ interface IOracleHelper {
 
     function setOracleParameters(OracleParameters calldata parameters) external;
 
-    function setSequenzerUptimeFeed(IAggregatorV3 sequencerUptimeFeed) external;
+    function setSequencerUptimeFeed(IAggregatorV3 sequencerUptimeFeed) external;
 
     function setTwapParams(bool enabled, uint40 interval, uint256 deviationThreshold) external;
 
@@ -45,5 +45,5 @@ interface IOracleHelper {
 
     function getOracleParameters() external view returns (OracleParameters memory);
 
-    function getSequenzerUptimeFeed() external view returns (IAggregatorV3);
+    function getSequencerUptimeFeed() external view returns (IAggregatorV3);
 }

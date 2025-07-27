@@ -90,7 +90,7 @@ contract OracleHelper is IOracleHelper {
         _;
     }
 
-    function setSequenzerUptimeFeed(IAggregatorV3 sequencerUptimeFeed) external override onlyFactory {
+    function setSequencerUptimeFeed(IAggregatorV3 sequencerUptimeFeed) external override onlyFactory {
         _sequencerUptimeFeed = sequencerUptimeFeed;
     }
 
@@ -110,7 +110,7 @@ contract OracleHelper is IOracleHelper {
     }
 
     function _getOraclePrice(IAggregatorV3 dataFeed) internal view returns (uint256 uintPrice) {
-        _checkSequenzerUp();
+        _checkSequencerUp();
 
         (, int256 price, , uint256 updatedAt, ) = dataFeed.latestRoundData();
 
@@ -127,7 +127,7 @@ contract OracleHelper is IOracleHelper {
         uintPrice = uint256(price);
     }
 
-    function _checkSequenzerUp() internal view {
+    function _checkSequencerUp() internal view {
         if (address(_sequencerUptimeFeed) == address(0)) {
             return;
         }
@@ -153,7 +153,7 @@ contract OracleHelper is IOracleHelper {
         return _dataFeedY;
     }
 
-    function getSequenzerUptimeFeed() external view override returns (IAggregatorV3) {
+    function getSequencerUptimeFeed() external view override returns (IAggregatorV3) {
         return _sequencerUptimeFeed;
     }
 
