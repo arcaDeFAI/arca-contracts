@@ -15,6 +15,7 @@ import {IShadowStrategy} from "../../contracts-shadow/src/interfaces/IShadowStra
 import {IMinimalVault} from "./interfaces/IMinimalVault.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
 import {IOracleRewardShadowVault} from "../../contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol";
+import {IRamsesV3Pool} from "../../contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
@@ -544,6 +545,41 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         return _createDefaultStrategy(address(vault), lbPair, tokenX, tokenY);
     }
 
+    /**
+     * @notice Creates a new Shadow oracle reward vault and Shadow strategy for the given pool.
+     * @dev The Shadow vault will be linked to the Shadow strategy.
+     * @param pool The address of the Ramses V3 Pool.
+     * @param dataFeedX The address of the data feed for token X.
+     * @param dataFeedY The address of the data feed for token Y.
+     * @param heartbeatX The heartbeat of the data feed for token X.
+     * @param heartbeatY The heartbeat of the data feed for token Y.
+     * @return vault The address of the new Shadow vault.
+     * @return strategy The address of the new Shadow strategy.
+     */
+    function createShadowOracleRewardVaultAndStrategy(
+        address pool,
+        IAggregatorV3 dataFeedX,
+        IAggregatorV3 dataFeedY,
+        uint24 heartbeatX,
+        uint24 heartbeatY
+    )
+        external
+        override
+        onlyOwner
+        returns (address vault, address strategy)
+    {
+        if (dataFeedX.decimals() != dataFeedY.decimals()) revert VaultFactory__InvalidDecimals();
+
+        // Get tokens from the pool
+        IRamsesV3Pool ramsesPool = IRamsesV3Pool(pool);
+        address tokenX = ramsesPool.token0();
+        address tokenY = ramsesPool.token1();
+
+        vault = _createShadowOracleRewardVault(pool, tokenX, tokenY, dataFeedX, dataFeedY, heartbeatX, heartbeatY);
+        strategy = _createShadowStrategy(vault, pool, tokenX, tokenY);
+
+        _linkVaultToStrategy(IMinimalVault(vault), strategy);
+    }
 
     /**
      * @notice Links the given vault to the given strategy.
@@ -686,7 +722,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
         if (vType == VaultType.Simple) vName = "Simple";
         else if (vType == VaultType.Oracle) vName = "Oracle";
-        else if (vType == VaultType.ShadowOracle) vName = "Shadow Oracle";
         else if (vType == VaultType.ShadowOracleReward) vName = "Shadow Oracle Reward";
         else revert VaultFactory__InvalidType();
 
@@ -727,7 +762,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         bytes memory vaultImmutableData =
             abi.encodePacked(lbPair, tokenX, tokenY, decimalsX, decimalsY, dataFeedX, dataFeedY, address(helper));
         
-        vault = _createVault(VaultType.Oracle, lbPair, tokenX, tokenY, vaultImmutableData);
+        vault = _createMetropolisVault(VaultType.Oracle, lbPair, tokenX, tokenY, vaultImmutableData);
 
         // Initialize the helper with the vault address
         helper.initialize(vault, heartbeatX, heartbeatY, 0, type(uint256).max, _defaultSequencerUptimeFeed);
@@ -737,20 +772,25 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
-     * @dev Internal function to create a new vault of the given type.
-     * @param vType The type of the vault.
+     * @dev Internal function to create a new Metropolis vault of the given type.
+     * @param vType The type of the vault (must be a Metropolis vault type).
      * @param lbPair The address of the LBPair.
      * @param tokenX The address of token X.
      * @param tokenY The address of token Y.
      * @param vaultImmutableData The immutable data to pass to the vault.
      */
-    function _createVault(
+    function _createMetropolisVault(
         VaultType vType,
         ILBPair lbPair,
         address tokenX,
         address tokenY,
         bytes memory vaultImmutableData
     ) private isValidType(uint8(vType)) returns (address vault) {
+        // Ensure this is only used for Metropolis vaults
+        if (vType != VaultType.Simple && vType != VaultType.Oracle && vType != VaultType.OracleReward) {
+            revert VaultFactory__InvalidType();
+        }
+
         address vaultImplementation = _vaultImplementation[vType];
         if (vaultImplementation == address(0)) revert VaultFactory__VaultImplementationNotSet(vType);
 
@@ -762,9 +802,74 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _vaults[vType].push(vault);
         _vaultType[vault] = vType;
 
+        // Metropolis vaults use name and symbol parameters
         IBaseVault(vault).initialize(_getName(vType, vaultId), "MVT");
 
         emit VaultCreated(vType, vault, lbPair, vaultId, tokenX, tokenY);
+    }
+
+    /**
+     * @dev Internal function to create a new Shadow oracle reward vault.
+     * @param pool The address of the Ramses V3 Pool.
+     * @param tokenX The address of token X.
+     * @param tokenY The address of token Y.
+     * @param dataFeedX The address of the data feed for token X.
+     * @param dataFeedY The address of the data feed for token Y.
+     * @param heartbeatX The heartbeat of the data feed for token X.
+     * @param heartbeatY The heartbeat of the data feed for token Y.
+     */
+    function _createShadowOracleRewardVault(
+        address pool,
+        address tokenX,
+        address tokenY,
+        IAggregatorV3 dataFeedX,
+        IAggregatorV3 dataFeedY,
+        uint24 heartbeatX,
+        uint24 heartbeatY
+    ) internal returns (address vault) {
+        VaultType vType = VaultType.ShadowOracleReward;
+        
+        address vaultImplementation = _vaultImplementation[vType];
+        if (vaultImplementation == address(0)) revert VaultFactory__VaultImplementationNotSet(vType);
+
+        uint256 vaultId = _vaults[vType].length;
+        
+        // Shadow vault immutable data layout:
+        // - 0x00: 20 bytes: The address of the Shadow pool
+        // - 0x14: 20 bytes: The address of token 0
+        // - 0x28: 20 bytes: The address of token 1
+        // - 0x3C: 20 bytes: The address of the data feed for token 0
+        // - 0x50: 20 bytes: The address of the data feed for token 1
+        // - 0x64: 1 byte: The decimals of token 0
+        // - 0x65: 1 byte: The decimals of token 1
+        // - 0x66: 3 bytes: The heartbeat of the data feed for token 0
+        // - 0x69: 3 bytes: The heartbeat of the data feed for token 1
+        bytes memory vaultImmutableData = abi.encodePacked(
+            pool,
+            tokenX,
+            tokenY,
+            dataFeedX,
+            dataFeedY,
+            IERC20MetadataUpgradeable(tokenX).decimals(),
+            IERC20MetadataUpgradeable(tokenY).decimals(),
+            heartbeatX,
+            heartbeatY
+        );
+
+        vault = ImmutableClone.cloneDeterministic(
+            vaultImplementation,
+            vaultImmutableData,
+            keccak256(abi.encodePacked(vType, vaultId)) // salt calculation inlined to reduce stack pressure
+            );
+
+        _vaults[vType].push(vault);
+        _vaultType[vault] = vType;
+
+        // Shadow vaults use different initialization
+        IOracleRewardShadowVault(vault).initialize(_getName(vType, vaultId), "MVT");
+
+        // Note: For event consistency, we pass address(0) for lbPair since Shadow vaults don't use LBPairs
+        emit VaultCreated(vType, vault, ILBPair(address(0)), vaultId, tokenX, tokenY);
     }
 
     /**
@@ -783,6 +888,28 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         return _createStrategy(StrategyType.Default, address(vault), lbPair, strategyImmutableData);
     }
 
+    /**
+     * @dev Internal function to create a new Shadow strategy for the given vault.
+     * @param vault The address of the vault.
+     * @param pool The address of the Ramses V3 Pool.
+     * @param tokenX The address of token X.
+     * @param tokenY The address of token Y.
+     */
+    function _createShadowStrategy(address vault, address pool, address tokenX, address tokenY)
+        internal
+        returns (address strategy)
+    {
+        // Shadow strategy immutable data layout:
+        // - 0x00: 20 bytes: The address of the Vault
+        // - 0x14: 20 bytes: The address of the Ramses V3 Pool
+        // - 0x28: 20 bytes: The address of token X
+        // - 0x3C: 20 bytes: The address of token Y
+        bytes memory strategyImmutableData = abi.encodePacked(vault, pool, tokenX, tokenY);
+
+        // Note: Shadow strategies don't use LBPair, so we pass address(0)
+
+        return _createStrategy(StrategyType.Shadow, address(vault), ILBPair(address(0)), strategyImmutableData);
+    }
 
     /**
      * @dev Internal function to create a new strategy of the given type.
@@ -836,7 +963,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
     /**
      * @dev Internal function to link the given vault to the given strategy.
-     * @param vault The address of the vault.
+     * @param minimalVault The address of the vault.
      * @param strategy The address of the strategy.
      */
     function _linkVaultToStrategy(IMinimalVault minimalVault, address strategy) internal {

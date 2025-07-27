@@ -13,6 +13,7 @@ import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
 
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
+import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IWNative} from "./interfaces/IWNative.sol";
 
@@ -206,7 +207,7 @@ abstract contract BaseVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeab
      * @dev Returns the address of the current strategy.
      * @return The address of the strategy
      */
-    function getStrategy() public view virtual override returns (IMetropolisStrategy) {
+    function getStrategy() public view virtual override returns (IStrategyCommon) {
         return _strategy;
     }
 

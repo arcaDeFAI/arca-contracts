@@ -93,8 +93,6 @@ interface IBaseVault is IMinimalVault, IERC20Upgradeable {
 
     function getTokenY() external view returns (IERC20Upgradeable);
 
-    function getStrategy() external view returns (IMetropolisStrategy);
-
     function getAumAnnualFee() external view returns (uint256);
 
     function getRange() external view returns (int32 low, int32 upper);

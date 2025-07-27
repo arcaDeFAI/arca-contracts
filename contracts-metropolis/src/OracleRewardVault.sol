@@ -10,7 +10,7 @@ import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
 import {IERC20} from "./interfaces/IHooksRewarder.sol";
-
+import {IMinimalVault} from "../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
 import {TokenHelper} from "./libraries/TokenHelper.sol";
 import {Precision} from "./libraries/Precision.sol";
 import {console} from "forge-std/console.sol";
@@ -46,7 +46,7 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
      * @dev Returns the type of the vault.
      * @return vaultType The type of the vault
      */
-    function getVaultType() public pure virtual override returns (IVaultFactory.VaultType) {
+    function getVaultType() public pure virtual override(OracleVault, IMinimalVault) returns (IVaultFactory.VaultType) {
         return IVaultFactory.VaultType.OracleReward;
     }
 

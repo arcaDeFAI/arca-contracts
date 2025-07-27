@@ -8,6 +8,7 @@ import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 import {IAggregatorV3} from "./IAggregatorV3.sol";
 import {IStrategyCommon} from "./IStrategyCommon.sol";
 import {IBaseVault} from "./IBaseVault.sol";
+import {IMinimalVault} from "./IMinimalVault.sol";
 import {IOracleHelper} from "./IOracleHelper.sol";
 
 /**
@@ -35,7 +36,6 @@ interface IVaultFactory {
         Simple,
         Oracle,
         OracleReward,
-        ShadowOracle,
         ShadowOracleReward
     }
 
@@ -136,9 +136,9 @@ interface IVaultFactory {
 
     function setOperator(IStrategyCommon strategy, address operator) external;
 
-    function setPendingAumAnnualFee(IBaseVault vault, uint16 pendingAumAnnualFee) external;
+    function setPendingAumAnnualFee(IMinimalVault vault, uint16 pendingAumAnnualFee) external;
 
-    function resetPendingAumAnnualFee(IBaseVault vault) external;
+    function resetPendingAumAnnualFee(IMinimalVault vault) external;
 
     function setFeeRecipient(address feeRecipient) external;
 
@@ -160,13 +160,21 @@ interface IVaultFactory {
 
     function createDefaultStrategy(IBaseVault vault) external returns (address strategy);
 
-    function linkVaultToStrategy(IBaseVault vault, address strategy) external;
+    function createShadowOracleRewardVaultAndStrategy(
+        address pool,
+        IAggregatorV3 dataFeedX,
+        IAggregatorV3 dataFeedY,
+        uint24 heartbeatX,
+        uint24 heartbeatY
+    ) external returns (address vault, address strategy);
 
-    function setEmergencyMode(IBaseVault vault) external;
+    function linkVaultToStrategy(IMinimalVault vault, address strategy) external;
+
+    function setEmergencyMode(IMinimalVault vault) external;
 
     function cancelShutdown(address oracleVault) external;
 
-    function recoverERC20(IBaseVault vault, IERC20Upgradeable token, address recipient, uint256 amount) external;
+    function recoverERC20(IMinimalVault vault, IERC20Upgradeable token, address recipient, uint256 amount) external;
     
     function setTransferIgnoreList(address[] calldata addresses) external;
 

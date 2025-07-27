@@ -26,8 +26,6 @@ interface IShadowStrategy is IStrategyCommon {
         int32 tickLower,
         int32 tickUpper,
         int32 desiredTick,
-        int32 slippageTick,
-        uint256 amountX,
-        uint256 amountY
+        int32 slippageTick
     ) external;
 }
