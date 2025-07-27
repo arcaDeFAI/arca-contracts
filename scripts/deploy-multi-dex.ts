@@ -9,6 +9,10 @@ async function main() {
 
   // Configure parameters based on network
   let wnative: string;
+
+  // NOTE: If you want to re-use a contract for the Oracle Helper Factory, set it here
+  // Otherwise, a new one will be deployed (except for hardhat localhost where it's not used)
+  let oracleHelperFactoryAddress: string = "0x0000000000000000000000000000000000000000";
   const creationFee = 0n; // Default 0 for testnet
   
   // Shadow protocol addresses configuration
@@ -35,20 +39,39 @@ async function main() {
     await mockWS.waitForDeployment();
     wnative = await mockWS.getAddress();
     console.log("Mock wS deployed at:", wnative);
+    const mockOracleHelperFactoryContract = await ethers.getContractFactory("OracleHelperFactory");
+    const mockOracleHelperFactory = await mockOracleHelperFactoryContract.deploy();
+    mockOracleHelperFactory.waitForDeployment();
+    oracleHelperFactoryAddress = await mockOracleHelperFactory.getAddress();
   } else if (network.name === "sonic-testnet") {
     // For testnet, use the testnet wS address
     wnative = "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"; // Actual testnet wS
+    
+    
   } else if (network.name === "sonic-mainnet") {
     // For mainnet, use the mainnet wS address
     wnative = "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"; // Actual mainnet wS
+
+    // NOTE: If you want to re-use a contract for the Oracle Helper Factory, set it here
+    oracleHelperFactoryAddress = "0x0000000000000000000000000000000000000000";
   } else {
     throw new Error(`Unsupported network: ${network.name}`);
+  }
+
+  if (oracleHelperFactoryAddress == "0x0000000000000000000000000000000000000000") {
+    // Deploy OracleHelperFactory
+    console.log("Deploying OracleHelperFactory...");
+    const OracleHelperFactoryContract = await ethers.getContractFactory("OracleHelperFactory");
+    const oracleHelperFactory = await OracleHelperFactoryContract.deploy();
+    await oracleHelperFactory.waitForDeployment();
+    oracleHelperFactoryAddress = await oracleHelperFactory.getAddress();
+    console.log("OracleHelperFactory deployed at:", oracleHelperFactoryAddress);
   }
 
   // Deploy VaultFactory implementation
   console.log("Deploying VaultFactory implementation...");
   const VaultFactory = await ethers.getContractFactory("VaultFactory");
-  const vaultFactoryImpl = await VaultFactory.deploy(wnative);
+  const vaultFactoryImpl = await VaultFactory.deploy(wnative, oracleHelperFactoryAddress);
   await vaultFactoryImpl.waitForDeployment();
   console.log("VaultFactory implementation deployed at:", await vaultFactoryImpl.getAddress());
 
