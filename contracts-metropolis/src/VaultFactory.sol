@@ -31,14 +31,14 @@ import {
     IRamsesV3Pool
 } from "../../contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
+import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
 import {IPriceLens} from "./interfaces/IPriceLens.sol";
-
+import {IOracleHelperFactory} from "./interfaces/IOracleHelperFactory.sol";
 import {OracleLensAggregator} from "./utils/OracleLensAggregator.sol";
 import {IERC20, TokenHelper} from "./libraries/TokenHelper.sol";
-import {IOracleHelper, OracleHelper} from "./OracleHelper.sol";
 
 /**
  * @title Liquidity Book Vault Factory contract
@@ -60,7 +60,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     uint256 private constant MAX_AUM_FEE = 0.3e4; // 30% fee
 
     address private immutable _wnative;
-
     mapping(VaultType => address[]) private _vaults;
     mapping(StrategyType => address[]) private _strategies;
 
@@ -109,6 +108,9 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     address private _shadowNonfungiblePositionManager;
     address private _shadowVoter;
 
+    /// @dev Oracle Helper Factory, to create oracle helpers for Oracle Vaults
+    address private _oracleHelperFactory;
+
     /**
      * @dev Modifier to check if the type id is valid.
      * @param typeId The type id to check.
@@ -123,13 +125,14 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @dev Constructor of the contract.
      * @param wnative The address of the wrapped native token.
      */
-    constructor(address wnative) {
+    constructor(address wnative, address oracleHelperFactory) {
         _disableInitializers();
 
         // safety check
         IERC20Upgradeable(wnative).balanceOf(address(this));
 
         _wnative = wnative;
+        _oracleHelperFactory = oracleHelperFactory;
     }
 
     /// @custom:oz-upgrades-validate-as-initializer
@@ -410,6 +413,14 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         }
 
         strategy.setOperator(operator);
+    }
+
+    function getOracleHelperFactory() external view returns (address) {
+        return _oracleHelperFactory;
+    }
+
+    function setOracleHelperFactory(address oracleHelperFactory) external onlyOwner {
+        _oracleHelperFactory = oracleHelperFactory;
     }
 
     /**
@@ -845,7 +856,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         uint8 decimalsY = IERC20MetadataUpgradeable(tokenY).decimals();
 
         // Create the helper first
-        IOracleHelper helper = new OracleHelper(
+        IOracleHelper helper = IOracleHelperFactory(_oracleHelperFactory).createOracleHelper(
             address(this),
             lbPair,
             dataFeedX,
@@ -853,8 +864,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
             decimalsX,
             decimalsY
         );
-
-        // IOracleHelper helper = IOracleHelper(address(0)); // dummy test
 
         bytes memory vaultImmutableData = abi.encodePacked(
             lbPair,
