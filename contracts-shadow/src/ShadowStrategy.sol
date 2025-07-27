@@ -2,13 +2,16 @@
 
 pragma solidity 0.8.26;
 
-import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
-import {IBaseVault} from "../../contracts-metropolis/src/interfaces/IBaseVault.sol";
-import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
-import {IShadowStrategy} from "./interfaces/IShadowStrategy.sol";
+import {Clone} from "joe-v2/libraries/Clone.sol";
 import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {ReentrancyGuardUpgradeable} from "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
+import {IERC20} from "joe-v2/interfaces/ILBPair.sol";
+
+import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
+import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
+import {IShadowStrategy} from "./interfaces/IShadowStrategy.sol";
 import {INonfungiblePositionManager} from "../CL/periphery/interfaces/INonfungiblePositionManager.sol";
 import {IRamsesV3Pool} from "../CL/core/interfaces/IRamsesV3Pool.sol";
 import {IMinimalGauge} from "./interfaces/IMinimalGauge.sol";
@@ -18,12 +21,11 @@ import {TickMath} from "../CL/core/libraries/TickMath.sol";
 import {FullMath} from "../CL/core/libraries/FullMath.sol";
 import {FixedPoint128} from "../CL/core/libraries/FixedPoint128.sol";
 import {PoolAddress} from "../CL/periphery/libraries/PoolAddress.sol";
-import {IERC20} from "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
 import {IOracleRewardVault} from "../../contracts-metropolis/src/interfaces/IOracleRewardVault.sol";
-import {Clone} from "joe-v2/libraries/Clone.sol";
-import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
 import {TokenHelper} from "../../contracts-metropolis/src/libraries/TokenHelper.sol";
 import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
+import {IOracleRewardShadowVault} from "./interfaces/IOracleRewardShadowVault.sol";
+import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
 
 /**
  * @title Shadow Strategy Contract
@@ -41,6 +43,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using SafeCast for uint256;
     using Math for uint256;
+    using Uint256x256Math for uint256;
 
     // Additional errors not in IStrategyCommon but needed for Shadow
     error Strategy__ActiveIdSlippage();
@@ -124,7 +127,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     /**
      * @notice Initialize the contract.
      */
-    function initialize() external initializer override {
+    function initialize() external initializer {
         __ReentrancyGuard_init();
         _rebalanceCoolDown = 5 seconds;
     }
@@ -165,69 +168,81 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
     // ============ IStrategyCommon Implementation ============
 
-    function getFactory() external view override returns (IVaultFactory) {
+    function getFactory() external view returns (IVaultFactory) {
         return _factory;
     }
 
-    function getVault() external pure override returns (address) {
+    function getVault() external pure returns (address) {
         return _vault();
     }
 
-    function getTokenX() external pure override returns (IERC20Upgradeable) {
+    function getPool() external pure returns (address) {
+        return address(_pool());
+    }
+
+    function getTokenX() external pure returns (IERC20Upgradeable) {
         return _tokenX();
     }
 
-    function getTokenY() external pure override returns (IERC20Upgradeable) {
+    function getTokenY() external pure returns (IERC20Upgradeable) {
         return _tokenY();
     }
 
-    function getOperator() external view override returns (address) {
+    function getOperator() external view returns (address) {
         return _operator;
     }
 
-    function getStrategyType() external pure override returns (IVaultFactory.StrategyType) {
+    function getRange() external view returns (int32 lower, int32 upper) {
+        return (int32(_currentTickLower), int32(_currentTickUpper));
+    }
+
+    function getStrategyType() external pure returns (IVaultFactory.StrategyType) {
         return IVaultFactory.StrategyType.Shadow;
     }
 
-    function getAumAnnualFee() external view override returns (uint256) {
+    function getAumAnnualFee() external view returns (uint256) {
         return _aumAnnualFee;
     }
 
-    function getPendingAumAnnualFee() external view override returns (bool isSet, uint256 pendingAumAnnualFee) {
+    function getPendingAumAnnualFee() external view returns (bool isSet, uint256 pendingAumAnnualFee) {
         return (_pendingAumAnnualFeeSet, _pendingAumAnnualFee);
     }
 
-    function getBalances() external view override returns (uint256 amountX, uint256 amountY) {
+    function getBalances() external view returns (uint256 amountX, uint256 amountY) {
         return _getBalances();
     }
 
-    function getIdleBalances() external view override returns (uint256 amountX, uint256 amountY) {
+    function getIdleBalances() external view returns (uint256 amountX, uint256 amountY) {
         amountX = _tokenX().balanceOf(address(this));
         amountY = _tokenY().balanceOf(address(this));
     }
 
-    function getLastRebalance() external view override returns (uint256) {
+    function getLastRebalance() external view returns (uint256) {
         return _lastRebalance;
     }
 
-    function setOperator(address operator) external override onlyFactory {
+    function getMaxRange() external view returns (uint256) {
+        return _MAX_RANGE;
+    }
+
+    function setOperator(address operator) external onlyFactory {
         _operator = operator;
         emit OperatorSet(operator);
     }
 
-    function setRebalanceCoolDown(uint256 coolDown) external override onlyDefaultOperator {
+    function setRebalanceCoolDown(uint256 coolDown) external onlyFactory {
         _rebalanceCoolDown = coolDown;
         emit RebalanceCoolDownSet(coolDown);
     }
 
-    function setPendingAumAnnualFee(uint16 pendingAumAnnualFee) external override onlyFactory {
+    function setPendingAumAnnualFee(uint16 pendingAumAnnualFee) external onlyFactory {
         if (pendingAumAnnualFee > _MAX_AUM_ANNUAL_FEE) revert Strategy__InvalidFee();
         _pendingAumAnnualFeeSet = true;
         _pendingAumAnnualFee = pendingAumAnnualFee;
         emit PendingAumAnnualFeeSet(pendingAumAnnualFee);
     }
 
-    function resetPendingAumAnnualFee() external override onlyFactory {
+    function resetPendingAumAnnualFee() external onlyFactory {
         _pendingAumAnnualFeeSet = false;
         _pendingAumAnnualFee = 0;
         emit PendingAumAnnualFeeReset();
@@ -235,21 +250,21 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
     // ============ IShadowStrategy Implementation ============
 
-    function getPosition() external view override returns (uint256 tokenId, int24 tickLower, int24 tickUpper) {
+    function getPosition() external view returns (uint256 tokenId, int24 tickLower, int24 tickUpper) {
         return (_positionTokenId, _currentTickLower, _currentTickUpper);
     }
 
-    function getShadowNonfungiblePositionManager() external view override returns (INonfungiblePositionManager) {
+    function getShadowNonfungiblePositionManager() external view returns (INonfungiblePositionManager) {
         return INonfungiblePositionManager(_factory.getShadowNonfungiblePositionManager());
     }
 
-    function getVoter() external view override returns (IMinimalVoter) {
+    function getVoter() external view returns (IMinimalVoter) {
         return IMinimalVoter(_factory.getShadowVoter());
     }
 
     // ============ Reward Functions ============
 
-    function getRewardToken() external view override returns (IERC20) {
+    function getRewardToken() external view returns (IERC20) {
         IMinimalVoter voter = IMinimalVoter(_factory.getShadowVoter());
         if (address(voter) == address(0)) return IERC20(address(0));
         
@@ -259,29 +274,29 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         return IERC20(IMinimalGauge(gauge).rewardToken());
     }
 
-    function getExtraRewardToken() external view override returns (IERC20) {
+    function getExtraRewardToken() external view returns (IERC20) {
         // Shadow doesn't have extra rewards in the same way as Metropolis
         return IERC20(address(0));
     }
 
-    function hasRewards() external view override returns (bool) {
+    function hasRewards() external view returns (bool) {
         IMinimalVoter voter = IMinimalVoter(_factory.getShadowVoter());
         if (address(voter) == address(0)) return false;
         
         return voter.gaugeForPool(address(_pool())) != address(0);
     }
 
-    function hasExtraRewards() external view override returns (bool) {
+    function hasExtraRewards() external view returns (bool) {
         return false; // Shadow doesn't have extra rewards
     }
 
-    function harvestRewards() external override onlyTrusted {
+    function harvestRewards() external onlyTrusted {
         _harvestRewards();
     }
 
     // ============ Core Functions ============
 
-    function withdrawAll() external override onlyVault {
+    function withdrawAll() external onlyVault {
         address vault = _vault();
         
         // Exit position completely
@@ -292,10 +307,10 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         uint256 balance1 = _tokenY().balanceOf(address(this));
         
         // Get queued withdrawals info
-        uint256 queuedShares = IBaseVault(vault).getCurrentTotalQueuedWithdrawal();
+        uint256 queuedShares = IOracleRewardShadowVault(vault).getCurrentTotalQueuedWithdrawal();
         
         // Calculate queued amounts (if any)
-        uint256 totalSupply = IBaseVault(vault).totalSupply();
+        uint256 totalSupply = IOracleRewardShadowVault(vault).totalSupply();
         uint256 queuedAmount0 = 0;
         uint256 queuedAmount1 = 0;
         
@@ -324,17 +339,13 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
      * @param tickUpper The upper tick of the new position
      * @param desiredTick The desired current tick (for slippage check)
      * @param slippageTick The allowed tick slippage
-     * @param amountX The amount of token X to deposit (unused in Shadow)
-     * @param amountY The amount of token Y to deposit (unused in Shadow)
      */
     function rebalance(
         int32 tickLower,
         int32 tickUpper,
         int32 desiredTick,
-        int32 slippageTick,
-        uint256 amountX,
-        uint256 amountY
-    ) external override onlyOperators {
+        int32 slippageTick
+    ) external onlyOperators {
         // Check cooldown
         uint256 lastRebalance = _lastRebalance;
         if (lastRebalance > 0 && block.timestamp < lastRebalance + _rebalanceCoolDown) {
@@ -421,7 +432,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         INonfungiblePositionManager npm = INonfungiblePositionManager(_factory.getShadowNonfungiblePositionManager());
         
         // Get position details
-        (,,,,,, uint128 liquidity,,,,) = npm.positions(_positionTokenId);
+        uint128 liquidity;
+        (,,,,, liquidity,,,,) = npm.positions(_positionTokenId);
 
         // Only decrease liquidity if there is any
         if (liquidity > 0) {
@@ -449,8 +461,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         
         npm.collect(collectParams);
 
-        // Try to claim rewards if gauge exists
-        try this._claimRewards(_positionTokenId) {} catch {}
+        // Claim rewards if gauge exists
+        _claimRewards(_positionTokenId);
 
         // Burn the NFT
         npm.burn(_positionTokenId);
@@ -467,9 +479,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
      * @notice Claims rewards for a position
      * @param tokenId The NFT token ID to claim rewards for
      */
-    function _claimRewards(uint256 tokenId) external {
-        require(msg.sender == address(this), "ShadowStrategy: only self");
-        
+    function _claimRewards(uint256 tokenId) internal {
         IMinimalVoter voter = IMinimalVoter(_factory.getShadowVoter());
         if (address(voter) == address(0)) return;
 
@@ -482,7 +492,11 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         tokens[0] = IMinimalGauge(gauge).rewardToken();
         
         INonfungiblePositionManager npm = INonfungiblePositionManager(_factory.getShadowNonfungiblePositionManager());
-        npm.getReward(tokenId, tokens);
+        
+        // Try to claim rewards, return early if it fails
+        try npm.getReward(tokenId, tokens) {} catch {
+            return;
+        }
     }
 
     /**
@@ -500,23 +514,25 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         
         INonfungiblePositionManager npm = INonfungiblePositionManager(_factory.getShadowNonfungiblePositionManager());
         
-        // Approve tokens to NPM
+        // Approve tokens to NPM (reset to 0 first to handle non-standard tokens)
         if (amount0Desired > 0) {
+            _tokenX().safeApprove(address(npm), 0);
             _tokenX().safeApprove(address(npm), amount0Desired);
         }
         if (amount1Desired > 0) {
+            _tokenY().safeApprove(address(npm), 0);
             _tokenY().safeApprove(address(npm), amount1Desired);
         }
         
-        // Get pool's fee from the pool contract
-        uint24 fee = _pool().fee();
+        // Get tickSpacing from the pool contract
+        int24 tickSpacing = _pool().tickSpacing();
         
         // Mint new position
         (tokenId, liquidity, amount0, amount1) = npm.mint(
             INonfungiblePositionManager.MintParams({
                 token0: address(_tokenX()),
                 token1: address(_tokenY()),
-                fee: fee,
+                tickSpacing: tickSpacing,
                 tickLower: tickLower,
                 tickUpper: tickUpper,
                 amount0Desired: amount0Desired,
@@ -594,13 +610,13 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         returns (uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY)
     {
         // Get the queued shares
-        queuedShares = IBaseVault(_vault()).getCurrentTotalQueuedWithdrawal();
+        queuedShares = IOracleRewardShadowVault(_vault()).getCurrentTotalQueuedWithdrawal();
         
         // Get total balances
         (uint256 totalBalanceX, uint256 totalBalanceY) = _getBalances();
         
         // Calculate queued amounts
-        uint256 totalSupply = IBaseVault(_vault()).totalSupply();
+        uint256 totalSupply = IOracleRewardShadowVault(_vault()).totalSupply();
         if (totalSupply > 0 && queuedShares > 0) {
             queuedAmountX = queuedShares.mulDivRoundDown(totalBalanceX, totalSupply);
             queuedAmountY = queuedShares.mulDivRoundDown(totalBalanceY, totalSupply);
@@ -664,7 +680,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             if (queuedAmountX > 0) _tokenX().safeTransfer(vault, queuedAmountX);
             if (queuedAmountY > 0) _tokenY().safeTransfer(vault, queuedAmountY);
             
-            IBaseVault(vault).executeQueuedWithdrawals();
+            IOracleRewardShadowVault(vault).executeQueuedWithdrawals();
         }
     }
 
