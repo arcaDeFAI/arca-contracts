@@ -59,7 +59,7 @@ interface IOracleRewardShadowVault is IMinimalVault, IERC20Upgradeable {
 
     // Structs
     struct QueuedWithdrawal {
-        uint128 totalQueuedShares;
+        uint256 totalQueuedShares;
         uint128 totalAmountX;
         uint128 totalAmountY;
         mapping(address => uint256) userWithdrawals;
