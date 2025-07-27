@@ -119,6 +119,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _wnative = wnative;
     }
 
+    /// @custom:oz-upgrades-validate-as-initializer
     function initialize4(address owner, uint256 creationFee) public reinitializer(6) {
         if (owner == address(0)) revert VaultFactory__InvalidOwner();
 
