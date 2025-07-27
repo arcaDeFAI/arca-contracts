@@ -21,6 +21,7 @@ import {Precision} from "../../contracts-metropolis/src/libraries/Precision.sol"
 import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
 import {IOracleRewardShadowVault} from "./interfaces/IOracleRewardShadowVault.sol";
 import {FullMath} from "../CL/core/libraries/FullMath.sol";
+import {ShadowPriceHelper} from "./libraries/ShadowPriceHelper.sol";
 
 /**
  * @title Oracle Reward Shadow Vault contract
@@ -142,7 +143,7 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         return _decimalsY() + _SHARES_DECIMALS;
     }
 
-    function getFactory() public view virtual returns (IVaultFactory) {
+    function getFactory() external view virtual returns (IVaultFactory) {
         return _factory;
     }
 
@@ -150,19 +151,19 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
      * @dev Returns the type of the vault.
      * @return vaultType The type of the vault (ShadowOracleReward)
      */
-    function getVaultType() public pure virtual returns (IVaultFactory.VaultType) {
+    function getVaultType() external pure virtual returns (IVaultFactory.VaultType) {
         return IVaultFactory.VaultType.ShadowOracleReward;
     }
 
-    function getPool() public pure virtual returns (IRamsesV3Pool) {
+    function getPool() external pure virtual returns (IRamsesV3Pool) {
         return _pool();
     }
 
-    function getTokenX() public pure virtual returns (IERC20Upgradeable) {
+    function getTokenX() external pure virtual returns (IERC20Upgradeable) {
         return _tokenX();
     }
 
-    function getTokenY() public pure virtual returns (IERC20Upgradeable) {
+    function getTokenY() external pure virtual returns (IERC20Upgradeable) {
         return _tokenY();
     }
 
@@ -170,7 +171,7 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         return _strategy;
     }
     
-    function getTwapInterval() public view virtual returns (uint32) {
+    function getTwapInterval() external view virtual returns (uint32) {
         return _twapInterval;
     }
     
@@ -181,22 +182,22 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         _twapInterval = twapInterval;
     }
 
-    function getAumAnnualFee() public view virtual returns (uint256) {
+    function getAumAnnualFee() external view virtual returns (uint256) {
         IStrategyCommon strategy = _strategy;
         return address(strategy) == address(0) ? 0 : strategy.getAumAnnualFee();
     }
 
-    function getOperators() public view virtual returns (address defaultOperator, address operator) {
+    function getOperators() external view virtual returns (address defaultOperator, address operator) {
         IStrategyCommon strategy = _strategy;
         defaultOperator = _factory.getDefaultOperator();
         operator = address(strategy) == address(0) ? address(0) : strategy.getOperator();
     }
 
-    function getBalances() public view virtual returns (uint256 amountX, uint256 amountY) {
+    function getBalances() external view virtual returns (uint256 amountX, uint256 amountY) {
         (amountX, amountY) = _getBalances(_strategy);
     }
 
-    function isDepositsPaused() public view virtual returns (bool paused) {
+    function isDepositsPaused() external view virtual returns (bool paused) {
         return _depositsPaused;
     }
 
@@ -204,15 +205,15 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         return _flaggedForShutdown;
     }
 
-    function getCurrentRound() public view virtual returns (uint256 round) {
+    function getCurrentRound() external view virtual returns (uint256 round) {
         return _queuedWithdrawalsByRound.length - 1;
     }
 
-    function getQueuedWithdrawal(uint256 round, address user) public view virtual returns (uint256 shares) {
+    function getQueuedWithdrawal(uint256 round, address user) external view virtual returns (uint256 shares) {
         return _queuedWithdrawalsByRound[round].userWithdrawals[user];
     }
 
-    function getTotalQueuedWithdrawal(uint256 round) public view virtual returns (uint256 totalQueuedShares) {
+    function getTotalQueuedWithdrawal(uint256 round) external view virtual returns (uint256 totalQueuedShares) {
         return _queuedWithdrawalsByRound[round].totalQueuedShares;
     }
 
@@ -694,100 +695,7 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
     }
 
     function _getOraclePrice(bool isTokenX) internal view returns (uint256) {
-        uint32 twapInterval = _twapInterval;
-        
-        if (twapInterval == 0) {
-            // Use spot price
-            return _getPoolSpotPrice(isTokenX);
-        } else {
-            // Use TWAP
-            return _getPoolTWAPPrice(isTokenX, twapInterval);
-        }
-    }
-    
-    function _getPoolSpotPrice(bool isTokenX) internal view returns (uint256) {
-        (uint160 sqrtPriceX96,,,,,,) = _pool().slot0();
-        
-        // Price is in terms of token1/token0
-        // sqrtPriceX96 = sqrt(price) * 2^96
-        // price = (sqrtPriceX96 / 2^96)^2
-        
-        if (isTokenX) {
-            // Price of token0 in terms of token1
-            // We need to return price scaled to 18 decimals
-            uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 192);
-            
-            // Adjust for decimals difference
-            uint8 decimalsX = _decimalsX();
-            uint8 decimalsY = _decimalsY();
-            
-            if (decimalsX > decimalsY) {
-                return price * (10 ** (decimalsX - decimalsY));
-            } else if (decimalsY > decimalsX) {
-                return price / (10 ** (decimalsY - decimalsX));
-            } else {
-                return price;
-            }
-        } else {
-            // Price of token1 in terms of token0 (inverse)
-            // price = 1 / ((sqrtPriceX96 / 2^96)^2) = (2^192) / (sqrtPriceX96^2)
-            uint256 price = FullMath.mulDiv(1 << 192, 1e18, FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1));
-            
-            // Adjust for decimals difference
-            uint8 decimalsX = _decimalsX();
-            uint8 decimalsY = _decimalsY();
-            
-            if (decimalsY > decimalsX) {
-                return price * (10 ** (decimalsY - decimalsX));
-            } else if (decimalsX > decimalsY) {
-                return price / (10 ** (decimalsX - decimalsY));
-            } else {
-                return price;
-            }
-        }
-    }
-    
-    function _getPoolTWAPPrice(bool isTokenX, uint32 twapInterval) internal view returns (uint256) {
-        uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[0] = twapInterval;
-        secondsAgos[1] = 0;
-        
-        (int56[] memory tickCumulatives,) = _pool().observe(secondsAgos);
-        
-        // Calculate average tick
-        int24 avgTick = int24((tickCumulatives[1] - tickCumulatives[0]) / int56(uint56(twapInterval)));
-        
-        // Convert tick to sqrtPriceX96
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(avgTick);
-        
-        // Same price calculation logic as spot price
-        if (isTokenX) {
-            uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 192);
-            
-            uint8 decimalsX = _decimalsX();
-            uint8 decimalsY = _decimalsY();
-            
-            if (decimalsX > decimalsY) {
-                return price * (10 ** (decimalsX - decimalsY));
-            } else if (decimalsY > decimalsX) {
-                return price / (10 ** (decimalsY - decimalsX));
-            } else {
-                return price;
-            }
-        } else {
-            uint256 price = FullMath.mulDiv(1 << 192, 1e18, FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1));
-            
-            uint8 decimalsX = _decimalsX();
-            uint8 decimalsY = _decimalsY();
-            
-            if (decimalsY > decimalsX) {
-                return price * (10 ** (decimalsY - decimalsX));
-            } else if (decimalsX > decimalsY) {
-                return price / (10 ** (decimalsX - decimalsY));
-            } else {
-                return price;
-            }
-        }
+        return ShadowPriceHelper.getOraclePrice(_pool(), isTokenX, _twapInterval, _decimalsX(), _decimalsY());
     }
 
     function _getBalances(IStrategyCommon strategy) internal view virtual returns (uint256 amountX, uint256 amountY) {
@@ -918,7 +826,7 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
             : 0;
     }
 
-    function _harvest(address user, Reward storage reward) internal returns (uint256) {
+    function _harvest(address user, Reward storage reward) internal view returns (uint256) {
         return _calcPending(user, reward, reward.accRewardsPerShare);
     }
 
