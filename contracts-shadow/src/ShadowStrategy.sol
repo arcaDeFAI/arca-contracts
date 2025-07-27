@@ -274,7 +274,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         return IERC20(IMinimalGauge(gauge).rewardToken());
     }
 
-    function getExtraRewardToken() external view returns (IERC20) {
+    function getExtraRewardToken() external pure returns (IERC20) {
         // Shadow doesn't have extra rewards in the same way as Metropolis
         return IERC20(address(0));
     }
@@ -286,7 +286,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         return voter.gaugeForPool(address(_pool())) != address(0);
     }
 
-    function hasExtraRewards() external view returns (bool) {
+    function hasExtraRewards() external pure returns (bool) {
         return false; // Shadow doesn't have extra rewards
     }
 

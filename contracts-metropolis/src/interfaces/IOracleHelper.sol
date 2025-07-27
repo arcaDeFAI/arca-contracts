@@ -21,6 +21,7 @@ interface IOracleHelper {
     error OracleHelper__InvalidVault();
     error OracleHelper__NotFactory();
 
+    function initialize(address vault, uint24 heartbeatX, uint24 heartbeatY, uint256 minPrice, uint256 maxPrice, IAggregatorV3 sequencerUptimeFeed) external;
 
     function setOracleParameters(OracleParameters calldata parameters) external;
 
