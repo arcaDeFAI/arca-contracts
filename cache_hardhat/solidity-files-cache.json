@@ -3463,8 +3463,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IVaultFactory.sol": {
-      "lastModificationDate": 1753568600568,
-      "contentHash": "5d717a9203bf60d11d319f0c64cefc5e",
+      "lastModificationDate": 1753583992423,
+      "contentHash": "dfcc17e101df6546ff23431fabc59482",
       "sourceName": "contracts-metropolis/src/interfaces/IVaultFactory.sol",
       "solcConfig": {
         "version": "0.8.26",
@@ -3941,8 +3941,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/VaultFactory.sol": {
-      "lastModificationDate": 1753578466564,
-      "contentHash": "6e49ab4ab07c09f5ce509080b1296df9",
+      "lastModificationDate": 1753584192227,
+      "contentHash": "c9d34f5f71b8a0d3db7de9190b58fa70",
       "sourceName": "contracts-metropolis/src/VaultFactory.sol",
       "solcConfig": {
         "version": "0.8.26",
@@ -4078,8 +4078,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/OracleHelper.sol": {
-      "lastModificationDate": 1753233981914,
-      "contentHash": "939b99677119c9eae578f9280588d17a",
+      "lastModificationDate": 1753581900932,
+      "contentHash": "b6e1560a72a0e07f4fb00fd721f05bde",
       "sourceName": "contracts-metropolis/src/OracleHelper.sol",
       "solcConfig": {
         "version": "0.8.26",
@@ -4436,8 +4436,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/HybridPriceLens.sol": {
-      "lastModificationDate": 1753233981913,
-      "contentHash": "44dbe72106f9ae696f2f444e3524ccba",
+      "lastModificationDate": 1753581546207,
+      "contentHash": "88395564fb087772e75940c9e2aa1fd3",
       "sourceName": "contracts-metropolis/src/HybridPriceLens.sol",
       "solcConfig": {
         "version": "0.8.26",
@@ -4469,7 +4469,10 @@
         "./interfaces/IAggregatorV3.sol",
         "joe-v2/interfaces/ILBPair.sol",
         "openzeppelin/access/Ownable.sol",
-        "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol"
+        "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol",
+        "../../contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol",
+        "../../contracts-shadow/CL/core/libraries/TickMath.sol",
+        "../../contracts-shadow/CL/core/libraries/FullMath.sol"
       ],
       "versionPragmas": [
         "0.8.26"
@@ -5815,8 +5818,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol": {
-      "lastModificationDate": 1753568809024,
-      "contentHash": "01079103b5b8fe99e684a4795cf0e921",
+      "lastModificationDate": 1753584240639,
+      "contentHash": "f43060b5f86482bbc2272eba75e3ba11",
       "sourceName": "contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol",
       "solcConfig": {
         "version": "0.8.26",
@@ -5849,7 +5852,6 @@
         "../../../contracts-metropolis/src/interfaces/IMinimalVault.sol",
         "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol",
         "../../../contracts-metropolis/src/interfaces/IVaultFactory.sol",
-        "../../../contracts-metropolis/src/interfaces/IOracleHelper.sol",
         "../../../contracts-metropolis/src/interfaces/IHooksRewarder.sol"
       ],
       "versionPragmas": [

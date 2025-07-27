@@ -14,10 +14,8 @@ import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrate
 import {IShadowStrategy} from "./interfaces/IShadowStrategy.sol";
 import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
 import {IWNative} from "../../contracts-metropolis/src/interfaces/IWNative.sol";
-import {IAggregatorV3} from "../../contracts-metropolis/src/interfaces/IAggregatorV3.sol";
 import {IERC20} from "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
-import {IOracleHelper} from "../../contracts-metropolis/src/interfaces/IOracleHelper.sol";
-import {OracleHelper} from "../../contracts-metropolis/src/OracleHelper.sol";
+import {TickMath} from "../CL/core/libraries/TickMath.sol";
 import {TokenHelper} from "../../contracts-metropolis/src/libraries/TokenHelper.sol";
 import {Precision} from "../../contracts-metropolis/src/libraries/Precision.sol";
 import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
@@ -26,17 +24,13 @@ import {IOracleRewardShadowVault} from "./interfaces/IOracleRewardShadowVault.so
 /**
  * @title Oracle Reward Shadow Vault contract
  * @author Arca
- * @notice This contract is a standalone vault for Shadow (Ramses V3) pools with oracle pricing and reward distribution
+ * @notice This contract is a standalone vault for Shadow (Ramses V3) pools with pool-based oracle pricing and reward distribution
  * @dev The immutable data should be encoded as follows:
  * - 0x00: 20 bytes: The address of the Shadow pool
  * - 0x14: 20 bytes: The address of token 0
  * - 0x28: 20 bytes: The address of token 1
- * - 0x3C: 20 bytes: The address of the data feed for token 0
- * - 0x50: 20 bytes: The address of the data feed for token 1
- * - 0x64: 1 byte: The decimals of token 0
- * - 0x65: 1 byte: The decimals of token 1
- * - 0x66: 3 bytes: The heartbeat of the data feed for token 0
- * - 0x69: 3 bytes: The heartbeat of the data feed for token 1
+ * - 0x3C: 1 byte: The decimals of token 0
+ * - 0x3D: 1 byte: The decimals of token 1
  */
 contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgradeable, IOracleRewardShadowVault {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -129,8 +123,10 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
     // ============ State Variables ============
     IVaultFactory internal immutable _factory;
     address private immutable _wnative;
-    OracleHelper private _oracleHelper;
-
+    
+    // Pool oracle configuration
+    uint32 private _twapInterval; // 0 for spot price, >0 for TWAP
+    
     IStrategyCommon private _strategy;
     bool private _depositsPaused;
     bool private _flaggedForShutdown;
@@ -208,16 +204,6 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         __ERC20_init(name, symbol);
         __ReentrancyGuard_init();
 
-        // Initialize oracle helper
-        _oracleHelper = new OracleHelper(
-            _dataFeedX(),
-            _dataFeedY(),
-            _heartbeatX(),
-            _heartbeatY(),
-            _decimalsX(),
-            _decimalsY()
-        );
-
         // Initialize the first round of queued withdrawals
         _queuedWithdrawalsByRound.push();
     }
@@ -258,9 +244,16 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
     function getStrategy() public view virtual returns (IStrategyCommon) {
         return _strategy;
     }
-
-    function getOracleHelper() public view virtual returns (IOracleHelper) {
-        return _oracleHelper;
+    
+    function getTwapInterval() public view virtual returns (uint32) {
+        return _twapInterval;
+    }
+    
+    function setTwapInterval(uint32 twapInterval) external virtual {
+        if (msg.sender != address(_factory) && msg.sender != _factory.getDefaultOperator()) {
+            revert ShadowVault__OnlyFactory();
+        }
+        _twapInterval = twapInterval;
     }
 
     function getAumAnnualFee() public view virtual returns (uint256) {
@@ -683,28 +676,12 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         return IERC20Upgradeable(_getArgAddress(40));
     }
 
-    function _dataFeedX() internal pure virtual returns (IAggregatorV3) {
-        return IAggregatorV3(_getArgAddress(60));
-    }
-
-    function _dataFeedY() internal pure virtual returns (IAggregatorV3) {
-        return IAggregatorV3(_getArgAddress(80));
-    }
-
     function _decimalsX() internal pure virtual returns (uint8) {
-        return _getArgUint8(100);
+        return _getArgUint8(60);
     }
 
     function _decimalsY() internal pure virtual returns (uint8) {
-        return _getArgUint8(101);
-    }
-
-    function _heartbeatX() internal pure virtual returns (uint24) {
-        return _getArgUint24(102);
-    }
-
-    function _heartbeatY() internal pure virtual returns (uint24) {
-        return _getArgUint24(105);
+        return _getArgUint8(61);
     }
 
     function _previewShares(IStrategyCommon strategy, uint256 amountX, uint256 amountY)
@@ -788,7 +765,100 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
     }
 
     function _getOraclePrice(bool isTokenX) internal view returns (uint256) {
-        return isTokenX ? _oracleHelper.getPriceX() : _oracleHelper.getPriceY();
+        uint32 twapInterval = _twapInterval;
+        
+        if (twapInterval == 0) {
+            // Use spot price
+            return _getPoolSpotPrice(isTokenX);
+        } else {
+            // Use TWAP
+            return _getPoolTWAPPrice(isTokenX, twapInterval);
+        }
+    }
+    
+    function _getPoolSpotPrice(bool isTokenX) internal view returns (uint256) {
+        (uint160 sqrtPriceX96,,,,,,) = _pool().slot0();
+        
+        // Price is in terms of token1/token0
+        // sqrtPriceX96 = sqrt(price) * 2^96
+        // price = (sqrtPriceX96 / 2^96)^2
+        
+        if (isTokenX) {
+            // Price of token0 in terms of token1
+            // We need to return price scaled to 18 decimals
+            uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 192);
+            
+            // Adjust for decimals difference
+            uint8 decimalsX = _decimalsX();
+            uint8 decimalsY = _decimalsY();
+            
+            if (decimalsX > decimalsY) {
+                return price * (10 ** (decimalsX - decimalsY));
+            } else if (decimalsY > decimalsX) {
+                return price / (10 ** (decimalsY - decimalsX));
+            } else {
+                return price;
+            }
+        } else {
+            // Price of token1 in terms of token0 (inverse)
+            // price = 1 / ((sqrtPriceX96 / 2^96)^2) = (2^192) / (sqrtPriceX96^2)
+            uint256 price = FullMath.mulDiv(1 << 192, 1e18, FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1));
+            
+            // Adjust for decimals difference
+            uint8 decimalsX = _decimalsX();
+            uint8 decimalsY = _decimalsY();
+            
+            if (decimalsY > decimalsX) {
+                return price * (10 ** (decimalsY - decimalsX));
+            } else if (decimalsX > decimalsY) {
+                return price / (10 ** (decimalsX - decimalsY));
+            } else {
+                return price;
+            }
+        }
+    }
+    
+    function _getPoolTWAPPrice(bool isTokenX, uint32 twapInterval) internal view returns (uint256) {
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = twapInterval;
+        secondsAgos[1] = 0;
+        
+        (int56[] memory tickCumulatives,) = _pool().observe(secondsAgos);
+        
+        // Calculate average tick
+        int24 avgTick = int24((tickCumulatives[1] - tickCumulatives[0]) / int56(uint56(twapInterval)));
+        
+        // Convert tick to sqrtPriceX96
+        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(avgTick);
+        
+        // Same price calculation logic as spot price
+        if (isTokenX) {
+            uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 192);
+            
+            uint8 decimalsX = _decimalsX();
+            uint8 decimalsY = _decimalsY();
+            
+            if (decimalsX > decimalsY) {
+                return price * (10 ** (decimalsX - decimalsY));
+            } else if (decimalsY > decimalsX) {
+                return price / (10 ** (decimalsY - decimalsX));
+            } else {
+                return price;
+            }
+        } else {
+            uint256 price = FullMath.mulDiv(1 << 192, 1e18, FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1));
+            
+            uint8 decimalsX = _decimalsX();
+            uint8 decimalsY = _decimalsY();
+            
+            if (decimalsY > decimalsX) {
+                return price * (10 ** (decimalsY - decimalsX));
+            } else if (decimalsX > decimalsY) {
+                return price / (10 ** (decimalsX - decimalsY));
+            } else {
+                return price;
+            }
+        }
     }
 
     function _getBalances(IStrategyCommon strategy) internal view virtual returns (uint256 amountX, uint256 amountY) {
