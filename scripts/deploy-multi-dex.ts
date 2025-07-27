@@ -18,8 +18,8 @@ async function main() {
   // Shadow protocol addresses configuration
   const shadowConfig: { [key: string]: { npm: string; voter: string } } = {
     "sonic-mainnet": {
-      npm: "0x0000000000000000000000000000000000000000", // TODO: Add actual Shadow NPM address
-      voter: "0x0000000000000000000000000000000000000000" // TODO: Add actual Shadow Voter address
+      npm: "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406", // Shadow NPM address
+      voter: "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D" // Shadow Voter address
     },
     "sonic-testnet": {
       npm: "0x0000000000000000000000000000000000000000", // TODO: Add testnet Shadow NPM address
@@ -34,7 +34,7 @@ async function main() {
   if (network.name === "localhost" || network.name === "hardhat") {
     // For localhost, deploy a mock wS
     console.log("Deploying Mock wS token...");
-    const MockERC20 = await ethers.getContractFactory("MockERC20");
+    const MockERC20 = await ethers.getContractFactory("ERC20");
     const mockWS = await MockERC20.deploy("Wrapped Sonic", "wS", 18, deployer.address);
     await mockWS.waitForDeployment();
     wnative = await mockWS.getAddress();
@@ -121,6 +121,11 @@ async function main() {
   await oracleRewardVaultImpl.waitForDeployment();
   console.log("OracleRewardVault implementation deployed at:", await oracleRewardVaultImpl.getAddress());
 
+  const OracleRewardShadowVault = await ethers.getContractFactory("OracleRewardShadowVault");
+  const oracleRewardShadowVaultImpl = await OracleRewardShadowVault.deploy(proxyAddress);
+  await oracleRewardShadowVaultImpl.waitForDeployment();
+  console.log("OracleRewardShadowVault implementation deployed at:", await oracleRewardShadowVaultImpl.getAddress());
+
   const maxRange = 51; // Default max range for Sonic
   const Strategy = await ethers.getContractFactory("Strategy");
   const strategyImpl = await Strategy.deploy(proxyAddress, maxRange);
@@ -139,6 +144,7 @@ async function main() {
   console.log("Setting vault and strategy implementations...");
   
   const VAULT_TYPE_ORACLE = 2;
+  const VAULT_TYPE_SHADOW_ORACLE_REWARD = 4;
   const STRATEGY_TYPE_DEFAULT = 1;
   const STRATEGY_TYPE_SHADOW = 2;
 
@@ -146,12 +152,16 @@ async function main() {
   await tx1.wait();
   console.log("Oracle vault implementation set");
 
-  const tx2 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_DEFAULT, await strategyImpl.getAddress());
+  const tx2 = await vaultFactory.setVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD, await oracleRewardShadowVaultImpl.getAddress());
   await tx2.wait();
+  console.log("Oracle reward shadow vault implementation set");
+
+  const tx3 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_DEFAULT, await strategyImpl.getAddress());
+  await tx3.wait();
   console.log("Strategy implementation set");
 
-  const tx3 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, await shadowStrategyImpl.getAddress());
-  await tx3.wait();
+  const tx4 = await vaultFactory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, await shadowStrategyImpl.getAddress());
+  await tx4.wait();
   console.log("Shadow strategy implementation set");
 
   // Configure Shadow protocol addresses
@@ -161,16 +171,16 @@ async function main() {
     const { npm, voter } = shadowConfig[network.name];
     
     if (npm !== "0x0000000000000000000000000000000000000000") {
-      const tx4 = await vaultFactory.setShadowNonfungiblePositionManager(npm);
-      await tx4.wait();
+      const tx5 = await vaultFactory.setShadowNonfungiblePositionManager(npm);
+      await tx5.wait();
       console.log("Shadow NPM address set:", npm);
     } else {
       console.log("⚠️  Warning: Shadow NPM address not configured for", network.name);
     }
 
     if (voter !== "0x0000000000000000000000000000000000000000") {
-      const tx5 = await vaultFactory.setShadowVoter(voter);
-      await tx5.wait();
+      const tx6 = await vaultFactory.setShadowVoter(voter);
+      await tx6.wait();
       console.log("Shadow Voter address set:", voter);
     } else {
       console.log("⚠️  Warning: Shadow Voter address not configured for", network.name);
@@ -181,6 +191,7 @@ async function main() {
   console.log("\nVerifying configuration...");
   const owner = await vaultFactory.owner();
   const oracleVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_ORACLE);
+  const oracleRewardShadowVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD);
   const strategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_DEFAULT);
   const shadowStrategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_SHADOW);
   const npmFromFactory = await vaultFactory.getNonfungiblePositionManager();
@@ -189,6 +200,7 @@ async function main() {
   console.log("Configuration verified:");
   console.log("Owner:", owner);
   console.log("Oracle vault implementation matches:", oracleVaultImplFromFactory === await oracleRewardVaultImpl.getAddress());
+  console.log("Oracle reward shadow vault implementation matches:", oracleRewardShadowVaultImplFromFactory === await oracleRewardShadowVaultImpl.getAddress());
   console.log("Strategy implementation matches:", strategyImplFromFactory === await strategyImpl.getAddress());
   console.log("Shadow strategy implementation matches:", shadowStrategyImplFromFactory === await shadowStrategyImpl.getAddress());
   console.log("Shadow NPM configured:", npmFromFactory);
@@ -204,6 +216,7 @@ async function main() {
   console.log("Strategy Implementation:", await strategyImpl.getAddress());
   
   console.log("\n=== Shadow Contracts ===");
+  console.log("OracleRewardShadowVault Implementation:", await oracleRewardShadowVaultImpl.getAddress());
   console.log("ShadowStrategy Implementation:", await shadowStrategyImpl.getAddress());
   console.log("Shadow NPM:", npmFromFactory);
   console.log("Shadow Voter:", voterFromFactory);
@@ -222,6 +235,7 @@ async function main() {
       proxyAdmin: await proxyAdmin.getAddress(),
       oracleVaultImpl: await oracleVaultImpl.getAddress(),
       oracleRewardVaultImpl: await oracleRewardVaultImpl.getAddress(),
+      oracleRewardShadowVaultImpl: await oracleRewardShadowVaultImpl.getAddress(),
       strategyImpl: await strategyImpl.getAddress(),
       shadowStrategyImpl: await shadowStrategyImpl.getAddress(),
       shadowNPM: npmFromFactory,

@@ -20,6 +20,7 @@ import {TokenHelper} from "../../contracts-metropolis/src/libraries/TokenHelper.
 import {Precision} from "../../contracts-metropolis/src/libraries/Precision.sol";
 import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
 import {IOracleRewardShadowVault} from "./interfaces/IOracleRewardShadowVault.sol";
+import {FullMath} from "../CL/core/libraries/FullMath.sol";
 
 /**
  * @title Oracle Reward Shadow Vault contract
@@ -43,82 +44,6 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
     uint8 internal constant _SHARES_DECIMALS = 6;
     uint256 internal constant _SHARES_PRECISION = 10 ** _SHARES_DECIMALS;
     uint256 private constant PHANTOM_SHARE_PRECISION = 1e18;
-
-    // ============ Errors ============
-    error ShadowVault__OnlyFactory();
-    error ShadowVault__OnlyOperators();
-    error ShadowVault__OnlyStrategy();
-    error ShadowVault__OnlyWNative();
-    error ShadowVault__DepositsPaused();
-    error ShadowVault__NoNativeToken();
-    error ShadowVault__InvalidRecipient();
-    error ShadowVault__ZeroShares();
-    error ShadowVault__ZeroAmount();
-    error ShadowVault__InvalidStrategy();
-    error ShadowVault__InvalidNativeAmount();
-    error ShadowVault__InsufficientShares();
-    error ShadowVault__InvalidRound();
-    error ShadowVault__NoQueuedWithdrawal();
-    error ShadowVault__Unauthorized();
-    error ShadowVault__InvalidToken();
-    error ShadowVault__BurnMinShares();
-    error ShadowVault__NativeTransferFailed();
-    error ShadowVault__NotInEmergencyMode();
-    error ShadowVault__SameStrategy();
-    error ShadowVault__MaxSharesExceeded();
-    error ShadowVault__AlreadyFlaggedForShutdown();
-    error ShadowVault__InvalidShares();
-    error ShadowVault__WithdrawLocked();
-
-    // ============ Events ============
-    event Deposited(address indexed sender, uint256 amountX, uint256 amountY, uint256 shares);
-    event WithdrawalQueued(address indexed sender, address indexed recipient, uint256 round, uint256 shares);
-    event WithdrawalCancelled(address indexed sender, address indexed recipient, uint256 round, uint256 shares);
-    event WithdrawalRedeemed(address indexed sender, address indexed recipient, uint256 round, uint256 shares, uint256 amountX, uint256 amountY);
-    event WithdrawalExecuted(uint256 round, uint256 shares, uint256 amountX, uint256 amountY);
-    event EmergencyWithdrawal(address indexed sender, uint256 shares, uint256 amountX, uint256 amountY);
-    event StrategySet(address indexed strategy);
-    event DepositsPaused();
-    event DepositsResumed();
-    event EmergencyMode();
-    event Recovered(address indexed token, address indexed recipient, uint256 amount);
-    event ShutdownSubmitted();
-    event ShutdownCancelled();
-    event PoolUpdated(uint256 timestamp, uint256 accRewardsPerShare);
-
-    // ============ Structs ============
-    struct QueuedWithdrawal {
-        uint128 totalQueuedShares;
-        uint128 totalAmountX;
-        uint128 totalAmountY;
-        mapping(address => uint256) userWithdrawals;
-    }
-
-    struct User {
-        uint256 phantomAmount;
-        mapping(address => uint256) rewardDebtPerToken;
-    }
-
-    struct Reward {
-        IERC20 token;
-        uint256 lastRewardBalance;
-        uint256 accRewardsPerShare;
-    }
-
-    struct UserInfo {
-        uint256 phantomAmount;
-        RewardDebtInfo[] rewardDebtInfo;
-    }
-
-    struct RewardDebtInfo {
-        IERC20 token;
-        uint256 rewardDebt;
-    }
-
-    struct UserReward {
-        IERC20 token;
-        uint256 pendingRewards;
-    }
 
     // ============ State Variables ============
     IVaultFactory internal immutable _factory;
@@ -213,7 +138,7 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         return 1;
     }
 
-    function decimals() public view virtual override returns (uint8) {
+    function decimals() public view virtual override(ERC20Upgradeable, IOracleRewardShadowVault) returns (uint8) {
         return _decimalsY() + _SHARES_DECIMALS;
     }
 
@@ -223,10 +148,10 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
 
     /**
      * @dev Returns the type of the vault.
-     * @return vaultType The type of the vault (SHADOW_ORACLE_REWARD)
+     * @return vaultType The type of the vault (ShadowOracleReward)
      */
     function getVaultType() public pure virtual returns (IVaultFactory.VaultType) {
-        return IVaultFactory.VaultType.SHADOW_ORACLE_REWARD;
+        return IVaultFactory.VaultType.ShadowOracleReward;
     }
 
     function getPool() public pure virtual returns (IRamsesV3Pool) {
@@ -555,6 +480,10 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
 
         if (currentStrategy == newStrategy) revert ShadowVault__SameStrategy();
 
+        if (newStrategy.getStrategyType() != IVaultFactory.StrategyType.Shadow) {
+            revert ShadowVault__InvalidStrategy();
+        }
+
         if (
             newStrategy.getVault() != address(this) || 
             IShadowStrategy(address(newStrategy)).getPool() != address(_pool()) ||
@@ -697,7 +626,7 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
 
         if (totalShares == 0 || (totalX == 0 && totalY == 0)) {
             (effectiveX, effectiveY) = _calculateInitialAmounts(amountX, amountY);
-            shares = effectiveY.convertDecimals(_decimalsY(), decimals());
+            shares = effectiveY * _SHARES_PRECISION;
         } else {
             uint256 amountXInY = 0;
             uint256 amountYInX = 0;
