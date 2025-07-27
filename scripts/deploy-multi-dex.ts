@@ -1,4 +1,7 @@
+import { Contract, ContractFactory } from "ethers";
 import { ethers, network } from "hardhat";
+import { OracleHelperFactory, ShadowPriceHelper } from "typechain-types";
+type Libraries = Record<string, string>;
 
 async function main() {
   console.log(`Deploying Metropolis & Shadow contracts to ${network.name}...`);
@@ -10,9 +13,11 @@ async function main() {
   // Configure parameters based on network
   let wnative: string;
 
-  // NOTE: If you want to re-use a contract for the Oracle Helper Factory, set it here
+  // NOTE: If you want to re-use a contract for the Oracle Helper Factory or other contracts, set it here
   // Otherwise, a new one will be deployed (except for hardhat localhost where it's not used)
   let oracleHelperFactoryAddress: string = "0x0000000000000000000000000000000000000000";
+  let shadowPriceHelperAddress: string = "0x0000000000000000000000000000000000000000";
+
   const creationFee = 0n; // Default 0 for testnet
   
   // Shadow protocol addresses configuration
@@ -30,19 +35,21 @@ async function main() {
       voter: "0x0000000000000000000000000000000000000000" // Will be set from mock deployment
     }
   };
-  
+
   if (network.name === "localhost" || network.name === "hardhat") {
     // For localhost, deploy a mock wS
     console.log("Deploying Mock wS token...");
-    const MockERC20 = await ethers.getContractFactory("ERC20");
+    const MockERC20 = await ethers.getContractFactory("MockERC20");
     const mockWS = await MockERC20.deploy("Wrapped Sonic", "wS", 18, deployer.address);
     await mockWS.waitForDeployment();
     wnative = await mockWS.getAddress();
     console.log("Mock wS deployed at:", wnative);
-    const mockOracleHelperFactoryContract = await ethers.getContractFactory("OracleHelperFactory");
-    const mockOracleHelperFactory = await mockOracleHelperFactoryContract.deploy();
-    mockOracleHelperFactory.waitForDeployment();
-    oracleHelperFactoryAddress = await mockOracleHelperFactory.getAddress();
+
+    // For localhost, always deploy the shadow price helper address
+    [, shadowPriceHelperAddress] = await deployShadowPriceHelper();
+
+    // For localhost, always deploy a oracle helper factory contract
+    [, oracleHelperFactoryAddress] = await deployOracleHelperFactory();
   } else if (network.name === "sonic-testnet") {
     // For testnet, use the testnet wS address
     wnative = "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"; // Actual testnet wS
@@ -60,12 +67,11 @@ async function main() {
 
   if (oracleHelperFactoryAddress == "0x0000000000000000000000000000000000000000") {
     // Deploy OracleHelperFactory
-    console.log("Deploying OracleHelperFactory...");
-    const OracleHelperFactoryContract = await ethers.getContractFactory("OracleHelperFactory");
-    const oracleHelperFactory = await OracleHelperFactoryContract.deploy();
-    await oracleHelperFactory.waitForDeployment();
-    oracleHelperFactoryAddress = await oracleHelperFactory.getAddress();
-    console.log("OracleHelperFactory deployed at:", oracleHelperFactoryAddress);
+    [,oracleHelperFactoryAddress] = await deployOracleHelperFactory();
+  }
+
+  if (shadowPriceHelperAddress == "0x0000000000000000000000000000000000000000") {
+    [,shadowPriceHelperAddress] = await deployShadowPriceHelper();
   }
 
   // Deploy VaultFactory implementation
@@ -121,13 +127,17 @@ async function main() {
   await oracleRewardVaultImpl.waitForDeployment();
   console.log("OracleRewardVault implementation deployed at:", await oracleRewardVaultImpl.getAddress());
 
-  const OracleRewardShadowVault = await ethers.getContractFactory("OracleRewardShadowVault");
+  const OracleRewardShadowVault = await ethers.getContractFactory("OracleRewardShadowVault", {
+  libraries: {
+    ShadowPriceHelper: shadowPriceHelperAddress,
+  },
+  });
   const oracleRewardShadowVaultImpl = await OracleRewardShadowVault.deploy(proxyAddress);
   await oracleRewardShadowVaultImpl.waitForDeployment();
   console.log("OracleRewardShadowVault implementation deployed at:", await oracleRewardShadowVaultImpl.getAddress());
 
   const maxRange = 51; // Default max range for Sonic
-  const Strategy = await ethers.getContractFactory("Strategy");
+  const Strategy = await ethers.getContractFactory("MetropolisStrategy");
   const strategyImpl = await Strategy.deploy(proxyAddress, maxRange);
   await strategyImpl.waitForDeployment();
   console.log("Strategy implementation deployed at:", await strategyImpl.getAddress());
@@ -194,7 +204,7 @@ async function main() {
   const oracleRewardShadowVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD);
   const strategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_DEFAULT);
   const shadowStrategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_SHADOW);
-  const npmFromFactory = await vaultFactory.getNonfungiblePositionManager();
+  const npmFromFactory = await vaultFactory.getShadowNonfungiblePositionManager();
   const voterFromFactory = await vaultFactory.getShadowVoter();
 
   console.log("Configuration verified:");
@@ -262,3 +272,24 @@ main()
     console.error(error);
     process.exit(1);
   });
+
+async function deployOracleHelperFactory() : Promise<[OracleHelperFactory, string]> {
+  console.log("Deploying OracleHelperFactory...");
+  const OracleHelperFactoryContract = await ethers.getContractFactory("OracleHelperFactory");
+  const oracleHelperFactory = await OracleHelperFactoryContract.deploy();
+  await oracleHelperFactory.waitForDeployment();
+  const oracleHelperFactoryAddress = await oracleHelperFactory.getAddress();
+  console.log("OracleHelperFactory deployed at:", oracleHelperFactoryAddress);
+  return [oracleHelperFactory, oracleHelperFactoryAddress];
+
+}
+
+async function deployShadowPriceHelper() : Promise<[ShadowPriceHelper, string]> {
+  console.log("Deploying Shadow price helper...");
+  const contract = await ethers.getContractFactory("ShadowPriceHelper");
+  const contractDeployed = await contract.deploy();
+  await contractDeployed.waitForDeployment();
+  const contractAddress = await contractDeployed.getAddress();
+  console.log("ShadowPriceHelper deployed at:", contractAddress);
+  return [contractDeployed, contractAddress];
+}
