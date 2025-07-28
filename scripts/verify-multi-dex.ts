@@ -32,6 +32,8 @@ interface VerificationEntry {
   contract?: string;
   isProxy?: boolean;
   libraries?: Record<string, string>;
+  needsLibraries?: boolean;
+  librariesPath?: string;
 }
 
 // Helper function to get explorer URL based on network
@@ -60,6 +62,11 @@ async function getDeployerAddress(deployment: DeploymentFile): Promise<string> {
 
 async function main() {
   console.log(`\n📝 Verifying Multi-DEX contracts (Metropolis & Shadow) on ${network.name}...\n`);
+  
+  // TODO: Fix Solidity version mismatch issue
+  // Contracts were deployed with Solidity 0.8.26 but hardhat.config.ts uses 0.8.28
+  // This causes proxy verification to fail with version mismatch errors
+  // The contracts are still verified on the explorer, so this is mostly cosmetic
 
   // Load deployment addresses
   const deploymentPath = `./deployments/metropolis-${network.name}.json`;
@@ -94,6 +101,17 @@ async function main() {
       // Use zero address as fallback
       addresses.oracleHelperFactory = "0x0000000000000000000000000000000000000000";
     }
+  }
+  
+  // Create libraries.json file if shadowPriceHelper is available
+  let librariesJsonPath: string | undefined;
+  if (addresses.shadowPriceHelper && addresses.shadowPriceHelper !== "0x0000000000000000000000000000000000000000") {
+    const librariesJson = {
+      "ShadowPriceHelper": addresses.shadowPriceHelper
+    };
+    librariesJsonPath = `./deployments/libraries.json`;
+    fs.writeFileSync(librariesJsonPath, JSON.stringify(librariesJson, null, 2));
+    console.log(`Created ${librariesJsonPath} for library verification`);
   }
 
   // Build verifications array dynamically to handle optional contracts
@@ -174,11 +192,10 @@ async function main() {
       contract: "contracts-shadow/src/OracleRewardShadowVault.sol:OracleRewardShadowVault"
     };
     
-    // Only add libraries if shadowPriceHelper is available and not zero address
-    if (addresses.shadowPriceHelper && addresses.shadowPriceHelper !== "0x0000000000000000000000000000000000000000") {
-      verifyEntry.libraries = {
-        "contracts-shadow/src/libraries/ShadowPriceHelper.sol:ShadowPriceHelper": addresses.shadowPriceHelper
-      };
+    // Mark that this needs library verification
+    if (librariesJsonPath) {
+      verifyEntry.needsLibraries = true;
+      verifyEntry.librariesPath = librariesJsonPath;
     } else {
       console.log("⚠️  Warning: shadowPriceHelper address not available, skipping library linking for OracleRewardShadowVault");
     }
@@ -205,9 +222,14 @@ async function main() {
 
   // Helper function to add delay
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  // Rate limit handling with exponential backoff
+  const baseDelay = 3000; // Start with 3 seconds
+  let currentDelay = baseDelay;
 
-  for (const verification of verifications) {
-    console.log(`\n🔍 Verifying ${verification.name}...`);
+  for (let i = 0; i < verifications.length; i++) {
+    const verification = verifications[i];
+    console.log(`\n🔍 Verifying ${verification.name}... (${i + 1}/${verifications.length})`);
     console.log(`Address: ${verification.address}`);
     
     try {
@@ -299,21 +321,16 @@ async function main() {
           console.log(`❌ All attempts failed for ${verification.name}`);
           failCount++;
         }
-      } else if (verification.libraries) {
-        // Special handling for contracts with libraries
+      } else if (verification.needsLibraries && verification.librariesPath) {
+        // Special handling for contracts with libraries using JSON file
         console.log("Using command-line verification for library-linked contract...");
-        
-        const librariesArg = Object.entries(verification.libraries)
-          .map(([lib, addr]) => `${lib}:${addr}`)
-          .join(",");
         
         try {
           const cmd = [
             "npx", "hardhat", "verify",
             "--network", network.name,
             "--contract", verification.contract,
-            "--libraries", librariesArg,
-            "--force",
+            "--libraries", verification.librariesPath,
             verification.address,
             ...verification.constructorArguments.map(arg => String(arg))
           ].join(" ");
@@ -337,6 +354,10 @@ async function main() {
           } else {
             console.log(`❌ Failed to verify ${verification.name}:`, errorMessage.split('\n')[0]);
             failCount++;
+            
+            // Show manual command for library verification
+            console.log(`\n💡 Manual verification command:`);
+            console.log(`npx hardhat verify --network ${network.name} --contract ${verification.contract} --libraries ${verification.librariesPath} ${verification.address} ${verification.constructorArguments.join(' ')}`);
           }
         }
       } else {
@@ -374,16 +395,31 @@ async function main() {
     }
     
     // Add delay to avoid rate limiting
-    await delay(2000);
+    // Reset delay if we haven't hit rate limit recently
+    if (successCount > 0 && successCount % 3 === 0) {
+      currentDelay = baseDelay;
+    }
+    await delay(currentDelay);
   }
 
   console.log(`\n📊 Verification Summary:`);
   
-  // Show manual verification commands for failed contracts
-  if (failCount > 0) {
-    console.log(`\n📝 Manual Verification Commands for Failed Contracts:`);
-    console.log(`\nFor VaultFactory Implementation (if failed):`);
+  // Show comprehensive manual verification commands for all contracts
+  if (failCount > 0 || process.env.SHOW_ALL_COMMANDS) {
+    console.log(`\n📝 Manual Verification Commands:`);
+    console.log(`\n1. For VaultFactory Implementation:`);
     console.log(`npx hardhat verify --network ${network.name} --contract contracts-metropolis/src/VaultFactory.sol:VaultFactory ${addresses.vaultFactoryImpl} ${addresses.wnative} ${addresses.oracleHelperFactory || "0x0000000000000000000000000000000000000000"}`);
+    
+    if (addresses.oracleRewardShadowVaultImpl && librariesJsonPath) {
+      console.log(`\n2. For OracleRewardShadowVault (with libraries):`);
+      console.log(`# First ensure ${librariesJsonPath} exists with content:`);
+      console.log(`# {"ShadowPriceHelper": "${addresses.shadowPriceHelper}"}`);
+      console.log(`npx hardhat verify --network ${network.name} --contract contracts-shadow/src/OracleRewardShadowVault.sol:OracleRewardShadowVault --libraries ${librariesJsonPath} ${addresses.oracleRewardShadowVaultImpl} ${addresses.vaultFactory}`);
+    }
+    
+    console.log(`\n3. For Proxy contracts (if they fail due to version mismatch):`);
+    console.log(`# This is a known issue - contracts deployed with 0.8.26 but current config uses 0.8.28`);
+    console.log(`# The contracts are usually still verified on the explorer`);
   }
   console.log(`✅ Successful: ${successCount}`);
   console.log(`❌ Failed: ${failCount}`);
@@ -407,6 +443,11 @@ async function main() {
   console.log(`Shadow Voter: ${addresses.shadowVoter}`);
   console.log(`ShadowStrategy Implementation: ${addresses.shadowStrategyImpl}`);
   console.log(`View ShadowStrategy: ${getExplorerUrl(network.name)}/address/${addresses.shadowStrategyImpl}#code`);
+  
+  if (librariesJsonPath) {
+    console.log(`\n📚 Libraries JSON file created at: ${librariesJsonPath}`);
+    console.log(`This file is required for verifying contracts with linked libraries.`);
+  }
 }
 
 main()
