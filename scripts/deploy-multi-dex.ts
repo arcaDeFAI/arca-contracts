@@ -55,74 +55,76 @@ class GasTracker {
     console.log(`  ⛽ Gas used: ${gasUsed.toString()}, Cost: ${ethers.formatEther(cost)} S`);
   }
   
-  getReport() {
-    console.log("\n=== 🔥 Gas Usage Report 🔥 ===");
-    console.log("Network:", network.name);
-    console.log("Total Transactions:", this.transactions.length);
-    
+  getReport(verbose: boolean = false) {
     // Separate by category
     const deployments = this.transactions.filter(tx => tx.category === "deployment");
     const configurations = this.transactions.filter(tx => tx.category === "configuration");
     
-    // Deployment costs
-    if (deployments.length > 0) {
-      console.log("\n📦 Contract Deployments:");
-      console.log("-".repeat(90));
-      console.log("Contract".padEnd(45) + "Gas Used".padEnd(15) + "Gas Price (Gwei)".padEnd(17) + "Cost (S)");
-      console.log("-".repeat(90));
+    if (verbose) {
+      console.log("\n=== 🔥 Gas Usage Report 🔥 ===");
+      console.log("Network:", network.name);
+      console.log("Total Transactions:", this.transactions.length);
       
-      let deploymentGas = 0n;
-      let deploymentCost = 0n;
-      
-      for (const tx of deployments) {
-        const gasPriceGwei = ethers.formatUnits(tx.gasPrice, "gwei");
-        const costInS = ethers.formatEther(tx.cost);
+      // Deployment costs
+      if (deployments.length > 0) {
+        console.log("\n📦 Contract Deployments:");
+        console.log("-".repeat(90));
+        console.log("Contract".padEnd(45) + "Gas Used".padEnd(15) + "Gas Price (Gwei)".padEnd(17) + "Cost (S)");
+        console.log("-".repeat(90));
         
-        console.log(
-          tx.name.padEnd(45) +
-          tx.gasUsed.toString().padEnd(15) +
-          gasPriceGwei.padEnd(17) +
-          costInS
-        );
+        let deploymentGas = 0n;
+        let deploymentCost = 0n;
         
-        deploymentGas += tx.gasUsed;
-        deploymentCost += tx.cost;
+        for (const tx of deployments) {
+          const gasPriceGwei = ethers.formatUnits(tx.gasPrice, "gwei");
+          const costInS = ethers.formatEther(tx.cost);
+          
+          console.log(
+            tx.name.padEnd(45) +
+            tx.gasUsed.toString().padEnd(15) +
+            gasPriceGwei.padEnd(17) +
+            costInS
+          );
+          
+          deploymentGas += tx.gasUsed;
+          deploymentCost += tx.cost;
+        }
+        
+        console.log("-".repeat(90));
+        console.log("Subtotal".padEnd(45) + deploymentGas.toString().padEnd(15) + " ".padEnd(17) + ethers.formatEther(deploymentCost));
       }
       
-      console.log("-".repeat(90));
-      console.log("Subtotal".padEnd(45) + deploymentGas.toString().padEnd(15) + " ".padEnd(17) + ethers.formatEther(deploymentCost));
-    }
-    
-    // Configuration costs
-    if (configurations.length > 0) {
-      console.log("\n⚙️  Configuration Transactions:");
-      console.log("-".repeat(90));
-      console.log("Transaction".padEnd(45) + "Gas Used".padEnd(15) + "Gas Price (Gwei)".padEnd(17) + "Cost (S)");
-      console.log("-".repeat(90));
-      
-      let configGas = 0n;
-      let configCost = 0n;
-      
-      for (const tx of configurations) {
-        const gasPriceGwei = ethers.formatUnits(tx.gasPrice, "gwei");
-        const costInS = ethers.formatEther(tx.cost);
+      // Configuration costs
+      if (configurations.length > 0) {
+        console.log("\n⚙️  Configuration Transactions:");
+        console.log("-".repeat(90));
+        console.log("Transaction".padEnd(45) + "Gas Used".padEnd(15) + "Gas Price (Gwei)".padEnd(17) + "Cost (S)");
+        console.log("-".repeat(90));
         
-        console.log(
-          tx.name.padEnd(45) +
-          tx.gasUsed.toString().padEnd(15) +
-          gasPriceGwei.padEnd(17) +
-          costInS
-        );
+        let configGas = 0n;
+        let configCost = 0n;
         
-        configGas += tx.gasUsed;
-        configCost += tx.cost;
+        for (const tx of configurations) {
+          const gasPriceGwei = ethers.formatUnits(tx.gasPrice, "gwei");
+          const costInS = ethers.formatEther(tx.cost);
+          
+          console.log(
+            tx.name.padEnd(45) +
+            tx.gasUsed.toString().padEnd(15) +
+            gasPriceGwei.padEnd(17) +
+            costInS
+          );
+          
+          configGas += tx.gasUsed;
+          configCost += tx.cost;
+        }
+        
+        console.log("-".repeat(90));
+        console.log("Subtotal".padEnd(45) + configGas.toString().padEnd(15) + " ".padEnd(17) + ethers.formatEther(configCost));
       }
-      
-      console.log("-".repeat(90));
-      console.log("Subtotal".padEnd(45) + configGas.toString().padEnd(15) + " ".padEnd(17) + ethers.formatEther(configCost));
     }
     
-    // Total summary
+    // Total summary (always shown)
     const totalGas = this.transactions.reduce((sum, tx) => sum + tx.gasUsed, 0n);
     const totalCost = this.transactions.reduce((sum, tx) => sum + tx.cost, 0n);
     
@@ -214,6 +216,11 @@ async function sendTransaction(
 }
 
 async function main() {
+  // Parse command line arguments for verbose flag
+  // Note: Hardhat doesn't pass custom args through process.argv when using `hardhat run`
+  // We need to check environment variable instead
+  const verbose = process.env.VERBOSE === "true";
+
   console.log(`Deploying Metropolis & Shadow contracts to ${network.name}...`);
 
   // Initialize gas tracker
@@ -586,7 +593,7 @@ async function main() {
   console.log("ProxyAdmin is owned by:", deployer.address);
 
   // Generate gas report
-  const gasReport = gasTracker.getReport();
+  const gasReport = gasTracker.getReport(verbose);
 
   // Save deployment addresses
   const deployment = {
