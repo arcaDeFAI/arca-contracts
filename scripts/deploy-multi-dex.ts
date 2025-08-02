@@ -280,9 +280,6 @@ async function main() {
   } else if (network.name === "sonic-mainnet") {
     // For mainnet, use the mainnet wS address
     wnative = "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"; // Actual mainnet wS
-
-    // NOTE: If you want to re-use a contract for the Oracle Helper Factory, set it here
-    oracleHelperFactoryAddress = "0x0000000000000000000000000000000000000000";
   } else {
     throw new Error(`Unsupported network: ${network.name}`);
   }
