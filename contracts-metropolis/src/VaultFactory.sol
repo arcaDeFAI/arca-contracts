@@ -618,6 +618,10 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         return _creationFee;
     }
 
+    function getPriceLens() external view returns (address) {
+        return _priceLens;
+    }
+
     function getVaultsByMarketMaker(
         address marketMaker
     ) external view returns (address[] memory) {

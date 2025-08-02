@@ -757,8 +757,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/VaultFactory.sol": {
-      "lastModificationDate": 1753591607628,
-      "contentHash": "0ca25268761a55992f082af17ba4b0f3",
+      "lastModificationDate": 1753762779835,
+      "contentHash": "bd4a1816b08bffa0492a4d5230bf908e",
       "sourceName": "contracts-metropolis/src/VaultFactory.sol",
       "solcConfig": {
         "version": "0.8.26",

@@ -41,7 +41,7 @@ async function main() {
 
   if (!fs.existsSync(metropolisPath)) {
     console.log("❌ Metropolis deployment not found:", metropolisPath);
-    console.log("Please run: npx hardhat run scripts/deploy-metropolis.ts --network", network.name);
+    console.log("Please run: npx hardhat run scripts/deploy-multi-dex.ts --network!", network.name);
     return;
   }
 
@@ -71,8 +71,19 @@ async function main() {
   const AUM_FEE = 1000; // 10% (in basis points * 100, max is 3000 = 30%)
 
   // Get contracts
+  console.log("\n📋 Loading contracts...");
   const vaultFactory = await ethers.getContractAt("VaultFactory", VAULT_FACTORY_ADDRESS);
+  console.log("VaultFactory loaded at:", await vaultFactory.getAddress());
   const priceLens = await ethers.getContractAt("HybridPriceLens", PRICE_LENS_ADDRESS);
+  console.log("PriceLens loaded at:", await priceLens.getAddress());
+  
+  // Debug: Check if priceLens is already set
+  try {
+    const currentPriceLens = await vaultFactory.getPriceLens();
+    console.log("Current PriceLens in VaultFactory:", currentPriceLens);
+  } catch (e) {
+    console.log("Could not get current PriceLens:", e.message);
+  }
 
   // Step 1: Verify LB Pair configuration
   console.log("\nStep 1: Verifying LB Pair configuration...");
@@ -226,7 +237,7 @@ async function main() {
     const tx = await vaultFactory.createMarketMakerOracleVault(
       LB_PAIR_ADDRESS,
       AUM_FEE,
-      { value: creationFee }
+      { value: creationFee, gasLimit: 10000000 }
     );
     
     console.log("Transaction submitted:", tx.hash);
@@ -281,6 +292,7 @@ async function main() {
         console.log("Decoded error:", decodedError);
       } catch {
         console.log("Could not decode error data");
+        console.log(error);
       }
     }
   }
