@@ -626,8 +626,14 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         uint256 totalShares = totalSupply();
 
         if (totalShares == 0 || (totalX == 0 && totalY == 0)) {
+            // For initial deposit, use total value in Y (following Metropolis pattern)
+            uint256 valueInY = _getValueInY(amountX, amountY);
+            
+            // Shares = value * precision (just like Metropolis)
+            shares = valueInY * _SHARES_PRECISION;
+            
+            // Calculate effective amounts for the actual deposit
             (effectiveX, effectiveY) = _calculateInitialAmounts(amountX, amountY);
-            shares = effectiveY * _SHARES_PRECISION;
         } else {
             uint256 amountXInY = 0;
             uint256 amountYInX = 0;
@@ -670,32 +676,59 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
         view
         returns (uint256 effectiveX, uint256 effectiveY)
     {
-        uint256 priceX = _getOraclePrice(true);
-        uint256 priceY = _getOraclePrice(false);
+        // Get price of X in terms of Y (e.g., 0.29 USDC per wS)
+        uint256 priceXInY = _getOraclePrice(true);
 
-        uint256 valueX = amountX.mulDivRoundDown(priceX, 10 ** _decimalsX());
-        uint256 valueY = amountY.mulDivRoundDown(priceY, 10 ** _decimalsY());
+        // Calculate value of X in Y terms
+        uint256 valueXInY = amountX.mulDivRoundDown(priceXInY, 10 ** _decimalsX());
+        
+        // Total value of Y is simply amountY (since 1 Y = 1 Y)
+        uint256 valueY = amountY;
 
-        if (valueX < valueY) {
+        // Take the minimum value and balance accordingly
+        if (valueXInY < valueY) {
+            // X is limiting factor, keep all X and reduce Y
             effectiveX = amountX;
-            effectiveY = valueX.mulDivRoundDown(10 ** _decimalsY(), priceY);
+            effectiveY = valueXInY;
         } else {
-            effectiveX = valueY.mulDivRoundDown(10 ** _decimalsX(), priceX);
+            // Y is limiting factor, keep all Y and reduce X
+            effectiveX = valueY.mulDivRoundDown(10 ** _decimalsX(), priceXInY);
             effectiveY = amountY;
         }
     }
 
     function _calculateAmountInOtherToken(uint256 amount, bool isTokenX) internal view returns (uint256) {
-        uint256 priceFrom = _getOraclePrice(isTokenX);
-        uint256 priceTo = _getOraclePrice(!isTokenX);
-        uint8 decimalsFrom = isTokenX ? _decimalsX() : _decimalsY();
-        uint8 decimalsTo = isTokenX ? _decimalsY() : _decimalsX();
-
-        return amount.mulDivRoundDown(priceFrom, 10 ** decimalsFrom).mulDivRoundDown(10 ** decimalsTo, priceTo);
+        if (isTokenX) {
+            // Converting X to Y: multiply by price of X in Y
+            uint256 priceXInY = _getOraclePrice(true);
+            return amount.mulDivRoundDown(priceXInY, 10 ** _decimalsX());
+        } else {
+            // Converting Y to X: divide by price of X in Y
+            uint256 priceXInY = _getOraclePrice(true);
+            return amount.mulDivRoundDown(10 ** _decimalsX(), priceXInY);
+        }
     }
 
     function _getOraclePrice(bool isTokenX) internal view returns (uint256) {
         return ShadowPriceHelper.getOraclePrice(_pool(), isTokenX, _twapInterval, _decimalsX(), _decimalsY());
+    }
+
+    /**
+     * @dev Calculates total value in TokenY terms (following Metropolis pattern)
+     * @param amountX Amount of tokenX
+     * @param amountY Amount of tokenY  
+     * @return valueInY Total value expressed in tokenY's smallest units
+     */
+    function _getValueInY(uint256 amountX, uint256 amountY) internal view returns (uint256 valueInY) {
+        // Get price of X in terms of Y (with decimal adjustment)
+        uint256 priceXInY = _getOraclePrice(true);
+        
+        // Convert X to Y value: (amountX * priceXInY) / 10^decimalsX
+        // This gives us value in tokenY's decimal scale
+        uint256 amountXInY = amountX.mulDivRoundDown(priceXInY, 10 ** _decimalsX());
+        
+        // Total value = X value in Y + Y amount
+        valueInY = amountXInY + amountY;
     }
 
     function _getBalances(IStrategyCommon strategy) internal view virtual returns (uint256 amountX, uint256 amountY) {
@@ -832,8 +865,26 @@ contract OracleRewardShadowVault is Clone, ERC20Upgradeable, ReentrancyGuardUpgr
 
     function _updatePool() internal virtual {
         if (address(getStrategy()) != address(0)) {
-            if (getStrategy().hasRewards()) _notifyRewardToken(getStrategy().getRewardToken());
-            if (getStrategy().hasExtraRewards()) _notifyRewardToken(getStrategy().getExtraRewardToken());
+            // Safely check and notify reward tokens
+            try getStrategy().hasRewards() returns (bool hasRewards) {
+                if (hasRewards) {
+                    try getStrategy().getRewardToken() returns (IERC20 rewardToken) {
+                        if (address(rewardToken) != address(0)) {
+                            _notifyRewardToken(rewardToken);
+                        }
+                    } catch {}
+                }
+            } catch {}
+            
+            try getStrategy().hasExtraRewards() returns (bool hasExtraRewards) {
+                if (hasExtraRewards) {
+                    try getStrategy().getExtraRewardToken() returns (IERC20 extraRewardToken) {
+                        if (address(extraRewardToken) != address(0)) {
+                            _notifyRewardToken(extraRewardToken);
+                        }
+                    } catch {}
+                }
+            } catch {}
             
             try getStrategy().harvestRewards() {} catch {}
         }
