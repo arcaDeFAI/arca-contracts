@@ -288,10 +288,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     }
 
     function hasRewards() external view returns (bool) {
-        IMinimalVoter voter = IMinimalVoter(_factory.getShadowVoter());
-        if (address(voter) == address(0)) return false;
-        
-        return voter.gaugeForPool(address(_pool())) != address(0);
+        // Simply check if we have an active position that can earn rewards
+        return _positionTokenId != 0;
     }
 
     function hasExtraRewards() external pure returns (bool) {
