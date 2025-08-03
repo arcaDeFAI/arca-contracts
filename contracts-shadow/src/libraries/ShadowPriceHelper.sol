@@ -33,26 +33,38 @@ library ShadowPriceHelper {
     ) internal view returns (uint256) {
         (uint160 sqrtPriceX96,,,,,,) = pool.slot0();
         
+        // Use high precision scaling constant to avoid losing precision
+        // This needs to be large enough to maintain precision for small prices
+        uint256 PRECISION_SCALE = 1e36;
+        
+        // Calculate (sqrtPriceX96)^2 * PRECISION_SCALE / 2^192
+        // This gives us the raw price (token1 per token0) scaled by PRECISION_SCALE
+        uint256 priceScaled = FullMath.mulDiv(
+            uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+            PRECISION_SCALE,
+            1 << 192
+        );
+        
         if (isTokenX) {
-            uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 192);
-            
-            if (decimalsX > decimalsY) {
-                return price * (10 ** (decimalsX - decimalsY));
-            } else if (decimalsY > decimalsX) {
-                return price / (10 ** (decimalsY - decimalsX));
-            } else {
-                return price;
-            }
+            // We want price of tokenX in terms of tokenY
+            // Raw price is already token1/token0 (Y/X if X is token0)
+            // Need to convert from "Y wei per X wei" to "Y per X"
+            // This means multiplying by 10^decimalsX and dividing by PRECISION_SCALE
+            return FullMath.mulDiv(priceScaled, 10 ** decimalsX, PRECISION_SCALE);
         } else {
-            uint256 price = FullMath.mulDiv(1 << 192, 1e18, FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1));
+            // We want price of tokenY in terms of tokenX
+            // Raw price is token1/token0 (Y/X if X is token0)
+            // We need to invert: X/Y = 1 / (Y/X)
             
-            if (decimalsY > decimalsX) {
-                return price * (10 ** (decimalsY - decimalsX));
-            } else if (decimalsX > decimalsY) {
-                return price / (10 ** (decimalsX - decimalsY));
-            } else {
-                return price;
-            }
+            // First get the price of X in Y with proper decimals
+            uint256 priceXInY = FullMath.mulDiv(priceScaled, 10 ** decimalsX, PRECISION_SCALE);
+            
+            // Now invert to get Y in X
+            // If 1 X = priceXInY Y, then 1 Y = (10^decimalsX / priceXInY) X
+            // But we need to scale properly: (10^decimalsX * 10^decimalsY) / priceXInY
+            if (priceXInY == 0) return 0;
+            
+            return FullMath.mulDiv(10 ** decimalsY, 10 ** decimalsX, priceXInY);
         }
     }
     
@@ -73,26 +85,26 @@ library ShadowPriceHelper {
         
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(avgTick);
         
+        // Use the same high precision approach as spot price
+        uint256 PRECISION_SCALE = 1e36;
+        
+        // Calculate (sqrtPriceX96)^2 * PRECISION_SCALE / 2^192
+        uint256 priceScaled = FullMath.mulDiv(
+            uint256(sqrtPriceX96) * uint256(sqrtPriceX96),
+            PRECISION_SCALE,
+            1 << 192
+        );
+        
         if (isTokenX) {
-            uint256 price = FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1 << 192);
-            
-            if (decimalsX > decimalsY) {
-                return price * (10 ** (decimalsX - decimalsY));
-            } else if (decimalsY > decimalsX) {
-                return price / (10 ** (decimalsY - decimalsX));
-            } else {
-                return price;
-            }
+            // Price of tokenX in terms of tokenY
+            return FullMath.mulDiv(priceScaled, 10 ** decimalsX, PRECISION_SCALE);
         } else {
-            uint256 price = FullMath.mulDiv(1 << 192, 1e18, FullMath.mulDiv(uint256(sqrtPriceX96), uint256(sqrtPriceX96), 1));
+            // Price of tokenY in terms of tokenX (inverted)
+            uint256 priceXInY = FullMath.mulDiv(priceScaled, 10 ** decimalsX, PRECISION_SCALE);
             
-            if (decimalsY > decimalsX) {
-                return price * (10 ** (decimalsY - decimalsX));
-            } else if (decimalsX > decimalsY) {
-                return price / (10 ** (decimalsX - decimalsY));
-            } else {
-                return price;
-            }
+            if (priceXInY == 0) return 0;
+            
+            return FullMath.mulDiv(10 ** decimalsY, 10 ** decimalsX, priceXInY);
         }
     }
 }

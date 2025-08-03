@@ -377,7 +377,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/OracleVault.sol": {
-      "lastModificationDate": 1753586714132,
+      "lastModificationDate": 1754169707778,
       "contentHash": "c88398c36595b8df7aaa111594d8a11b",
       "sourceName": "contracts-metropolis/src/OracleVault.sol",
       "solcConfig": {
@@ -1184,8 +1184,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/ShadowStrategy.sol": {
-      "lastModificationDate": 1753586714154,
-      "contentHash": "112e0b7a69db9ba97bb6048d70a9b394",
+      "lastModificationDate": 1754179451200,
+      "contentHash": "e8954e4e508db434f96d45249dab1991",
       "sourceName": "contracts-shadow/src/ShadowStrategy.sol",
       "solcConfig": {
         "version": "0.8.26",
@@ -4217,8 +4217,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/OracleRewardShadowVault.sol": {
-      "lastModificationDate": 1753649692383,
-      "contentHash": "4d51d8e863f1ac52acabf6509ec075b1",
+      "lastModificationDate": 1754179472479,
+      "contentHash": "2e1288d84cc65abe82f96d708afbf01d",
       "sourceName": "contracts-shadow/src/OracleRewardShadowVault.sol",
       "solcConfig": {
         "version": "0.8.26",
@@ -4275,8 +4275,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/libraries/ShadowPriceHelper.sol": {
-      "lastModificationDate": 1753649595748,
-      "contentHash": "e4f733dc9fa5a1361375169e18d58387",
+      "lastModificationDate": 1754171652499,
+      "contentHash": "7dc93181c03a50f2f9bfc547032a1228",
       "sourceName": "contracts-shadow/src/libraries/ShadowPriceHelper.sol",
       "solcConfig": {
         "version": "0.8.26",

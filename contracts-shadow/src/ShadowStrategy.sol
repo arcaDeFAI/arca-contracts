@@ -267,11 +267,19 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     function getRewardToken() external view returns (IERC20) {
         IMinimalVoter voter = IMinimalVoter(_factory.getShadowVoter());
         if (address(voter) == address(0)) return IERC20(address(0));
-        
-        address gauge = voter.gaugeForPool(address(_pool()));
-        if (gauge == address(0)) return IERC20(address(0));
-        
-        return IERC20(IMinimalGauge(gauge).rewardToken());
+
+        // Safely try to get reward token, return zero address if it fails
+        try voter.gaugeForPool(address(_pool())) returns (address gauge) {
+            if (gauge == address(0)) return IERC20(address(0));
+            
+            try IMinimalGauge(gauge).rewardToken() returns (address rewardToken) {
+                return IERC20(rewardToken);
+            } catch {
+                return IERC20(address(0));
+            }
+        } catch {
+            return IERC20(address(0));
+        }
     }
 
     function getExtraRewardToken() external pure returns (IERC20) {

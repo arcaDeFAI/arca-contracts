@@ -1,21 +1,21 @@
 {
   "network": "sonic-mainnet",
-  "timestamp": "2025-07-27T23:52:50.078Z",
+  "timestamp": "2025-08-02T22:41:17.862Z",
   "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
   "addresses": {
-    "vaultFactory": "0x1DD9f2cCD4b48a274938E88E205516FF3eF6720C",
-    "vaultFactoryImpl": "0xD5d428D634409872b744ac358C2e64918f2eDCeE",
-    "proxyAdmin": "0x819A880372D07575558D8bAb53ec9cbf10275017",
+    "vaultFactory": "0xdAE9a70F0Ed98cc224311F58E5483A5e6643e37B",
+    "vaultFactoryImpl": "0xb81ABEc6a7Cd568C5a10b0B8c7626Af0f5B44f83",
+    "proxyAdmin": "0x560600aeA9A94C19775a92519490E79542ADE8e6",
     "oracleVaultImpl": null,
-    "oracleRewardVaultImpl": "0x99f5ae1a5De1146297EFFCcd600870BA368dddaa",
-    "oracleRewardShadowVaultImpl": "0x72EF20973c78E0b071FC57E9e23bb2b1f77c991e",
-    "strategyImpl": "0xb90ce8290eaD6Eca3140410cD094f4E3E9A3Af1E",
-    "shadowStrategyImpl": "0x4d785D8E0CDf0FfaA5E332CFC13b5De36A99E119",
+    "oracleRewardVaultImpl": "0x9B1f25aEAC50a9bAcD40055faDba4f9620e54954",
+    "oracleRewardShadowVaultImpl": "0x43b188E489808550D09F8A5757026EB446C673Aa",
+    "strategyImpl": "0x359ca7511dB32df91e528fF0f16411C06B8EC4EC",
+    "shadowStrategyImpl": "0x7a569dA3e7Ede7850b807b8f7fB76a065b05F128",
     "shadowNPM": "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406",
     "shadowVoter": "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D",
     "wnative": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
-    "oracleHelperFactory": "0x50DE3d9CD3B57d2dcD6717B9Acf133CdA886f8be",
-    "shadowPriceHelper": "0x434E98fdFd359afF433289224f57A515db09E41c"
+    "oracleHelperFactory": "0x16C3C1BDf3c6A35ECB898a8C02f08FF360c97CE5",
+    "shadowPriceHelper": "0x56e6a0383cB4D498c4D940Ca32A9907B071B45e5"
   },
   "configuration": {
     "metropolisMaxRange": 51,
@@ -24,13 +24,5 @@
       "npm": "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406",
       "voter": "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D"
     }
-  },
-  "gasUsage": {
-    "totalGas": "30343413",
-    "totalCost": "1668887715000000000",
-    "totalCostInS": "1.668887715",
-    "transactionCount": 15,
-    "deploymentCount": 9,
-    "configurationCount": 6
   }
 }
