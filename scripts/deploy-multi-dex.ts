@@ -233,7 +233,8 @@ async function main() {
   // Configure parameters based on network
   let wnative: string;
 
-  // NOTE: If you want to re-use a contract for the Oracle Helper Factory or other contracts, set it here
+  // -------------------------------------- CONFIG ZONE START --------------------------------------
+  // If you want to re-use a contract for the Oracle Helper Factory or other contracts, set it here
   // Otherwise, a new one will be deployed (except for hardhat localhost where it's not used)
   let oracleHelperFactoryAddress: string = "0x0000000000000000000000000000000000000000";
   let shadowPriceHelperAddress: string = "0x0000000000000000000000000000000000000000";
@@ -241,20 +242,34 @@ async function main() {
   const creationFee = 0n; // Default 0 for testnet
   
   // Shadow protocol addresses configuration
-  const shadowConfig: { [key: string]: { npm: string; voter: string } } = {
+  const deploymentConfig: { [key: string]: { npm: string; voter: string, priceLens: string, whitelist: string[] } } = {
     "sonic-mainnet": {
       npm: "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406", // Shadow NPM address
-      voter: "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D" // Shadow Voter address
+      voter: "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D", // Shadow Voter address
+      whitelist: ["0x76F4aeb24dD5681dCDC23ef9778a95C6aB76a995",
+        "0x324963c267C354c7660Ce8CA3F5f167E05649970", // Shadow pool wS/USDC
+        "0x97325a7854c604261002126267dAEd219E34b06b", // Shadow pool wS/USDT
+        "0x64B93267B73CE6bb431b5799ED8674f9160CE214", // Shadow pool SHADOW/USDT
+        "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC"  // Metropolis LB Pair wS/USDC
+      ], // Whitelist pools/LB Pairs that you want to use
+      // Set a price lens here if you want to re-use a deployed price lens contract
+      priceLens: "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B", 
     },
     "sonic-testnet": {
       npm: "0x0000000000000000000000000000000000000000", // TODO: Add testnet Shadow NPM address
-      voter: "0x0000000000000000000000000000000000000000" // TODO: Add testnet Shadow Voter address
+      voter: "0x0000000000000000000000000000000000000000", // TODO: Add testnet Shadow Voter address
+      whitelist: [],
+      priceLens: "0x0000000000000000000000000000000000000000",
     },
     "localhost": {
       npm: "0x0000000000000000000000000000000000000000", // Will be set from mock deployment
-      voter: "0x0000000000000000000000000000000000000000" // Will be set from mock deployment
+      voter: "0x0000000000000000000000000000000000000000", // Will be set from mock deployment
+      whitelist: [],
+      priceLens: "0x0000000000000000000000000000000000000000",
     }
   };
+
+  // -------------------------------------- CONFIG ZONE END --------------------------------------
 
   if (network.name === "localhost" || network.name === "hardhat") {
     // For localhost, deploy a mock wS
@@ -491,10 +506,10 @@ async function main() {
   console.log("  Immediate verification - Match   :", verifyShadowStrategy === shadowStrategyImplAddress);
 
   // Configure Shadow protocol addresses
-  if (shadowConfig[network.name]) {
+  if (deploymentConfig[network.name]) {
     console.log("Configuring Shadow protocol addresses...");
     
-    const { npm, voter } = shadowConfig[network.name];
+    const { npm, voter, whitelist, priceLens } = deploymentConfig[network.name];
     
     if (npm !== "0x0000000000000000000000000000000000000000") {
       await sendTransaction(
@@ -515,6 +530,26 @@ async function main() {
     } else {
       console.log("⚠️  Warning: Shadow Voter address not configured for", network.name);
     }
+
+    if (priceLens !== "0x0000000000000000000000000000000000000000") {
+        await sendTransaction(
+          `Set Price Lens to ${priceLens}`,
+          vaultFactory.setPriceLens(priceLens),
+          gasTracker
+        );
+    } else {
+      console.log("⚠️  Warning: Price Lens address not configured for", network.name);
+    }
+
+    if (whitelist.length > 0) {
+      await sendTransaction(
+        `Set Token Pair/Pool Whitelist to ${whitelist.join()}`,
+        vaultFactory.setPairWhitelist(whitelist, true),
+        gasTracker
+      );
+    } else {
+      console.log("No token whitelist pre-configured.");
+    }
   }
 
   // Verify the configuration
@@ -530,17 +565,18 @@ async function main() {
   const shadowStrategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_SHADOW);
   const npmFromFactory = await vaultFactory.getShadowNonfungiblePositionManager();
   const voterFromFactory = await vaultFactory.getShadowVoter();
+  const priceLensFromFactory = await vaultFactory.getPriceLens();
 
   console.log("\n=== Detailed Verification ===");
   
   // Only check Oracle vault if it was deployed
   if (oracleVaultImpl) {
     const oracleVaultDeployedAddr = await oracleVaultImpl.getAddress();
-    console.log("Oracle vault - Deployed:", oracleVaultDeployedAddr);
-    console.log("Oracle vault - Factory :", oracleVaultImplFromFactory);
-    console.log("Oracle vault - Match   :", oracleVaultImplFromFactory === oracleVaultDeployedAddr);
+    console.log("Metropolis Oracle vault - Deployed:", oracleVaultDeployedAddr);
+    console.log("Metropolis Oracle vault - Factory :", oracleVaultImplFromFactory);
+    console.log("Metropolis Oracle vault - Match   :", oracleVaultImplFromFactory === oracleVaultDeployedAddr);
   } else {
-    console.log("Oracle vault: SKIPPED (using OracleRewardVault for VAULT_TYPE_ORACLE)");
+    console.log("Metropolis Oracle vault: SKIPPED (using OracleRewardVault for VAULT_TYPE_ORACLE)");
     console.log("VAULT_TYPE_ORACLE =", VAULT_TYPE_ORACLE, "set to:", oracleVaultImplFromFactory);
     console.log("Expected (OracleRewardVault):", oracleRewardVaultAddress);
     console.log("Match:", oracleVaultImplFromFactory === oracleRewardVaultAddress);
@@ -551,7 +587,7 @@ async function main() {
   console.log("Shadow vault - Factory :", oracleRewardShadowVaultImplFromFactory);
   console.log("Shadow vault - Match   :", oracleRewardShadowVaultImplFromFactory === oracleRewardShadowVaultAddress);
   
-  console.log("\nStrategy verification:");
+  console.log("\nMetropolis Strategy verification:");
   console.log("Strategy - Deployed:", strategyImplAddress);
   console.log("Strategy - Factory :", strategyImplFromFactory);
   console.log("Strategy - Match   :", strategyImplFromFactory === strategyImplAddress);
@@ -564,7 +600,7 @@ async function main() {
   console.log("\nProtocol addresses:");
   console.log("Shadow NPM configured:", npmFromFactory);
   console.log("Shadow Voter configured:", voterFromFactory);
-
+  
   console.log("\n✅ Deployment complete!");
   console.log("\n=== Metropolis Contracts ===");
   console.log("VaultFactory (Proxy):", proxyAddress);
@@ -577,9 +613,9 @@ async function main() {
     console.log("OracleVault Implementation: SKIPPED");
   }
   
-  console.log("OracleRewardVault Implementation:", await oracleRewardVaultImpl.getAddress());
-  console.log("Strategy Implementation:", await strategyImpl.getAddress());
-  
+  console.log("Metropolis OracleRewardVault Implementation:", await oracleRewardVaultImpl.getAddress());
+  console.log("Metropolis Strategy Implementation:", await strategyImpl.getAddress());
+  console.log("Metropolis Price Lens:", priceLensFromFactory)
   console.log("\n=== Shadow Contracts ===");
   console.log("OracleRewardShadowVault Implementation:", await oracleRewardShadowVaultImpl.getAddress());
   console.log("ShadowStrategy Implementation:", await shadowStrategyImpl.getAddress());
@@ -608,6 +644,7 @@ async function main() {
       shadowStrategyImpl: await shadowStrategyImpl.getAddress(),
       shadowNPM: npmFromFactory,
       shadowVoter: voterFromFactory,
+      priceLens: priceLensFromFactory,
       wnative: wnative,
       oracleHelperFactory: oracleHelperFactoryAddress,
       shadowPriceHelper: shadowPriceHelperAddress,
@@ -615,7 +652,7 @@ async function main() {
     configuration: {
       metropolisMaxRange: maxRange,
       shadowMaxRange: maxRangeShadow,
-      shadowConfig: shadowConfig[network.name] || null
+      shadowConfig: deploymentConfig[network.name] || null
     }
   };
 
