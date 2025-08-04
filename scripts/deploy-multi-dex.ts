@@ -236,7 +236,7 @@ async function main() {
   // -------------------------------------- CONFIG ZONE START --------------------------------------
   // If you want to re-use a contract for the Oracle Helper Factory or other contracts, set it here
   // Otherwise, a new one will be deployed (except for hardhat localhost where it's not used)
-  let oracleHelperFactoryAddress: string = "0x0000000000000000000000000000000000000000";
+  let oracleHelperFactoryAddress: string = "0x1c4be246e60A602d09A2e5074ff99942353Cf750";
   let shadowPriceHelperAddress: string = "0x0000000000000000000000000000000000000000";
   let shadowPriceHelperWrapperAddress: string = "0xa8D204f63885bdD531c1b5Bde9d8e540e76F2E53";
 
@@ -560,6 +560,17 @@ async function main() {
     }
   }
 
+  // Set oracle helper factory
+  if (oracleHelperFactoryAddress !== "0x0000000000000000000000000000000000000000") {
+    await sendTransaction(
+      `Set Oracle Helper Factory to ${oracleHelperFactoryAddress}`,
+      vaultFactory.setOracleHelperFactory(oracleHelperFactoryAddress),
+      gasTracker
+    );
+  } else {
+    console.log("⚠️  Warning: Oracle Helper Factory not set - createMarketMakerOracleVault will fail");
+  }
+
   // Verify the configuration
   console.log("\n=== Verifying Factory Configuration ===");
   
@@ -574,6 +585,7 @@ async function main() {
   const npmFromFactory = await vaultFactory.getShadowNonfungiblePositionManager();
   const voterFromFactory = await vaultFactory.getShadowVoter();
   const priceLensFromFactory = await vaultFactory.getPriceLens();
+  const oracleHelperFactoryFromFactory = await vaultFactory.getOracleHelperFactory();
 
   console.log("\n=== Detailed Verification ===");
   
@@ -608,6 +620,7 @@ async function main() {
   console.log("\nProtocol addresses:");
   console.log("Shadow NPM configured:", npmFromFactory);
   console.log("Shadow Voter configured:", voterFromFactory);
+  console.log("Oracle Helper Factory configured:", oracleHelperFactoryFromFactory);
   
   console.log("\n✅ Deployment complete!");
   console.log("\n=== Metropolis Contracts ===");
