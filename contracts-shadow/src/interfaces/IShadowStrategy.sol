@@ -2,8 +2,12 @@
 
 pragma solidity 0.8.26;
 
-import {IStrategyCommon} from "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
-import {INonfungiblePositionManager} from "../../CL/periphery/interfaces/INonfungiblePositionManager.sol";
+import {
+    IStrategyCommon
+} from "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
+import {
+    INonfungiblePositionManager
+} from "../../CL/periphery/interfaces/INonfungiblePositionManager.sol";
 import {IMinimalVoter} from "./IMinimalVoter.sol";
 
 /**
@@ -13,15 +17,25 @@ import {IMinimalVoter} from "./IMinimalVoter.sol";
  */
 interface IShadowStrategy is IStrategyCommon {
     // Shadow-specific events
-    event PositionMinted(uint256 indexed tokenId, int24 tickLower, int24 tickUpper, uint128 liquidity);
+    event PositionMinted(
+        uint256 indexed tokenId,
+        int24 tickLower,
+        int24 tickUpper,
+        uint128 liquidity
+    );
     event PositionBurned(uint256 indexed tokenId);
 
     // Shadow-specific getters
-    function getPosition() external view returns (uint256 tokenId, int24 tickLower, int24 tickUpper);
-    function getShadowNonfungiblePositionManager() external view returns (INonfungiblePositionManager);
-    function getVoter() external view returns (IMinimalVoter);
-    function getPool() external pure returns(address);
-    
+    function getPosition()
+        external
+        view
+        returns (uint256 tokenId, int24 tickLower, int24 tickUpper);
+    function getShadowNonfungiblePositionManager()
+        external
+        view
+        returns (INonfungiblePositionManager);
+    function getPool() external pure returns (address);
+
     // Shadow-specific rebalance - clean interface without unused parameters
     function rebalance(
         int32 tickLower,

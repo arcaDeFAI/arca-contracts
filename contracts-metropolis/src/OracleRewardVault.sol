@@ -10,7 +10,9 @@ import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
 import {IERC20} from "./interfaces/IHooksRewarder.sol";
-import {IMinimalVault} from "../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
+import {
+    IMinimalVault
+} from "../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
 import {TokenHelper} from "./libraries/TokenHelper.sol";
 import {Precision} from "./libraries/Precision.sol";
 import {console} from "forge-std/console.sol";
@@ -46,36 +48,60 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
      * @dev Returns the type of the vault.
      * @return vaultType The type of the vault
      */
-    function getVaultType() public pure virtual override(OracleVault, IMinimalVault) returns (IVaultFactory.VaultType) {
+    function getVaultType()
+        public
+        pure
+        virtual
+        override(OracleVault, IMinimalVault)
+        returns (IVaultFactory.VaultType)
+    {
         return IVaultFactory.VaultType.OracleReward;
     }
 
-    function getUserInfo(address user) external view override returns (UserInfo memory userInfo) {
+    function getUserInfo(
+        address user
+    ) external view override returns (UserInfo memory userInfo) {
         userInfo.phantomAmount = _users[user].phantomAmount;
-        userInfo.rewardDebtInfo = new RewardDebtInfo[](cachedRewardTokens.length);
+        userInfo.rewardDebtInfo = new RewardDebtInfo[](
+            cachedRewardTokens.length
+        );
         for (uint256 i = 0; i < cachedRewardTokens.length; i++) {
             Reward storage reward = cachedRewardTokens[i];
             userInfo.rewardDebtInfo[i] = RewardDebtInfo({
                 token: reward.token,
-                rewardDebt: _users[user].rewardDebtPerToken[address(reward.token)]
+                rewardDebt: _users[user].rewardDebtPerToken[
+                    address(reward.token)
+                ]
             });
         }
         return userInfo;
     }
 
-    function getPendingRewards(address user) external view override returns (UserReward[] memory rewards) {
+    function getPendingRewards(
+        address user
+    ) external view override returns (UserReward[] memory rewards) {
         rewards = new UserReward[](cachedRewardTokens.length);
         for (uint256 i = 0; i < cachedRewardTokens.length; i++) {
             Reward storage reward = cachedRewardTokens[i];
-            (uint256 calcAccRewardsPerShare,) = _getAccRewardsPerShare(reward);
+            (uint256 calcAccRewardsPerShare, ) = _getAccRewardsPerShare(reward);
             rewards[i] = UserReward({
                 token: reward.token,
-                pendingRewards: _calcPending(user, reward, calcAccRewardsPerShare)
-            });   
+                pendingRewards: _calcPending(
+                    user,
+                    reward,
+                    calcAccRewardsPerShare
+                )
+            });
         }
     }
 
-    function _getAccRewardsPerShare(Reward storage reward) internal view returns (uint256 calcAccRewardsPerShare, uint256 rewardBalance) {
+    function _getAccRewardsPerShare(
+        Reward storage reward
+    )
+        internal
+        view
+        returns (uint256 calcAccRewardsPerShare, uint256 rewardBalance)
+    {
         if (address(getStrategy()) == address(0)) {
             return (reward.accRewardsPerShare, reward.lastRewardBalance);
         }
@@ -106,34 +132,49 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
         }
     }
 
-    function _calcPending(address user, Reward storage reward, uint256 calcAccRewardsPerShare) internal view returns (uint256) {
-        return _users[user].phantomAmount > 0 ? (_users[user].phantomAmount * calcAccRewardsPerShare).unshiftPrecision() - _users[user].rewardDebtPerToken[address(reward.token)] : 0;
+    function _calcPending(
+        address user,
+        Reward storage reward,
+        uint256 calcAccRewardsPerShare
+    ) internal view returns (uint256) {
+        return
+            _users[user].phantomAmount > 0
+                ? (_users[user].phantomAmount * calcAccRewardsPerShare)
+                    .unshiftPrecision() -
+                    _users[user].rewardDebtPerToken[address(reward.token)]
+                : 0;
     }
 
-    /** 
+    /**
      * @dev Must be called by the strategy and before reward transfer happens
      * @param token The reward token
      */
     function notifyRewardToken(IERC20 token) external {
-        if (address(getStrategy()) != msg.sender) revert BaseVault__OnlyStrategy();
+        if (address(getStrategy()) != msg.sender)
+            revert BaseVault__OnlyStrategy();
         _notifyRewardToken(token);
     }
 
     function _notifyRewardToken(IERC20 token) internal {
         if (!tokenCached[address(token)]) {
             tokenCached[address(token)] = true;
-            cachedRewardTokens.push(Reward({
-                token: token,
-                lastRewardBalance: 0,
-                accRewardsPerShare: 0
-            }));
+            cachedRewardTokens.push(
+                Reward({
+                    token: token,
+                    lastRewardBalance: 0,
+                    accRewardsPerShare: 0
+                })
+            );
         }
     }
 
     function updateAccRewardsPerShare() public {
         for (uint256 i = 0; i < cachedRewardTokens.length; i++) {
             Reward storage reward = cachedRewardTokens[i];
-            (uint256 accRewardsPerShare, uint256 rewardBalance) = _getAccRewardsPerShare(reward);
+            (
+                uint256 accRewardsPerShare,
+                uint256 rewardBalance
+            ) = _getAccRewardsPerShare(reward);
 
             reward.accRewardsPerShare = accRewardsPerShare;
             reward.lastRewardBalance = rewardBalance;
@@ -143,9 +184,20 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
 
     function _updatePool() internal override {
         if (address(getStrategy()) != address(0)) {
-            if (getStrategy().hasRewards()) _notifyRewardToken(getStrategy().getRewardToken());
-            if (getStrategy().hasExtraRewards()) _notifyRewardToken(getStrategy().getExtraRewardToken());
-            
+            // Get all reward tokens
+            try getStrategy().getRewardTokens() returns (
+                address[] memory tokens
+            ) {
+                // Notify vault about all tokens
+                for (uint i = 0; i < tokens.length; i++) {
+                    if (tokens[i] != address(0)) {
+                        _notifyRewardToken(IERC20(tokens[i]));
+                    }
+                }
+            } catch {
+                // Strategy doesn't support getRewardTokens() or external call failed
+                // Continue without notifying tokens
+            }
             try getStrategy().harvestRewards() {} catch {
                 // silently fail if no rewards are available
             }
@@ -159,7 +211,10 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
      * @param user user
      * @param amount amount
      */
-    function _modifyUser(address user, int256 amount) internal virtual override {
+    function _modifyUser(
+        address user,
+        int256 amount
+    ) internal virtual override {
         User storage userData = _users[user];
         uint256 uAmount = uint256(amount < 0 ? -amount : amount);
         uint256 phantomAmount = (uAmount * PHANTOM_SHARE_PRECISION) /
@@ -205,7 +260,10 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
     /**
      * @dev Harvest rewards for a user without trasfer
      */
-    function _harvest(address user, Reward storage reward) internal returns (uint256 payoutAmount) {
+    function _harvest(
+        address user,
+        Reward storage reward
+    ) internal returns (uint256 payoutAmount) {
         payoutAmount = _calcPending(user, reward, reward.accRewardsPerShare);
         reward.lastRewardBalance = reward.lastRewardBalance - payoutAmount;
 
@@ -223,16 +281,23 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
     /**
      * @dev claim rewards of sender before transfering it to recipient
      */
-    function _transfer(address sender, address recipient, uint256 amount) internal override {
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal override {
         if (!_isIgnored(recipient) || !_isIgnored(sender)) _updatePool();
-        
+
         // we dont want to modify if the transfer is between user and strategy and vice versa
         // otherwise the accounting will be wrong as we modify the shares on reedem
-        if (sender == address(getStrategy()) || recipient == address(getStrategy())) {
+        if (
+            sender == address(getStrategy()) ||
+            recipient == address(getStrategy())
+        ) {
             super._transfer(sender, recipient, amount);
             return;
         }
-        
+
         if (!_isIgnored(recipient)) _modifyUser(recipient, int256(amount));
         if (!_isIgnored(sender)) _modifyUser(sender, -int256(amount));
 

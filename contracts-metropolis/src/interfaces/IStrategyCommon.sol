@@ -2,7 +2,9 @@
 
 pragma solidity 0.8.26;
 
-import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {
+    IERC20Upgradeable
+} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IVaultFactory} from "./IVaultFactory.sol";
 import {IERC20} from "./IHooksRewarder.sol";
 
@@ -29,7 +31,11 @@ interface IStrategyCommon {
     event OperatorSet(address operator);
     event RebalanceCoolDownSet(uint256 coolDown);
     event AumFeeCollected(
-        address indexed sender, uint256 totalBalanceX, uint256 totalBalanceY, uint256 feeX, uint256 feeY
+        address indexed sender,
+        uint256 totalBalanceX,
+        uint256 totalBalanceY,
+        uint256 feeX,
+        uint256 feeY
     );
     event AumAnnualFeeSet(uint256 fee);
     event PendingAumAnnualFeeSet(uint256 fee);
@@ -41,35 +47,46 @@ interface IStrategyCommon {
     function getTokenX() external pure returns (IERC20Upgradeable);
     function getTokenY() external pure returns (IERC20Upgradeable);
     function getOperator() external view returns (address);
-    
+
     // Strategy type for casting
-    function getStrategyType() external view returns (IVaultFactory.StrategyType);
-    
+    function getStrategyType()
+        external
+        view
+        returns (IVaultFactory.StrategyType);
+
     // Fee management
     function getAumAnnualFee() external view returns (uint256 aumAnnualFee);
-    function getPendingAumAnnualFee() external view returns (bool isSet, uint256 pendingAumAnnualFee);
+    function getPendingAumAnnualFee()
+        external
+        view
+        returns (bool isSet, uint256 pendingAumAnnualFee);
     function setPendingAumAnnualFee(uint16 pendingAumAnnualFee) external;
     function resetPendingAumAnnualFee() external;
-    
+
     // Balance calculations
-    function getBalances() external view returns (uint256 amountX, uint256 amountY);
-    function getIdleBalances() external view returns (uint256 amountX, uint256 amountY);
-    
+    function getBalances()
+        external
+        view
+        returns (uint256 amountX, uint256 amountY);
+    function getIdleBalances()
+        external
+        view
+        returns (uint256 amountX, uint256 amountY);
+
     // Rewards
-    function getRewardToken() external view returns (IERC20);
-    function getExtraRewardToken() external view returns (IERC20);
+    function getRewardTokens() external view returns (address[] memory);
     function hasRewards() external view returns (bool);
     function hasExtraRewards() external view returns (bool);
     function harvestRewards() external;
-    
+
     // Operations
     function getLastRebalance() external view returns (uint256 lastRebalance);
     function setRebalanceCoolDown(uint256 coolDown) external;
-    
+
     // Core functionality
     function initialize() external;
     function withdrawAll() external;
     function setOperator(address operator) external;
-    
+
     // Note: rebalance() is NOT included here as it has protocol-specific parameters
 }
