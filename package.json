@@ -30,7 +30,7 @@
     "dev:testnet:discover-pairs": "hardhat run scripts/discover-all-lb-pairs.ts --network sonic-testnet",
     "testnet:balances": "hardhat run scripts/testnet-utils/check-balances.ts --network sonic-testnet",
     "testnet:get-usdc": "hardhat run scripts/testnet-utils/swap-for-usdc.ts --network sonic-testnet",
-    "test:shadow-vault:manual": "hardhat run scripts/test-shadow-vault-interactive.ts --network sonic-mainnet"
+    "shadow-vault:cli": "hardhat run scripts/test-shadow-vault-interactive.ts --network sonic-mainnet"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",

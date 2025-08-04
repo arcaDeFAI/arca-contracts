@@ -4,15 +4,25 @@ pragma solidity 0.8.26;
 
 import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
 import {PriceHelper} from "joe-v2/libraries/PriceHelper.sol";
-import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {
+    IERC20Upgradeable
+} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 import {ILBToken} from "joe-v2/interfaces/ILBToken.sol";
-import {LiquidityAmounts} from "joe-v2-periphery/periphery/LiquidityAmounts.sol";
+import {
+    LiquidityAmounts
+} from "joe-v2-periphery/periphery/LiquidityAmounts.sol";
 import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
-import {LiquidityConfigurations} from "joe-v2/libraries/math/LiquidityConfigurations.sol";
+import {
+    LiquidityConfigurations
+} from "joe-v2/libraries/math/LiquidityConfigurations.sol";
 import {Clone} from "joe-v2/libraries/Clone.sol";
-import {ReentrancyGuardUpgradeable} from "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {SafeERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {
+    ReentrancyGuardUpgradeable
+} from "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {
+    SafeERC20Upgradeable
+} from "openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
@@ -38,7 +48,11 @@ import {console} from "forge-std/console.sol";
  * - 0x3C: 20 bytes: The address of the token Y.
  * - 0x50: 2 bytes: The bin step of the lb pair.
  */
-contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStrategy {
+contract MetropolisStrategy is
+    Clone,
+    ReentrancyGuardUpgradeable,
+    IMetropolisStrategy
+{
     using SafeERC20Upgradeable for IERC20Upgradeable;
     using LiquidityAmounts for address;
     using Math for uint256;
@@ -50,7 +64,7 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
     uint256 private constant _BASIS_POINTS = 1e4;
 
     /// @dev max range can be set depending on gas block limit of the chain)
-    /// recommended max range on L2 chains (e.g. arbitrum) is 51. 
+    /// recommended max range on L2 chains (e.g. arbitrum) is 51.
     uint256 private immutable _MAX_RANGE;
 
     uint256 private constant _MAX_AUM_ANNUAL_FEE = 0.3e4; // 30%
@@ -93,21 +107,26 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @notice Modifier to check if the caller is the operator or the default operator.
      */
     modifier onlyOperators() {
-        if (msg.sender != _operator && msg.sender != _factory.getDefaultOperator()) revert Strategy__OnlyOperators();
+        if (
+            msg.sender != _operator &&
+            msg.sender != _factory.getDefaultOperator()
+        ) revert Strategy__OnlyOperators();
         _;
     }
 
     modifier onlyTrusted() {
-        if (msg.sender != _operator 
-            && msg.sender != _factory.getDefaultOperator() 
-            && msg.sender != address(this) 
-            && msg.sender != _vault()
-            ) revert Strategy__OnlyTrusted();
+        if (
+            msg.sender != _operator &&
+            msg.sender != _factory.getDefaultOperator() &&
+            msg.sender != address(this) &&
+            msg.sender != _vault()
+        ) revert Strategy__OnlyTrusted();
         _;
     }
 
     modifier onlyDefaultOperator() {
-        if (msg.sender != _factory.getDefaultOperator()) revert Strategy__OnlyDefaultOperator();
+        if (msg.sender != _factory.getDefaultOperator())
+            revert Strategy__OnlyDefaultOperator();
         _;
     }
 
@@ -182,7 +201,13 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return lower The lower bound of the range.
      * @return upper The upper bound of the range.
      */
-    function getRange() external view virtual override returns (int32 lower, int32 upper) {
+    function getRange()
+        external
+        view
+        virtual
+        override
+        returns (int32 lower, int32 upper)
+    {
         return (int32(uint32(_lowerRange)), int32(uint32(_upperRange)));
     }
 
@@ -199,7 +224,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return amountX The amount of token X.
      * @return amountY The amount of token Y.
      */
-    function getBalances() external view override returns (uint256 amountX, uint256 amountY) {
+    function getBalances()
+        external
+        view
+        override
+        returns (uint256 amountX, uint256 amountY)
+    {
         return _getBalances();
     }
 
@@ -208,7 +238,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return amountX The idle amount of token X.
      * @return amountY The idle amount of token Y.
      */
-    function getIdleBalances() external view override returns (uint256 amountX, uint256 amountY) {
+    function getIdleBalances()
+        external
+        view
+        override
+        returns (uint256 amountX, uint256 amountY)
+    {
         amountX = _tokenX().balanceOf(address(this));
         amountY = _tokenY().balanceOf(address(this));
     }
@@ -217,7 +252,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @notice Returns the assets under management annual fee.
      * @return aumAnnualFee The assets under management annual fee.
      */
-    function getAumAnnualFee() external view override returns (uint256 aumAnnualFee) {
+    function getAumAnnualFee()
+        external
+        view
+        override
+        returns (uint256 aumAnnualFee)
+    {
         return _aumAnnualFee;
     }
 
@@ -225,7 +265,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @notice Returns the last rebalance timestamp.
      * @return lastRebalance The last rebalance timestamp.
      */
-    function getLastRebalance() external view override returns (uint256 lastRebalance) {
+    function getLastRebalance()
+        external
+        view
+        override
+        returns (uint256 lastRebalance)
+    {
         return _lastRebalance;
     }
 
@@ -233,7 +278,7 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @notice Returns the reward token of the strategy if the underlying pair has a reward hook.
      * @return rewardToken The reward token
      */
-    function getRewardToken() external view override returns (IERC20) {
+    function getRewardToken() external view returns (IERC20) {
         IHooksRewarder rewarder = _getRewarder();
         if (address(rewarder) != address(0)) return rewarder.getRewardToken();
         return IERC20(address(0));
@@ -243,10 +288,58 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @notice Returns the extra reward token of the strategy if the underlying pair has a extra reward hook.
      * @return rewardToken The reward token
      */
-    function getExtraRewardToken() external view override returns (IERC20) {
+    function getExtraRewardToken() external view returns (IERC20) {
         IHooksRewarder extraRewarder = _getExtraRewarder();
-        if (address(extraRewarder) != address(0)) return extraRewarder.getRewardToken();
+        if (address(extraRewarder) != address(0))
+            return extraRewarder.getRewardToken();
         return IERC20(address(0));
+    }
+
+    /**
+     * @notice Returns all reward tokens for this strategy
+     * @return tokens Array of reward token addresses
+     */
+    function getRewardTokens()
+        external
+        view
+        override
+        returns (address[] memory tokens)
+    {
+        uint count = 0;
+        address rewardToken;
+        address extraRewardToken;
+
+        // Count valid tokens
+        IHooksRewarder rewarder = _getRewarder();
+        if (address(rewarder) != address(0)) {
+            try rewarder.getRewardToken() returns (IERC20 token) {
+                if (address(token) != address(0)) {
+                    rewardToken = address(token);
+                    count++;
+                }
+            } catch {}
+        }
+
+        IHooksRewarder extraRewarder = _getExtraRewarder();
+        if (address(extraRewarder) != address(0)) {
+            try extraRewarder.getRewardToken() returns (IERC20 token) {
+                if (address(token) != address(0)) {
+                    extraRewardToken = address(token);
+                    count++;
+                }
+            } catch {}
+        }
+
+        // Build array
+        tokens = new address[](count);
+        uint index = 0;
+
+        if (rewardToken != address(0)) {
+            tokens[index++] = rewardToken;
+        }
+        if (extraRewardToken != address(0)) {
+            tokens[index++] = extraRewardToken;
+        }
     }
 
     /**
@@ -255,7 +348,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return pendingAumAnnualFee The pending assets under management annual fee.
      * If the pending assets under management annual fee is not set, this value is zero.
      */
-    function getPendingAumAnnualFee() external view override returns (bool isSet, uint256 pendingAumAnnualFee) {
+    function getPendingAumAnnualFee()
+        external
+        view
+        override
+        returns (bool isSet, uint256 pendingAumAnnualFee)
+    {
         return (_pendingAumAnnualFeeSet, _pendingAumAnnualFee);
     }
 
@@ -269,7 +367,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
     /**
      * @notice Returns the strategy type
      */
-    function getStrategyType() external pure override returns (IVaultFactory.StrategyType) {
+    function getStrategyType()
+        external
+        pure
+        override
+        returns (IVaultFactory.StrategyType)
+    {
         return IVaultFactory.StrategyType.Default;
     }
 
@@ -283,11 +386,24 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         address vault = _vault();
 
         // Withdraw all the tokens from the LB pool and return the amounts and the queued withdrawals.
-        (uint256 amountX, uint256 amountY, uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY) =
-            _withdraw(_lowerRange, _upperRange, IBaseVault(vault).totalSupply());
+        (
+            uint256 amountX,
+            uint256 amountY,
+            uint256 queuedShares,
+            uint256 queuedAmountX,
+            uint256 queuedAmountY
+        ) = _withdraw(
+                _lowerRange,
+                _upperRange,
+                IBaseVault(vault).totalSupply()
+            );
 
         // Execute the queued withdrawals and send the tokens to the vault.
-        _transferAndExecuteQueuedAmounts(queuedShares, queuedAmountX, queuedAmountY);
+        _transferAndExecuteQueuedAmounts(
+            queuedShares,
+            queuedAmountX,
+            queuedAmountY
+        );
 
         // Send the tokens to the vault.
         _tokenX().safeTransfer(vault, amountX);
@@ -305,12 +421,20 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @param lowerRange lower id to withdraw
      * @param upperRange upper id to withdraw
      */
-    function emergencyWidthdrawRange(uint24 lowerRange, uint24 upperRange) external onlyDefaultOperator {
+    function emergencyWidthdrawRange(
+        uint24 lowerRange,
+        uint24 upperRange
+    ) external onlyDefaultOperator {
         address vault = _vault();
 
         // Withdraw all the tokens from the LB pool and return the amounts and the queued withdrawals.
-        (uint256 amountX, uint256 amountY, uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY) =
-            _withdraw(lowerRange, upperRange, IBaseVault(vault).totalSupply());
+        (
+            uint256 amountX,
+            uint256 amountY,
+            uint256 queuedShares,
+            uint256 queuedAmountX,
+            uint256 queuedAmountY
+        ) = _withdraw(lowerRange, upperRange, IBaseVault(vault).totalSupply());
     }
 
     /**
@@ -335,17 +459,31 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         uint256 amountY,
         bytes calldata distributions
     ) external virtual override onlyOperators {
-
         // check if the cool down period has passed
-        if (_lastRebalance > 0 && block.timestamp < _lastRebalance + _rebalanceCoolDown) revert Strategy__RebalanceCoolDown();
+        if (
+            _lastRebalance > 0 &&
+            block.timestamp < _lastRebalance + _rebalanceCoolDown
+        ) revert Strategy__RebalanceCoolDown();
 
         {
             // Withdraw all the tokens from the LB pool and return the amounts and the queued withdrawals.
             // It will also charge the AUM annual fee based on the last time a rebalance was executed.
-            (uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY) = _withdrawAndApplyAumAnnualFee();
-            console.log("rebalance -> queuedAmountX/Y", queuedAmountX, queuedAmountY);
+            (
+                uint256 queuedShares,
+                uint256 queuedAmountX,
+                uint256 queuedAmountY
+            ) = _withdrawAndApplyAumAnnualFee();
+            console.log(
+                "rebalance -> queuedAmountX/Y",
+                queuedAmountX,
+                queuedAmountY
+            );
             // Execute the queued withdrawals and send the tokens to the vault.
-            _transferAndExecuteQueuedAmounts(queuedShares, queuedAmountX, queuedAmountY);
+            _transferAndExecuteQueuedAmounts(
+                queuedShares,
+                queuedAmountX,
+                queuedAmountY
+            );
 
             // harvest rewards if pair has an LB hook
             // we catch the error to avoid reverting the rebalance
@@ -355,26 +493,40 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         }
 
         // Validate non-negative for Metropolis bins
-        require(newLower >= 0 && newUpper >= 0 && desiredActiveId >= 0 && slippageActiveId >= 0, "Strategy__NegativeRange");
-        
+        require(
+            newLower >= 0 &&
+                newUpper >= 0 &&
+                desiredActiveId >= 0 &&
+                slippageActiveId >= 0,
+            "Strategy__NegativeRange"
+        );
+
         // Convert to uint24 for Metropolis
         uint24 lower = uint24(uint32(newLower));
         uint24 upper = uint24(uint32(newUpper));
         uint24 desiredId = uint24(uint32(desiredActiveId));
         uint24 slippageId = uint24(uint32(slippageActiveId));
-        
+
         // Check if the operator wants to deposit tokens.
         if (desiredId > 0 || slippageId > 0) {
-
             // check price;  will revert if not in deviation
             _checkPrice();
 
             // Adjust the range and get the active id, in case the active id changed.
             uint24 activeId;
-            (activeId, lower, upper) = _adjustRange(lower, upper, desiredId, slippageId);
+            (activeId, lower, upper) = _adjustRange(
+                lower,
+                upper,
+                desiredId,
+                slippageId
+            );
 
             // Get the distributions and the amounts to deposit
-            bytes32[] memory liquidityConfigs = _getLiquidityConfigs(lower, upper, distributions);
+            bytes32[] memory liquidityConfigs = _getLiquidityConfigs(
+                lower,
+                upper,
+                distributions
+            );
 
             // Deposit the tokens to the LB pool.
             _depositToLB(lower, upper, liquidityConfigs, amountX, amountY);
@@ -412,8 +564,11 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @dev Only the factory can call this function.
      * @param pendingAumAnnualFee The assets under management annual fee.
      */
-    function setPendingAumAnnualFee(uint16 pendingAumAnnualFee) external override onlyFactory {
-        if (pendingAumAnnualFee > _MAX_AUM_ANNUAL_FEE) revert Strategy__InvalidFee();
+    function setPendingAumAnnualFee(
+        uint16 pendingAumAnnualFee
+    ) external override onlyFactory {
+        if (pendingAumAnnualFee > _MAX_AUM_ANNUAL_FEE)
+            revert Strategy__InvalidFee();
 
         _pendingAumAnnualFeeSet = true;
         _pendingAumAnnualFee = pendingAumAnnualFee;
@@ -437,7 +592,9 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @dev Only the factory can call this function.
      * @param coolDown The rebalance cool down in seconds.
      */
-    function setRebalanceCoolDown(uint256 coolDown) external override onlyFactory {
+    function setRebalanceCoolDown(
+        uint256 coolDown
+    ) external override onlyFactory {
         _rebalanceCoolDown = coolDown;
 
         emit RebalanceCoolDownSet(coolDown);
@@ -481,13 +638,16 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @param upper The upper end of the range.
      * @return ids The ids of the tokens in the range.
      */
-    function _getIds(uint24 lower, uint24 upper) internal pure returns (uint256[] memory ids) {
+    function _getIds(
+        uint24 lower,
+        uint24 upper
+    ) internal pure returns (uint256[] memory ids) {
         // Get the delta of the range, we add 1 because the upper bound is inclusive.
         uint256 delta = upper - lower + 1;
 
         // Get the ids from lower to upper (inclusive).
         ids = new uint256[](delta);
-        for (uint256 i; i < delta;) {
+        for (uint256 i; i < delta; ) {
             ids[i] = lower + i;
 
             unchecked {
@@ -501,7 +661,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return amountX The balance of token X.
      * @return amountY The balance of token Y.
      */
-    function _getBalances() internal view virtual returns (uint256 amountX, uint256 amountY) {
+    function _getBalances()
+        internal
+        view
+        virtual
+        returns (uint256 amountX, uint256 amountY)
+    {
         // Get the balances of the tokens in the contract.
         amountX = _tokenX().balanceOf(address(this));
         amountY = _tokenY().balanceOf(address(this));
@@ -513,7 +678,8 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         if (upper != 0) {
             uint256[] memory ids = _getIds(lower, upper);
 
-            (uint256 depositedX, uint256 depositedY) = address(this).getAmountsOf(ids, address(_pair()));
+            (uint256 depositedX, uint256 depositedY) = address(this)
+                .getAmountsOf(ids, address(_pair()));
 
             amountX += depositedX;
             amountY += depositedY;
@@ -536,11 +702,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @param desiredActiveId The desired active id.
      * @param slippageActiveId The allowed slippage of the active id.
      */
-    function _adjustRange(uint24 newLower, uint24 newUpper, uint24 desiredActiveId, uint24 slippageActiveId)
-        internal
-        view
-        returns (uint24 activeId, uint24, uint24)
-    {
+    function _adjustRange(
+        uint24 newLower,
+        uint24 newUpper,
+        uint24 desiredActiveId,
+        uint24 slippageActiveId
+    ) internal view returns (uint24 activeId, uint24, uint24) {
         activeId = _getActiveId();
 
         // If the active id is different from the desired active id, adjust the range.
@@ -560,8 +727,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
                 unchecked {
                     delta = activeId - desiredActiveId;
 
-                    newLower = newLower > type(uint24).max - delta ? type(uint24).max : newLower + delta;
-                    newUpper = newUpper > type(uint24).max - delta ? type(uint24).max : newUpper + delta;
+                    newLower = newLower > type(uint24).max - delta
+                        ? type(uint24).max
+                        : newLower + delta;
+                    newUpper = newUpper > type(uint24).max - delta
+                        ? type(uint24).max
+                        : newUpper + delta;
                 }
             }
 
@@ -581,13 +752,16 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * distributions = abi.encodePacked(uint64(distribX0), uint64(distribY0), uint64(distribX1), uint64(distribY1), ...)
      * @return liquidityConfigs The liquidity configurations for the given range.
      */
-    function _getLiquidityConfigs(uint24 idLower, uint24 idUpper, bytes calldata distributions)
-        internal
-        pure
-        returns (bytes32[] memory liquidityConfigs)
-    {
+    function _getLiquidityConfigs(
+        uint24 idLower,
+        uint24 idUpper,
+        bytes calldata distributions
+    ) internal pure returns (bytes32[] memory liquidityConfigs) {
         if (idUpper == 0 || idLower > idUpper) revert Strategy__InvalidRange();
-        if (distributions.length != (idUpper - idLower + 1) * _PACKED_DISTRIBS_SIZE) revert Strategy__InvalidLength();
+        if (
+            distributions.length !=
+            (idUpper - idLower + 1) * _PACKED_DISTRIBS_SIZE
+        ) revert Strategy__InvalidLength();
 
         uint256 length = distributions.length / _PACKED_DISTRIBS_SIZE;
 
@@ -597,9 +771,15 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         for (uint256 i; i < length; ++i) {
             uint24 id = idLower + uint24(i);
 
-            uint128 distribs = uint128(bytes16(distributions[index:index += _PACKED_DISTRIBS_SIZE]));
+            uint128 distribs = uint128(
+                bytes16(distributions[index:index += _PACKED_DISTRIBS_SIZE])
+            );
 
-            liquidityConfigs[i] = LiquidityConfigurations.encodeParams(uint64(distribs >> 64), uint64(distribs), id);
+            liquidityConfigs[i] = LiquidityConfigurations.encodeParams(
+                uint64(distribs >> 64),
+                uint64(distribs),
+                id
+            );
         }
     }
 
@@ -609,8 +789,10 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @param newUpper The upper end of the new range.
      */
     function _setRange(uint24 newLower, uint24 newUpper) internal {
-        if (newUpper == 0 || newLower > newUpper) revert Strategy__InvalidRange();
-        if (newUpper - newLower + 1 > _MAX_RANGE) revert Strategy__RangeTooWide();
+        if (newUpper == 0 || newLower > newUpper)
+            revert Strategy__InvalidRange();
+        if (newUpper - newLower + 1 > _MAX_RANGE)
+            revert Strategy__RangeTooWide();
 
         uint24 previousUpper = _upperRange;
 
@@ -673,7 +855,11 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      */
     function _withdrawAndApplyAumAnnualFee()
         internal
-        returns (uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY)
+        returns (
+            uint256 queuedShares,
+            uint256 queuedAmountX,
+            uint256 queuedAmountY
+        )
     {
         // Get the range and reset it.
         (uint24 lowerRange, uint24 upperRange) = (_lowerRange, _upperRange);
@@ -683,8 +869,17 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         uint256 totalBalanceX;
         uint256 totalBalanceY;
 
-        (totalBalanceX, totalBalanceY, queuedShares, queuedAmountX, queuedAmountY) =
-            _withdraw(lowerRange, upperRange, IBaseVault(_vault()).totalSupply());
+        (
+            totalBalanceX,
+            totalBalanceY,
+            queuedShares,
+            queuedAmountX,
+            queuedAmountY
+        ) = _withdraw(
+                lowerRange,
+                upperRange,
+                IBaseVault(_vault()).totalSupply()
+            );
 
         // Get the total balance of the strategy.
         totalBalanceX += queuedAmountX;
@@ -695,7 +890,8 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         _lastRebalance = block.timestamp.safe64();
 
         // If the total balance is 0, early return to not charge the AUM annual fee nor update it.
-        if (totalBalanceX == 0 && totalBalanceY == 0) return (queuedShares, queuedAmountX, queuedAmountY);
+        if (totalBalanceX == 0 && totalBalanceY == 0)
+            return (queuedShares, queuedAmountX, queuedAmountY);
 
         // Apply the AUM annual fee
         if (lastRebalance < block.timestamp) {
@@ -703,32 +899,50 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
 
             if (annualFee > 0) {
                 // pay the aum fee to the market maker if any, otherwise to the default fee recipient
-                address feeRecipient = _factory.getFeeRecipientByVault(_vault());
+                address feeRecipient = _factory.getFeeRecipientByVault(
+                    _vault()
+                );
 
                 // Get the duration of the last rebalance and cap it to 1 day.
                 uint256 duration = block.timestamp - lastRebalance;
                 duration = duration > 1 days ? 1 days : duration;
 
                 // Round up the fees and transfer them to the fee recipient.
-                uint256 feeX = (totalBalanceX * annualFee * duration + _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
-                uint256 feeY = (totalBalanceY * annualFee * duration + _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
+                uint256 feeX = (totalBalanceX *
+                    annualFee *
+                    duration +
+                    _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
+                uint256 feeY = (totalBalanceY *
+                    annualFee *
+                    duration +
+                    _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
 
                 if (feeX > 0) {
                     // Adjusts the queued amount of token X to account for the fee.
-                    queuedAmountX =
-                        queuedAmountX == 0 ? 0 : queuedAmountX - feeX.mulDivRoundUp(queuedAmountX, totalBalanceX);
+                    queuedAmountX = queuedAmountX == 0
+                        ? 0
+                        : queuedAmountX -
+                            feeX.mulDivRoundUp(queuedAmountX, totalBalanceX);
 
                     _tokenX().safeTransfer(feeRecipient, feeX);
                 }
                 if (feeY > 0) {
                     // Adjusts the queued amount of token Y to account for the fee.
-                    queuedAmountY =
-                        queuedAmountY == 0 ? 0 : queuedAmountY - feeY.mulDivRoundUp(queuedAmountY, totalBalanceY);
+                    queuedAmountY = queuedAmountY == 0
+                        ? 0
+                        : queuedAmountY -
+                            feeY.mulDivRoundUp(queuedAmountY, totalBalanceY);
 
                     _tokenY().safeTransfer(feeRecipient, feeY);
                 }
 
-                emit AumFeeCollected(msg.sender, totalBalanceX, totalBalanceY, feeX, feeY);
+                emit AumFeeCollected(
+                    msg.sender,
+                    totalBalanceX,
+                    totalBalanceY,
+                    feeX,
+                    feeY
+                );
             }
         }
 
@@ -756,20 +970,36 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return queuedAmountX The amount of token X withdrawn from the queued withdraws.
      * @return queuedAmountY The amount of token Y withdrawn from the queued withdraws.
      */
-    function _withdraw(uint24 removedLower, uint24 removedUpper, uint256 totalShares)
+    function _withdraw(
+        uint24 removedLower,
+        uint24 removedUpper,
+        uint256 totalShares
+    )
         internal
-        returns (uint256 amountX, uint256 amountY, uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY)
+        returns (
+            uint256 amountX,
+            uint256 amountY,
+            uint256 queuedShares,
+            uint256 queuedAmountX,
+            uint256 queuedAmountY
+        )
     {
         // Get the amount of shares queued for withdrawal.
         queuedShares = IBaseVault(_vault()).getCurrentTotalQueuedWithdrawal();
 
         // Withdraw from the Liquidity Book Pair and get the amounts of tokens in the strategy.
-        (uint256 balanceX, uint256 balanceY) = _withdrawFromLB(removedLower, removedUpper);
+        (uint256 balanceX, uint256 balanceY) = _withdrawFromLB(
+            removedLower,
+            removedUpper
+        );
 
         // Get the amount of tokens to withdraw from the queued withdraws.
         (queuedAmountX, queuedAmountY) = totalShares == 0 || queuedShares == 0
             ? (0, 0)
-            : (queuedShares.mulDivRoundDown(balanceX, totalShares), queuedShares.mulDivRoundDown(balanceY, totalShares));
+            : (
+                queuedShares.mulDivRoundDown(balanceX, totalShares),
+                queuedShares.mulDivRoundDown(balanceY, totalShares)
+            );
 
         // Get the amount that were not queued for withdrawal.
         amountX = balanceX - queuedAmountX;
@@ -783,10 +1013,10 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return balanceX The amount of token X in the strategy.
      * @return balanceY The amount of token Y in the strategy.
      */
-    function _withdrawFromLB(uint24 removedLower, uint24 removedUpper)
-        internal
-        returns (uint256 balanceX, uint256 balanceY)
-    {
+    function _withdrawFromLB(
+        uint24 removedLower,
+        uint24 removedUpper
+    ) internal returns (uint256 balanceX, uint256 balanceY) {
         uint256 length;
 
         // Get the pair address and the delta between the upper and lower range.
@@ -798,7 +1028,7 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
 
         if (removedUpper > 0) {
             // Get the ids and amounts of the tokens to withdraw.
-            for (uint256 i; i < delta;) {
+            for (uint256 i; i < delta; ) {
                 uint256 id = removedLower + i;
                 uint256 amount = ILBToken(pair).balanceOf(address(this), id);
 
@@ -842,9 +1072,11 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @param queuedAmountX The amount of token X withdrawn from the queued withdraws.
      * @param queuedAmountY The amount of token Y withdrawn from the queued withdraws.
      */
-    function _transferAndExecuteQueuedAmounts(uint256 queuedShares, uint256 queuedAmountX, uint256 queuedAmountY)
-        private
-    {
+    function _transferAndExecuteQueuedAmounts(
+        uint256 queuedShares,
+        uint256 queuedAmountX,
+        uint256 queuedAmountY
+    ) private {
         if (queuedShares > 0) {
             address vault = _vault();
 
@@ -884,21 +1116,33 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         }
 
         // get the balance of the reward token and extra reward token before claiming
-        uint256 balanceBefore = TokenHelper.safeBalanceOf(rewardToken, address(this));
-        uint256 balanceBeforeExtra = hasExtra ? TokenHelper.safeBalanceOf(extraToken, address(this)) : 0;
+        uint256 balanceBefore = TokenHelper.safeBalanceOf(
+            rewardToken,
+            address(this)
+        );
+        uint256 balanceBeforeExtra = hasExtra
+            ? TokenHelper.safeBalanceOf(extraToken, address(this))
+            : 0;
 
         // claim the rewards for current deposited bins
         // claim on MC Rewarder will also claim on the Extra Rewarder if any
         rewarder.claim(address(this), ids);
 
-
-        uint256 balanceAfter = TokenHelper.safeBalanceOf(rewardToken, address(this));
-        uint256 balanceAfterExtra = hasExtra ? TokenHelper.safeBalanceOf(extraToken, address(this)) : 0;
+        uint256 balanceAfter = TokenHelper.safeBalanceOf(
+            rewardToken,
+            address(this)
+        );
+        uint256 balanceAfterExtra = hasExtra
+            ? TokenHelper.safeBalanceOf(extraToken, address(this))
+            : 0;
 
         uint256 rewardAmount = balanceAfter;
 
         // if the reward token is the same as the tokenX or tokenY, we only sent the difference as rewards
-        if (address(rewardToken) == address(_tokenX()) || address(rewardToken) == address(_tokenY())) {
+        if (
+            address(rewardToken) == address(_tokenX()) ||
+            address(rewardToken) == address(_tokenY())
+        ) {
             rewardAmount = balanceAfter - balanceBefore;
         }
 
@@ -910,7 +1154,10 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
         // send any  extra rewards
         if (hasExtra) {
             uint256 extraAmount = balanceAfterExtra;
-            if (address(extraToken) == address(_tokenX()) || address(extraToken) == address(_tokenY())) {
+            if (
+                address(extraToken) == address(_tokenX()) ||
+                address(extraToken) == address(_tokenY())
+            ) {
                 extraAmount = balanceAfterExtra - balanceBeforeExtra;
             }
 
@@ -939,7 +1186,11 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
     /**
      * @dev Returns the extra rewarder address of the pair.
      */
-    function _getExtraRewarder() internal view returns (IHooksRewarder extraRewarder) {
+    function _getExtraRewarder()
+        internal
+        view
+        returns (IHooksRewarder extraRewarder)
+    {
         address hooks = _getHooks();
         if (hooks != address(0)) {
             return IHooksRewarder(_getExtraHooks(hooks));
@@ -960,7 +1211,9 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return hooks The hooks address of the pair. Typically the LB hooks rewarder.
      */
     function _getHooks() internal view returns (address) {
-        try ILBPairHooks(address(_pair())).getLBHooksParameters() returns (bytes32 hooksParameters) {
+        try ILBPairHooks(address(_pair())).getLBHooksParameters() returns (
+            bytes32 hooksParameters
+        ) {
             Hooks.Parameters memory parameters = Hooks.decode(hooksParameters);
             return parameters.hooks;
         } catch {
@@ -973,8 +1226,12 @@ contract MetropolisStrategy is Clone, ReentrancyGuardUpgradeable, IMetropolisStr
      * @return hooks The hooks address of the rewarder. Typically the LB hooks extra rewarder
      */
     function _getExtraHooks(address rewarder) internal view returns (address) {
-        try IHooksRewarder(rewarder).getExtraHooksParameters() returns (bytes32 extraHooksParameters) {
-            Hooks.Parameters memory parameters = Hooks.decode(extraHooksParameters);
+        try IHooksRewarder(rewarder).getExtraHooksParameters() returns (
+            bytes32 extraHooksParameters
+        ) {
+            Hooks.Parameters memory parameters = Hooks.decode(
+                extraHooksParameters
+            );
             return parameters.hooks;
         } catch {
             return address(0);
