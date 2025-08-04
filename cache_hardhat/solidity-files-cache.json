@@ -5076,6 +5076,46 @@
         "^0.8.0"
       ],
       "artifacts": []
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/ShadowPriceHelperWrapper.sol": {
+      "lastModificationDate": 1754277850246,
+      "contentHash": "350d2d5da854a123f791cca3a8e083dc",
+      "sourceName": "contracts-shadow/src/ShadowPriceHelperWrapper.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../CL/core/interfaces/IRamsesV3Pool.sol",
+        "./libraries/ShadowPriceHelper.sol"
+      ],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "ShadowPriceHelperWrapper"
+      ]
     }
   }
 }

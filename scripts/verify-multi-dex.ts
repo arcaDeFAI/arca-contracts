@@ -137,6 +137,15 @@ async function main() {
     });
   }
 
+  if (addresses.shadowPriceHelperWrapper && addresses.shadowPriceHelperWrapper !== "0x0000000000000000000000000000000000000000") {
+    verifications.push({
+      name: "ShadowPriceHelperWrapper",
+      address: addresses.shadowPriceHelperWrapper,
+      constructorArguments: [],
+      contract: "contracts-shadow/src/ShadowPriceHelperWrapper.sol:ShadowPriceHelperWrapper"
+    });
+  }
+
   // VaultFactory now takes two constructor arguments
   verifications.push({
     name: "VaultFactory Implementation",

@@ -6,7 +6,8 @@ import path from "path";
 import { 
     OracleRewardShadowVault,
     ShadowStrategy,
-    IRamsesV3Pool
+    IRamsesV3Pool,
+    ShadowPriceHelperWrapper
 } from "../typechain-types";
 import { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -39,6 +40,7 @@ class ShadowVaultTester {
     private vault?: OracleRewardShadowVault;
     private strategy?: ShadowStrategy;
     private pool?: IRamsesV3Pool;
+    private priceHelper?: ShadowPriceHelperWrapper;
     private tokenX?: IERC20MetadataUpgradeable;
     private tokenY?: IERC20MetadataUpgradeable;
     private signer: SignerWithAddress;
@@ -61,7 +63,27 @@ class ShadowVaultTester {
             console.log(chalk.gray("Loading vault contract..."));
             this.vault = await ethers.getContractAt("OracleRewardShadowVault", this.config.vaultAddress, this.signer);
             console.log(chalk.gray(`✓ Vault loaded at: ${await this.vault.getAddress()}`));
+
+            console.log(chalk.gray("Loading pool contract..."));
+            this.pool = await ethers.getContractAt("IRamsesV3Pool", await this.vault!.getPool(), this.signer);
+            console.log(chalk.gray(`✓ Pool loaded at: ${await this.pool.getAddress()}`));
             
+            // Load price helper wrapper if available
+            console.log(chalk.gray("Loading price helper wrapper..."));
+            const deploymentPath = path.join(__dirname, "../deployments", `metropolis-${network.name}.json`);
+            if (fs.existsSync(deploymentPath)) {
+                const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
+                const priceHelperAddress = deployment.addresses?.shadowPriceHelperWrapper;
+                if (priceHelperAddress && priceHelperAddress !== ethers.ZeroAddress) {
+                    this.priceHelper = await ethers.getContractAt("ShadowPriceHelperWrapper", priceHelperAddress, this.signer);
+                    console.log(chalk.gray(`✓ Price Helper Wrapper loaded at: ${priceHelperAddress}`));
+                } else {
+                    console.log(chalk.yellow(`⚠️  Price Helper Wrapper not found in deployment file`));
+                }
+            } else {
+                console.log(chalk.yellow(`⚠️  Deployment file not found for network: ${network.name}`));
+            }
+
             console.log(chalk.gray("Loading strategy contract..."));
             this.strategy = await ethers.getContractAt("ShadowStrategy", this.config.strategyAddress, this.signer);
             console.log(chalk.gray(`✓ Strategy loaded at: ${await this.strategy.getAddress()}`));
@@ -144,34 +166,60 @@ class ShadowVaultTester {
     }
 
     async showTokenAmountSuggestions() {
-        if (!this.tokenX || !this.tokenY) return;
+        if (!this.tokenX || !this.tokenY || !this.vault) return;
         
         try {
-            const [symbolX, decimalsX, symbolY, decimalsY] = await Promise.all([
+            const [symbolX, decimalsX, symbolY, decimalsY, totalSupply] = await Promise.all([
                 this.getTokenSymbol(this.tokenX),
                 this.getTokenDecimals(this.tokenX),
                 this.getTokenSymbol(this.tokenY),
-                this.getTokenDecimals(this.tokenY)
+                this.getTokenDecimals(this.tokenY),
+                this.vault.totalSupply()
             ]);
+            
+            const isFirstDeposit = totalSupply === 0n;
             
             console.log(chalk.gray(`Token X: ${symbolX} (${decimalsX} decimals)`));
             console.log(chalk.gray(`Token Y: ${symbolY} (${decimalsY} decimals)`));
-            console.log(chalk.gray("\nSuggested amounts:"));
+            
+            if (isFirstDeposit) {
+                console.log(chalk.yellow("\n⚠️  FIRST DEPOSIT DETECTED!"));
+                console.log(chalk.yellow("    1,000,000 shares will be locked in vault"));
+                console.log(chalk.yellow("    You need to deposit value > $1 to receive shares\n"));
+            }
+            
+            console.log(chalk.gray("Suggested amounts:"));
             
             // Helper to format amounts based on decimals
-            const formatAmounts = (symbol: string, decimals: number) => {
-                const amounts = [1, 0.1, 0.01];
+            const formatAmounts = (symbol: string, decimals: number, isUSDC: boolean) => {
+                let amounts = [1, 0.1, 0.01];
+                
+                // For first deposit, suggest larger amounts
+                if (isFirstDeposit) {
+                    if (isUSDC) {
+                        amounts = [100, 10, 1]; // $100, $10, $1 for USDC
+                        console.log(chalk.green("    💡 Minimum $1 recommended for first deposit"));
+                    } else {
+                        amounts = [1, 0.1, 0.02]; // Adjust for other tokens
+                    }
+                }
+                
                 amounts.forEach(amount => {
                     const wei = BigInt(Math.floor(amount * (10 ** decimals)));
-                    console.log(chalk.gray(`  - ${amount} ${symbol} = ${wei.toString()} wei`));
+                    const label = isUSDC && isFirstDeposit ? `$${amount}` : `${amount} ${symbol}`;
+                    console.log(chalk.gray(`  - ${label} = ${wei.toString()} wei`));
                 });
             };
             
             console.log(chalk.gray("\nFor Token X:"));
-            formatAmounts(symbolX, decimalsX);
+            formatAmounts(symbolX, decimalsX, false);
             
             console.log(chalk.gray("\nFor Token Y:"));
-            formatAmounts(symbolY, decimalsY);
+            formatAmounts(symbolY, decimalsY, symbolY.toUpperCase() === "USDC");
+            
+            if (isFirstDeposit) {
+                console.log(chalk.cyan("\n💡 Run 'npx hardhat run scripts/deposit-ratio-helper.ts' for optimal ratios"));
+            }
             
             console.log("");
         } catch (e) {
@@ -338,6 +386,7 @@ class ShadowVaultTester {
             const decimals = await this.vault!.decimals();
             const version = await this.vault!.version();
             const vaultType = await this.vault!.getVaultType();
+            const poolAddress = await this.pool!.getAddress();
             
             console.log(chalk.white("Basic Info:"));
             console.log(chalk.gray(`  Name: ${name}`));
@@ -345,23 +394,78 @@ class ShadowVaultTester {
             console.log(chalk.gray(`  Decimals: ${decimals}`));
             console.log(chalk.gray(`  Version: ${version}`));
             console.log(chalk.gray(`  Vault Type: ${vaultType}`));
+            console.log(chalk.gray(`  Pool address: ${poolAddress}`));
             
             // State
             const isPaused = await this.vault!.isDepositsPaused();
             const isFlagged = await this.vault!.isFlaggedForShutdown();
             const totalSupply = await this.vault!.totalSupply();
             const [balanceX, balanceY] = await this.vault!.getBalances();
+            const tick = (await this.pool!.slot0()).tick;
+            const tickSpacing = await this.pool!.tickSpacing();
             
             console.log(chalk.white("\nState:"));
             console.log(chalk.gray(`  Deposits Paused: ${isPaused}`));
+            console.log(chalk.gray(`  Is Flagged for Shutdown: ${isFlagged}`));
             console.log(chalk.gray(`  Total Supply: ${ethers.formatUnits(totalSupply, decimals)}`));
             console.log(chalk.gray(`  Balance X: ${balanceX.toString()}`));
             console.log(chalk.gray(`  Balance Y: ${balanceY.toString()}`));
+            console.log(chalk.gray(`  Current Pool Tick: ${tick.toString()}`));
+            console.log(chalk.gray(`  Current Pool Tick Spacing: ${tickSpacing.toString()}`));
             
             // Oracle config
             const twapInterval = await this.vault!.getTwapInterval();
             console.log(chalk.white("\nOracle Configuration:"));
             console.log(chalk.gray(`  TWAP Interval: ${twapInterval} seconds`));
+            
+            // Price information
+            if (this.priceHelper && this.pool) {
+                try {
+                    const tokenXDecimals = await this.getTokenDecimals(this.tokenX!);
+                    const tokenYDecimals = await this.getTokenDecimals(this.tokenY!);
+                    const tokenXSymbol = await this.getTokenSymbol(this.tokenX!);
+                    const tokenYSymbol = await this.getTokenSymbol(this.tokenY!);
+                    
+                    // Get spot price (tokenX in terms of tokenY)
+                    const spotPriceX = await this.priceHelper.getPoolSpotPrice(
+                        await this.pool.getAddress(),
+                        true,
+                        tokenXDecimals,
+                        tokenYDecimals
+                    );
+                    
+                    // Get spot price (tokenY in terms of tokenX)
+                    const spotPriceY = await this.priceHelper.getPoolSpotPrice(
+                        await this.pool.getAddress(),
+                        false,
+                        tokenXDecimals,
+                        tokenYDecimals
+                    );
+                    
+                    // Format prices with appropriate decimals
+                    const priceXFormatted = ethers.formatUnits(spotPriceX, tokenYDecimals);
+                    const priceYFormatted = ethers.formatUnits(spotPriceY, tokenXDecimals);
+                    
+                    console.log(chalk.white("\nPrice Information:"));
+                    console.log(chalk.gray(`  1 ${tokenXSymbol} = ${priceXFormatted} ${tokenYSymbol}`));
+                    console.log(chalk.gray(`  1 ${tokenYSymbol} = ${priceYFormatted} ${tokenXSymbol}`));
+                    
+                    // If TWAP is configured, show TWAP price as well
+                    if (twapInterval > 0) {
+                        const twapPriceX = await this.priceHelper.getPoolTWAPPrice(
+                            await this.pool.getAddress(),
+                            true,
+                            twapInterval,
+                            tokenXDecimals,
+                            tokenYDecimals
+                        );
+                        const twapPriceXFormatted = ethers.formatUnits(twapPriceX, tokenYDecimals);
+                        console.log(chalk.gray(`  TWAP (${twapInterval}s): 1 ${tokenXSymbol} = ${twapPriceXFormatted} ${tokenYSymbol}`));
+                    }
+                } catch (e) {
+                    console.log(chalk.yellow(`  Could not fetch price: ${e}`));
+                }
+            }
             
             // Strategy info
             const strategyAddress = await this.vault!.getStrategy();
@@ -528,7 +632,15 @@ class ShadowVaultTester {
             
             if (expectedShares === 0n && (params.amountX > 0n || params.amountY > 0n)) {
                 console.error(chalk.red("\n❌ Deposit amount too small - would receive 0 shares"));
-                console.log(chalk.yellow("\n💡 Try a larger amount. For USDC, try at least 1000000 wei (1 USDC)"));
+                
+                const totalSupply = await this.vault.totalSupply();
+                if (totalSupply === 0n) {
+                    console.log(chalk.yellow("\n⚠️  This is the first deposit!"));
+                    console.log(chalk.yellow("    You need to deposit value > $1 to overcome the penalty"));
+                    console.log(chalk.yellow("    Try: 100 USDC (100000000 wei) or equivalent value"));
+                } else {
+                    console.log(chalk.yellow("\n💡 Try a larger amount. For USDC, try at least 1000000 wei (1 USDC)"));
+                }
                 return;
             }
         } catch (previewError) {
@@ -733,10 +845,6 @@ class ShadowVaultTester {
                     break;
                 default:
                     console.log(chalk.red("Invalid option"));
-            }
-            
-            if (running) {
-                await this.question("\nPress Enter to continue...");
             }
         }
         
@@ -1004,16 +1112,46 @@ async function main() {
     const [signer] = await ethers.getSigners();
     console.log(chalk.gray(`Signer: ${signer.address}\n`));
     
-    // Get vault addresses from command line or prompt
-    let vaultAddress = process.env.SHADOW_VAULT_ADDRESS;
-    let strategyAddress = process.env.SHADOW_STRATEGY_ADDRESS;
+    // Get vault address from command line argument or prompt user
+    let vaultAddress = process.argv[2] || process.env.SHADOW_VAULT_ADDRESS;
     
-    if (!vaultAddress || !strategyAddress) {
-        console.log(chalk.yellow("Using provided addresses:"));
-        vaultAddress = "0x03b46f808190f15A1dE6131A190EbAdec0371dbe";
-        strategyAddress = "0x9b79f7C61104Cdee83EAad5DAe5045123b738Ad4";
-        console.log(chalk.gray(`Vault: ${vaultAddress}`));
-        console.log(chalk.gray(`Strategy: ${strategyAddress}\n`));
+    if (!vaultAddress) {
+        // Create readline interface for user input
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        
+        vaultAddress = await new Promise<string>((resolve) => {
+            rl.question(chalk.yellow("Enter OracleRewardShadowVault address: "), (answer) => {
+                rl.close();
+                resolve(answer.trim());
+            });
+        });
+        
+        if (!vaultAddress || !ethers.isAddress(vaultAddress)) {
+            console.error(chalk.red("\n❌ Invalid vault address provided"));
+            process.exit(1);
+        }
+    }
+    
+    console.log(chalk.gray(`Vault: ${vaultAddress}`));
+    
+    // Get strategy address from vault
+    let strategyAddress: string;
+    try {
+        const vault = await ethers.getContractAt("OracleRewardShadowVault", vaultAddress, signer);
+        strategyAddress = await vault.getStrategy();
+        
+        if (strategyAddress === ethers.ZeroAddress) {
+            console.error(chalk.red("\n❌ No strategy set on vault"));
+            process.exit(1);
+        }
+        
+        console.log(chalk.gray(`Strategy: ${strategyAddress} (derived from vault)\n`));
+    } catch (error) {
+        console.error(chalk.red("\n❌ Failed to get strategy from vault:"), error);
+        process.exit(1);
     }
     
     // Configuration

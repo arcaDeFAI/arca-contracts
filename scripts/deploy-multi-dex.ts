@@ -1,6 +1,6 @@
 import type { Contract, TransactionReceipt, TransactionResponse } from "ethers";
 import { ethers, network } from "hardhat";
-import type { OracleHelperFactory, ShadowPriceHelper } from "typechain-types";
+import type { OracleHelperFactory, ShadowPriceHelper, ShadowPriceHelperWrapper } from "typechain-types";
 
 // Gas tracking utility
 interface GasTransaction {
@@ -238,6 +238,7 @@ async function main() {
   // Otherwise, a new one will be deployed (except for hardhat localhost where it's not used)
   let oracleHelperFactoryAddress: string = "0x0000000000000000000000000000000000000000";
   let shadowPriceHelperAddress: string = "0x0000000000000000000000000000000000000000";
+  let shadowPriceHelperWrapperAddress: string = "0xa8D204f63885bdD531c1b5Bde9d8e540e76F2E53";
 
   const creationFee = 0n; // Default 0 for testnet
   
@@ -285,6 +286,9 @@ async function main() {
     // For localhost, always deploy the shadow price helper address
     [, shadowPriceHelperAddress] = await deployShadowPriceHelper(gasTracker);
 
+    // For localhost, always deploy the shadow price helper wrapper
+    [, shadowPriceHelperWrapperAddress] = await deployShadowPriceHelperWrapper(gasTracker, shadowPriceHelperAddress);
+
     // For localhost, always deploy a oracle helper factory contract
     [, oracleHelperFactoryAddress] = await deployOracleHelperFactory(gasTracker);
   } else if (network.name === "sonic-testnet") {
@@ -306,6 +310,10 @@ async function main() {
 
   if (shadowPriceHelperAddress === "0x0000000000000000000000000000000000000000") {
     [,shadowPriceHelperAddress] = await deployShadowPriceHelper(gasTracker);
+  }
+
+  if (shadowPriceHelperWrapperAddress === "0x0000000000000000000000000000000000000000") {
+    [,shadowPriceHelperWrapperAddress] = await deployShadowPriceHelperWrapper(gasTracker, shadowPriceHelperAddress);
   }
 
   // Deploy VaultFactory implementation
@@ -648,6 +656,7 @@ async function main() {
       wnative: wnative,
       oracleHelperFactory: oracleHelperFactoryAddress,
       shadowPriceHelper: shadowPriceHelperAddress,
+      shadowPriceHelperWrapper: shadowPriceHelperWrapperAddress,
     },
     configuration: {
       metropolisMaxRange: maxRange,
@@ -687,6 +696,23 @@ async function deployShadowPriceHelper(gasTracker: GasTracker) : Promise<[Shadow
   const contract = await ethers.getContractFactory("ShadowPriceHelper");
   const contractDeployed = await deployContract<ShadowPriceHelper>(
     "ShadowPriceHelper",
+    contract,
+    [],
+    gasTracker,
+    { gasLimit: 10000000 }
+  );
+  const contractAddress = await contractDeployed.getAddress();
+  return [contractDeployed, contractAddress];
+}
+
+async function deployShadowPriceHelperWrapper(gasTracker: GasTracker, shadowPriceHelperAddress: string) : Promise<[ShadowPriceHelperWrapper, string]> {
+  const contract = await ethers.getContractFactory("ShadowPriceHelperWrapper", {
+    libraries: {
+      ShadowPriceHelper: shadowPriceHelperAddress
+    }
+  });
+  const contractDeployed = await deployContract<ShadowPriceHelperWrapper>(
+    "ShadowPriceHelperWrapper",
     contract,
     [],
     gasTracker,

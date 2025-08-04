@@ -1,28 +1,38 @@
 {
   "network": "sonic-mainnet",
-  "timestamp": "2025-08-04T01:02:18.089Z",
+  "timestamp": "2025-08-04T04:05:38.096Z",
   "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
   "addresses": {
-    "vaultFactory": "0x50f4A5d99f75E26e3E651EA15F0eD9058eB18C4e",
-    "vaultFactoryImpl": "0x09df296593DB91d2a23c3439477784727745DE82",
-    "proxyAdmin": "0x65a77835c102FBA0Df3fFC40354245849bA6F67c",
+    "vaultFactory": "0x03C533af900094AAc9C19A19700dc9BaF1Dd440c",
+    "vaultFactoryImpl": "0x5c9cF6744FB206CF45E082849C96e749629efde2",
+    "proxyAdmin": "0x64F5730Bed07A871f14D315d684FC394BC9A24fB",
     "oracleVaultImpl": null,
-    "oracleRewardVaultImpl": "0xB636354F20BD87726c8B6999A8C409112069c1d1",
-    "oracleRewardShadowVaultImpl": "0xc448225213bD22D02884BEEAc7602150DE38a687",
-    "strategyImpl": "0x347d5f6a779949603cB074bDb54595620886f20F",
-    "shadowStrategyImpl": "0xfE8a474dC03799Ee286EBB4b44a825ae27c25325",
+    "oracleRewardVaultImpl": "0xbd849222c1626ffa70102496cf4660B2A79c9B02",
+    "oracleRewardShadowVaultImpl": "0x78eb846545962d4A910f0A25c8f232d8e91a7dba",
+    "strategyImpl": "0xA52483AC0aa99656193852a8461E67AD45778b5a",
+    "shadowStrategyImpl": "0xb2084b99D8Ca26b9F5a0604A3420E8dda3FeDe36",
     "shadowNPM": "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406",
     "shadowVoter": "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D",
+    "priceLens": "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B",
     "wnative": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
-    "oracleHelperFactory": "0x474832279D9ce821C93f56d49aBec5987df0fd5d",
-    "shadowPriceHelper": "0x5082c8C134F389EFE12c8C6C08A47ac8391427E7"
+    "oracleHelperFactory": "0x1c4be246e60A602d09A2e5074ff99942353Cf750",
+    "shadowPriceHelper": "0x8821E299e282c46b2a7c697eC89Ce8D819C64795",
+    "shadowPriceHelperWrapper": "0xa8D204f63885bdD531c1b5Bde9d8e540e76F2E53"
   },
   "configuration": {
     "metropolisMaxRange": 51,
     "shadowMaxRange": 887272,
     "shadowConfig": {
       "npm": "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406",
-      "voter": "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D"
+      "voter": "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D",
+      "whitelist": [
+        "0x76F4aeb24dD5681dCDC23ef9778a95C6aB76a995",
+        "0x324963c267C354c7660Ce8CA3F5f167E05649970",
+        "0x97325a7854c604261002126267dAEd219E34b06b",
+        "0x64B93267B73CE6bb431b5799ED8674f9160CE214",
+        "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC"
+      ],
+      "priceLens": "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B"
     }
   }
 }
