@@ -2,6 +2,288 @@
   "version": "3.4",
   "log": [
     {
+      "contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol:IRamsesV3Pool": {
+        "src": "contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol:16",
+        "inherit": [
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol:IRamsesV3PoolEvents",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol:IRamsesV3PoolErrors",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol:IRamsesV3PoolOwnerActions",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol:IRamsesV3PoolActions",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol:IRamsesV3PoolDerivedState",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol:IRamsesV3PoolState",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol:IRamsesV3PoolImmutables"
+        ],
+        "libraries": [],
+        "methods": [
+          "_advancePeriod()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol:IRamsesV3PoolActions": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint160)",
+          "mint(address,uint256,int24,int24,uint128,bytes)",
+          "collect(address,uint256,int24,int24,uint128,uint128)",
+          "burn(uint256,int24,int24,uint128)",
+          "swap(address,bool,int256,uint160,bytes)",
+          "flash(address,uint256,uint256,bytes)",
+          "increaseObservationCardinalityNext(uint16)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol:IRamsesV3PoolDerivedState": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol:7",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "observe(uint32[])",
+          "snapshotCumulativesInside(int24,int24)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol:IRamsesV3PoolErrors": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol:IRamsesV3PoolEvents": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol:IRamsesV3PoolImmutables": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "factory()",
+          "token0()",
+          "token1()",
+          "fee()",
+          "tickSpacing()",
+          "maxLiquidityPerTick()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol:IRamsesV3PoolOwnerActions": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "setFeeProtocol()",
+          "collectProtocol(address,uint128,uint128)",
+          "setFee(uint24)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol:IRamsesV3PoolState": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol:7",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "slot0()",
+          "feeGrowthGlobal0X128()",
+          "feeGrowthGlobal1X128()",
+          "protocolFees()",
+          "liquidity()",
+          "ticks(int24)",
+          "tickBitmap(int16)",
+          "positions(bytes32)",
+          "observations(uint256)",
+          "positionPeriodSecondsInRange(uint256,address,uint256,int24,int24)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/libraries/FullMath.sol:FullMath": {
+        "src": "contracts-shadow/CL/core/libraries/FullMath.sol:7",
+        "version": {
+          "withMetadata": "d7e036812c391f3a60fb37e68f0cd9f7ccace63046848920231b101a207d43ba",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/libraries/TickMath.sol:TickMath": {
+        "src": "contracts-shadow/CL/core/libraries/TickMath.sol:7",
+        "version": {
+          "withMetadata": "fe0dd7be5bb436ac792ae331034551f4583da2ed85cf0aa8aaf3c217132e85ac",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/src/ShadowPriceHelperWrapper.sol:ShadowPriceHelperWrapper": {
+        "src": "contracts-shadow/src/ShadowPriceHelperWrapper.sol:13",
+        "version": {
+          "withMetadata": "b13fc5daad244cc682f6996501fda76b8cc7c113514c31c68e40c28170200694",
+          "withoutMetadata": "32827f827d87ab8fe9dd34c84f164e21428e58e80bb15131c5cf3992d6de7bf8",
+          "linkedWithoutMetadata": "32827f827d87ab8fe9dd34c84f164e21428e58e80bb15131c5cf3992d6de7bf8"
+        },
+        "inherit": [],
+        "libraries": [
+          "contracts-shadow/src/libraries/ShadowPriceHelper.sol:ShadowPriceHelper"
+        ],
+        "methods": [
+          "getOraclePrice(address,bool,uint32,uint8,uint8)",
+          "getPoolSpotPrice(address,bool,uint8,uint8)",
+          "getPoolTWAPPrice(address,bool,uint32,uint8,uint8)"
+        ],
+        "linkReferences": [
+          {
+            "src": "contracts-shadow/src/libraries/ShadowPriceHelper.sol",
+            "name": "ShadowPriceHelper",
+            "length": 20,
+            "start": 246,
+            "placeholder": "__$e67ebb1140e1d2c9349fff613462444575$__"
+          }
+        ],
+        "errors": [
+          {
+            "kind": "external-library-linking",
+            "name": "ShadowPriceHelper",
+            "src": "contracts-shadow/src/libraries/ShadowPriceHelper.sol"
+          }
+        ],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/src/libraries/ShadowPriceHelper.sol:ShadowPriceHelper": {
+        "src": "contracts-shadow/src/libraries/ShadowPriceHelper.sol:13",
+        "version": {
+          "withMetadata": "2e45b216a2618908b7aa7d5e80ae5969a4bac87563f0a3a8be397bdb456ad6cf",
+          "withoutMetadata": "6b6faacf7eb29d97a3799aa37be62b36f013c1dc00db5c16ca3aac92ff317735",
+          "linkedWithoutMetadata": "6b6faacf7eb29d97a3799aa37be62b36f013c1dc00db5c16ca3aac92ff317735"
+        },
+        "inherit": [],
+        "libraries": [
+          "contracts-shadow/CL/core/libraries/FullMath.sol:FullMath",
+          "contracts-shadow/CL/core/libraries/TickMath.sol:TickMath"
+        ],
+        "methods": [
+          "getOraclePrice(address,bool,uint32,uint8,uint8)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      }
+    },
+    {
       "@openzeppelin/contracts/token/ERC721/IERC721.sol:IERC721": {
         "src": "@openzeppelin/contracts/token/ERC721/IERC721.sol:11",
         "inherit": [
