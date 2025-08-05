@@ -4,10 +4,12 @@ import chalk from "chalk";
 import fs from "fs";
 import path from "path";
 import { 
-    OracleRewardShadowVault,
-    ShadowStrategy,
-    IRamsesV3Pool,
-    ShadowPriceHelperWrapper
+    OracleRewardVault,
+    MetropolisStrategy,
+    ILBPair,
+    OracleHelper,
+    HybridPriceLens,
+    IVaultFactory
 } from "../typechain-types";
 import { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -25,13 +27,15 @@ import {
     validateDeposit
 } from "./test-vault-utils";
 
-class ShadowVaultTester {
+class MetropolisVaultTester {
     private rl: readline.Interface;
     private config: TestConfig;
-    private vault?: OracleRewardShadowVault;
-    private strategy?: ShadowStrategy;
-    private pool?: IRamsesV3Pool;
-    private priceHelper?: ShadowPriceHelperWrapper;
+    private vault?: OracleRewardVault;
+    private vaultFactory?: IVaultFactory;
+    private strategy?: MetropolisStrategy;
+    private pair?: ILBPair;
+    private oracleHelper?: OracleHelper;
+    private priceLens?: HybridPriceLens;
     private tokenX?: IERC20MetadataUpgradeable;
     private tokenY?: IERC20MetadataUpgradeable;
     private signer: SignerWithAddress;
@@ -48,45 +52,65 @@ class ShadowVaultTester {
     }
 
     async initialize() {
-        console.log(chalk.blue("\n🚀 Initializing Shadow Vault Tester...\n"));
+        console.log(chalk.blue("\n🚀 Initializing Metropolis Vault Tester...\n"));
         
         try {
             // Connect to contracts
             console.log(chalk.gray("Loading vault contract..."));
-            this.vault = await ethers.getContractAt("OracleRewardShadowVault", this.config.vaultAddress, this.signer);
+            this.vault = await ethers.getContractAt("OracleRewardVault", this.config.vaultAddress, this.signer);
             console.log(chalk.gray(`✓ Vault loaded at: ${await this.vault.getAddress()}`));
 
-            console.log(chalk.gray("Loading pool contract..."));
-            this.pool = await ethers.getContractAt("IRamsesV3Pool", await this.vault!.getPool(), this.signer);
-            console.log(chalk.gray(`✓ Pool loaded at: ${await this.pool.getAddress()}`));
+            console.log(chalk.gray("Loading strategy contract..."));
+            this.strategy = await ethers.getContractAt("MetropolisStrategy", this.config.strategyAddress, this.signer);
+            console.log(chalk.gray(`✓ Strategy loaded at: ${await this.strategy.getAddress()}`));
             
-            // Load price helper wrapper if available
-            console.log(chalk.gray("Loading price helper wrapper..."));
+            // Get associated contracts
+            console.log(chalk.gray("Getting pair address..."));
+            const pairAddress = await this.vault.getPair();
+            console.log(chalk.gray(`✓ Pair address: ${pairAddress}`));
+            
+            console.log(chalk.gray("Loading pair contract..."));
+            this.pair = await ethers.getContractAt("ILBPair", pairAddress, this.signer);
+
+            const vaultFactoryAddress = await this.vault.getFactory();
+
+            if (vaultFactoryAddress && vaultFactoryAddress !== ethers.ZeroAddress) {
+                this.vaultFactory = await ethers.getContractAt("VaultFactory", vaultFactoryAddress, this.signer);
+
+                if (this.vaultFactory) {
+                    console.log(chalk.gray(`✓ Vault Factory loaded at: ${vaultFactoryAddress}`));
+                } else {
+                    console.log(chalk.yellow(`⚠️ Failed to load VaultFactory from address ${vaultFactoryAddress}`));
+                }
+                
+            } else {
+                console.log(chalk.yellow(`⚠️ Failed to get VaultFactory address`));
+            }
+            
+            // Load oracle helper if available
+            console.log(chalk.gray("Loading oracle helper..."));
             const deploymentPath = path.join(__dirname, "../deployments", `metropolis-${network.name}.json`);
             if (fs.existsSync(deploymentPath)) {
                 const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
-                const priceHelperAddress = deployment.addresses?.shadowPriceHelperWrapper;
-                if (priceHelperAddress && priceHelperAddress !== ethers.ZeroAddress) {
-                    this.priceHelper = await ethers.getContractAt("ShadowPriceHelperWrapper", priceHelperAddress, this.signer);
-                    console.log(chalk.gray(`✓ Price Helper Wrapper loaded at: ${priceHelperAddress}`));
+                const oracleHelperAddress = await this.vault.getOracleHelper();
+                const priceLensAddress = deployment.addresses?.priceLens;
+                
+                if (oracleHelperAddress && oracleHelperAddress !== ethers.ZeroAddress) {
+                    this.oracleHelper = await ethers.getContractAt("OracleHelper", oracleHelperAddress, this.signer);
+                    console.log(chalk.gray(`✓ Oracle Helper loaded at: ${oracleHelperAddress}`));
                 } else {
-                    console.log(chalk.yellow(`⚠️  Price Helper Wrapper not found in deployment file`));
+                    console.log(chalk.yellow(`⚠️  Oracle Helper not found in deployment file`));
+                }
+                
+                if (priceLensAddress && priceLensAddress !== ethers.ZeroAddress) {
+                    this.priceLens = await ethers.getContractAt("HybridPriceLens", priceLensAddress, this.signer);
+                    console.log(chalk.gray(`✓ Price Lens loaded at: ${priceLensAddress}`));
+                } else {
+                    console.log(chalk.yellow(`⚠️  Price Lens not found in deployment file`));
                 }
             } else {
                 console.log(chalk.yellow(`⚠️  Deployment file not found for network: ${network.name}`));
             }
-
-            console.log(chalk.gray("Loading strategy contract..."));
-            this.strategy = await ethers.getContractAt("ShadowStrategy", this.config.strategyAddress, this.signer);
-            console.log(chalk.gray(`✓ Strategy loaded at: ${await this.strategy.getAddress()}`));
-            
-            // Get associated contracts
-            console.log(chalk.gray("Getting pool address..."));
-            const poolAddress = await this.vault.getPool();
-            console.log(chalk.gray(`✓ Pool address: ${poolAddress}`));
-            
-            console.log(chalk.gray("Loading pool contract..."));
-            this.pool = await ethers.getContractAt("IRamsesV3Pool", poolAddress, this.signer);
             
             console.log(chalk.gray("Getting token addresses..."));
             const tokenXAddress = await this.vault.getTokenX();
@@ -118,7 +142,6 @@ class ShadowVaultTester {
             });
         });
     }
-
 
     async confirm(prompt: string): Promise<boolean> {
         const answer = await this.question(`${prompt} (y/n): `);
@@ -160,7 +183,6 @@ class ShadowVaultTester {
         return result;
     }
 
-
     async showVaultInfo() {
         console.log(chalk.blue("\n📊 Vault Information:\n"));
         
@@ -171,7 +193,7 @@ class ShadowVaultTester {
             const decimals = await this.vault!.decimals();
             const version = await this.vault!.version();
             const vaultType = await this.vault!.getVaultType();
-            const poolAddress = await this.pool!.getAddress();
+            const pairAddress = await this.pair!.getAddress();
             
             console.log(chalk.white("Basic Info:"));
             console.log(chalk.gray(`  Name: ${name}`));
@@ -179,15 +201,15 @@ class ShadowVaultTester {
             console.log(chalk.gray(`  Decimals: ${decimals}`));
             console.log(chalk.gray(`  Version: ${version}`));
             console.log(chalk.gray(`  Vault Type: ${vaultType}`));
-            console.log(chalk.gray(`  Pool address: ${poolAddress}`));
+            console.log(chalk.gray(`  Pair address: ${pairAddress}`));
             
             // State
             const isPaused = await this.vault!.isDepositsPaused();
             const isFlagged = await this.vault!.isFlaggedForShutdown();
             const totalSupply = await this.vault!.totalSupply();
             const [balanceX, balanceY] = await this.vault!.getBalances();
-            const tick = (await this.pool!.slot0()).tick;
-            const tickSpacing = await this.pool!.tickSpacing();
+            const activeId = await this.pair!.getActiveId();
+            const binStep = await this.pair!.getBinStep();
             
             console.log(chalk.white("\nState:"));
             console.log(chalk.gray(`  Deposits Paused: ${isPaused}`));
@@ -195,61 +217,91 @@ class ShadowVaultTester {
             console.log(chalk.gray(`  Total Supply: ${ethers.formatUnits(totalSupply, decimals)}`));
             console.log(chalk.gray(`  Balance X: ${balanceX.toString()}`));
             console.log(chalk.gray(`  Balance Y: ${balanceY.toString()}`));
-            console.log(chalk.gray(`  Current Pool Tick: ${tick.toString()}`));
-            console.log(chalk.gray(`  Current Pool Tick Spacing: ${tickSpacing.toString()}`));
+            console.log(chalk.gray(`  Active Bin ID: ${activeId.toString()}`));
+            console.log(chalk.gray(`  Bin Step: ${binStep.toString()}`));
             
-            // Oracle config
-            const twapInterval = await this.vault!.getTwapInterval();
-            console.log(chalk.white("\nOracle Configuration:"));
-            console.log(chalk.gray(`  TWAP Interval: ${twapInterval} seconds`));
             
             // Price information
-            if (this.priceHelper && this.pool) {
+            if (this.oracleHelper) {
                 try {
+                    const price = await this.oracleHelper.getPrice();
                     const tokenXDecimals = await getTokenDecimals(this.tokenX!);
                     const tokenYDecimals = await getTokenDecimals(this.tokenY!);
                     const tokenXSymbol = await getTokenSymbol(this.tokenX!);
                     const tokenYSymbol = await getTokenSymbol(this.tokenY!);
                     
-                    // Get spot price (tokenX in terms of tokenY)
-                    const spotPriceX = await this.priceHelper.getPoolSpotPrice(
-                        await this.pool.getAddress(),
-                        true,
-                        tokenXDecimals,
-                        tokenYDecimals
-                    );
-                    
-                    // Get spot price (tokenY in terms of tokenX)
-                    const spotPriceY = await this.priceHelper.getPoolSpotPrice(
-                        await this.pool.getAddress(),
-                        false,
-                        tokenXDecimals,
-                        tokenYDecimals
-                    );
-                    
-                    // Format prices with appropriate decimals
-                    const priceXFormatted = ethers.formatUnits(spotPriceX, tokenYDecimals);
-                    const priceYFormatted = ethers.formatUnits(spotPriceY, tokenXDecimals);
-                    
                     console.log(chalk.white("\nPrice Information:"));
-                    console.log(chalk.gray(`  1 ${tokenXSymbol} = ${priceXFormatted} ${tokenYSymbol}`));
-                    console.log(chalk.gray(`  1 ${tokenYSymbol} = ${priceYFormatted} ${tokenXSymbol}`));
+                    // Oracle price is in 128.128 fixed-point format
+                    // The price represents how many units of tokenY per unit of tokenX
+                    // To get the price of 1 full tokenX in tokenY:
+                    // (price * 10^tokenXDecimals) >> 128, then format with tokenY decimals
                     
-                    // If TWAP is configured, show TWAP price as well
-                    if (twapInterval > 0) {
-                        const twapPriceX = await this.priceHelper.getPoolTWAPPrice(
-                            await this.pool.getAddress(),
-                            true,
-                            twapInterval,
-                            tokenXDecimals,
-                            tokenYDecimals
-                        );
-                        const twapPriceXFormatted = ethers.formatUnits(twapPriceX, tokenYDecimals);
-                        console.log(chalk.gray(`  TWAP (${twapInterval}s): 1 ${tokenXSymbol} = ${twapPriceXFormatted} ${tokenYSymbol}`));
+                    const SCALE_OFFSET = 128n;
+                    const oneTokenX = 10n ** BigInt(tokenXDecimals);
+                    
+                    // Calculate how many units of Y for 1 full token of X
+                    const amountYForOneX = (price * oneTokenX) >> SCALE_OFFSET;
+                    const priceFormatted = ethers.formatUnits(amountYForOneX, tokenYDecimals);
+                    console.log(chalk.gray(`  Oracle Price: 1 ${tokenXSymbol} = ${priceFormatted} ${tokenYSymbol}`));
+                    
+                    // Show current bin price for comparison
+                    if (this.priceLens) {
+                        try {
+                            const tokenXAddress = await this.tokenX!.getAddress();
+                            const tokenYAddress = await this.tokenY!.getAddress();
+                            
+                            const tokenXPriceNative = await this.priceLens.getTokenPriceNative(tokenXAddress);
+                            const tokenXPriceNativeFormatted = ethers.formatUnits(tokenXPriceNative, 18); // Native price is in 18 decimals (wS)
+                            console.log(chalk.gray(`  PriceLens: 1 ${tokenXSymbol} = ${tokenXPriceNativeFormatted} wS`));
+                            
+                            const tokenYPriceNative = await this.priceLens.getTokenPriceNative(tokenYAddress);
+                            const tokenYPriceNativeFormatted = ethers.formatUnits(tokenYPriceNative, 18); // Native price is in 18 decimals (wS)
+                            console.log(chalk.gray(`  PriceLens: 1 ${tokenYSymbol} = ${tokenYPriceNativeFormatted} wS`));
+                            
+                            // Calculate cross price
+                            // If tokenX = 1 wS and tokenY = 3.28 wS, then tokenX/tokenY = 1/3.28 = 0.3048 tokenY per tokenX
+                            if (tokenYPriceNative > 0n) {
+                                const scaleFactor = 10n ** BigInt(tokenYDecimals);
+                                const tokenXPerY = (tokenXPriceNative * scaleFactor) / tokenYPriceNative;
+                                const tokenXPerYFormatted = ethers.formatUnits(tokenXPerY, tokenYDecimals);
+                                console.log(chalk.gray(`  PriceLens Cross: 1 ${tokenXSymbol} = ${tokenXPerYFormatted} ${tokenYSymbol}`));
+                            }
+                        } catch (e: any) {
+                            console.log(chalk.yellow(`  Could not fetch spot price from price lens: ${e.message || e}`));
+                        }
+                    } else {
+                        console.log(chalk.yellow(`Price lens not set`));
+                    }
+
+                    // Oracle Helper detailed parameters
+                    try {
+                        const oracleParams = await this.oracleHelper.getOracleParameters();
+                        console.log(chalk.white("\nOracle Helper Parameters:"));
+                        console.log(chalk.gray(`  Min Price: ${ethers.formatUnits(oracleParams.minPrice, tokenYDecimals)}`));
+                        console.log(chalk.gray(`  Max Price: ${ethers.formatUnits(oracleParams.maxPrice, tokenYDecimals)}`));
+                        console.log(chalk.gray(`  Heartbeat X: ${oracleParams.heartbeatX} seconds`));
+                        console.log(chalk.gray(`  Heartbeat Y: ${oracleParams.heartbeatY} seconds`));
+                        console.log(chalk.gray(`  Deviation Threshold: ${ethers.formatUnits(oracleParams.deviationThreshold, 16)}%`));
+                        console.log(chalk.gray(`  TWAP Check Enabled: ${oracleParams.twapPriceCheckEnabled}`));
+                        console.log(chalk.gray(`  TWAP Interval: ${oracleParams.twapInterval} seconds`));
+                        
+                        // Check if price is in deviation
+                        const priceInDeviation = await this.oracleHelper.checkPriceInDeviation();
+                        console.log(chalk.gray(`  Price In Deviation: ${priceInDeviation ? chalk.green("Yes") : chalk.red("No")}`));
+                        
+                        // Get data feeds
+                        const dataFeedX = await this.oracleHelper.getDataFeedX();
+                        const dataFeedY = await this.oracleHelper.getDataFeedY();
+                        console.log(chalk.gray(`  Data Feed X: ${dataFeedX}`));
+                        console.log(chalk.gray(`  Data Feed Y: ${dataFeedY}`));
+                    } catch (e) {
+                        console.log(chalk.yellow(`  Could not fetch oracle helper parameters`));
                     }
                 } catch (e) {
                     console.log(chalk.yellow(`  Could not fetch price: ${e}`));
                 }
+                
+                
             }
             
             // Strategy info
@@ -263,6 +315,16 @@ class ShadowVaultTester {
                 console.log(chalk.gray(`  Default Operator: ${defaultOp}`));
                 console.log(chalk.gray(`  Operator: ${operator}`));
                 console.log(chalk.gray(`  AUM Annual Fee: ${aumFee.toString()}`));
+                
+                // Get bin range from strategy
+                try {
+                    const [low, upper] = await this.strategy!.getRange();
+                    const maxRange = await this.strategy!.getMaxRange();
+                    console.log(chalk.gray(`  Current Bin Range: [${low}, ${upper}]`));
+                    console.log(chalk.gray(`  Max Range Width: ${maxRange}`));
+                } catch (e) {
+                    console.log(chalk.gray(`  Bin Range: Not set`));
+                }
             }
             
             // Queue info
@@ -301,8 +363,13 @@ class ShadowVaultTester {
                 this.tokenX!.balanceOf(userAddress),
                 this.tokenY!.balanceOf(userAddress)
             ]);
-            console.log(chalk.gray(`  Token X Balance: ${tokenXBal.toString()}`));
-            console.log(chalk.gray(`  Token Y Balance: ${tokenYBal.toString()}`));
+
+            const tokenXDecimals = await getTokenDecimals(this.tokenX!);
+            const tokenYDecimals = await getTokenDecimals(this.tokenY!);
+            const tokenXSymbol = await getTokenSymbol(this.tokenX!);
+            const tokenYSymbol = await getTokenSymbol(this.tokenY!);
+            console.log(chalk.gray(`  Token X Balance: ${ethers.formatUnits(tokenXBal, tokenXDecimals)} ${tokenXSymbol}`));
+            console.log(chalk.gray(`  Token Y Balance: ${ethers.formatUnits(tokenYBal, tokenYDecimals)} ${tokenYSymbol}`));
             
             // Rewards
             const userInfo = await this.vault!.getUserInfo(userAddress);
@@ -400,24 +467,65 @@ class ShadowVaultTester {
     async testRebalance() {
         console.log(chalk.blue("\n🔄 Test Rebalance\n"));
         
-        const tickLower = await this.question("Enter tick lower: ");
-        const tickUpper = await this.question("Enter tick upper: ");
-        const desiredTick = await this.question("Enter desired tick: ");
-        const slippageTick = await this.question("Enter slippage tick: ");
+        // Show current state
+        const { activeId } = await this.pair!.getActiveId();
+        console.log(chalk.gray(`Current Active Bin ID: ${activeId}`));
+        
+        try {
+            const [currentLow, currentUpper] = await this.strategy!.getRange();
+            console.log(chalk.gray(`Current Bin Range: [${currentLow}, ${currentUpper}]`));
+        } catch (e) {
+            console.log(chalk.gray(`Current Bin Range: Not set`));
+        }
+        
+        const newLower = await this.question("Enter new lower bin ID: ");
+        const newUpper = await this.question("Enter new upper bin ID: ");
+        const desiredActiveId = await this.question("Enter desired active bin ID: ");
+        const slippageActiveId = await this.question("Enter slippage active bin ID: ");
+        
+        // Get current balances for the rebalance
+        const [amountX, amountY] = await this.vault!.getBalances();
+        console.log(chalk.gray(`\nCurrent vault balances: X=${amountX}, Y=${amountY}`));
+        
+        // For simplicity, we'll create a uniform distribution
+        const numBins = parseInt(newUpper) - parseInt(newLower) + 1;
+        console.log(chalk.gray(`Number of bins: ${numBins}`));
+        
+        // Create distribution bytes (simplified - uniform distribution)
+        const distributionX: number[] = [];
+        const distributionY: number[] = [];
+        const distributionPerBin = Math.floor(10000 / numBins); // 10000 = 100%
+        
+        for (let i = 0; i < numBins; i++) {
+            distributionX.push(distributionPerBin);
+            distributionY.push(distributionPerBin);
+        }
+        
+        // Encode distributions
+        const distributions = ethers.AbiCoder.defaultAbiCoder().encode(
+            ["uint256[]", "uint256[]"],
+            [distributionX, distributionY]
+        );
         
         const params = {
-            tickLower: parseInt(tickLower),
-            tickUpper: parseInt(tickUpper),
-            desiredTick: parseInt(desiredTick),
-            slippageTick: parseInt(slippageTick)
+            newLower: parseInt(newLower),
+            newUpper: parseInt(newUpper),
+            desiredActiveId: parseInt(desiredActiveId),
+            slippageActiveId: parseInt(slippageActiveId),
+            amountX: amountX.toString(),
+            amountY: amountY.toString(),
+            distributions: distributions
         };
         
         await this.executeAction("Rebalance", async () => {
             return this.strategy!.rebalance(
-                params.tickLower,
-                params.tickUpper,
-                params.desiredTick,
-                params.slippageTick
+                params.newLower,
+                params.newUpper,
+                params.desiredActiveId,
+                params.slippageActiveId,
+                amountX,
+                amountY,
+                distributions
             );
         }, params);
     }
@@ -496,14 +604,14 @@ class ShadowVaultTester {
 
     async exportResults() {
         const timestamp = new Date().toISOString().replace(/:/g, '-');
-        const filename = `shadow-vault-test-${timestamp}.json`;
+        const filename = `metropolis-vault-test-${timestamp}.json`;
         const filepath = path.join(this.config.exportPath, filename);
         
         await this.resultManager.exportToFile(filepath);
     }
 
     async showMainMenu() {
-        console.log(chalk.blue("\n=== Shadow Vault Interactive Tester ===\n"));
+        console.log(chalk.blue("\n=== Metropolis Vault Interactive Tester ===\n"));
         console.log(chalk.gray("1. View Vault Information"));
         console.log(chalk.gray("2. View User Information"));
         console.log(chalk.gray("3. Deposit Operations"));
@@ -573,9 +681,8 @@ class ShadowVaultTester {
     async showDepositMenu() {
         console.log(chalk.blue("\n💰 Deposit Operations\n"));
         console.log(chalk.gray("1. Regular Deposit"));
-        console.log(chalk.gray("2. Native Deposit"));
-        console.log(chalk.gray("3. Preview Shares"));
-        console.log(chalk.gray("4. Back"));
+        console.log(chalk.gray("2. Preview Shares"));
+        console.log(chalk.gray("3. Back"));
         
         const choice = await this.question("\nSelect option: ");
         
@@ -584,9 +691,6 @@ class ShadowVaultTester {
                 await this.testDeposit();
                 break;
             case '2':
-                await this.testDepositNative();
-                break;
-            case '3':
                 await this.previewShares();
                 break;
         }
@@ -597,10 +701,9 @@ class ShadowVaultTester {
         console.log(chalk.gray("1. Queue Withdrawal"));
         console.log(chalk.gray("2. Cancel Queued Withdrawal"));
         console.log(chalk.gray("3. Redeem Withdrawal"));
-        console.log(chalk.gray("4. Redeem Native"));
-        console.log(chalk.gray("5. Emergency Withdraw"));
-        console.log(chalk.gray("6. View Queue Status"));
-        console.log(chalk.gray("7. Back"));
+        console.log(chalk.gray("4. Emergency Withdraw"));
+        console.log(chalk.gray("5. View Queue Status"));
+        console.log(chalk.gray("6. Back"));
         
         const choice = await this.question("\nSelect option: ");
         
@@ -614,7 +717,7 @@ class ShadowVaultTester {
             case '3':
                 await this.testRedeemWithdrawal();
                 break;
-            case '6':
+            case '5':
                 await this.showQueueStatus();
                 break;
         }
@@ -646,8 +749,9 @@ class ShadowVaultTester {
     async showRewardMenu() {
         console.log(chalk.blue("\n🎁 Reward Management\n"));
         console.log(chalk.gray("1. View Pending Rewards"));
-        console.log(chalk.gray("2. Update Rewards"));
-        console.log(chalk.gray("3. Back"));
+        console.log(chalk.gray("2. Claim Rewards"));
+        console.log(chalk.gray("3. Update Rewards"));
+        console.log(chalk.gray("4. Back"));
         
         const choice = await this.question("\nSelect option: ");
         
@@ -656,6 +760,9 @@ class ShadowVaultTester {
                 await this.showPendingRewards();
                 break;
             case '2':
+                await this.claimRewards();
+                break;
+            case '3':
                 await this.updateRewards();
                 break;
         }
@@ -676,11 +783,6 @@ class ShadowVaultTester {
     }
 
     // Additional helper methods
-    async testDepositNative() {
-        console.log(chalk.blue("\n💰 Test Native Deposit\n"));
-        console.log(chalk.yellow("Not implemented yet"));
-    }
-
     async previewShares() {
         console.log(chalk.blue("\n🔍 Preview Shares\n"));
         
@@ -760,23 +862,28 @@ class ShadowVaultTester {
         console.log(chalk.blue("\n📊 Strategy Information\n"));
         
         try {
-            const [position, tickLower, tickUpper] = await this.strategy!.getPosition();
             const operator = await this.strategy!.getOperator();
             const lastRebalance = await this.strategy!.getLastRebalance();
             const [idleX, idleY] = await this.strategy!.getIdleBalances();
             
-            console.log(chalk.white("Position:"));
-            console.log(chalk.gray(`  Token ID: ${position.toString()}`));
-            console.log(chalk.gray(`  Tick Lower: ${tickLower}`));
-            console.log(chalk.gray(`  Tick Upper: ${tickUpper}`));
-            
-            console.log(chalk.white("\nManagement:"));
+            console.log(chalk.white("Management:"));
             console.log(chalk.gray(`  Operator: ${operator}`));
             console.log(chalk.gray(`  Last Rebalance: ${new Date(Number(lastRebalance) * 1000).toLocaleString()}`));
             
             console.log(chalk.white("\nIdle Balances:"));
             console.log(chalk.gray(`  Token X: ${idleX.toString()}`));
             console.log(chalk.gray(`  Token Y: ${idleY.toString()}`));
+            
+            // Try to get range
+            try {
+                const [low, upper] = await this.strategy!.getRange();
+                console.log(chalk.white("\nBin Range:"));
+                console.log(chalk.gray(`  Lower: ${low}`));
+                console.log(chalk.gray(`  Upper: ${upper}`));
+                console.log(chalk.gray(`  Width: ${Number(upper) - Number(low) + 1} bins`));
+            } catch (e) {
+                console.log(chalk.yellow("\nBin Range: Not set"));
+            }
             
         } catch (error) {
             console.error(chalk.red("Error fetching strategy info:"), error);
@@ -810,6 +917,14 @@ class ShadowVaultTester {
         }
     }
 
+    async claimRewards() {
+        console.log(chalk.blue("\n💸 Claim Rewards\n"));
+        
+        await this.executeAction("Claim Rewards", async () => {
+            return this.vault!.claim();
+        });
+    }
+
     async updateRewards() {
         console.log(chalk.blue("\n🔄 Update Rewards\n"));
         
@@ -821,7 +936,7 @@ class ShadowVaultTester {
 
 // Main function
 async function main() {
-    console.log(chalk.blue.bold("\n🚀 Shadow Vault Interactive Tester\n"));
+    console.log(chalk.blue.bold("\n🚀 Metropolis Vault Interactive Tester\n"));
     
     // Get network info
     console.log(chalk.gray(`Network: ${network.name}`));
@@ -832,7 +947,7 @@ async function main() {
     console.log(chalk.gray(`Signer: ${signer.address}\n`));
     
     // Get vault address from command line argument or prompt user
-    let vaultAddress = process.argv[2] || process.env.SHADOW_VAULT_ADDRESS;
+    let vaultAddress = process.argv[2] || process.env.METROPOLIS_VAULT_ADDRESS;
     
     if (!vaultAddress) {
         // Create readline interface for user input
@@ -842,7 +957,7 @@ async function main() {
         });
         
         vaultAddress = await new Promise<string>((resolve) => {
-            rl.question(chalk.yellow("Enter OracleRewardShadowVault address: "), (answer) => {
+            rl.question(chalk.yellow("Enter OracleRewardVault address: "), (answer) => {
                 rl.close();
                 resolve(answer.trim());
             });
@@ -859,7 +974,7 @@ async function main() {
     // Get strategy address from vault
     let strategyAddress: string;
     try {
-        const vault = await ethers.getContractAt("OracleRewardShadowVault", vaultAddress, signer);
+        const vault = await ethers.getContractAt("OracleRewardVault", vaultAddress, signer);
         strategyAddress = await vault.getStrategy();
         
         if (strategyAddress === ethers.ZeroAddress) {
@@ -888,7 +1003,7 @@ async function main() {
     }
     
     // Create and run tester
-    const tester = new ShadowVaultTester(config);
+    const tester = new MetropolisVaultTester(config);
     await tester.run();
     
     console.log(chalk.green("\n✅ Testing complete!\n"));
@@ -902,4 +1017,4 @@ if (require.main === module) {
     });
 }
 
-export { ShadowVaultTester, TestConfig };
+export { MetropolisVaultTester, TestConfig };
