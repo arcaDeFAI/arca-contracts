@@ -3,17 +3,18 @@ import readline from "readline";
 import chalk from "chalk";
 import fs from "fs";
 import path from "path";
-import { 
+import type { 
     OracleRewardShadowVault,
     ShadowStrategy,
     IRamsesV3Pool,
     ShadowPriceHelperWrapper
 } from "../typechain-types";
-import { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import type { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
+import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import type {
+    TestResult} from "./test-vault-utils";
 import {
     TestConfig,
-    TestResult,
     TestResultManager,
     formatters,
     getTokenSymbol,
@@ -193,8 +194,8 @@ class ShadowVaultTester {
             console.log(chalk.gray(`  Deposits Paused: ${isPaused}`));
             console.log(chalk.gray(`  Is Flagged for Shutdown: ${isFlagged}`));
             console.log(chalk.gray(`  Total Supply: ${ethers.formatUnits(totalSupply, decimals)}`));
-            console.log(chalk.gray(`  Balance X: ${balanceX.toString()}`));
-            console.log(chalk.gray(`  Balance Y: ${balanceY.toString()}`));
+            console.log(chalk.gray(`  Balance X: ${await formatters.formatBalance(balanceX, this.tokenX!)}`));
+            console.log(chalk.gray(`  Balance Y: ${await formatters.formatBalance(balanceY, this.tokenY!)}`));
             console.log(chalk.gray(`  Current Pool Tick: ${tick.toString()}`));
             console.log(chalk.gray(`  Current Pool Tick Spacing: ${tickSpacing.toString()}`));
             
@@ -262,7 +263,7 @@ class ShadowVaultTester {
                 console.log(chalk.gray(`  Address: ${strategyAddress}`));
                 console.log(chalk.gray(`  Default Operator: ${defaultOp}`));
                 console.log(chalk.gray(`  Operator: ${operator}`));
-                console.log(chalk.gray(`  AUM Annual Fee: ${aumFee.toString()}`));
+                console.log(chalk.gray(`  AUM Annual Fee: ${aumFee.toString()} basis points`));
             }
             
             // Queue info
@@ -292,8 +293,8 @@ class ShadowVaultTester {
             // Preview amounts
             if (shares > 0n) {
                 const [amountX, amountY] = await this.vault!.previewAmounts(shares);
-                console.log(chalk.gray(`  Value X: ${amountX.toString()}`));
-                console.log(chalk.gray(`  Value Y: ${amountY.toString()}`));
+                console.log(chalk.gray(`  Value X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+                console.log(chalk.gray(`  Value Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
             }
             
             // Token balances
@@ -301,21 +302,23 @@ class ShadowVaultTester {
                 this.tokenX!.balanceOf(userAddress),
                 this.tokenY!.balanceOf(userAddress)
             ]);
-            console.log(chalk.gray(`  Token X Balance: ${tokenXBal.toString()}`));
-            console.log(chalk.gray(`  Token Y Balance: ${tokenYBal.toString()}`));
+            console.log(chalk.gray(`  Token X Balance: ${await formatters.formatBalance(tokenXBal, this.tokenX!)}`));
+            console.log(chalk.gray(`  Token Y Balance: ${await formatters.formatBalance(tokenYBal, this.tokenY!)}`));
             
             // Rewards
             const userInfo = await this.vault!.getUserInfo(userAddress);
             const pendingRewards = await this.vault!.getPendingRewards(userAddress);
             
             console.log(chalk.white("\nReward Info:"));
-            console.log(chalk.gray(`  Phantom Amount: ${userInfo.phantomAmount.toString()}`));
+            const decimals = await this.vault!.decimals();
+            console.log(chalk.gray(`  Phantom Amount: ${formatters.formatShareAmount(userInfo.phantomAmount, Number(decimals))}`));
             
             if (pendingRewards.length > 0) {
                 console.log(chalk.white("\nPending Rewards:"));
-                pendingRewards.forEach((reward: any) => {
-                    console.log(chalk.gray(`  ${reward.token}: ${reward.pendingRewards.toString()}`));
-                });
+                for (const reward of pendingRewards) {
+                    const formatted = await formatters.formatRewardAmount(reward.pendingRewards, reward.token, this.signer);
+                    console.log(chalk.gray(`  ${formatted}`));
+                }
             }
             
         } catch (error) {
@@ -696,9 +699,10 @@ class ShadowVaultTester {
                 BigInt(amountY || "0")
             );
             
-            console.log(chalk.gray(`\n  Shares: ${shares.toString()}`));
-            console.log(chalk.gray(`  Effective X: ${effectiveX.toString()}`));
-            console.log(chalk.gray(`  Effective Y: ${effectiveY.toString()}`));
+            const decimals = await this.vault!.decimals();
+            console.log(chalk.gray(`\n  Shares: ${formatters.formatShareAmount(shares, Number(decimals))}`));
+            console.log(chalk.gray(`  Effective X: ${await formatters.formatBalance(effectiveX, this.tokenX!)}`));
+            console.log(chalk.gray(`  Effective Y: ${await formatters.formatBalance(effectiveY, this.tokenY!)}`));
         } catch (error) {
             console.error(chalk.red("Error previewing shares:"), error);
         }
@@ -741,13 +745,14 @@ class ShadowVaultTester {
                 
                 if (totalQueued > 0 || userQueued > 0) {
                     console.log(chalk.white(`\nRound ${i}:`));
-                    console.log(chalk.gray(`  Total Queued: ${totalQueued.toString()}`));
-                    console.log(chalk.gray(`  User Queued: ${userQueued.toString()}`));
+                    const decimals = await this.vault!.decimals();
+                    console.log(chalk.gray(`  Total Queued: ${formatters.formatShareAmount(totalQueued, Number(decimals))}`));
+                    console.log(chalk.gray(`  User Queued: ${formatters.formatShareAmount(userQueued, Number(decimals))}`));
                     
                     if (userQueued > 0) {
                         const [amountX, amountY] = await this.vault!.getRedeemableAmounts(i, this.signer.address);
-                        console.log(chalk.gray(`  Redeemable X: ${amountX.toString()}`));
-                        console.log(chalk.gray(`  Redeemable Y: ${amountY.toString()}`));
+                        console.log(chalk.gray(`  Redeemable X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+                        console.log(chalk.gray(`  Redeemable Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
                     }
                 }
             }
@@ -775,8 +780,8 @@ class ShadowVaultTester {
             console.log(chalk.gray(`  Last Rebalance: ${new Date(Number(lastRebalance) * 1000).toLocaleString()}`));
             
             console.log(chalk.white("\nIdle Balances:"));
-            console.log(chalk.gray(`  Token X: ${idleX.toString()}`));
-            console.log(chalk.gray(`  Token Y: ${idleY.toString()}`));
+            console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(idleX, this.tokenX!)}`));
+            console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(idleY, this.tokenY!)}`));
             
         } catch (error) {
             console.error(chalk.red("Error fetching strategy info:"), error);
@@ -800,10 +805,10 @@ class ShadowVaultTester {
             if (pendingRewards.length === 0) {
                 console.log(chalk.gray("No pending rewards"));
             } else {
-                pendingRewards.forEach((reward: any) => {
-                    console.log(chalk.gray(`Token: ${reward.token}`));
-                    console.log(chalk.gray(`Amount: ${reward.pendingRewards.toString()}`));
-                });
+                for (const reward of pendingRewards) {
+                    const formatted = await formatters.formatRewardAmount(reward.pendingRewards, reward.token, this.signer);
+                    console.log(chalk.gray(`  ${formatted}`));
+                }
             }
         } catch (error) {
             console.error(chalk.red("Error fetching pending rewards:"), error);
