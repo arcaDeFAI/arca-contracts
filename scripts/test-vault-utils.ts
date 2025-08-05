@@ -1,8 +1,8 @@
 import { ethers } from "hardhat";
 import chalk from "chalk";
 import fs from "fs";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
+import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import type { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 
 // Common test configuration
 export interface TestConfig {
@@ -78,6 +78,41 @@ export const formatters = {
     tokenAmount: (amount: bigint, decimals: number, symbol: string): string => {
         const formatted = ethers.formatUnits(amount, decimals);
         return `${formatted} ${symbol}`;
+    },
+    
+    // New balance formatting functions
+    formatBalance: async (amount: bigint, token: IERC20MetadataUpgradeable): Promise<string> => {
+        try {
+            const decimals = await getTokenDecimals(token);
+            const symbol = await getTokenSymbol(token);
+            const formatted = ethers.formatUnits(amount, decimals);
+            return `${formatted} ${symbol}`;
+        } catch (e) {
+            return amount.toString(); // Fallback to raw value
+        }
+    },
+    
+    formatBalanceWithSymbol: (amount: bigint, decimals: number, symbol: string): string => {
+        const formatted = ethers.formatUnits(amount, decimals);
+        return `${formatted} ${symbol}`;
+    },
+    
+    formatShareAmount: (shares: bigint, decimals: number): string => {
+        const formatted = ethers.formatUnits(shares, decimals);
+        return `${formatted} shares`;
+    },
+    
+    // Format reward token from address
+    formatRewardAmount: async (amount: bigint, tokenAddress: string, signer: SignerWithAddress): Promise<string> => {
+        try {
+            const token = await ethers.getContractAt("IERC20MetadataUpgradeable", tokenAddress, signer);
+            const decimals = await getTokenDecimals(token);
+            const symbol = await getTokenSymbol(token);
+            const formatted = ethers.formatUnits(amount, decimals);
+            return `${formatted} ${symbol}`;
+        } catch (e) {
+            return amount.toString(); // Fallback to raw value
+        }
     },
     
     tokenInfo: async (token: IERC20MetadataUpgradeable | undefined, label: string): Promise<string> => {
