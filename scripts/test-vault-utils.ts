@@ -17,13 +17,13 @@ export interface TestConfig {
 export interface TestResult {
     timestamp: number;
     action: string;
-    params: any;
+    params: Record<string, unknown>;
     txHash?: string;
     gasUsed?: string;
-    events?: any[];
+    events?: Array<{event?: string; args?: Record<string, unknown>}>;
     error?: string;
-    stateBefore?: any;
-    stateAfter?: any;
+    stateBefore?: VaultState;
+    stateAfter?: VaultState;
 }
 
 // Vault state structure
@@ -46,12 +46,29 @@ export interface SuggestedAmount {
     wei: bigint;
 }
 
+// Vault contract interface (common methods)
+export interface IVaultContract {
+    getBalances(): Promise<[bigint, bigint]>;
+    totalSupply(): Promise<bigint>;
+    balanceOf(address: string): Promise<bigint>;
+    previewAmounts(shares: bigint): Promise<[bigint, bigint]>;
+    previewShares(amountX: bigint, amountY: bigint): Promise<[bigint, bigint, bigint]>;
+    decimals(): Promise<number>;
+    isDepositsPaused(): Promise<boolean>;
+    getStrategy(): Promise<string>;
+    getCurrentRound(): Promise<number>;
+    getQueuedWithdrawal(round: number, user: string): Promise<bigint>;
+    interface: {
+        parseError(data: string): {name: string; args: unknown} | null;
+    };
+}
+
 // Execute options
 export interface ExecuteOptions {
     signer: SignerWithAddress;
     dryRun: boolean;
-    vault?: any;
-    captureState?: (user: string) => Promise<any>;
+    vault?: IVaultContract;
+    captureState?: (user: string) => Promise<VaultState | null>;
 }
 
 // Token helper functions
@@ -194,6 +211,101 @@ export function generateAmountSuggestions(
     });
 }
 
+// Share withdrawal suggestions
+export function generateShareSuggestions(
+    currentShares: bigint,
+    decimals: number
+): Array<{label: string, amount: bigint, percentage: number}> {
+    if (currentShares === 0n) {
+        return [];
+    }
+    
+    const suggestions = [
+        { label: "25%", percentage: 25 },
+        { label: "50%", percentage: 50 },
+        { label: "75%", percentage: 75 },
+        { label: "Max (100%)", percentage: 100 }
+    ];
+    
+    return suggestions.map(s => ({
+        label: s.label,
+        amount: (currentShares * BigInt(s.percentage)) / 100n,
+        percentage: s.percentage
+    }));
+}
+
+// Estimate tokens from shares
+export async function estimateTokensFromShares(
+    vault: IVaultContract,
+    shares: bigint
+): Promise<{amountX: bigint, amountY: bigint}> {
+    try {
+        const [amountX, amountY] = await vault.previewAmounts(shares);
+        return { amountX, amountY };
+    } catch (error) {
+        console.error(chalk.red("Error estimating tokens:"), error);
+        return { amountX: 0n, amountY: 0n };
+    }
+}
+
+
+// Format time ago
+export function formatTimeAgo(timestamp: number): string {
+    const now = Date.now();
+    const seconds = Math.floor((now - timestamp) / 1000);
+    
+    if (seconds < 60) return `${seconds} seconds ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
+}
+
+// Calculate optimal deposit ratio
+export async function calculateOptimalRatio(
+    vault: IVaultContract,
+    tokenX: IERC20MetadataUpgradeable,
+    tokenY: IERC20MetadataUpgradeable
+): Promise<{ratioX: number, ratioY: number, message: string}> {
+    try {
+        const [balanceX, balanceY] = await vault.getBalances();
+        const totalSupply = await vault.totalSupply();
+        
+        if (totalSupply === 0n || (balanceX === 0n && balanceY === 0n)) {
+            return {
+                ratioX: 50,
+                ratioY: 50,
+                message: "First deposit - any ratio accepted"
+            };
+        }
+        
+        const decimalsX = await getTokenDecimals(tokenX);
+        const decimalsY = await getTokenDecimals(tokenY);
+        
+        // Normalize to same decimal base
+        const normalizedX = Number(balanceX) / (10 ** decimalsX);
+        const normalizedY = Number(balanceY) / (10 ** decimalsY);
+        const total = normalizedX + normalizedY;
+        
+        if (total === 0) {
+            return { ratioX: 50, ratioY: 50, message: "Equal ratio recommended" };
+        }
+        
+        const ratioX = Math.round((normalizedX / total) * 100);
+        const ratioY = Math.round((normalizedY / total) * 100);
+        
+        return {
+            ratioX,
+            ratioY,
+            message: `Current vault ratio: ${ratioX}% X / ${ratioY}% Y`
+        };
+    } catch (error) {
+        return { ratioX: 50, ratioY: 50, message: "Could not calculate ratio" };
+    }
+}
+
 // Test result manager
 export class TestResultManager {
     private results: TestResult[] = [];
@@ -223,7 +335,7 @@ export class TestResultManager {
 
 // Capture vault state
 export async function captureVaultState(
-    vault: any,
+    vault: IVaultContract,
     tokenX: IERC20MetadataUpgradeable,
     tokenY: IERC20MetadataUpgradeable,
     user: string
@@ -255,11 +367,35 @@ export async function captureVaultState(
     }
 }
 
+// Gas estimation helper
+export async function estimateGasWithCost(
+    actionFn: () => Promise<{toString(): string}>,
+    gasPrice?: bigint
+): Promise<{ gas: bigint, costEth: string, costUsd?: string }> {
+    try {
+        const estimatedGas = await actionFn();
+        const gas = BigInt(estimatedGas.toString());
+        
+        // Use provided gas price or fetch current
+        const effectiveGasPrice = gasPrice || (await ethers.provider.getGasPrice());
+        const costWei = gas * effectiveGasPrice;
+        const costEth = ethers.formatEther(costWei);
+        
+        return {
+            gas,
+            costEth,
+            costUsd: undefined // Could integrate with price oracle for USD conversion
+        };
+    } catch (error) {
+        throw new Error(`Gas estimation failed: ${error}`);
+    }
+}
+
 // Transaction execution wrapper
 export async function executeWithCapture(
     actionName: string,
-    actionFn: () => Promise<any>,
-    options: ExecuteOptions & { params?: any }
+    actionFn: () => Promise<{hash: string; wait(): Promise<{gasUsed: bigint; events?: Array<{event?: string; args?: Record<string, unknown>}>}>}>,
+    options: ExecuteOptions & { params?: Record<string, unknown> }
 ): Promise<TestResult> {
     const result: TestResult = {
         timestamp: Date.now(),
@@ -270,7 +406,11 @@ export async function executeWithCapture(
     try {
         // Capture state before if capture function provided
         if (options.captureState) {
-            result.stateBefore = await options.captureState(options.signer.address);
+            const state = await options.captureState(options.signer.address);
+
+            if (state) {
+                result.stateBefore = state;
+            }
         }
 
         if (options.dryRun) {
@@ -282,7 +422,8 @@ export async function executeWithCapture(
                 const estimatedGas = await actionFn();
                 console.log(chalk.gray("Estimated gas:"), estimatedGas.toString());
             } catch (error) {
-                console.log(chalk.gray("Gas estimation failed"));
+                // TODO FIX ME: gas estimates always fail
+                console.log(chalk.gray(`Gas estimation failed: ${error}`));
             }
             
             result.error = "Dry run - not executed";
@@ -302,13 +443,13 @@ export async function executeWithCapture(
             // Log events
             if (receipt.events && receipt.events.length > 0) {
                 console.log(chalk.blue("\n📋 Events:"));
-                receipt.events.forEach((event: any) => {
+                receipt.events.forEach((event) => {
                     if (event.event) {
                         console.log(chalk.cyan(`  - ${event.event}`));
                         if (event.args) {
-                            Object.keys(event.args).forEach((key) => {
+                            Object.entries(event.args).forEach(([key, value]) => {
                                 if (isNaN(Number(key))) {
-                                    console.log(chalk.gray(`    ${key}: ${event.args[key].toString()}`));
+                                    console.log(chalk.gray(`    ${key}: ${value?.toString() || 'N/A'}`));
                                 }
                             });
                         }
@@ -319,7 +460,10 @@ export async function executeWithCapture(
 
         // Capture state after if capture function provided
         if (options.captureState && !options.dryRun) {
-            result.stateAfter = await options.captureState(options.signer.address);
+            const state = await options.captureState(options.signer.address);
+            if (state) {
+                result.stateAfter = state;
+            }
             
             // Show state changes
             if (result.stateBefore && result.stateAfter) {
@@ -349,6 +493,35 @@ export async function executeWithCapture(
     }
 
     return result;
+}
+
+// Visual range display for ticks/bins
+export function displayVisualRange(
+    lower: number,
+    upper: number,
+    current: number,
+    type: "tick" | "bin" = "tick"
+): void {
+    const width = 50;
+    const range = upper - lower;
+    const currentPos = Math.round(((current - lower) / range) * width);
+    
+    console.log(chalk.cyan(`\n${type === "tick" ? "Tick" : "Bin"} Range Visualization:`));
+    console.log(chalk.gray(`[${lower}]` + "─".repeat(width) + `[${upper}]`));
+    
+    let visual = "";
+    for (let i = 0; i <= width; i++) {
+        if (i === currentPos) {
+            visual += chalk.yellow("█");
+        } else if (i === 0 || i === width) {
+            visual += "|";
+        } else {
+            visual += "─";
+        }
+    }
+    console.log(visual);
+    console.log(chalk.gray(" ".repeat(currentPos) + `↑ Current: ${current}`));
+    console.log("");
 }
 
 // Common UI helpers
@@ -410,6 +583,80 @@ export const ui = {
         } catch (e) {
             console.log(chalk.yellow("Could not fetch token information"));
         }
+    },
+    
+    showShareWithdrawalContext: async (
+        vault: IVaultContract,
+        signer: SignerWithAddress,
+        tokenX: IERC20MetadataUpgradeable,
+        tokenY: IERC20MetadataUpgradeable
+    ) => {
+        try {
+            const userShares = await vault.balanceOf(signer.address);
+            const totalSupply = await vault.totalSupply();
+            const decimals = Number(await vault.decimals());
+            const currentRound = await vault.getCurrentRound();
+            
+            // Check queued shares
+            let totalQueued = 0n;
+            for (let i = 0; i <= currentRound; i++) {
+                const queued = await vault.getQueuedWithdrawal(i, signer.address);
+                totalQueued += queued;
+            }
+            
+            // Format shares
+            const userSharesFormatted = formatters.formatShareAmount(userShares, decimals);
+            const totalSharesFormatted = formatters.formatShareAmount(totalSupply, decimals);
+            const queuedSharesFormatted = formatters.formatShareAmount(totalQueued, decimals);
+            
+            // Calculate ownership percentage including queued shares
+            const totalOwned = userShares + totalQueued;
+            const ownershipPercent = totalSupply > 0n 
+                ? (Number(totalOwned) / Number(totalSupply) * 100).toFixed(2)
+                : "0";
+            
+            console.log(chalk.cyan(`\nYour Balance: ${userSharesFormatted}`));
+            if (totalQueued > 0n) {
+                console.log(chalk.yellow(`Queued for withdrawal: ${queuedSharesFormatted}`));
+                console.log(chalk.gray(`Total owned: ${formatters.formatShareAmount(totalOwned, decimals)}`));
+            }
+            console.log(chalk.gray(`Vault Total: ${totalSharesFormatted} (you own ${ownershipPercent}%)`));
+            
+            // Check if user has any shares to withdraw
+            if (userShares === 0n && totalQueued > 0n) {
+                console.log(chalk.yellow("\n⚠️  All your shares are already queued for withdrawal"));
+                console.log(chalk.yellow("Use 'Cancel Queued Withdrawal' or wait for rebalance to process"));
+                return;
+            } else if (userShares === 0n) {
+                console.log(chalk.yellow("\n⚠️  You have no shares to withdraw"));
+                return;
+            }
+            
+            // Show suggestions based on available shares
+            console.log(chalk.gray("\nSuggested amounts:"));
+            const suggestions = generateShareSuggestions(userShares, decimals);
+            
+            for (const suggestion of suggestions) {
+                const formatted = formatters.formatShareAmount(suggestion.amount, decimals);
+                console.log(chalk.gray(`  - ${suggestion.label}: ${formatted}`));
+                
+                // Preview what they would get
+                try {
+                    const { amountX, amountY } = await estimateTokensFromShares(vault, suggestion.amount);
+                    if (amountX > 0n || amountY > 0n) {
+                        const formattedX = await formatters.formatBalance(amountX, tokenX);
+                        const formattedY = await formatters.formatBalance(amountY, tokenY);
+                        console.log(chalk.gray(`    → Receive: ${formattedX} + ${formattedY}`));
+                    }
+                } catch (e) {
+                    // Skip preview if estimation fails
+                }
+            }
+            
+            console.log(chalk.gray('\nEnter shares to withdraw (in wei) or type "max":'));
+        } catch (error) {
+            console.error(chalk.red("Error showing withdrawal context:"), error);
+        }
     }
 };
 
@@ -421,7 +668,7 @@ export async function checkAndApproveTokens(
     amountX: bigint,
     amountY: bigint,
     signer: SignerWithAddress,
-    executeAction: (name: string, fn: () => Promise<any>) => Promise<any>
+    executeAction: (name: string, fn: () => Promise<{hash: string; wait(): Promise<{gasUsed: bigint}>}>, params?: Record<string, unknown>, skipConfirm?: boolean) => Promise<TestResult>
 ): Promise<void> {
     const [allowanceX, allowanceY] = await Promise.all([
         tokenX.allowance(signer.address, vaultAddress),
@@ -434,20 +681,20 @@ export async function checkAndApproveTokens(
         if (allowanceX < amountX) {
             await executeAction("Approve Token X", async () => {
                 return tokenX.approve(vaultAddress, ethers.MaxUint256);
-            });
+            }, {}, true); // Skip confirmation for approvals
         }
         
         if (allowanceY < amountY) {
             await executeAction("Approve Token Y", async () => {
                 return tokenY.approve(vaultAddress, ethers.MaxUint256);
-            });
+            }, {}, true); // Skip confirmation for approvals
         }
     }
 }
 
 // Pre-deposit validation checks
 export async function validateDeposit(
-    vault: any,
+    vault: IVaultContract,
     tokenX: IERC20MetadataUpgradeable,
     tokenY: IERC20MetadataUpgradeable,
     amountX: bigint,

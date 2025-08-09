@@ -14,7 +14,9 @@ import type {
 import type { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import type {
-    TestResult} from "./test-vault-utils";
+    TestResult,
+    VaultState
+} from "./test-vault-utils";
 import {
     TestConfig,
     TestResultManager,
@@ -25,7 +27,11 @@ import {
     executeWithCapture,
     ui,
     checkAndApproveTokens,
-    validateDeposit
+    validateDeposit,
+    estimateTokensFromShares,
+    calculateOptimalRatio,
+    displayVisualRange,
+    estimateGasWithCost
 } from "./test-vault-utils";
 
 class MetropolisVaultTester {
@@ -158,7 +164,7 @@ class MetropolisVaultTester {
         await ui.showTokenAmountSuggestions(this.tokenX, this.tokenY, isFirstDeposit);
     }
 
-    async captureState(): Promise<any> {
+    async captureState(): Promise<VaultState | null> {
         try {
             return await captureVaultState(this.vault!, this.tokenX!, this.tokenY!, this.signer.address);
         } catch (error) {
@@ -169,9 +175,33 @@ class MetropolisVaultTester {
 
     async executeAction(
         actionName: string, 
-        actionFn: () => Promise<any>, 
-        params: any = {}
+        actionFn: () => Promise<{hash: string; wait(): Promise<{gasUsed: bigint; events?: Array<{event?: string; args?: Record<string, unknown>}>}>}>, 
+        params: Record<string, unknown> = {},
+        skipConfirmation: boolean = false
     ): Promise<TestResult> {
+        // Gas estimation
+        if (!this.config.dryRun && !skipConfirmation) {
+            try {
+                console.log(chalk.gray("\n⛽ Estimating gas..."));
+                const gasInfo = await estimateGasWithCost(actionFn);
+                console.log(chalk.gray(`  Estimated gas: ${gasInfo.gas.toString()}`));
+                console.log(chalk.gray(`  Estimated cost: ${gasInfo.costEth} ETH`));
+                
+                const confirmed = await this.confirm(`\nProceed with ${actionName}?`);
+                if (!confirmed) {
+                    console.log(chalk.yellow("Transaction cancelled"));
+                    return {
+                        timestamp: Date.now(),
+                        action: actionName,
+                        params,
+                        error: "User cancelled"
+                    };
+                }
+            } catch (error) {
+                console.log(chalk.yellow("Could not estimate gas, continuing..."));
+            }
+        }
+        
         const result = await executeWithCapture(actionName, actionFn, {
             signer: this.signer,
             dryRun: this.config.dryRun,
@@ -369,8 +399,8 @@ class MetropolisVaultTester {
             const tokenYDecimals = await getTokenDecimals(this.tokenY!);
             const tokenXSymbol = await getTokenSymbol(this.tokenX!);
             const tokenYSymbol = await getTokenSymbol(this.tokenY!);
-            console.log(chalk.gray(`  Token X Balance: ${ethers.formatUnits(tokenXBal, tokenXDecimals)} ${tokenXSymbol}`));
-            console.log(chalk.gray(`  Token Y Balance: ${ethers.formatUnits(tokenYBal, tokenYDecimals)} ${tokenYSymbol}`));
+            console.log(chalk.gray(`  Token X Balance: ${await formatters.formatBalance(tokenXBal, this.tokenX!)}`));
+            console.log(chalk.gray(`  Token Y Balance: ${await formatters.formatBalance(tokenYBal, this.tokenY!)}`));
             
             // Rewards
             const userInfo = await this.vault!.getUserInfo(userAddress);
@@ -395,6 +425,11 @@ class MetropolisVaultTester {
 
     async testDeposit() {
         console.log(chalk.blue("\n💰 Test Deposit\n"));
+        
+        // Show optimal deposit ratio
+        const ratio = await calculateOptimalRatio(this.vault!, this.tokenX!, this.tokenY!);
+        console.log(chalk.cyan(`\n💡 ${ratio.message}`));
+        console.log(chalk.gray(`   Optimal ratio: ${ratio.ratioX}% Token X / ${ratio.ratioY}% Token Y\n`));
         
         // Show token info and suggested amounts
         await this.showTokenAmountSuggestions();
@@ -429,7 +464,7 @@ class MetropolisVaultTester {
             params.amountX,
             params.amountY,
             this.signer,
-            (name, fn) => this.executeAction(name, fn)
+            (name, fn, params, skipConfirm) => this.executeAction(name, fn, params || {}, skipConfirm)
         );
         
         // Validate deposit
@@ -454,13 +489,50 @@ class MetropolisVaultTester {
     async testQueueWithdrawal() {
         console.log(chalk.blue("\n🏦 Test Queue Withdrawal\n"));
         
-        const shares = await this.question("Enter shares to withdraw (in wei): ");
+        // Show withdrawal context with balance and suggestions
+        await ui.showShareWithdrawalContext(this.vault!, this.signer, this.tokenX!, this.tokenY!);
+        
+        const sharesInput = await this.question("");
         const recipient = await this.question("Enter recipient address (or press enter for self): ");
         
+        // Handle "max" input
+        let shares: bigint;
+        if (sharesInput.toLowerCase() === "max") {
+            // Calculate available shares (total - queued)
+            const totalShares = await this.vault!.balanceOf(this.signer.address);
+            const currentRound = await this.vault!.getCurrentRound();
+            let totalQueued = 0n;
+            for (let i = 0; i <= Number(currentRound); i++) {
+                const queued = await this.vault!.getQueuedWithdrawal(i, this.signer.address);
+                totalQueued += queued;
+            }
+            shares = totalShares - totalQueued;
+            console.log(chalk.cyan(`Using max available shares: ${shares.toString()}`));
+        } else {
+            shares = BigInt(sharesInput || "0");
+        }
+        
         const params = {
-            shares: BigInt(shares || "0"),
+            shares,
             recipient: recipient || this.signer.address
         };
+        
+        // Check if shares is 0
+        if (shares === 0n) {
+            console.log(chalk.red("\n❌ Cannot queue 0 shares"));
+            return;
+        }
+        
+        // Preview what they will receive
+        const { amountX, amountY } = await estimateTokensFromShares(this.vault!, shares);
+        console.log(chalk.cyan("\nPreview: You will receive approximately:"));
+        console.log(chalk.gray(`  - ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  - ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        
+        if (!await this.confirm("\nContinue with withdrawal?")) {
+            console.log(chalk.yellow("Withdrawal cancelled"));
+            return;
+        }
         
         await this.executeAction("Queue Withdrawal", async () => {
             return this.vault!.queueWithdrawal(params.shares, params.recipient);
@@ -477,6 +549,9 @@ class MetropolisVaultTester {
         try {
             const [currentLow, currentUpper] = await this.strategy!.getRange();
             console.log(chalk.gray(`Current Bin Range: [${currentLow}, ${currentUpper}]`));
+            
+            // Show current range visualization
+            displayVisualRange(Number(currentLow), Number(currentUpper), Number(activeId), "bin");
         } catch (e) {
             console.log(chalk.gray(`Current Bin Range: Not set`));
         }
@@ -485,7 +560,7 @@ class MetropolisVaultTester {
         const newUpper = await this.question("Enter new upper bin ID: ");
         const desiredActiveId = await this.question("Enter desired active bin ID: ");
         const slippageActiveId = await this.question("Enter slippage active bin ID: ");
-        
+
         // Get current balances for the rebalance
         const [amountX, amountY] = await this.vault!.getBalances();
         console.log(chalk.gray(`\nCurrent vault balances: X=${amountX}, Y=${amountY}`));
@@ -510,6 +585,9 @@ class MetropolisVaultTester {
             [distributionX, distributionY]
         );
         
+        // Show new range visualization
+        displayVisualRange(parseInt(newLower), parseInt(newUpper), parseInt(desiredActiveId), "bin");
+        
         const params = {
             newLower: parseInt(newLower),
             newUpper: parseInt(newUpper),
@@ -520,6 +598,7 @@ class MetropolisVaultTester {
             distributions: distributions
         };
         
+        // TODO FIX ME (this operation reverts) there's an error somewhere
         await this.executeAction("Rebalance", async () => {
             return this.strategy!.rebalance(
                 params.newLower,
@@ -720,6 +799,9 @@ class MetropolisVaultTester {
             case '3':
                 await this.testRedeemWithdrawal();
                 break;
+            case '4':
+                // TODO
+                break;
             case '5':
                 await this.showQueueStatus();
                 break;
@@ -745,6 +827,9 @@ class MetropolisVaultTester {
                 break;
             case '3':
                 await this.testHarvestRewards();
+                break;
+            case '4':
+                // TODO
                 break;
         }
     }
@@ -782,7 +867,7 @@ class MetropolisVaultTester {
         
         const choice = await this.question("\nSelect option: ");
         
-        // Admin function implementations...
+        // TODO: Admin function implementations...
     }
 
     // Additional helper methods
@@ -813,6 +898,21 @@ class MetropolisVaultTester {
     async testCancelQueuedWithdrawal() {
         console.log(chalk.blue("\n❌ Test Cancel Queued Withdrawal\n"));
         
+        // First show what's queued
+        const currentRound = await this.vault!.getCurrentRound();
+        const queuedShares = await this.vault!.getQueuedWithdrawal(currentRound, this.signer.address);
+        
+        if (queuedShares === 0n) {
+            console.log(chalk.yellow("You have no queued withdrawals in the current round"));
+            return;
+        }
+        
+        const decimals = Number(await this.vault!.decimals());
+        const queuedFormatted = formatters.formatShareAmount(queuedShares, decimals);
+        console.log(chalk.cyan(`Your queued withdrawal: ${queuedFormatted}`));
+        
+        // TODO: help the user enter a correct amount (writing a share amount in wei is not intuitive)
+        // We can possibly refactor and then re-use the code for the "Queue Withdrawal" where we suggest amounts and offer the "max" option
         const shares = await this.question("Enter shares to cancel (in wei): ");
         
         await this.executeAction("Cancel Queued Withdrawal", async () => {
@@ -912,10 +1012,10 @@ class MetropolisVaultTester {
             if (pendingRewards.length === 0) {
                 console.log(chalk.gray("No pending rewards"));
             } else {
-                pendingRewards.forEach((reward: any) => {
+                for (const reward of pendingRewards) {
                     const formatted = await formatters.formatRewardAmount(reward.pendingRewards, reward.token, this.signer);
                     console.log(chalk.gray(`  ${formatted}`));
-                });
+                }
             }
         } catch (error) {
             console.error(chalk.red("Error fetching pending rewards:"), error);
