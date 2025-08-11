@@ -35,7 +35,6 @@ import {Hooks} from "./libraries/Hooks.sol";
 import {TokenHelper} from "./libraries/TokenHelper.sol";
 import {Constants} from "./libraries/Constants.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
-import {console} from "forge-std/console.sol";
 /**
  * @title Liquidity Book Simple SimpleStrategy contract
  * @author Trader Joe
@@ -473,11 +472,6 @@ contract MetropolisStrategy is
                 uint256 queuedAmountX,
                 uint256 queuedAmountY
             ) = _withdrawAndApplyAumAnnualFee();
-            console.log(
-                "rebalance -> queuedAmountX/Y",
-                queuedAmountX,
-                queuedAmountY
-            );
             // Execute the queued withdrawals and send the tokens to the vault.
             _transferAndExecuteQueuedAmounts(
                 queuedShares,

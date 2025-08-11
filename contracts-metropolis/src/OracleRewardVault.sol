@@ -15,7 +15,6 @@ import {
 } from "../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
 import {TokenHelper} from "./libraries/TokenHelper.sol";
 import {Precision} from "./libraries/Precision.sol";
-import {console} from "forge-std/console.sol";
 
 /**
  * @title Liquidity Book Oracle Reward Vault contract
