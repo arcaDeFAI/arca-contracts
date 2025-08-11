@@ -2,7 +2,7 @@ import type { Vault } from "../types/vault";
 
 export const mockVaults: Vault[] = [
   {
-    id: "s-usdc",
+    id: 1,
     name: "S/USDC",
     tokens: ["S", "USDC"],
     platform: "Metropolis",
@@ -11,10 +11,10 @@ export const mockVaults: Vault[] = [
     aprDaily: 0.34,
     poolTvl: 2500000,
     farmTvl: 1800000,
-    status: "Active",
+    earnings: 0,
   },
   {
-    id: "s-usdc-cl",
+    id: 2,
     name: "S/USDC-CL",
     tokens: ["S", "USDC"],
     platform: "Shadow",
@@ -23,7 +23,7 @@ export const mockVaults: Vault[] = [
     aprDaily: 0.51,
     poolTvl: 1200000,
     farmTvl: 850000,
-    status: "Active",
+    earnings: 0,
   },
 ];
 

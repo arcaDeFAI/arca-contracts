@@ -44,8 +44,8 @@ export function useVaultTvl(vaultName: string) {
     address: strategyAddress as `0x${string}`,
     abi: VAULT_STRATEGY_ABI,
     functionName: "getBalances",
-    enabled: !!strategyAddress,
     query: {
+      enabled: !!strategyAddress,
       refetchInterval: 10000, // Refetch every 10 seconds
       refetchOnWindowFocus: true,
       refetchOnMount: true,

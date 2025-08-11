@@ -62,7 +62,7 @@ export function useUserPositions() {
       abi: VAULT_ABI,
       functionName: "balanceOf",
       args: [address as `0x${string}`],
-      enabled: !!address && !!vaultAddress,
+      query: { enabled: !!address && !!vaultAddress },
     });
 
     // Get total supply of vault shares
@@ -70,7 +70,7 @@ export function useUserPositions() {
       address: vaultAddress as `0x${string}`,
       abi: VAULT_ABI,
       functionName: "totalSupply",
-      enabled: !!vaultAddress,
+      query: { enabled: !!vaultAddress },
     });
 
     // Get total assets in vault (total value locked)
@@ -78,7 +78,7 @@ export function useUserPositions() {
       address: vaultAddress as `0x${string}`,
       abi: VAULT_ABI,
       functionName: "totalAssets",
-      enabled: !!vaultAddress,
+      query: { enabled: !!vaultAddress },
     });
 
     // Get dollar amounts from shares using previewAmounts
@@ -87,7 +87,7 @@ export function useUserPositions() {
       abi: VAULT_ABI,
       functionName: "previewAmounts",
       args: [userShares || 0n],
-      enabled: !!vaultAddress && !!userShares && userShares > 0n,
+      query: { enabled: !!vaultAddress && !!userShares && userShares > 0n },
     });
 
     // Debug logging for S/USDC vault (after all variables are declared)
