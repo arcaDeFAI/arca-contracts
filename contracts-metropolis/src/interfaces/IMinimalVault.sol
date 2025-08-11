@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 pragma solidity 0.8.26;
 

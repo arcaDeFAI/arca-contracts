@@ -2,10 +2,3 @@
 src = "contracts"
 out = "out"
 libs = ["contracts-metropolis/lib", "lib"]
-remappings = [
-    "joe-v2/=contracts-metropolis/lib/joe-v2/src/",
-    "joe-v2-periphery/=contracts-metropolis/lib/joe-v2-periphery/src/",
-    "openzeppelin-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/",
-    "openzeppelin/=node_modules/@openzeppelin/contracts/",
-    "forge-std/=lib/joe-v2/lib/forge-std/src/"
-]
