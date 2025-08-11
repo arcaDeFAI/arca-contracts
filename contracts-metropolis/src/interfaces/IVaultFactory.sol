@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 
 import {
     IERC20Upgradeable
-} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 
 import {IAggregatorV3} from "./IAggregatorV3.sol";

@@ -6,7 +6,7 @@ import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
 import {PriceHelper} from "joe-v2/libraries/PriceHelper.sol";
 import {
     IERC20Upgradeable
-} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 import {ILBToken} from "joe-v2/interfaces/ILBToken.sol";
 import {
@@ -19,10 +19,10 @@ import {
 import {Clone} from "joe-v2/libraries/Clone.sol";
 import {
     ReentrancyGuardUpgradeable
-} from "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {
     SafeERC20Upgradeable
-} from "openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";

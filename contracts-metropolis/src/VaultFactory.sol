@@ -5,17 +5,17 @@ pragma solidity 0.8.26;
 import {ImmutableClone} from "joe-v2/libraries/ImmutableClone.sol";
 import {
     IERC20Upgradeable
-} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {
     IERC20MetadataUpgradeable
-} from "openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
 import {
     Ownable2StepUpgradeable
-} from "openzeppelin-upgradeable/access/Ownable2StepUpgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {
     StringsUpgradeable
-} from "openzeppelin-upgradeable/utils/StringsUpgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
 import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";

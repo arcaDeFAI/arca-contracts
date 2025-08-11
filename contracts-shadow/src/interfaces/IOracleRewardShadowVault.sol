@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.26;
 
-import {IERC20Upgradeable} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IRamsesV3Pool} from "../../CL/core/interfaces/IRamsesV3Pool.sol";
 import {IMinimalVault} from "../../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
 import {IStrategyCommon} from "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";

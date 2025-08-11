@@ -5,13 +5,13 @@ pragma solidity 0.8.26;
 import {Clone} from "joe-v2/libraries/Clone.sol";
 import {
     IERC20Upgradeable
-} from "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {
     SafeERC20Upgradeable
-} from "openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {
     ReentrancyGuardUpgradeable
-} from "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
 import {IERC20} from "joe-v2/interfaces/ILBPair.sol";
 
