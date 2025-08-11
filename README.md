@@ -288,9 +288,6 @@ npm run lint
 # Auto-fix issues
 npm run lint:fix
 
-# Format Solidity code
-prettier --write 'contracts/**/*.sol'
-
 # Check contract sizes
 npm run compile  # Warns if contracts exceed size limits
 ```
