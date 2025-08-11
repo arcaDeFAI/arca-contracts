@@ -3,6 +3,11 @@ import * as fs from "fs";
 import * as path from "path";
 import * as csv from "csv-parse/sync";
 
+interface CSVRecord {
+  To: string;
+  [key: string]: string;
+}
+
 interface PoolData {
   poolAddress: string;
   token0Address: string;
@@ -147,13 +152,13 @@ async function main() {
         columns: true,
         skip_empty_lines: true,
         bom: true
-      });
+      }) as CSVRecord[];
       
       totalRecords += records.length;
       
       // Extract pool addresses from the "To" column
       const poolAddresses = records
-        .map((record: any) => record.To)
+        .map((record) => record.To)
         .filter((addr: string) => addr && addr !== "" && addr !== "0x0000000000000000000000000000000000000000");
       
       // Add to the Set (automatically handles duplicates)

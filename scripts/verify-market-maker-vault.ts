@@ -46,7 +46,7 @@ async function main() {
     console.log("LB Pair:", lbPair);
     
     // Get pair details
-    const lbPairContract = await ethers.getContractAt("joe-v2/interfaces/ILBPair.sol:ILBPair", lbPair);
+    const lbPairContract = await ethers.getContractAt("@arca/joe-v2/interfaces/ILBPair.sol:ILBPair", lbPair);
     const tokenX = await lbPairContract.getTokenX();
     const tokenY = await lbPairContract.getTokenY();
     

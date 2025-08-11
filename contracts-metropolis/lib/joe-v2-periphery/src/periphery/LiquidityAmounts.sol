@@ -2,12 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-import "joe-v2/libraries/math/Uint256x256Math.sol";
-import "joe-v2/libraries/PriceHelper.sol";
-import "joe-v2/libraries/Constants.sol";
-import "joe-v2/libraries/math/SafeCast.sol";
-import "joe-v2/interfaces/ILBPair.sol";
-import "joe-v2/interfaces/ILBToken.sol";
+import "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
+import "@arca/joe-v2/libraries/PriceHelper.sol";
+import "@arca/joe-v2/libraries/Constants.sol";
+import "@arca/joe-v2/libraries/math/SafeCast.sol";
+import "@arca/joe-v2/interfaces/ILBPair.sol";
+import "@arca/joe-v2/interfaces/ILBToken.sol";
 
 /// @title Liquidity Book periphery library for Liquidity Amount
 /// @author Trader Joe

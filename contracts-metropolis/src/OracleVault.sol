@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.26;
 
-import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
+import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 
 import {BaseVault} from "./BaseVault.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";

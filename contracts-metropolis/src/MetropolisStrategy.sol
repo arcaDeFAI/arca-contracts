@@ -2,21 +2,21 @@
 
 pragma solidity 0.8.26;
 
-import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
-import {PriceHelper} from "joe-v2/libraries/PriceHelper.sol";
+import {SafeCast} from "@arca/joe-v2/libraries/math/SafeCast.sol";
+import {PriceHelper} from "@arca/joe-v2/libraries/PriceHelper.sol";
 import {
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
-import {ILBToken} from "joe-v2/interfaces/ILBToken.sol";
+import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
+import {ILBToken} from "@arca/joe-v2/interfaces/ILBToken.sol";
 import {
     LiquidityAmounts
-} from "joe-v2-periphery/periphery/LiquidityAmounts.sol";
-import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
+} from "@arca/joe-v2-periphery/periphery/LiquidityAmounts.sol";
+import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 import {
     LiquidityConfigurations
-} from "joe-v2/libraries/math/LiquidityConfigurations.sol";
-import {Clone} from "joe-v2/libraries/Clone.sol";
+} from "@arca/joe-v2/libraries/math/LiquidityConfigurations.sol";
+import {Clone} from "@arca/joe-v2/libraries/Clone.sol";
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -427,13 +427,14 @@ contract MetropolisStrategy is
         address vault = _vault();
 
         // Withdraw all the tokens from the LB pool and return the amounts and the queued withdrawals.
-        (
-            uint256 amountX,
-            uint256 amountY,
-            uint256 queuedShares,
-            uint256 queuedAmountX,
-            uint256 queuedAmountY
-        ) = _withdraw(lowerRange, upperRange, IBaseVault(vault).totalSupply());
+        //(
+            //uint256 amountX,
+            //uint256 amountY,
+            //uint256 queuedShares,
+            //uint256 queuedAmountX,
+            //uint256 queuedAmountY
+        //) = 
+        _withdraw(lowerRange, upperRange, IBaseVault(vault).totalSupply());
     }
 
     /**

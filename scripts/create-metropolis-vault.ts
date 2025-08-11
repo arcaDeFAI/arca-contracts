@@ -87,7 +87,7 @@ async function main() {
 
   // Step 1: Verify LB Pair configuration
   console.log("\nStep 1: Verifying LB Pair configuration...");
-  const lbPair = await ethers.getContractAt("joe-v2/interfaces/ILBPair.sol:ILBPair", LB_PAIR_ADDRESS);
+  const lbPair = await ethers.getContractAt("@arca/joe-v2/interfaces/ILBPair.sol:ILBPair", LB_PAIR_ADDRESS);
   
   const tokenX = await lbPair.getTokenX();
   const tokenY = await lbPair.getTokenY();

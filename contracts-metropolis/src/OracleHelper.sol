@@ -3,8 +3,8 @@
 pragma solidity 0.8.26;
 
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
-import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
-import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
+import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
+import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 

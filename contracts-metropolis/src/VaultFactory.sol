@@ -2,14 +2,14 @@
 
 pragma solidity 0.8.26;
 
-import {ImmutableClone} from "joe-v2/libraries/ImmutableClone.sol";
+import {ImmutableClone} from "@arca/joe-v2/libraries/ImmutableClone.sol";
 import {
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {
     IERC20MetadataUpgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
+import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {
     Ownable2StepUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";

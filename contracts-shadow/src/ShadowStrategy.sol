@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.26;
 
-import {Clone} from "joe-v2/libraries/Clone.sol";
+import {Clone} from "@arca/joe-v2/libraries/Clone.sol";
 import {
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
@@ -12,8 +12,8 @@ import {
 import {
     ReentrancyGuardUpgradeable
 } from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {SafeCast} from "joe-v2/libraries/math/SafeCast.sol";
-import {IERC20} from "joe-v2/interfaces/ILBPair.sol";
+import {SafeCast} from "@arca/joe-v2/libraries/math/SafeCast.sol";
+import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
 import {
     IVaultFactory
@@ -43,7 +43,7 @@ import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
 import {
     IOracleRewardShadowVault
 } from "./interfaces/IOracleRewardShadowVault.sol";
-import {Uint256x256Math} from "joe-v2/libraries/math/Uint256x256Math.sol";
+import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 
 /**
  * @title Shadow Strategy Contract

@@ -2,3 +2,11 @@
 src = "contracts"
 out = "out"
 libs = ["contracts-metropolis/lib"]
+auto_detect_remappings = false
+remappings = [
+    "@arca/joe-v2/=contracts-metropolis/lib/joe-v2/src/",
+    "@arca/joe-v2-periphery/=contracts-metropolis/lib/joe-v2-periphery/src/",
+    "@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/",
+    "@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/",
+    "forge-std/=contracts-metropolis/lib/forge-std/src"
+]
