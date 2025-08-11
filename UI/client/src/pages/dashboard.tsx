@@ -182,7 +182,9 @@ export default function Dashboard() {
             <TokenPairIcons tokens={["S", "USDC"]} />
             <div>
               <div className="text-white font-medium">S/USDC Metropolis</div>
-              <div className="text-arca-secondary text-sm">Concentrated Liquidity Position</div>
+              <div className="text-arca-secondary text-sm">
+                Concentrated Liquidity Position
+              </div>
             </div>
           </div>
           <PositionRangeIndicator vaultName="S/USDC" />
@@ -220,11 +222,15 @@ export default function Dashboard() {
                 </div>
                 <div className="space-y-2">
                   {/* Show position range for Metro vaults */}
-                  {position.platform === "Metropolis" && position.vaultName.includes("S/USDC") && !position.vaultName.includes("CL") && (
-                    <div className="mb-2">
-                      <PositionRangeIndicator vaultName={position.vaultName} />
-                    </div>
-                  )}
+                  {position.platform === "Metropolis" &&
+                    position.vaultName.includes("S/USDC") &&
+                    !position.vaultName.includes("CL") && (
+                      <div className="mb-2">
+                        <PositionRangeIndicator
+                          vaultName={position.vaultName}
+                        />
+                      </div>
+                    )}
                   <div className="flex justify-between">
                     <span className="text-arca-secondary text-sm">
                       Deposited:

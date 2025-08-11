@@ -1,10 +1,9 @@
 import { getDefaultConfig } from "@rainbow-me/rainbowkit";
 import { mainnet, polygon, arbitrum } from "wagmi/chains";
+import { http } from "wagmi";
 
 // Define Sonic chain
 const sonic = {
-  iconUrl:
-    "https://res.cloudinary.com/dpnvhlvim/image/upload/sonic_logo_Black_xjdjoi.png",
   id: 146,
   name: "Sonic",
   network: "sonic",
@@ -25,8 +24,6 @@ const sonic = {
 
 // Define Sonic Blaze Testnet chain
 const sonicTestnet = {
-  iconUrl:
-    "https://res.cloudinary.com/dpnvhlvim/image/upload/sonic_logo_Black_xjdjoi.png",
   id: 57054,
   name: "Sonic Blaze Testnet",
   network: "sonic-testnet",
@@ -46,7 +43,6 @@ const sonicTestnet = {
     },
   },
   testnet: true,
-  faucets: ["https://testnet.soniclabs.com/account"],
 } as const;
 
 const projectId =
@@ -55,6 +51,12 @@ const projectId =
 export const rainbowkitConfig = getDefaultConfig({
   appName: "Arca",
   projectId,
-  chains: [mainnet, polygon, arbitrum, sonic],
+  chains: [mainnet, polygon, arbitrum, sonic] as const,
   ssr: false,
+  transports: {
+    [mainnet.id]: http(),
+    [polygon.id]: http(),
+    [arbitrum.id]: http(),
+    [sonic.id]: http(),
+  },
 });

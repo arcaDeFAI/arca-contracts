@@ -28,11 +28,11 @@ function useSonicPrice() {
 export function useLbpTvl(vaultName: string) {
   const lbpAddress = LBP_ADDRESSES[vaultName as keyof typeof LBP_ADDRESSES];
 
-  // Get reserves from LBP contract
-  const { data: reserves, isLoading: reservesLoading } = useReadContract({
+  // Get liquidity from LBP contract (using Fight Pool/Ramses V3 ABI)
+  const { data: liquidity, isLoading: liquidityLoading } = useReadContract({
     address: lbpAddress as `0x${string}`,
     abi: LBP_ABI,
-    functionName: "getReserves",
+    functionName: "liquidity",
     query: {
       enabled: !!lbpAddress,
       refetchInterval: 10000, // Refresh every 10 seconds
@@ -42,11 +42,11 @@ export function useLbpTvl(vaultName: string) {
     },
   });
 
-  // Get current price from LBP contract
-  const { data: price, isLoading: priceLoading } = useReadContract({
+  // Get current price from slot0
+  const { data: slot0, isLoading: slot0Loading } = useReadContract({
     address: lbpAddress as `0x${string}`,
     abi: LBP_ABI,
-    functionName: "getPriceFromId",
+    functionName: "slot0",
     query: {
       enabled: !!lbpAddress,
       refetchInterval: 10000,
@@ -63,34 +63,35 @@ export function useLbpTvl(vaultName: string) {
     error: priceError,
   } = useSonicPrice();
 
-  // Calculate TVL based on reserves using real-time pricing
+  // Calculate TVL based on liquidity using real-time pricing
   const calculateTvl = () => {
-    if (!reserves || !sonicPrice) return 0;
+    if (!liquidity || !sonicPrice) return 0;
 
-    const [reserveX, reserveY] = reserves as [bigint, bigint];
+    // Liquidity is a single value representing total liquidity in the pool
+    // For simplicity, we'll estimate TVL based on liquidity value
+    const liquidityFormatted = Number(liquidity) / 1e18;
 
-    // Convert reserves to readable numbers (18 decimals for S, 6 decimals for USDC)
-    const reserveXFormatted = Number(reserveX) / 1e18; // S token (18 decimals)
-    const reserveYFormatted = Number(reserveY) / 1e6; // USDC (6 decimals)
-
-    // Calculate TVL using real-time Sonic price
-    // TVL = (reserveX * sonicPrice) + (reserveY * $1.00)
-    const tvl = reserveXFormatted * sonicPrice + reserveYFormatted * 1.0;
+    // Approximate TVL calculation (simplified)
+    const tvl = liquidityFormatted * sonicPrice * 2; // Multiply by 2 as rough approximation for both sides
 
     return Math.round(tvl);
+  };
+
+  // Extract price from slot0 if available
+  const getPrice = () => {
+    if (!slot0 || !Array.isArray(slot0)) return null;
+    const sqrtPriceX96 = slot0[0] as bigint;
+    // Convert sqrtPriceX96 to regular price
+    const price = Number(sqrtPriceX96) ** 2 / 2 ** 192;
+    return price;
   };
 
   return {
     tvl: calculateTvl(),
     sonicPrice,
-    reserves: reserves
-      ? {
-          tokenX: Number(reserves[0]) / 1e18, // S token (18 decimals)
-          tokenY: Number(reserves[1]) / 1e6, // USDC (6 decimals)
-        }
-      : null,
-    price: price ? Number(price) / Math.pow(2, 128) : null, // LB price is in 128-bit fixed point
-    isLoading: reservesLoading || priceLoading || priceDataLoading,
+    reserves: null, // Ramses V3 doesn't expose reserves directly
+    price: getPrice(),
+    isLoading: liquidityLoading || slot0Loading || priceDataLoading,
     error: priceError,
   };
 }

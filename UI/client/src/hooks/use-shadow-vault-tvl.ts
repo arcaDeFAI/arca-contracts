@@ -1,4 +1,3 @@
-
 import { useReadContract } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
 import { SHADOW_STRATEGY_ABI, CONTRACT_ADDRESSES } from "@/lib/contracts";
@@ -45,8 +44,8 @@ export function useShadowVaultTvl(vaultName: string) {
     address: strategyAddress as `0x${string}`,
     abi: SHADOW_STRATEGY_ABI,
     functionName: "getBalances",
-    enabled: !!strategyAddress,
     query: {
+      enabled: !!strategyAddress,
       refetchInterval: 10000, // Refetch every 10 seconds
       refetchOnWindowFocus: true,
       refetchOnMount: true,

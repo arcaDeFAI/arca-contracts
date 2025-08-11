@@ -1,4 +1,3 @@
-
 import { useReadContract } from "wagmi";
 import { SHADOW_STRATEGY_ABI, CONTRACT_ADDRESSES } from "@/lib/contracts";
 
@@ -26,7 +25,7 @@ export function useShadowVaultTokens(vaultName: string) {
     address: strategyAddress as `0x${string}`,
     abi: SHADOW_STRATEGY_ABI,
     functionName: "token0",
-    enabled: !!strategyAddress,
+    query: { enabled: !!strategyAddress },
   });
 
   // Fetch TokenY address (USDC = token1) from strategy
@@ -38,7 +37,7 @@ export function useShadowVaultTokens(vaultName: string) {
     address: strategyAddress as `0x${string}`,
     abi: SHADOW_STRATEGY_ABI,
     functionName: "token1",
-    enabled: !!strategyAddress,
+    query: { enabled: !!strategyAddress },
   });
 
   const isLoading = tokenXLoading || tokenYLoading;
@@ -52,7 +51,7 @@ export function useShadowVaultTokens(vaultName: string) {
       tokenXAddress: tokenXAddress as string,
       tokenYAddress: tokenYAddress as string,
       isLoading,
-      error
+      error,
     });
   }
 

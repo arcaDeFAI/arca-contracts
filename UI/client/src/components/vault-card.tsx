@@ -54,7 +54,8 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     useWriteContract();
 
   // Detect vault type (Shadow vs Metropolis)
-  const isShadowVault = vault.platform === "Shadow" || vault.name.includes("-CL");
+  const isShadowVault =
+    vault.platform === "Shadow" || vault.name.includes("-CL");
 
   // Fetch real-time vault TVL data (use appropriate hook based on vault type)
   const metropolisTvlData = useVaultTvl(isShadowVault ? "" : vault.name);
@@ -71,7 +72,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
   // Fetch actual contract addresses from strategy (use appropriate hook)
   const metropolisTokensData = useVaultTokens(isShadowVault ? "" : vault.name);
-  const shadowTokensData = useShadowVaultTokens(isShadowVault ? vault.name : "");
+  const shadowTokensData = useShadowVaultTokens(
+    isShadowVault ? vault.name : "",
+  );
 
   const {
     vaultAddress,
@@ -86,7 +89,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
       abi: ERC20_ABI,
       functionName: "allowance",
       args: [address as `0x${string}`, vaultAddress as `0x${string}`],
-      enabled: !!address && !!vaultAddress,
+      query: { enabled: !!address && !!vaultAddress },
     });
 
   const { data: tokenYAllowance, refetch: refetchTokenYAllowance } =
@@ -95,7 +98,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
       abi: ERC20_ABI,
       functionName: "allowance",
       args: [address as `0x${string}`, vaultAddress as `0x${string}`],
-      enabled: !!address && !!vaultAddress && !!tokenYAddress,
+      query: { enabled: !!address && !!vaultAddress && !!tokenYAddress },
     });
 
   const { data: usdcAllowance, refetch: refetchUsdcAllowance } =
@@ -104,7 +107,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
       abi: ERC20_ABI,
       functionName: "allowance",
       args: [address as `0x${string}`, vaultAddress as `0x${string}`],
-      enabled: !!address && !!vaultAddress,
+      query: { enabled: !!address && !!vaultAddress },
     });
 
   // Token allowance hooks for approval checking
@@ -120,20 +123,24 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
       abi: vaultAbi,
       functionName: "balanceOf",
       args: [address as `0x${string}`],
-      enabled: !!address && !!vaultAddress,
+      query: { enabled: !!address && !!vaultAddress },
     });
 
   // Debug logging for vault card balanceOf
-  if ((vault.name === "S/USDC" || vault.name === "S/USDC-CL") && userVaultShares !== undefined) {
-    console.log(`VaultCard balanceOf for ${vault.name} (${isShadowVault ? 'Shadow' : 'Metropolis'}):`, {
-      vaultAddress,
-      userAddress: address,
-      userVaultShares: userVaultShares.toString(),
-      sharesDecimal: Number(userVaultShares) / 1e12,
-    });
+  if (
+    (vault.name === "S/USDC" || vault.name === "S/USDC-CL") &&
+    userVaultShares !== undefined
+  ) {
+    console.log(
+      `VaultCard balanceOf for ${vault.name} (${isShadowVault ? "Shadow" : "Metropolis"}):`,
+      {
+        vaultAddress,
+        userAddress: address,
+        userVaultShares: userVaultShares.toString(),
+        sharesDecimal: Number(userVaultShares) / 1e12,
+      },
+    );
   }
-
-
 
   // Fight Pool data for Shadow vaults
   const fightPoolData = useFightPoolLiquidity();
@@ -149,17 +156,20 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
   // Debug log to check token addresses and balances
   if (vault.name === "S/USDC" || vault.name === "S/USDC-CL") {
-    console.log(`Token addresses and balances for ${vault.name} (${isShadowVault ? 'Shadow' : 'Metropolis'}):`, {
-      tokenXAddress,
-      tokenYAddress,
-      tokenXBalance: tokenXBalance.balance,
-      tokenYBalance: tokenYBalance.balance,
-      tokenXLoading: tokenXBalance.isLoading,
-      tokenYLoading: tokenYBalance.isLoading,
-      tokenXDecimals: tokenXBalance.decimals,
-      tokenYDecimals: tokenYBalance.decimals,
-      addressesLoading,
-    });
+    console.log(
+      `Token addresses and balances for ${vault.name} (${isShadowVault ? "Shadow" : "Metropolis"}):`,
+      {
+        tokenXAddress,
+        tokenYAddress,
+        tokenXBalance: tokenXBalance.balance,
+        tokenYBalance: tokenYBalance.balance,
+        tokenXLoading: tokenXBalance.isLoading,
+        tokenYLoading: tokenYBalance.isLoading,
+        tokenXDecimals: tokenXBalance.decimals,
+        tokenYDecimals: tokenYBalance.decimals,
+        addressesLoading,
+      },
+    );
   }
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
@@ -218,7 +228,10 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     onLogs: (logs) => {
       // Check if any log is for the current user
       logs.forEach((log) => {
-        if (log.args.user?.toLowerCase() === address?.toLowerCase() || log.args.from?.toLowerCase() === address?.toLowerCase()) {
+        if (
+          log.args.user?.toLowerCase() === address?.toLowerCase() ||
+          log.args.from?.toLowerCase() === address?.toLowerCase()
+        ) {
           if (log.args.shares && log.args.shares > 0) {
             setPositionStatus("Active");
           }
@@ -521,14 +534,14 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               </div>
             </div>
             {/* Active Position Indicator */}
-            {userVaultShares && Number(userVaultShares) > 0 && (
+            {userVaultShares && Number(userVaultShares) > 0 ? (
               <div className="flex items-center space-x-2 ml-4">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <span className="text-green-400 text-sm font-medium">
                   Active
                 </span>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
@@ -809,14 +822,14 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                 ({vault.aprDaily}% daily)
               </div>
               {/* Active Position Indicator - Mobile */}
-              {userVaultShares && Number(userVaultShares) > 0 && (
+              {userVaultShares && Number(userVaultShares) > 0 ? (
                 <div className="flex items-center justify-end space-x-1 mt-1">
                   <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                   <span className="text-green-400 text-xs font-medium">
                     Active
                   </span>
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -861,7 +874,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               </div>
 
               {/* Token Input Fields */}
-              <div className="space-y-2">                {activeTab === "deposit" ? (
+              <div className="space-y-2">
+                {" "}
+                {activeTab === "deposit" ? (
                   vault.tokens.map((token, index) => (
                     <div key={token} className="space-y-1 group">
                       <div className="flex justify-between items-center">

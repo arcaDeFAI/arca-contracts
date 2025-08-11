@@ -1,6 +1,10 @@
 import { useReadContract } from "wagmi";
 import { useQuery } from "@tanstack/react-query";
-import { SHADOW_STRATEGY_ABI, CONTRACT_ADDRESSES, FIGHT_POOL_ABI } from "@/lib/contracts";
+import {
+  SHADOW_STRATEGY_ABI,
+  CONTRACT_ADDRESSES,
+  FIGHT_POOL_ABI,
+} from "@/lib/contracts";
 import { formatUnits } from "viem";
 
 // Hook to fetch real-time Sonic price from CoinGecko
@@ -40,8 +44,8 @@ export function useShadowLbpTvl(vaultName: string) {
     address: fightPoolAddress as `0x${string}`,
     abi: FIGHT_POOL_ABI,
     functionName: "liquidity",
-    enabled: !!fightPoolAddress && !!vaultName,
     query: {
+      enabled: !!fightPoolAddress && !!vaultName,
       refetchInterval: 10000, // Refetch every 10 seconds
       refetchOnWindowFocus: true,
       refetchOnMount: true,
@@ -58,8 +62,8 @@ export function useShadowLbpTvl(vaultName: string) {
     address: fightPoolAddress as `0x${string}`,
     abi: FIGHT_POOL_ABI,
     functionName: "slot0",
-    enabled: !!fightPoolAddress && !!vaultName,
     query: {
+      enabled: !!fightPoolAddress && !!vaultName,
       refetchInterval: 10000,
       refetchOnWindowFocus: true,
       refetchOnMount: true,
@@ -68,24 +72,18 @@ export function useShadowLbpTvl(vaultName: string) {
   });
 
   // Fetch token addresses
-  const {
-    data: token0,
-    isLoading: token0Loading,
-  } = useReadContract({
+  const { data: token0, isLoading: token0Loading } = useReadContract({
     address: fightPoolAddress as `0x${string}`,
     abi: FIGHT_POOL_ABI,
     functionName: "token0",
-    enabled: !!fightPoolAddress && !!vaultName,
+    query: { enabled: !!fightPoolAddress && !!vaultName },
   });
 
-  const {
-    data: token1,
-    isLoading: token1Loading,
-  } = useReadContract({
+  const { data: token1, isLoading: token1Loading } = useReadContract({
     address: fightPoolAddress as `0x${string}`,
     abi: FIGHT_POOL_ABI,
     functionName: "token1",
-    enabled: !!fightPoolAddress && !!vaultName,
+    query: { enabled: !!fightPoolAddress && !!vaultName },
   });
 
   // Fetch real-time Sonic price
@@ -114,7 +112,15 @@ export function useShadowLbpTvl(vaultName: string) {
 
     try {
       // Extract sqrtPriceX96 from slot0
-      const [sqrtPriceX96] = slot0 as [bigint, number, number, number, number, number, boolean];
+      const [sqrtPriceX96] = slot0 as [
+        bigint,
+        number,
+        number,
+        number,
+        number,
+        number,
+        boolean,
+      ];
 
       // Use CoinGecko price directly instead of calculating from sqrtPriceX96
       const sTokenPriceInUSD = sonicPrice; // S token price in USD from CoinGecko
@@ -122,13 +128,13 @@ export function useShadowLbpTvl(vaultName: string) {
       // For a more realistic TVL estimate, let's use a simpler approach
       // Since we know the expected TVL should be around $2.9M, we'll use a proportional calculation
       // based on the liquidity value and current market conditions
-      
+
       const liquidityNumber = Number(liquidity);
-      
+
       // Convert sqrtPriceX96 to actual price for debugging
-      const sqrtPrice = Number(sqrtPriceX96) / (2 ** 96);
+      const sqrtPrice = Number(sqrtPriceX96) / 2 ** 96;
       const calculatedPrice = sqrtPrice * sqrtPrice;
-      
+
       // Use a more conservative TVL calculation
       // Estimate TVL as a fraction of the total liquidity based on realistic market values
       // This is a rough approximation - in production you'd want exact tick math
@@ -138,10 +144,10 @@ export function useShadowLbpTvl(vaultName: string) {
         // Use liquidity as a base multiplier with realistic scaling
         Math.max(
           1000000, // $1M minimum
-          liquidityNumber / 1e18 * sTokenPriceInUSD * 0.1 // Conservative scaling factor
-        )
+          (liquidityNumber / 1e18) * sTokenPriceInUSD * 0.1, // Conservative scaling factor
+        ),
       );
-      
+
       // For S/USDC-CL, let's use a fixed realistic value until we get proper tick range data
       const tvl = vaultName === "S/USDC-CL" ? 2900000 : estimatedTvl;
 
@@ -167,16 +173,26 @@ export function useShadowLbpTvl(vaultName: string) {
     }
   };
 
-  const isLoading = liquidityLoading || slot0Loading || token0Loading || token1Loading || priceLoading;
+  const isLoading =
+    liquidityLoading ||
+    slot0Loading ||
+    token0Loading ||
+    token1Loading ||
+    priceLoading;
   const error = liquidityError || slot0Error || priceError;
 
   return {
     tvl: calculateTvl(),
     sonicPrice,
-    balances: liquidity && slot0 ? {
-      liquidity: liquidity.toString(),
-      sqrtPriceX96: (slot0 as [bigint, number, number, number, number, number, boolean])[0].toString(),
-    } : null,
+    balances:
+      liquidity && slot0
+        ? {
+            liquidity: liquidity.toString(),
+            sqrtPriceX96: (
+              slot0 as [bigint, number, number, number, number, number, boolean]
+            )[0].toString(),
+          }
+        : null,
     isLoading,
     error,
   };

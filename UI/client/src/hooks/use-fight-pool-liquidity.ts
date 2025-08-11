@@ -1,4 +1,3 @@
-
 import { useReadContract } from "wagmi";
 import { CONTRACT_ADDRESSES, FIGHT_POOL_ABI } from "@/lib/contracts";
 
@@ -44,7 +43,7 @@ export function useFightPoolLiquidity() {
     liquidity: liquidity?.toString(),
     slot0,
     fee: fee?.toString(),
-    isLoading
+    isLoading,
   });
 
   return {

@@ -10,7 +10,7 @@ import "@rainbow-me/rainbowkit/styles.css";
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
-  <WagmiProvider config={rainbowkitConfig}>
+  <WagmiProvider config={rainbowkitConfig as any}>
     <QueryClientProvider client={queryClient}>
       <RainbowKitProvider
         theme={darkTheme({
