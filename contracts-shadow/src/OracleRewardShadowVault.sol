@@ -29,7 +29,6 @@ import {IWNative} from "../../contracts-metropolis/src/interfaces/IWNative.sol";
 import {
     IERC20
 } from "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
-import {TickMath} from "../CL/core/libraries/TickMath.sol";
 import {
     TokenHelper
 } from "../../contracts-metropolis/src/libraries/TokenHelper.sol";
@@ -40,7 +39,6 @@ import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
 import {
     IOracleRewardShadowVault
 } from "./interfaces/IOracleRewardShadowVault.sol";
-import {FullMath} from "../CL/core/libraries/FullMath.sol";
 import {ShadowPriceHelper} from "./libraries/ShadowPriceHelper.sol";
 
 /**
@@ -1146,7 +1144,7 @@ contract OracleRewardShadowVault is
                 address[] memory tokens
             ) {
                 // Notify vault about all tokens
-                for (uint i = 0; i < tokens.length; i++) {
+                for (uint256 i = 0; i < tokens.length; i++) {
                     if (tokens[i] != address(0)) {
                         _notifyRewardToken(IERC20(tokens[i]));
                     }

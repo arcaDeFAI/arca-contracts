@@ -2,7 +2,9 @@
 
 pragma solidity 0.8.26;
 
-import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {
+    IERC20Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
 interface IOneInchRouter {
     struct SwapDescription {
@@ -15,8 +17,10 @@ interface IOneInchRouter {
         uint256 flags;
     }
 
-    function swap(address executor, SwapDescription calldata desc, bytes calldata permit, bytes calldata data)
-        external
-        payable
-        returns (uint256 returnAmount, uint256 spentAmount);
+    function swap(
+        address executor,
+        SwapDescription calldata desc,
+        bytes calldata permit,
+        bytes calldata data
+    ) external payable returns (uint256 returnAmount, uint256 spentAmount);
 }

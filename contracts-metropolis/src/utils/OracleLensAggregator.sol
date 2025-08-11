@@ -36,11 +36,19 @@ contract OracleLensAggregator is Ownable, IAggregatorV3 {
         return 1;
     }
 
-    function getRoundData(uint80)
+    function getRoundData(
+        uint80
+    )
         external
         view
         override
-        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+        returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        )
     {
         return (0, _getPriceNativeFromLens(), 0, block.timestamp, 0);
     }
@@ -49,7 +57,13 @@ contract OracleLensAggregator is Ownable, IAggregatorV3 {
         external
         view
         override
-        returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)
+        returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        )
     {
         return (0, _getPriceNativeFromLens(), 0, block.timestamp, 0);
     }

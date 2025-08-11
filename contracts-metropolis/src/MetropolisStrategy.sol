@@ -28,12 +28,10 @@ import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {Math} from "./libraries/Math.sol";
-import {IOneInchRouter} from "./interfaces/IOneInchRouter.sol";
 import {ILBPairHooks} from "./interfaces/ILBPairHooks.sol";
 import {IHooksRewarder, IERC20} from "./interfaces/IHooksRewarder.sol";
 import {Hooks} from "./libraries/Hooks.sol";
 import {TokenHelper} from "./libraries/TokenHelper.sol";
-import {Constants} from "./libraries/Constants.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 /**
  * @title Liquidity Book Simple SimpleStrategy contract
@@ -304,7 +302,7 @@ contract MetropolisStrategy is
         override
         returns (address[] memory tokens)
     {
-        uint count = 0;
+        uint256 count = 0;
         address rewardToken;
         address extraRewardToken;
 
@@ -331,7 +329,7 @@ contract MetropolisStrategy is
 
         // Build array
         tokens = new address[](count);
-        uint index = 0;
+        uint256 index = 0;
 
         if (rewardToken != address(0)) {
             tokens[index++] = rewardToken;
@@ -428,12 +426,12 @@ contract MetropolisStrategy is
 
         // Withdraw all the tokens from the LB pool and return the amounts and the queued withdrawals.
         //(
-            //uint256 amountX,
-            //uint256 amountY,
-            //uint256 queuedShares,
-            //uint256 queuedAmountX,
-            //uint256 queuedAmountY
-        //) = 
+        //uint256 amountX,
+        //uint256 amountY,
+        //uint256 queuedShares,
+        //uint256 queuedAmountX,
+        //uint256 queuedAmountY
+        //) =
         _withdraw(lowerRange, upperRange, IBaseVault(vault).totalSupply());
     }
 

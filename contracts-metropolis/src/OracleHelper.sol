@@ -10,7 +10,7 @@ import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 
 contract OracleHelper is IOracleHelper {
     using Uint256x256Math for uint256;
-    
+
     uint8 private constant _PRICE_OFFSET = 128;
     uint256 private constant GRACE_PERIOD_TIME = 3600;
 
@@ -34,7 +34,7 @@ contract OracleHelper is IOracleHelper {
 
     /// @notice The vault address
     address private _vault;
-    
+
     /// @notice Whether the oracle helper is initialized
     bool private _initialized;
 
@@ -60,10 +60,17 @@ contract OracleHelper is IOracleHelper {
         _decimalsY = decimalsY;
     }
 
-    function initialize(address vault, uint24 heartbeatX, uint24 heartbeatY, uint256 minPrice, uint256 maxPrice, IAggregatorV3 sequencerUptimeFeed) external onlyFactory {
+    function initialize(
+        address vault,
+        uint24 heartbeatX,
+        uint24 heartbeatY,
+        uint256 minPrice,
+        uint256 maxPrice,
+        IAggregatorV3 sequencerUptimeFeed
+    ) external onlyFactory {
         if (_initialized) revert OracleHelper__AlreadyInitialized();
         if (vault == address(0)) revert OracleHelper__InvalidVault();
-        
+
         _vault = vault;
         _initialized = true;
 
@@ -76,7 +83,7 @@ contract OracleHelper is IOracleHelper {
             twapPriceCheckEnabled: false,
             twapInterval: 0
         });
-        
+
         _sequencerUptimeFeed = sequencerUptimeFeed;
     }
 
@@ -90,37 +97,58 @@ contract OracleHelper is IOracleHelper {
         _;
     }
 
-    function setSequencerUptimeFeed(IAggregatorV3 sequencerUptimeFeed) external override onlyFactory {
+    function setSequencerUptimeFeed(
+        IAggregatorV3 sequencerUptimeFeed
+    ) external override onlyFactory {
         _sequencerUptimeFeed = sequencerUptimeFeed;
     }
 
-    function getOracleParameters() external view override returns (OracleParameters memory) {
+    function getOracleParameters()
+        external
+        view
+        override
+        returns (OracleParameters memory)
+    {
         return _oracleParameters;
     }
 
-    function setOracleParameters(OracleParameters calldata parameters) external override onlyFactory {
-        if (parameters.minPrice > parameters.maxPrice) revert IOracleVault.OracleVault__InvalidPrice();
+    function setOracleParameters(
+        OracleParameters calldata parameters
+    ) external override onlyFactory {
+        if (parameters.minPrice > parameters.maxPrice)
+            revert IOracleVault.OracleVault__InvalidPrice();
         _oracleParameters = parameters;
     }
 
-    function setTwapParams(bool enabled, uint40 interval, uint256 deviationThreshold) external override onlyFactory {
+    function setTwapParams(
+        bool enabled,
+        uint40 interval,
+        uint256 deviationThreshold
+    ) external override onlyFactory {
         _oracleParameters.twapPriceCheckEnabled = enabled;
         _oracleParameters.twapInterval = interval;
         _oracleParameters.deviationThreshold = deviationThreshold;
     }
 
-    function _getOraclePrice(IAggregatorV3 dataFeed) internal view returns (uint256 uintPrice) {
+    function _getOraclePrice(
+        IAggregatorV3 dataFeed
+    ) internal view returns (uint256 uintPrice) {
         _checkSequencerUp();
 
         (, int256 price, , uint256 updatedAt, ) = dataFeed.latestRoundData();
 
-        uint24 heartbeat = dataFeed == _dataFeedX ? _oracleParameters.heartbeatX : _oracleParameters.heartbeatY;
+        uint24 heartbeat = dataFeed == _dataFeedX
+            ? _oracleParameters.heartbeatX
+            : _oracleParameters.heartbeatY;
 
         if (updatedAt == 0 || updatedAt + heartbeat < block.timestamp) {
             revert IOracleVault.OracleVault__StalePrice();
         }
 
-        if (uint256(price) < _oracleParameters.minPrice || uint256(price) > _oracleParameters.maxPrice) {
+        if (
+            uint256(price) < _oracleParameters.minPrice ||
+            uint256(price) > _oracleParameters.maxPrice
+        ) {
             revert IOracleVault.OracleVault__InvalidPrice();
         }
 
@@ -132,7 +160,8 @@ contract OracleHelper is IOracleHelper {
             return;
         }
 
-        (, int256 answer, uint256 startedAt, , ) = _sequencerUptimeFeed.latestRoundData();
+        (, int256 answer, uint256 startedAt, , ) = _sequencerUptimeFeed
+            .latestRoundData();
 
         bool isSequencerUp = answer == 0;
         if (!isSequencerUp) {
@@ -144,16 +173,21 @@ contract OracleHelper is IOracleHelper {
             revert IOracleVault.OracleVault__GracePeriodNotOver();
         }
     }
-    
+
     function getDataFeedX() external view override returns (IAggregatorV3) {
         return _dataFeedX;
     }
-    
+
     function getDataFeedY() external view override returns (IAggregatorV3) {
         return _dataFeedY;
     }
 
-    function getSequencerUptimeFeed() external view override returns (IAggregatorV3) {
+    function getSequencerUptimeFeed()
+        external
+        view
+        override
+        returns (IAggregatorV3)
+    {
         return _sequencerUptimeFeed;
     }
 
@@ -182,8 +216,7 @@ contract OracleHelper is IOracleHelper {
         return amountXInY + amountY;
     }
 
-
-    function checkPriceInDeviation() external override view returns (bool) {
+    function checkPriceInDeviation() external view override returns (bool) {
         uint256 price = this.getPrice();
         _checkPrice(price);
         return true;
@@ -192,10 +225,13 @@ contract OracleHelper is IOracleHelper {
     function _checkPrice(uint256 spotPriceInY) internal view {
         if (!_oracleParameters.twapPriceCheckEnabled) return;
 
-        uint40 twapStart = uint40(block.timestamp - _oracleParameters.twapInterval);
+        uint40 twapStart = uint40(
+            block.timestamp - _oracleParameters.twapInterval
+        );
         uint40 twapEnd = uint40(block.timestamp);
 
-        if (twapEnd <= twapStart) revert IOracleVault.OracleVault__InvalidTimestamps();
+        if (twapEnd <= twapStart)
+            revert IOracleVault.OracleVault__InvalidTimestamps();
 
         (uint64 cumulativeId1, , ) = _pair.getOracleSampleAt(twapStart);
         (uint64 cumulativeId2, , ) = _pair.getOracleSampleAt(twapEnd);

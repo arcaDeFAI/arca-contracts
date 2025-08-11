@@ -9,21 +9,22 @@ import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {IOracleHelperFactory} from "./interfaces/IOracleHelperFactory.sol";
 
 contract OracleHelperFactory is IOracleHelperFactory {
-
-    function createOracleHelper(address factory,
+    function createOracleHelper(
+        address factory,
         ILBPair pair,
         IAggregatorV3 dataFeedX,
         IAggregatorV3 dataFeedY,
         uint8 decimalsX,
-        uint8 decimalsY) external returns (IOracleHelper) {
-        return new OracleHelper(
-            factory,
-            pair,
-            dataFeedX,
-            dataFeedY,
-            decimalsX,
-            decimalsY
-        );
+        uint8 decimalsY
+    ) external returns (IOracleHelper) {
+        return
+            new OracleHelper(
+                factory,
+                pair,
+                dataFeedX,
+                dataFeedY,
+                decimalsX,
+                decimalsY
+            );
     }
-
 }

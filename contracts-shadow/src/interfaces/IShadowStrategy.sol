@@ -8,7 +8,6 @@ import {
 import {
     INonfungiblePositionManager
 } from "../../CL/periphery/interfaces/INonfungiblePositionManager.sol";
-import {IMinimalVoter} from "./IMinimalVoter.sol";
 
 /**
  * @title Shadow Strategy Interface

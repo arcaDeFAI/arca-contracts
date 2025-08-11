@@ -2,7 +2,9 @@
 
 pragma solidity 0.8.26;
 
-import {IBaseVault} from "../../../contracts-metropolis/src/interfaces/IBaseVault.sol";
+import {
+    IBaseVault
+} from "../../../contracts-metropolis/src/interfaces/IBaseVault.sol";
 import {IRamsesV3Pool} from "../../CL/core/interfaces/IRamsesV3Pool.sol";
 
 /**

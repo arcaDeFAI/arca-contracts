@@ -6,7 +6,6 @@ import {
     IERC20Upgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IVaultFactory} from "./IVaultFactory.sol";
-import {IERC20} from "./IHooksRewarder.sol";
 
 /**
  * @title Common Strategy Interface
