@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.26;
 
-import {IERC20} from "joe-v2/interfaces/ILBPair.sol";
+import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
 interface IHooksRewarder {
     function getRewardToken() external view returns (IERC20);

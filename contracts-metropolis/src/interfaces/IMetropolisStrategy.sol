@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.26;
 
-import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
+import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {IStrategyCommon} from "./IStrategyCommon.sol";
 
 /**

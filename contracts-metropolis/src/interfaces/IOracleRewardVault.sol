@@ -3,7 +3,7 @@
 pragma solidity 0.8.26;
 
 import {IOracleVault} from "./IOracleVault.sol";
-import {IERC20} from "joe-v2/interfaces/ILBPair.sol";
+import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
 /**
  * @title Oracle Reard Vault Interface

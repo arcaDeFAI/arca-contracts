@@ -155,11 +155,11 @@ export const formatters = {
         }
     },
     
-    stateChanges: (before: any, after: any) => {
+    stateChanges: (before: VaultState | null, after: VaultState | null) => {
         console.log(chalk.blue("\n📊 State Changes:"));
         
         // Vault changes
-        if (before.vault && after.vault) {
+        if (before?.vault && after?.vault) {
             if (before.vault.balanceX !== after.vault.balanceX) {
                 console.log(chalk.gray(`  Vault Balance X: ${before.vault.balanceX} → ${after.vault.balanceX}`));
             }
@@ -172,7 +172,7 @@ export const formatters = {
         }
         
         // User changes
-        if (before.user && after.user) {
+        if (before?.user && after?.user) {
             if (before.user.shares !== after.user.shares) {
                 console.log(chalk.gray(`  User Shares: ${before.user.shares} → ${after.user.shares}`));
             }
@@ -471,16 +471,17 @@ export async function executeWithCapture(
             }
         }
 
-    } catch (error: any) {
-        console.error(chalk.red("\n❌ Error:"), error.message || error);
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(chalk.red("\n❌ Error:"), errorMessage);
         
         // Try to get more details about the revert
-        if (error.reason) {
+        if (error && typeof error === 'object' && 'reason' in error) {
             console.error(chalk.red("Reason:"), error.reason);
         }
-        if (error.data && options.vault) {
+        if (error && typeof error === 'object' && 'data' in error && options.vault) {
             try {
-                const decodedError = options.vault.interface.parseError(error.data);
+                const decodedError = options.vault.interface.parseError((error as {data: string}).data);
                 if (decodedError) {
                     console.error(chalk.red("Decoded error:"), decodedError.name, decodedError.args);
                 }

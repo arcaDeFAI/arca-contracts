@@ -297,8 +297,13 @@ class MetropolisVaultTester {
                                 const tokenXPerYFormatted = ethers.formatUnits(tokenXPerY, tokenYDecimals);
                                 console.log(chalk.gray(`  PriceLens Cross: 1 ${tokenXSymbol} = ${tokenXPerYFormatted} ${tokenYSymbol}`));
                             }
-                        } catch (e: any) {
-                            console.log(chalk.yellow(`  Could not fetch spot price from price lens: ${e.message || e}`));
+                        } catch (e) {
+                            if (e instanceof Error) {
+                                console.log(chalk.yellow(`  Could not fetch spot price from price lens: ${e.message || e}`));
+                            } else {
+                                console.error("Unknown error", e);
+                            }
+                            
                         }
                     } else {
                         console.log(chalk.yellow(`Price lens not set`));

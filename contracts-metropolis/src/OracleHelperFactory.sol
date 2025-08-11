@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 import {OracleHelper} from "./OracleHelper.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
-import {ILBPair} from "joe-v2/interfaces/ILBPair.sol";
+import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {IOracleHelperFactory} from "./interfaces/IOracleHelperFactory.sol";
 
 contract OracleHelperFactory is IOracleHelperFactory {

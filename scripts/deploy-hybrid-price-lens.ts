@@ -105,7 +105,7 @@ async function main() {
     if (tokenConfig.lbPair) {
       console.log(`\nChecking ${tokenName} pair configuration...`);
       try {
-        const pair = await ethers.getContractAt("joe-v2/interfaces/ILBPair.sol:ILBPair", tokenConfig.lbPair.address);
+        const pair = await ethers.getContractAt("@arca/joe-v2/interfaces/ILBPair.sol:ILBPair", tokenConfig.lbPair.address);
         const tokenX = await pair.getTokenX();
         const tokenY = await pair.getTokenY();
         
@@ -217,7 +217,7 @@ async function main() {
         
         // Try to get more info about the pair
         try {
-          const pair = await ethers.getContractAt("joe-v2/interfaces/ILBPair.sol:ILBPair", tokenConfig.lbPair.address);
+          const pair = await ethers.getContractAt("@arca/joe-v2/interfaces/ILBPair.sol:ILBPair", tokenConfig.lbPair.address);
           const tokenX = await pair.getTokenX();
           const tokenY = await pair.getTokenY();
           console.log(`  Actual pair tokenX: ${tokenX}`);
@@ -265,7 +265,7 @@ async function main() {
   // Verify USDC pair
   if (networkConfig.tokens.usdc?.lbPair) {
     console.log("\n--- wS-USDC Pair ---");
-    const usdcPair = await ethers.getContractAt("joe-v2/interfaces/ILBPair.sol:ILBPair", networkConfig.tokens.usdc.lbPair.address);
+    const usdcPair = await ethers.getContractAt("@arca/joe-v2/interfaces/ILBPair.sol:ILBPair", networkConfig.tokens.usdc.lbPair.address);
     const usdcTokenX = await usdcPair.getTokenX();
     const usdcTokenY = await usdcPair.getTokenY();
     console.log("Pair tokenX:", usdcTokenX);
@@ -277,7 +277,7 @@ async function main() {
   // Verify WETH pair
   if (networkConfig.tokens.weth?.lbPair) {
     console.log("\n--- WETH-wS Pair ---");
-    const wethPair = await ethers.getContractAt("joe-v2/interfaces/ILBPair.sol:ILBPair", networkConfig.tokens.weth.lbPair.address);
+    const wethPair = await ethers.getContractAt("@arca/joe-v2/interfaces/ILBPair.sol:ILBPair", networkConfig.tokens.weth.lbPair.address);
     const wethTokenX = await wethPair.getTokenX();
     const wethTokenY = await wethPair.getTokenY();
     console.log("Pair tokenX:", wethTokenX);
