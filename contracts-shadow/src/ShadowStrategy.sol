@@ -18,9 +18,6 @@ import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {
     IVaultFactory
 } from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
-import {
-    IStrategyCommon
-} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
 import {IShadowStrategy} from "./interfaces/IShadowStrategy.sol";
 import {
     INonfungiblePositionManager
@@ -30,15 +27,9 @@ import {IMinimalGauge} from "./interfaces/IMinimalGauge.sol";
 import {IMinimalVoter} from "./interfaces/IMinimalVoter.sol";
 import {LiquidityAmounts} from "../CL/periphery/libraries/LiquidityAmounts.sol";
 import {TickMath} from "../CL/core/libraries/TickMath.sol";
-import {FullMath} from "../CL/core/libraries/FullMath.sol";
-import {FixedPoint128} from "../CL/core/libraries/FixedPoint128.sol";
-import {PoolAddress} from "../CL/periphery/libraries/PoolAddress.sol";
 import {
     IOracleRewardVault
 } from "../../contracts-metropolis/src/interfaces/IOracleRewardVault.sol";
-import {
-    TokenHelper
-} from "../../contracts-metropolis/src/libraries/TokenHelper.sol";
 import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
 import {
     IOracleRewardShadowVault
@@ -906,7 +897,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         if (rewardTokens.length == 0) return;
 
         // Check earned amounts before claiming
-        for (uint i = 0; i < rewardTokens.length; i++) {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
             try gauge.earned(rewardTokens[i], address(this)) returns (
                 uint256 amount
             ) {
@@ -920,7 +911,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
         // Track balances before claiming
         uint256[] memory balancesBefore = new uint256[](rewardTokens.length);
-        for (uint i = 0; i < rewardTokens.length; i++) {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
             balancesBefore[i] = _getTokenBalanceSafely(rewardTokens[i]);
         }
 
@@ -940,7 +931,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         if (!claimSuccess) return;
 
         // Process claimed rewards
-        for (uint i = 0; i < rewardTokens.length; i++) {
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
             uint256 balanceAfter = _getTokenBalanceSafely(rewardTokens[i]);
             uint256 received = balanceAfter > balancesBefore[i]
                 ? balanceAfter - balancesBefore[i]
@@ -1067,7 +1058,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             earned = new uint256[](tokens.length);
 
             // Get earned amounts defensively
-            for (uint i = 0; i < tokens.length; i++) {
+            for (uint256 i = 0; i < tokens.length; i++) {
                 try
                     IMinimalGauge(gauge).earned(tokens[i], address(this))
                 returns (uint256 amount) {

@@ -5,7 +5,6 @@ pragma solidity 0.8.26;
 import {IAggregatorV3} from "./IAggregatorV3.sol";
 
 interface IOracleHelper {
-
     struct OracleParameters {
         uint256 minPrice;
         uint256 maxPrice;
@@ -21,13 +20,24 @@ interface IOracleHelper {
     error OracleHelper__InvalidVault();
     error OracleHelper__NotFactory();
 
-    function initialize(address vault, uint24 heartbeatX, uint24 heartbeatY, uint256 minPrice, uint256 maxPrice, IAggregatorV3 sequencerUptimeFeed) external;
+    function initialize(
+        address vault,
+        uint24 heartbeatX,
+        uint24 heartbeatY,
+        uint256 minPrice,
+        uint256 maxPrice,
+        IAggregatorV3 sequencerUptimeFeed
+    ) external;
 
     function setOracleParameters(OracleParameters calldata parameters) external;
 
     function setSequencerUptimeFeed(IAggregatorV3 sequencerUptimeFeed) external;
 
-    function setTwapParams(bool enabled, uint40 interval, uint256 deviationThreshold) external;
+    function setTwapParams(
+        bool enabled,
+        uint40 interval,
+        uint256 deviationThreshold
+    ) external;
 
     function checkPriceInDeviation() external view returns (bool);
 
@@ -37,13 +47,16 @@ interface IOracleHelper {
 
     function getDataFeedY() external view returns (IAggregatorV3);
 
-     function getValueInY(
+    function getValueInY(
         uint256 price,
         uint256 amountX,
         uint256 amountY
     ) external view returns (uint256 valueInY);
 
-    function getOracleParameters() external view returns (OracleParameters memory);
+    function getOracleParameters()
+        external
+        view
+        returns (OracleParameters memory);
 
     function getSequencerUptimeFeed() external view returns (IAggregatorV3);
 }

@@ -11,11 +11,20 @@ interface IHooksRewarder {
 
     function isStopped() external view returns (bool);
 
-    function getRewardedRange() external view returns (uint256 binStart, uint256 binEnd);
+    function getRewardedRange()
+        external
+        view
+        returns (uint256 binStart, uint256 binEnd);
 
-    function getPendingRewards(address user, uint256[] calldata ids) external view returns (uint256 pendingRewards);
+    function getPendingRewards(
+        address user,
+        uint256[] calldata ids
+    ) external view returns (uint256 pendingRewards);
 
     function claim(address user, uint256[] calldata ids) external;
 
-    function getExtraHooksParameters() external view returns (bytes32 extraHooksParameters);
+    function getExtraHooksParameters()
+        external
+        view
+        returns (bytes32 extraHooksParameters);
 }

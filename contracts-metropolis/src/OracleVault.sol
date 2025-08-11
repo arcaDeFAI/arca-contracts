@@ -8,7 +8,6 @@ import {BaseVault} from "./BaseVault.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
-import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
 import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 
 /**
@@ -49,12 +48,15 @@ contract OracleVault is BaseVault, IOracleVault {
         return _getOracleHelper().getPrice();
     }
 
-
     /**
      * @dev Returns the oracle parameters.
      * @return parameters The oracle parameters.
      */
-    function getOracleParameters() external view returns (IOracleHelper.OracleParameters memory) {
+    function getOracleParameters()
+        external
+        view
+        returns (IOracleHelper.OracleParameters memory)
+    {
         return _getOracleHelper().getOracleParameters();
     }
 
@@ -70,10 +72,15 @@ contract OracleVault is BaseVault, IOracleVault {
      * @dev Returns the type of the vault.
      * @return vaultType The type of the vault
      */
-    function getVaultType() public pure virtual override returns (IVaultFactory.VaultType) {
+    function getVaultType()
+        public
+        pure
+        virtual
+        override
+        returns (IVaultFactory.VaultType)
+    {
         return IVaultFactory.VaultType.Oracle;
     }
-
 
     /**
      * @dev Returns the shares that will be minted when depositing `expectedAmountX` of token X and
@@ -105,25 +112,31 @@ contract OracleVault is BaseVault, IOracleVault {
 
         uint256 totalShares = totalSupply();
 
-        uint256 valueInY = _getOracleHelper().getValueInY(price, amountX, amountY);
+        uint256 valueInY = _getOracleHelper().getValueInY(
+            price,
+            amountX,
+            amountY
+        );
 
         if (totalShares == 0) {
             return (valueInY * _SHARES_PRECISION, amountX, amountY);
         }
 
         (uint256 totalX, uint256 totalY) = _getBalances(strategy);
-        uint256 totalValueInY = _getOracleHelper().getValueInY(price, totalX, totalY);
+        uint256 totalValueInY = _getOracleHelper().getValueInY(
+            price,
+            totalX,
+            totalY
+        );
 
         shares = valueInY.mulDivRoundDown(totalShares, totalValueInY);
 
         return (shares, amountX, amountY);
     }
 
-
     function checkPriceInDeviation() external view returns (bool) {
         return _getOracleHelper().checkPriceInDeviation();
     }
-
 
     function _updatePool() internal virtual override {}
 
@@ -133,5 +146,4 @@ contract OracleVault is BaseVault, IOracleVault {
     ) internal virtual override {}
 
     function _beforeEmergencyMode() internal virtual override {}
-
 }

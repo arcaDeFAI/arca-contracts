@@ -5,10 +5,8 @@ pragma solidity 0.8.26;
 import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 
 import {OracleVault} from "./OracleVault.sol";
-import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
-import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
 import {IERC20} from "./interfaces/IHooksRewarder.sol";
 import {
     IMinimalVault
@@ -188,7 +186,7 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
                 address[] memory tokens
             ) {
                 // Notify vault about all tokens
-                for (uint i = 0; i < tokens.length; i++) {
+                for (uint256 i = 0; i < tokens.length; i++) {
                     if (tokens[i] != address(0)) {
                         _notifyRewardToken(IERC20(tokens[i]));
                     }

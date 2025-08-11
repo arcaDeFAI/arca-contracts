@@ -11,7 +11,6 @@ import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
  * @notice Interface used to interact with Liquidity Book Oracle Vaults
  */
 interface IOracleRewardVault is IOracleVault {
-
     struct User {
         uint256 phantomAmount;
         mapping(address => uint256) rewardDebtPerToken;
@@ -38,16 +37,21 @@ interface IOracleRewardVault is IOracleVault {
         uint256 rewardDebt;
     }
 
-    event PoolUpdated(uint256 indexed timestamp, uint256 indexed accRewardShare);
-    event Harvested(address indexed user, address indexed token, uint256 amount);
+    event PoolUpdated(
+        uint256 indexed timestamp,
+        uint256 indexed accRewardShare
+    );
+    event Harvested(
+        address indexed user,
+        address indexed token,
+        uint256 amount
+    );
 
     function getUserInfo(address user) external view returns (UserInfo memory);
 
-    function getPendingRewards(address _user)
-        external
-        view
-        returns (UserReward[] memory rewards);
-
+    function getPendingRewards(
+        address _user
+    ) external view returns (UserReward[] memory rewards);
 
     function claim() external;
 

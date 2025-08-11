@@ -2,7 +2,9 @@
 
 pragma solidity 0.8.26;
 
-import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {
+    IERC20Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
 import {IMetropolisStrategy} from "./IMetropolisStrategy.sol";
@@ -50,11 +52,26 @@ interface IBaseVault is IMinimalVault, IERC20Upgradeable {
         uint128 totalAmountY;
     }
 
-    event Deposited(address indexed user, uint256 amountX, uint256 amountY, uint256 shares);
+    event Deposited(
+        address indexed user,
+        uint256 amountX,
+        uint256 amountY,
+        uint256 shares
+    );
 
-    event WithdrawalQueued(address indexed sender, address indexed user, uint256 indexed round, uint256 shares);
+    event WithdrawalQueued(
+        address indexed sender,
+        address indexed user,
+        uint256 indexed round,
+        uint256 shares
+    );
 
-    event WithdrawalCancelled(address indexed sender, address indexed recipient, uint256 indexed round, uint256 shares);
+    event WithdrawalCancelled(
+        address indexed sender,
+        address indexed recipient,
+        uint256 indexed round,
+        uint256 shares
+    );
 
     event WithdrawalRedeemed(
         address indexed sender,
@@ -65,7 +82,12 @@ interface IBaseVault is IMinimalVault, IERC20Upgradeable {
         uint256 amountY
     );
 
-    event WithdrawalExecuted(uint256 indexed round, uint256 totalQueuedQhares, uint256 amountX, uint256 amountY);
+    event WithdrawalExecuted(
+        uint256 indexed round,
+        uint256 totalQueuedQhares,
+        uint256 amountX,
+        uint256 amountY
+    );
 
     event StrategySet(IMetropolisStrategy strategy);
 
@@ -77,7 +99,12 @@ interface IBaseVault is IMinimalVault, IERC20Upgradeable {
 
     event EmergencyMode();
 
-    event EmergencyWithdrawal(address indexed sender, uint256 shares, uint256 amountX, uint256 amountY);
+    event EmergencyWithdrawal(
+        address indexed sender,
+        uint256 shares,
+        uint256 amountX,
+        uint256 amountY
+    );
 
     event ShutdownSubmitted();
 
@@ -97,52 +124,84 @@ interface IBaseVault is IMinimalVault, IERC20Upgradeable {
 
     function getRange() external view returns (int32 low, int32 upper);
 
-    function getOperators() external view returns (address defaultOperator, address operator);
+    function getOperators()
+        external
+        view
+        returns (address defaultOperator, address operator);
 
-    function getBalances() external view returns (uint256 amountX, uint256 amountY);
+    function getBalances()
+        external
+        view
+        returns (uint256 amountX, uint256 amountY);
 
-    function previewShares(uint256 amountX, uint256 amountY)
+    function previewShares(
+        uint256 amountX,
+        uint256 amountY
+    )
         external
         view
         returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
 
-    function previewAmounts(uint256 shares) external view returns (uint256 amountX, uint256 amountY);
+    function previewAmounts(
+        uint256 shares
+    ) external view returns (uint256 amountX, uint256 amountY);
 
     function isDepositsPaused() external view returns (bool);
 
     function getCurrentRound() external view returns (uint256 round);
 
-    function getQueuedWithdrawal(uint256 round, address user) external view returns (uint256 shares);
+    function getQueuedWithdrawal(
+        uint256 round,
+        address user
+    ) external view returns (uint256 shares);
 
-    function getTotalQueuedWithdrawal(uint256 round) external view returns (uint256 totalQueuedShares);
+    function getTotalQueuedWithdrawal(
+        uint256 round
+    ) external view returns (uint256 totalQueuedShares);
 
-    function getCurrentTotalQueuedWithdrawal() external view returns (uint256 totalQueuedShares);
-
-    function getRedeemableAmounts(uint256 round, address user)
+    function getCurrentTotalQueuedWithdrawal()
         external
         view
-        returns (uint256 amountX, uint256 amountY);
+        returns (uint256 totalQueuedShares);
 
-    function deposit(uint256 amountX, uint256 amountY, uint256 minShares)
-        external
-        returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
+    function getRedeemableAmounts(
+        uint256 round,
+        address user
+    ) external view returns (uint256 amountX, uint256 amountY);
 
-    function depositNative(uint256 amountX, uint256 amountY, uint256 minShares)
+    function deposit(
+        uint256 amountX,
+        uint256 amountY,
+        uint256 minShares
+    ) external returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
+
+    function depositNative(
+        uint256 amountX,
+        uint256 amountY,
+        uint256 minShares
+    )
         external
         payable
         returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
 
-    function queueWithdrawal(uint256 shares, address recipient) external returns (uint256 round);
+    function queueWithdrawal(
+        uint256 shares,
+        address recipient
+    ) external returns (uint256 round);
 
-    function cancelQueuedWithdrawal(uint256 shares) external returns (uint256 round);
+    function cancelQueuedWithdrawal(
+        uint256 shares
+    ) external returns (uint256 round);
 
-    function redeemQueuedWithdrawal(uint256 round, address recipient)
-        external
-        returns (uint256 amountX, uint256 amountY);
+    function redeemQueuedWithdrawal(
+        uint256 round,
+        address recipient
+    ) external returns (uint256 amountX, uint256 amountY);
 
-    function redeemQueuedWithdrawalNative(uint256 round, address recipient)
-        external
-        returns (uint256 amountX, uint256 amountY);
+    function redeemQueuedWithdrawalNative(
+        uint256 round,
+        address recipient
+    ) external returns (uint256 amountX, uint256 amountY);
 
     function emergencyWithdraw() external;
 

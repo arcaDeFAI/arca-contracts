@@ -27,9 +27,16 @@ contract ShadowPriceHelperWrapper {
         uint8 decimalsX,
         uint8 decimalsY
     ) external view returns (uint256) {
-        return ShadowPriceHelper.getOraclePrice(pool, isTokenX, twapInterval, decimalsX, decimalsY);
+        return
+            ShadowPriceHelper.getOraclePrice(
+                pool,
+                isTokenX,
+                twapInterval,
+                decimalsX,
+                decimalsY
+            );
     }
-    
+
     /**
      * @notice Get current spot price from pool
      * @param pool The Ramses V3 pool to get price from
@@ -44,9 +51,15 @@ contract ShadowPriceHelperWrapper {
         uint8 decimalsX,
         uint8 decimalsY
     ) external view returns (uint256) {
-        return ShadowPriceHelper.getPoolSpotPrice(pool, isTokenX, decimalsX, decimalsY);
+        return
+            ShadowPriceHelper.getPoolSpotPrice(
+                pool,
+                isTokenX,
+                decimalsX,
+                decimalsY
+            );
     }
-    
+
     /**
      * @notice Get TWAP price from pool
      * @param pool The Ramses V3 pool to get price from
@@ -63,6 +76,13 @@ contract ShadowPriceHelperWrapper {
         uint8 decimalsX,
         uint8 decimalsY
     ) external view returns (uint256) {
-        return ShadowPriceHelper.getPoolTWAPPrice(pool, isTokenX, twapInterval, decimalsX, decimalsY);
+        return
+            ShadowPriceHelper.getPoolTWAPPrice(
+                pool,
+                isTokenX,
+                twapInterval,
+                decimalsX,
+                decimalsY
+            );
     }
 }

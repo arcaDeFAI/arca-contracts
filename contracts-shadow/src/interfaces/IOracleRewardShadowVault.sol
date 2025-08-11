@@ -2,12 +2,22 @@
 
 pragma solidity 0.8.26;
 
-import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {
+    IERC20Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IRamsesV3Pool} from "../../CL/core/interfaces/IRamsesV3Pool.sol";
-import {IMinimalVault} from "../../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
-import {IStrategyCommon} from "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
-import {IVaultFactory} from "../../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
-import {IERC20} from "../../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
+import {
+    IMinimalVault
+} from "../../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
+import {
+    IStrategyCommon
+} from "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
+import {
+    IVaultFactory
+} from "../../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
+import {
+    IERC20
+} from "../../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
 
 /**
  * @title Oracle Reward Shadow Vault Interface
@@ -42,17 +52,53 @@ interface IOracleRewardShadowVault is IMinimalVault, IERC20Upgradeable {
     error ShadowVault__WithdrawLocked();
 
     // Events
-    event Deposited(address indexed sender, uint256 amountX, uint256 amountY, uint256 shares);
-    event WithdrawalQueued(address indexed sender, address indexed recipient, uint256 round, uint256 shares);
-    event WithdrawalCancelled(address indexed sender, address indexed recipient, uint256 round, uint256 shares);
-    event WithdrawalRedeemed(address indexed sender, address indexed recipient, uint256 round, uint256 shares, uint256 amountX, uint256 amountY);
-    event WithdrawalExecuted(uint256 round, uint256 shares, uint256 amountX, uint256 amountY);
-    event EmergencyWithdrawal(address indexed sender, uint256 shares, uint256 amountX, uint256 amountY);
+    event Deposited(
+        address indexed sender,
+        uint256 amountX,
+        uint256 amountY,
+        uint256 shares
+    );
+    event WithdrawalQueued(
+        address indexed sender,
+        address indexed recipient,
+        uint256 round,
+        uint256 shares
+    );
+    event WithdrawalCancelled(
+        address indexed sender,
+        address indexed recipient,
+        uint256 round,
+        uint256 shares
+    );
+    event WithdrawalRedeemed(
+        address indexed sender,
+        address indexed recipient,
+        uint256 round,
+        uint256 shares,
+        uint256 amountX,
+        uint256 amountY
+    );
+    event WithdrawalExecuted(
+        uint256 round,
+        uint256 shares,
+        uint256 amountX,
+        uint256 amountY
+    );
+    event EmergencyWithdrawal(
+        address indexed sender,
+        uint256 shares,
+        uint256 amountX,
+        uint256 amountY
+    );
     event StrategySet(address indexed strategy);
     event DepositsPaused();
     event DepositsResumed();
     event EmergencyMode();
-    event Recovered(address indexed token, address indexed recipient, uint256 amount);
+    event Recovered(
+        address indexed token,
+        address indexed recipient,
+        uint256 amount
+    );
     event ShutdownSubmitted();
     event ShutdownCancelled();
     event PoolUpdated(uint256 timestamp, uint256 accRewardsPerShare);
@@ -110,37 +156,88 @@ interface IOracleRewardShadowVault is IMinimalVault, IERC20Upgradeable {
     function getTwapInterval() external view returns (uint32);
     function setTwapInterval(uint32 twapInterval) external;
     function getAumAnnualFee() external view returns (uint256);
-    function getOperators() external view returns (address defaultOperator, address operator);
-    function getBalances() external view returns (uint256 amountX, uint256 amountY);
+    function getOperators()
+        external
+        view
+        returns (address defaultOperator, address operator);
+    function getBalances()
+        external
+        view
+        returns (uint256 amountX, uint256 amountY);
     function isDepositsPaused() external view returns (bool paused);
     function isFlaggedForShutdown() external view returns (bool);
 
     // Queue management view functions
     function getCurrentRound() external view returns (uint256 round);
-    function getQueuedWithdrawal(uint256 round, address user) external view returns (uint256 shares);
-    function getTotalQueuedWithdrawal(uint256 round) external view returns (uint256 totalQueuedShares);
-    function getCurrentTotalQueuedWithdrawal() external view returns (uint256 totalQueuedShares);
-    function getRedeemableAmounts(uint256 round, address user) external view returns (uint256 amountX, uint256 amountY);
+    function getQueuedWithdrawal(
+        uint256 round,
+        address user
+    ) external view returns (uint256 shares);
+    function getTotalQueuedWithdrawal(
+        uint256 round
+    ) external view returns (uint256 totalQueuedShares);
+    function getCurrentTotalQueuedWithdrawal()
+        external
+        view
+        returns (uint256 totalQueuedShares);
+    function getRedeemableAmounts(
+        uint256 round,
+        address user
+    ) external view returns (uint256 amountX, uint256 amountY);
 
     // Preview functions
-    function previewShares(uint256 amountX, uint256 amountY) external view returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
-    function previewAmounts(uint256 shares) external view returns (uint256 amountX, uint256 amountY);
+    function previewShares(
+        uint256 amountX,
+        uint256 amountY
+    )
+        external
+        view
+        returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
+    function previewAmounts(
+        uint256 shares
+    ) external view returns (uint256 amountX, uint256 amountY);
 
     // Deposit functions
-    function deposit(uint256 amountX, uint256 amountY, uint256 minShares) external returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
-    function depositNative(uint256 amountX, uint256 amountY, uint256 minShares) external payable returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
+    function deposit(
+        uint256 amountX,
+        uint256 amountY,
+        uint256 minShares
+    ) external returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
+    function depositNative(
+        uint256 amountX,
+        uint256 amountY,
+        uint256 minShares
+    )
+        external
+        payable
+        returns (uint256 shares, uint256 effectiveX, uint256 effectiveY);
 
     // Withdrawal functions
-    function queueWithdrawal(uint256 shares, address recipient) external returns (uint256 round);
-    function cancelQueuedWithdrawal(uint256 shares) external returns (uint256 round);
-    function redeemQueuedWithdrawal(uint256 round, address recipient) external returns (uint256 amountX, uint256 amountY);
-    function redeemQueuedWithdrawalNative(uint256 round, address recipient) external returns (uint256 amountX, uint256 amountY);
+    function queueWithdrawal(
+        uint256 shares,
+        address recipient
+    ) external returns (uint256 round);
+    function cancelQueuedWithdrawal(
+        uint256 shares
+    ) external returns (uint256 round);
+    function redeemQueuedWithdrawal(
+        uint256 round,
+        address recipient
+    ) external returns (uint256 amountX, uint256 amountY);
+    function redeemQueuedWithdrawalNative(
+        uint256 round,
+        address recipient
+    ) external returns (uint256 amountX, uint256 amountY);
     function emergencyWithdraw() external;
     function executeQueuedWithdrawals() external;
 
     // Reward functions
-    function getUserInfo(address user) external view returns (UserInfo memory userInfo);
-    function getPendingRewards(address user) external view returns (UserReward[] memory rewards);
+    function getUserInfo(
+        address user
+    ) external view returns (UserInfo memory userInfo);
+    function getPendingRewards(
+        address user
+    ) external view returns (UserReward[] memory rewards);
     function notifyRewardToken(IERC20 token) external;
     function updateAccRewardsPerShare() external;
 
@@ -151,5 +248,9 @@ interface IOracleRewardShadowVault is IMinimalVault, IERC20Upgradeable {
     function submitShutdown() external;
     function cancelShutdown() external;
     function setEmergencyMode() external;
-    function recoverERC20(IERC20Upgradeable token, address recipient, uint256 amount) external;
+    function recoverERC20(
+        IERC20Upgradeable token,
+        address recipient,
+        uint256 amount
+    ) external;
 }

@@ -419,7 +419,9 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         return _oracleHelperFactory;
     }
 
-    function setOracleHelperFactory(address oracleHelperFactory) external onlyOwner {
+    function setOracleHelperFactory(
+        address oracleHelperFactory
+    ) external onlyOwner {
         _oracleHelperFactory = oracleHelperFactory;
     }
 
@@ -860,14 +862,15 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         uint8 decimalsY = IERC20MetadataUpgradeable(tokenY).decimals();
 
         // Create the helper first
-        IOracleHelper helper = IOracleHelperFactory(_oracleHelperFactory).createOracleHelper(
-            address(this),
-            lbPair,
-            dataFeedX,
-            dataFeedY,
-            decimalsX,
-            decimalsY
-        );
+        IOracleHelper helper = IOracleHelperFactory(_oracleHelperFactory)
+            .createOracleHelper(
+                address(this),
+                lbPair,
+                dataFeedX,
+                dataFeedY,
+                decimalsX,
+                decimalsY
+            );
 
         bytes memory vaultImmutableData = abi.encodePacked(
             lbPair,
