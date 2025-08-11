@@ -12,14 +12,21 @@ import { parseUnits } from "viem";
 import { useToast } from "@/hooks/use-toast";
 import {
   VAULT_ABI,
+  SHADOW_VAULT_ABI,
   CONTRACT_ADDRESSES,
   TOKEN_ADDRESSES,
   ERC20_ABI,
 } from "@/lib/contracts";
 import { useVaultTvl } from "@/hooks/use-vault-tvl";
 import { useVaultTokens } from "@/hooks/use-vault-tokens";
+import { useShadowVaultTvl } from "@/hooks/use-shadow-vault-tvl";
+import { useShadowVaultTokens } from "@/hooks/use-shadow-vault-tokens";
 import { useTokenBalance } from "@/hooks/use-token-balance";
 import { useLbpTvl } from "@/hooks/use-lbp-tvl";
+import { useShadowLbpTvl } from "@/hooks/use-shadow-lbp-tvl";
+import { useFightPoolLiquidity } from "@/hooks/use-fight-pool-liquidity";
+import { useUserPositions } from "@/hooks/use-user-positions";
+import { useDepositHistory } from "@/hooks/use-deposit-history";
 
 interface VaultCardProps {
   vault: Vault;
@@ -46,21 +53,32 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
   const { data: approvalHash, writeContract: writeApprove } =
     useWriteContract();
 
-  // Fetch real-time vault TVL data
+  // Detect vault type (Shadow vs Metropolis)
+  const isShadowVault = vault.platform === "Shadow" || vault.name.includes("-CL");
+
+  // Fetch real-time vault TVL data (use appropriate hook based on vault type)
+  const metropolisTvlData = useVaultTvl(isShadowVault ? "" : vault.name);
+  const shadowTvlData = useShadowVaultTvl(isShadowVault ? vault.name : "");
+
   const {
     tvl: farmTvl,
     sonicPrice,
     balances,
     isLoading: tvlLoading,
-  } = useVaultTvl(vault.name);
+  } = isShadowVault ? shadowTvlData : metropolisTvlData;
 
-  // Fetch actual contract addresses from strategy
+  // Pool TVL data fetching removed
+
+  // Fetch actual contract addresses from strategy (use appropriate hook)
+  const metropolisTokensData = useVaultTokens(isShadowVault ? "" : vault.name);
+  const shadowTokensData = useShadowVaultTokens(isShadowVault ? vault.name : "");
+
   const {
     vaultAddress,
     tokenXAddress,
     tokenYAddress,
     isLoading: addressesLoading,
-  } = useVaultTokens(vault.name);
+  } = isShadowVault ? shadowTokensData : metropolisTokensData;
 
   const { data: scusdAllowance, refetch: refetchScusdAllowance } =
     useReadContract({
@@ -92,19 +110,22 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
   // Token allowance hooks for approval checking
   //const tokenYAllowance = usdcAllowance;
 
+  // Select appropriate vault ABI based on vault type
+  const vaultAbi = isShadowVault ? SHADOW_VAULT_ABI : VAULT_ABI;
+
   // Fetch user's vault shares balance
   const { data: userVaultShares, refetch: refetchVaultShares } =
     useReadContract({
       address: vaultAddress as `0x${string}`,
-      abi: VAULT_ABI,
+      abi: vaultAbi,
       functionName: "balanceOf",
       args: [address as `0x${string}`],
       enabled: !!address && !!vaultAddress,
     });
 
   // Debug logging for vault card balanceOf
-  if (vault.name === "S/USDC" && userVaultShares !== undefined) {
-    console.log(`VaultCard balanceOf for ${vault.name}:`, {
+  if ((vault.name === "S/USDC" || vault.name === "S/USDC-CL") && userVaultShares !== undefined) {
+    console.log(`VaultCard balanceOf for ${vault.name} (${isShadowVault ? 'Shadow' : 'Metropolis'}):`, {
       vaultAddress,
       userAddress: address,
       userVaultShares: userVaultShares.toString(),
@@ -112,30 +133,34 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     });
   }
 
-  // Fetch real pool TVL from LBP contract
-  const {
-    tvl: poolTvl,
-    reserves,
-    price: lbpPrice,
-    isLoading: lbpLoading,
-  } = useLbpTvl(vault.name);
+
+
+  // Fight Pool data for Shadow vaults
+  const fightPoolData = useFightPoolLiquidity();
+
+  const handleCardClick = () => {
+    setIsExpanded(!isExpanded);
+    if (onClick) onClick();
+  };
 
   // Fetch user's token balances using addresses from strategy contract
   const tokenXBalance = useTokenBalance(tokenXAddress);
   const tokenYBalance = useTokenBalance(tokenYAddress);
 
   // Debug log to check token addresses and balances
-  console.log("Token addresses and balances:", {
-    tokenXAddress,
-    tokenYAddress,
-    tokenXBalance: tokenXBalance.balance,
-    tokenYBalance: tokenYBalance.balance,
-    tokenXLoading: tokenXBalance.isLoading,
-    tokenYLoading: tokenYBalance.isLoading,
-    tokenXDecimals: tokenXBalance.decimals,
-    tokenYDecimals: tokenYBalance.decimals,
-    addressesLoading,
-  });
+  if (vault.name === "S/USDC" || vault.name === "S/USDC-CL") {
+    console.log(`Token addresses and balances for ${vault.name} (${isShadowVault ? 'Shadow' : 'Metropolis'}):`, {
+      tokenXAddress,
+      tokenYAddress,
+      tokenXBalance: tokenXBalance.balance,
+      tokenYBalance: tokenYBalance.balance,
+      tokenXLoading: tokenXBalance.isLoading,
+      tokenYLoading: tokenYBalance.isLoading,
+      tokenXDecimals: tokenXBalance.decimals,
+      tokenYDecimals: tokenYBalance.decimals,
+      addressesLoading,
+    });
+  }
 
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
     useWaitForTransactionReceipt({ hash });
@@ -188,12 +213,12 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
   // Watch for Deposit events to update position status
   useWatchContractEvent({
     address: VAULT_CONTRACT_ADDRESS as `0x${string}`,
-    abi: VAULT_ABI,
+    abi: vaultAbi,
     eventName: "Deposit",
     onLogs: (logs) => {
       // Check if any log is for the current user
       logs.forEach((log) => {
-        if (log.args.from?.toLowerCase() === address?.toLowerCase()) {
+        if (log.args.user?.toLowerCase() === address?.toLowerCase() || log.args.from?.toLowerCase() === address?.toLowerCase()) {
           if (log.args.shares && log.args.shares > 0) {
             setPositionStatus("Active");
           }
@@ -349,11 +374,11 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
       // Call the vault's depositNative function for S token deposits
       await writeContract({
         address: VAULT_CONTRACT_ADDRESS as `0x${string}`,
-        abi: VAULT_ABI,
+        abi: vaultAbi,
         functionName: "depositNative",
         args: [
           amountX, // Amount of S token (passed as native value)
-          amountY, // Amount of scUSD to deposit
+          amountY, // Amount of scUSD/USDC to deposit
           0n, // Minimum shares
         ],
         value: amountX, // Send native S token as value
@@ -399,7 +424,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
       await writeContract({
         address: VAULT_CONTRACT_ADDRESS as `0x${string}`,
-        abi: VAULT_ABI,
+        abi: vaultAbi,
         functionName: "queueWithdrawal",
         args: [
           sharesToWithdraw, // Shares to withdraw (multiplied by 10^12)
@@ -457,11 +482,6 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     }).format(amount);
   };
 
-  const handleCardClick = () => {
-    setIsExpanded(!isExpanded);
-    if (onClick) onClick();
-  };
-
   return (
     <>
       {/* Desktop Layout */}
@@ -469,7 +489,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
         className={`hidden sm:block mx-4 mb-4 ${isExpanded ? "vault-card-glow" : "vault-card"}`}
       >
         <div
-          className={`grid grid-cols-4 gap-6 px-6 py-6 bg-arca-surface border border-arca-border transition-all duration-300 cursor-pointer ${
+          className={`grid grid-cols-3 gap-6 px-6 py-6 bg-arca-surface border border-arca-border transition-all duration-300 cursor-pointer ${
             isExpanded ? "rounded-t-xl" : "rounded-xl"
           }`}
           onClick={handleCardClick}
@@ -483,13 +503,6 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                 {vault.platform}
               </div>
             </div>
-          </div>
-
-          {/* Pool TVL */}
-          <div className="flex items-center">
-            <span className="text-white font-medium">
-              {formatCurrency(poolTvl || vault.poolTvl)}
-            </span>
           </div>
 
           {/* Farm TVL */}
@@ -807,13 +820,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <div className="text-arca-secondary text-xs">POOL TVL</div>
-              <div className="text-white font-medium">
-                {formatCurrency(poolTvl || vault.poolTvl)}
-              </div>
-            </div>
+          <div className="grid grid-cols-1 gap-3 text-sm">
             <div>
               <div className="text-arca-secondary text-xs">FARM TVL</div>
               <div className="text-white font-medium">
@@ -825,13 +832,13 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
 
         {/* Mobile Expanded Details */}
         {isExpanded && (
-          <div className="bg-gradient-to-b from-arca-surface to-arca-bg border border-arca-border border-t-0 rounded-b-xl px-4 py-4 -mt-1 shadow-2xl">
+          <div className="bg-gradient-to-b from-arca-surface to-arca-bg border border-arca-border border-t-0 rounded-b-xl px-2 py-2 -mt-1 shadow-2xl">
             {/* Mobile Deposit/Withdraw */}
-            <div className="bg-arca-surface rounded-xl p-4 border border-gray-800">
-              <div className="flex justify-center items-center mb-4">
-                <div className="flex bg-black rounded-xl p-1 border border-gray-700 hover:border-gray-600 transition-all duration-200">
+            <div className="bg-arca-surface rounded-lg p-2 border border-gray-800">
+              <div className="flex justify-center items-center mb-2">
+                <div className="flex bg-black rounded-lg p-0.5 border border-gray-700 hover:border-gray-600 transition-all duration-200">
                   <button
-                    className={`px-4 py-2 rounded-lg font-medium text-xs transition-all duration-200 ${
+                    className={`px-2 py-1 rounded-md font-medium text-xs transition-all duration-200 ${
                       activeTab === "deposit"
                         ? "bg-arca-primary text-black"
                         : "text-gray-300 hover:text-white hover:bg-gray-700"
@@ -841,7 +848,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                     Deposit
                   </button>
                   <button
-                    className={`px-4 py-2 rounded-lg font-medium text-xs transition-all duration-200 ${
+                    className={`px-2 py-1 rounded-md font-medium text-xs transition-all duration-200 ${
                       activeTab === "withdraw"
                         ? "bg-arca-primary text-black"
                         : "text-gray-300 hover:text-white hover:bg-gray-700"
@@ -854,10 +861,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               </div>
 
               {/* Token Input Fields */}
-              <div className="space-y-4">
-                {activeTab === "deposit" ? (
+              <div className="space-y-2">                {activeTab === "deposit" ? (
                   vault.tokens.map((token, index) => (
-                    <div key={token} className="space-y-2 group">
+                    <div key={token} className="space-y-1 group">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-300 text-xs font-medium">
                           {token} to Add
@@ -867,22 +873,22 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                             {index === 0
                               ? tokenXBalance.isLoading
                                 ? "Loading..."
-                                : Number(tokenXBalance.balance).toFixed(3)
+                                : Number(tokenXBalance.balance).toFixed(2)
                               : tokenYBalance.isLoading
                                 ? "Loading..."
-                                : Number(tokenYBalance.balance).toFixed(3)}
+                                : Number(tokenYBalance.balance).toFixed(2)}
                           </span>
                           {token === "S" && sonicPrice && (
                             <div className="text-emerald-400 text-xs font-medium">
-                              ${sonicPrice.toFixed(3)}
+                              ${sonicPrice.toFixed(2)}
                             </div>
                           )}
                         </div>
                       </div>
-                      <div className="relative bg-black rounded-lg border border-gray-700 hover:border-gray-600 transition-all duration-200">
-                        <div className="flex items-center p-3">
+                      <div className="relative bg-black rounded-md border border-gray-700 hover:border-gray-600 transition-all duration-200">
+                        <div className="flex items-center p-2">
                           <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${
+                            className={`w-6 h-6 rounded-full flex items-center justify-center shadow-lg ${
                               token === "S"
                                 ? "bg-gradient-to-r from-gray-600 to-gray-700"
                                 : "bg-gradient-to-r from-green-500 to-emerald-500"
@@ -899,17 +905,17 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                             onChange={(e) =>
                               handleInputChange(token, e.target.value)
                             }
-                            className="flex-1 bg-transparent text-white text-lg font-semibold border-none outline-none ml-3 placeholder-gray-500"
+                            className="flex-1 bg-transparent text-white text-sm font-semibold border-none outline-none ml-2 placeholder-gray-500"
                           />
                           <div className="flex space-x-1">
                             <button
-                              className="px-2 py-1 bg-green-600 hover:bg-green-500 text-black text-xs font-medium rounded transition-all duration-200"
+                              className="px-1.5 py-0.5 bg-green-600 hover:bg-green-500 text-black text-xs font-medium rounded transition-all duration-200"
                               onClick={() => handlePercentageClick(token, 50)}
                             >
                               50%
                             </button>
                             <button
-                              className="px-2 py-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-black text-xs font-medium rounded transition-all duration-200"
+                              className="px-1.5 py-0.5 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-black text-xs font-medium rounded transition-all duration-200"
                               onClick={() => handlePercentageClick(token, 100)}
                             >
                               MAX
@@ -920,7 +926,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                     </div>
                   ))
                 ) : (
-                  <div className="space-y-2 group">
+                  <div className="space-y-1 group">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-300 text-xs font-medium">
                         Shares to Withdraw
@@ -928,17 +934,17 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                       <div className="text-right">
                         <span className="text-gray-400 text-xs">
                           {userVaultShares
-                            ? (Number(userVaultShares) / 1e12).toFixed(8)
-                            : "0.00000000"}
+                            ? (Number(userVaultShares) / 1e12).toFixed(6)
+                            : "0.000000"}
                         </span>
                         <div className="text-red-400 text-xs font-medium">
                           LP Shares
                         </div>
                       </div>
                     </div>
-                    <div className="relative bg-black rounded-lg border border-gray-700 hover:border-gray-600 transition-all duration-200">
-                      <div className="flex items-center p-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-gray-600 to-gray-700 flex items-center justify-center shadow-lg">
+                    <div className="relative bg-black rounded-md border border-gray-700 hover:border-gray-600 transition-all duration-200">
+                      <div className="flex items-center p-2">
+                        <div className="w-6 h-6 rounded-full bg-gradient-to-r from-gray-600 to-gray-700 flex items-center justify-center shadow-lg">
                           <span className="text-white text-xs font-bold">
                             S
                           </span>
@@ -950,17 +956,17 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
                           onChange={(e) =>
                             handleInputChange("shares", e.target.value)
                           }
-                          className="flex-1 bg-transparent text-white text-lg font-semibold border-none outline-none ml-3 placeholder-gray-500"
+                          className="flex-1 bg-transparent text-white text-sm font-semibold border-none outline-none ml-2 placeholder-gray-500"
                         />
                         <div className="flex space-x-1">
                           <button
-                            className="px-2 py-1 bg-green-500 hover:bg-green-400 text-black text-xs font-medium rounded transition-all duration-200"
+                            className="px-1.5 py-0.5 bg-green-500 hover:bg-green-400 text-black text-xs font-medium rounded transition-all duration-200"
                             onClick={() => handlePercentageClick("shares", 50)}
                           >
                             50%
                           </button>
                           <button
-                            className="px-2 py-1 bg-green-500 hover:bg-green-400 text-black text-xs font-medium rounded transition-all duration-200"
+                            className="px-1.5 py-0.5 bg-green-500 hover:bg-green-400 text-black text-xs font-medium rounded transition-all duration-200"
                             onClick={() => handlePercentageClick("shares", 100)}
                           >
                             MAX
@@ -973,7 +979,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
               </div>
 
               {/* Action Buttons - Mobile */}
-              <div className="mt-6 space-y-3">
+              <div className="mt-3 space-y-2">
                 {activeTab === "deposit" ? (
                   (() => {
                     const token1Amount = depositAmounts[vault.tokens[1]] || "0";

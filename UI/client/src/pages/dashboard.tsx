@@ -2,6 +2,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { useLocation } from "wouter";
 import { useUserPositions } from "../hooks/use-user-positions";
 import TokenPairIcons from "../components/token-pair-icons";
+import PositionRangeIndicator from "../components/position-range-indicator";
 
 const chartData = [
   { name: "Jan", deposits: 1000, earnings: 50 },
@@ -171,6 +172,23 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Metro Position Range Card */}
+      <div className="bg-arca-surface rounded-xl border border-arca-border p-6 sm:p-8 mb-6">
+        <h2 className="text-lg font-semibold text-white mb-4">
+          Metro Position Status
+        </h2>
+        <div className="bg-arca-bg rounded-lg border border-arca-border p-4">
+          <div className="flex items-center space-x-3 mb-4">
+            <TokenPairIcons tokens={["S", "USDC"]} />
+            <div>
+              <div className="text-white font-medium">S/USDC Metropolis</div>
+              <div className="text-arca-secondary text-sm">Concentrated Liquidity Position</div>
+            </div>
+          </div>
+          <PositionRangeIndicator vaultName="S/USDC" />
+        </div>
+      </div>
+
       {/* Active Positions */}
       <div className="bg-arca-surface rounded-xl border border-arca-border p-6 sm:p-8">
         <h2 className="text-lg font-semibold text-white mb-6">
@@ -201,6 +219,12 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  {/* Show position range for Metro vaults */}
+                  {position.platform === "Metropolis" && position.vaultName.includes("S/USDC") && !position.vaultName.includes("CL") && (
+                    <div className="mb-2">
+                      <PositionRangeIndicator vaultName={position.vaultName} />
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-arca-secondary text-sm">
                       Deposited:
