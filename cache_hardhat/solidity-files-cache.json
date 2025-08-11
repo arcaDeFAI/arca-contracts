@@ -1,8 +1,53 @@
 {
   "_format": "hh-sol-cache-2",
   "files": {
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/ProxyImports.sol": {
+      "lastModificationDate": 1754763036560,
+      "contentHash": "579f277ca19b4038e03c3a699529961c",
+      "sourceName": "contracts-metropolis/src/ProxyImports.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol",
+        "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol",
+        "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": []
+    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/BaseVault.sol": {
-      "lastModificationDate": 1753586714132,
+      "lastModificationDate": 1754763036558,
       "contentHash": "fe970021079cf59bd13d063adccc9659",
       "sourceName": "contracts-metropolis/src/BaseVault.sol",
       "solcConfig": {
@@ -53,7 +98,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IBaseVault.sol": {
-      "lastModificationDate": 1753586714133,
+      "lastModificationDate": 1754763036561,
       "contentHash": "08ac3fc438faf6d36cdc54da765691a7",
       "sourceName": "contracts-metropolis/src/interfaces/IBaseVault.sol",
       "solcConfig": {
@@ -95,48 +140,8 @@
         "IBaseVault"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IMetropolisStrategy.sol": {
-      "lastModificationDate": 1753586714134,
-      "contentHash": "75c0b4eca94d88faa6de72c75b123d70",
-      "sourceName": "contracts-metropolis/src/interfaces/IMetropolisStrategy.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "joe-v2/interfaces/ILBPair.sol",
-        "./IStrategyCommon.sol"
-      ],
-      "versionPragmas": [
-        "0.8.26"
-      ],
-      "artifacts": [
-        "IMetropolisStrategy"
-      ]
-    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IStrategyCommon.sol": {
-      "lastModificationDate": 1754267216110,
+      "lastModificationDate": 1754763036563,
       "contentHash": "9f734e0fdb18d9669b81d43f4ebf0933",
       "sourceName": "contracts-metropolis/src/interfaces/IStrategyCommon.sol",
       "solcConfig": {
@@ -176,8 +181,48 @@
         "IStrategyCommon"
       ]
     },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IMetropolisStrategy.sol": {
+      "lastModificationDate": 1754763036561,
+      "contentHash": "75c0b4eca94d88faa6de72c75b123d70",
+      "sourceName": "contracts-metropolis/src/interfaces/IMetropolisStrategy.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "joe-v2/interfaces/ILBPair.sol",
+        "./IStrategyCommon.sol"
+      ],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "IMetropolisStrategy"
+      ]
+    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IVaultFactory.sol": {
-      "lastModificationDate": 1753586488919,
+      "lastModificationDate": 1754763036563,
       "contentHash": "3136e7985fb77bd7da3080300232cd07",
       "sourceName": "contracts-metropolis/src/interfaces/IVaultFactory.sol",
       "solcConfig": {
@@ -221,7 +266,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IMinimalVault.sol": {
-      "lastModificationDate": 1753586714134,
+      "lastModificationDate": 1754763036562,
       "contentHash": "ef9346ce25680caf2713b642dec40280",
       "sourceName": "contracts-metropolis/src/interfaces/IMinimalVault.sol",
       "solcConfig": {
@@ -262,7 +307,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IHooksRewarder.sol": {
-      "lastModificationDate": 1753586714133,
+      "lastModificationDate": 1754703233266,
       "contentHash": "747a1208e2cb0cf004e5a28283ad9ffd",
       "sourceName": "contracts-metropolis/src/interfaces/IHooksRewarder.sol",
       "solcConfig": {
@@ -301,7 +346,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IAggregatorV3.sol": {
-      "lastModificationDate": 1753586714133,
+      "lastModificationDate": 1754703233265,
       "contentHash": "4d1c7d048cec42a9460055eb92a5060b",
       "sourceName": "contracts-metropolis/src/interfaces/IAggregatorV3.sol",
       "solcConfig": {
@@ -338,7 +383,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IOracleHelper.sol": {
-      "lastModificationDate": 1753586788046,
+      "lastModificationDate": 1754763036562,
       "contentHash": "2b482c4d8704d9f62023d3c4f053f6f6",
       "sourceName": "contracts-metropolis/src/interfaces/IOracleHelper.sol",
       "solcConfig": {
@@ -377,7 +422,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/OracleVault.sol": {
-      "lastModificationDate": 1754169707778,
+      "lastModificationDate": 1754763036560,
       "contentHash": "c88398c36595b8df7aaa111594d8a11b",
       "sourceName": "contracts-metropolis/src/OracleVault.sol",
       "solcConfig": {
@@ -422,7 +467,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IOracleVault.sol": {
-      "lastModificationDate": 1753587656209,
+      "lastModificationDate": 1754763036562,
       "contentHash": "f9904740e241f7187329e4ff15145343",
       "sourceName": "contracts-metropolis/src/interfaces/IOracleVault.sol",
       "solcConfig": {
@@ -466,7 +511,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/MetropolisStrategy.sol": {
-      "lastModificationDate": 1754267216306,
+      "lastModificationDate": 1754763036559,
       "contentHash": "15dbf3c614802d7b7aec5e5527abbf8d",
       "sourceName": "contracts-metropolis/src/MetropolisStrategy.sol",
       "solcConfig": {
@@ -527,8 +572,45 @@
         "MetropolisStrategy"
       ]
     },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/libraries/Math.sol": {
+      "lastModificationDate": 1754703233267,
+      "contentHash": "a114b6e81bac4535240459a46cff0edd",
+      "sourceName": "contracts-metropolis/src/libraries/Math.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "Math"
+      ]
+    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IOneInchRouter.sol": {
-      "lastModificationDate": 1753586714134,
+      "lastModificationDate": 1754703233266,
       "contentHash": "4789d8affb2c18ea542000ab0ead97e4",
       "sourceName": "contracts-metropolis/src/interfaces/IOneInchRouter.sol",
       "solcConfig": {
@@ -566,45 +648,8 @@
         "IOneInchRouter"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/libraries/Math.sol": {
-      "lastModificationDate": 1753233981914,
-      "contentHash": "a114b6e81bac4535240459a46cff0edd",
-      "sourceName": "contracts-metropolis/src/libraries/Math.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "0.8.26"
-      ],
-      "artifacts": [
-        "Math"
-      ]
-    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/ILBPairHooks.sol": {
-      "lastModificationDate": 1753586714133,
+      "lastModificationDate": 1754703233266,
       "contentHash": "2f10faf7c3c96f4db277d071431c315f",
       "sourceName": "contracts-metropolis/src/interfaces/ILBPairHooks.sol",
       "solcConfig": {
@@ -640,45 +685,8 @@
         "ILBPairHooks"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/libraries/Constants.sol": {
-      "lastModificationDate": 1753586714136,
-      "contentHash": "d44fedc796edb0372f65a5bb3e29fd9f",
-      "sourceName": "contracts-metropolis/src/libraries/Constants.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "0.8.26"
-      ],
-      "artifacts": [
-        "Constants"
-      ]
-    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/libraries/TokenHelper.sol": {
-      "lastModificationDate": 1753586714136,
+      "lastModificationDate": 1754703233268,
       "contentHash": "e9f7d7b786af8f7db6ce0011a3488189",
       "sourceName": "contracts-metropolis/src/libraries/TokenHelper.sol",
       "solcConfig": {
@@ -716,8 +724,45 @@
         "TokenHelper"
       ]
     },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/libraries/Constants.sol": {
+      "lastModificationDate": 1754703233267,
+      "contentHash": "d44fedc796edb0372f65a5bb3e29fd9f",
+      "sourceName": "contracts-metropolis/src/libraries/Constants.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "Constants"
+      ]
+    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IOracleRewardVault.sol": {
-      "lastModificationDate": 1753586714134,
+      "lastModificationDate": 1754703233266,
       "contentHash": "7412ca7743e03f6a220bee6bb8845bc8",
       "sourceName": "contracts-metropolis/src/interfaces/IOracleRewardVault.sol",
       "solcConfig": {
@@ -757,7 +802,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/VaultFactory.sol": {
-      "lastModificationDate": 1753762779835,
+      "lastModificationDate": 1754763036561,
       "contentHash": "bd4a1816b08bffa0492a4d5230bf908e",
       "sourceName": "contracts-metropolis/src/VaultFactory.sol",
       "solcConfig": {
@@ -817,7 +862,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/interfaces/IShadowStrategy.sol": {
-      "lastModificationDate": 1754267216687,
+      "lastModificationDate": 1754763036565,
       "contentHash": "4cb11eeb19c0b8ef3eff209eb2ba44d7",
       "sourceName": "contracts-shadow/src/interfaces/IShadowStrategy.sol",
       "solcConfig": {
@@ -858,7 +903,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol": {
-      "lastModificationDate": 1753646410235,
+      "lastModificationDate": 1754763036564,
       "contentHash": "453f02982e05992eb4c8cfeeb3c92952",
       "sourceName": "contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol",
       "solcConfig": {
@@ -901,45 +946,8 @@
         "IOracleRewardShadowVault"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IPriceLens.sol": {
-      "lastModificationDate": 1753586714134,
-      "contentHash": "e8e14e81db1d074a39487f25253a16f1",
-      "sourceName": "contracts-metropolis/src/interfaces/IPriceLens.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "0.8.26"
-      ],
-      "artifacts": [
-        "IPriceLens"
-      ]
-    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IOracleHelperFactory.sol": {
-      "lastModificationDate": 1753588698345,
+      "lastModificationDate": 1754763036562,
       "contentHash": "5b18d8083d99da750f05803b84a04e96",
       "sourceName": "contracts-metropolis/src/interfaces/IOracleHelperFactory.sol",
       "solcConfig": {
@@ -979,8 +987,45 @@
         "IOracleHelperFactory"
       ]
     },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IPriceLens.sol": {
+      "lastModificationDate": 1754703233267,
+      "contentHash": "e8e14e81db1d074a39487f25253a16f1",
+      "sourceName": "contracts-metropolis/src/interfaces/IPriceLens.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "IPriceLens"
+      ]
+    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/utils/OracleLensAggregator.sol": {
-      "lastModificationDate": 1753586714136,
+      "lastModificationDate": 1754703233268,
       "contentHash": "111d4befc097e88a2670721b1a624ae1",
       "sourceName": "contracts-metropolis/src/utils/OracleLensAggregator.sol",
       "solcConfig": {
@@ -1021,7 +1066,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/interfaces/IMinimalVoter.sol": {
-      "lastModificationDate": 1753586714154,
+      "lastModificationDate": 1754703233287,
       "contentHash": "7c6e605944760ed6e720f35dd1d3e847",
       "sourceName": "contracts-shadow/src/interfaces/IMinimalVoter.sol",
       "solcConfig": {
@@ -1057,10 +1102,10 @@
         "IMinimalVoter"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/interfaces/IShadowVault.sol": {
-      "lastModificationDate": 1753586714154,
-      "contentHash": "73eb1d01cdd23dbad3de2197269cac7f",
-      "sourceName": "contracts-shadow/src/interfaces/IShadowVault.sol",
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/OracleRewardShadowVault.sol": {
+      "lastModificationDate": 1754763036563,
+      "contentHash": "8846d2207497944bc2e3b103ae728475",
+      "sourceName": "contracts-shadow/src/OracleRewardShadowVault.sol",
       "solcConfig": {
         "version": "0.8.26",
         "settings": {
@@ -1087,63 +1132,38 @@
         }
       },
       "imports": [
-        "../../../contracts-metropolis/src/interfaces/IBaseVault.sol",
-        "../../CL/core/interfaces/IRamsesV3Pool.sol"
-      ],
-      "versionPragmas": [
-        "0.8.26"
-      ],
-      "artifacts": [
-        "IShadowVault"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/OracleHelper.sol": {
-      "lastModificationDate": 1753588023022,
-      "contentHash": "12003edca85ba874fb1a2ddd719bc3c3",
-      "sourceName": "contracts-metropolis/src/OracleHelper.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./interfaces/IAggregatorV3.sol",
-        "joe-v2/interfaces/ILBPair.sol",
+        "joe-v2/libraries/Clone.sol",
+        "openzeppelin-upgradeable/token/ERC20/ERC20Upgradeable.sol",
+        "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol",
+        "../CL/core/interfaces/IRamsesV3Pool.sol",
         "joe-v2/libraries/math/Uint256x256Math.sol",
-        "./interfaces/IOracleVault.sol",
-        "./interfaces/IOracleHelper.sol"
+        "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol",
+        "openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol",
+        "joe-v2/libraries/math/SafeCast.sol",
+        "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol",
+        "./interfaces/IShadowStrategy.sol",
+        "../../contracts-metropolis/src/interfaces/IVaultFactory.sol",
+        "../../contracts-metropolis/src/interfaces/IWNative.sol",
+        "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol",
+        "../CL/core/libraries/TickMath.sol",
+        "../../contracts-metropolis/src/libraries/TokenHelper.sol",
+        "../../contracts-metropolis/src/libraries/Precision.sol",
+        "../../contracts-metropolis/src/libraries/Math.sol",
+        "./interfaces/IOracleRewardShadowVault.sol",
+        "../CL/core/libraries/FullMath.sol",
+        "./libraries/ShadowPriceHelper.sol"
       ],
       "versionPragmas": [
         "0.8.26"
       ],
       "artifacts": [
-        "OracleHelper"
+        "OracleRewardShadowVault"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/OracleHelperFactory.sol": {
-      "lastModificationDate": 1753589478295,
-      "contentHash": "dbd6060268e9e0946dc6860598950cf3",
-      "sourceName": "contracts-metropolis/src/OracleHelperFactory.sol",
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/libraries/Precision.sol": {
+      "lastModificationDate": 1754703233267,
+      "contentHash": "23355a709d057d8d9971a73d94b4924f",
+      "sourceName": "contracts-metropolis/src/libraries/Precision.sol",
       "solcConfig": {
         "version": "0.8.26",
         "settings": {
@@ -1170,21 +1190,58 @@
         }
       },
       "imports": [
-        "./interfaces/IOracleHelper.sol",
-        "./OracleHelper.sol",
-        "./interfaces/IAggregatorV3.sol",
-        "joe-v2/interfaces/ILBPair.sol",
-        "./interfaces/IOracleHelperFactory.sol"
+        "./Constants.sol"
       ],
       "versionPragmas": [
         "0.8.26"
       ],
       "artifacts": [
-        "OracleHelperFactory"
+        "Precision"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/libraries/ShadowPriceHelper.sol": {
+      "lastModificationDate": 1754763036565,
+      "contentHash": "7dc93181c03a50f2f9bfc547032a1228",
+      "sourceName": "contracts-shadow/src/libraries/ShadowPriceHelper.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../../CL/core/interfaces/IRamsesV3Pool.sol",
+        "../../CL/core/libraries/TickMath.sol",
+        "../../CL/core/libraries/FullMath.sol"
+      ],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "ShadowPriceHelper"
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/ShadowStrategy.sol": {
-      "lastModificationDate": 1754267216493,
+      "lastModificationDate": 1754763036564,
       "contentHash": "0ff475de50cfe3b18c0fec143133be68",
       "sourceName": "contracts-shadow/src/ShadowStrategy.sol",
       "solcConfig": {
@@ -1245,7 +1302,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/interfaces/IMinimalGauge.sol": {
-      "lastModificationDate": 1754267216681,
+      "lastModificationDate": 1754763036564,
       "contentHash": "874608d70449052f61089e3fce401ee3",
       "sourceName": "contracts-shadow/src/interfaces/IMinimalGauge.sol",
       "solcConfig": {
@@ -1282,7 +1339,7 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/OracleRewardVault.sol": {
-      "lastModificationDate": 1754267216358,
+      "lastModificationDate": 1754763036560,
       "contentHash": "2ee2e0d213395fe4d68958e1bcf028e7",
       "sourceName": "contracts-metropolis/src/OracleRewardVault.sol",
       "solcConfig": {
@@ -1330,47 +1387,8 @@
         "OracleRewardVault"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/libraries/Precision.sol": {
-      "lastModificationDate": 1753233981914,
-      "contentHash": "23355a709d057d8d9971a73d94b4924f",
-      "sourceName": "contracts-metropolis/src/libraries/Precision.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./Constants.sol"
-      ],
-      "versionPragmas": [
-        "0.8.26"
-      ],
-      "artifacts": [
-        "Precision"
-      ]
-    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/HybridPriceLens.sol": {
-      "lastModificationDate": 1753586714132,
+      "lastModificationDate": 1754763036559,
       "contentHash": "88395564fb087772e75940c9e2aa1fd3",
       "sourceName": "contracts-metropolis/src/HybridPriceLens.sol",
       "solcConfig": {
@@ -1413,6 +1431,172 @@
       ],
       "artifacts": [
         "HybridPriceLens"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/OracleHelperFactory.sol": {
+      "lastModificationDate": 1754763036560,
+      "contentHash": "dbd6060268e9e0946dc6860598950cf3",
+      "sourceName": "contracts-metropolis/src/OracleHelperFactory.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./interfaces/IOracleHelper.sol",
+        "./OracleHelper.sol",
+        "./interfaces/IAggregatorV3.sol",
+        "joe-v2/interfaces/ILBPair.sol",
+        "./interfaces/IOracleHelperFactory.sol"
+      ],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "OracleHelperFactory"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/OracleHelper.sol": {
+      "lastModificationDate": 1754763036560,
+      "contentHash": "12003edca85ba874fb1a2ddd719bc3c3",
+      "sourceName": "contracts-metropolis/src/OracleHelper.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./interfaces/IAggregatorV3.sol",
+        "joe-v2/interfaces/ILBPair.sol",
+        "joe-v2/libraries/math/Uint256x256Math.sol",
+        "./interfaces/IOracleVault.sol",
+        "./interfaces/IOracleHelper.sol"
+      ],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "OracleHelper"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/interfaces/IShadowVault.sol": {
+      "lastModificationDate": 1754703233287,
+      "contentHash": "73eb1d01cdd23dbad3de2197269cac7f",
+      "sourceName": "contracts-shadow/src/interfaces/IShadowVault.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../../../contracts-metropolis/src/interfaces/IBaseVault.sol",
+        "../../CL/core/interfaces/IRamsesV3Pool.sol"
+      ],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "IShadowVault"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/ShadowPriceHelperWrapper.sol": {
+      "lastModificationDate": 1754763036564,
+      "contentHash": "350d2d5da854a123f791cca3a8e083dc",
+      "sourceName": "contracts-shadow/src/ShadowPriceHelperWrapper.sol",
+      "solcConfig": {
+        "version": "0.8.26",
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../CL/core/interfaces/IRamsesV3Pool.sol",
+        "./libraries/ShadowPriceHelper.sol"
+      ],
+      "versionPragmas": [
+        "0.8.26"
+      ],
+      "artifacts": [
+        "ShadowPriceHelperWrapper"
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/lib/joe-v2/src/libraries/math/Uint256x256Math.sol": {
@@ -2585,10 +2769,10 @@
         "ERC20Upgradeable"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol": {
-      "lastModificationDate": 1753586714137,
-      "contentHash": "f63c2e6d41338cc20b93cca748d599b8",
-      "sourceName": "contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol",
+    "/home/raph/WBS/crypto/arca-contracts/node_modules/@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol": {
+      "lastModificationDate": 1753058541952,
+      "contentHash": "1453fc85149da6598faf08c46b88182d",
+      "sourceName": "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol",
       "solcConfig": {
         "version": "0.8.28",
         "settings": {
@@ -2621,320 +2805,13 @@
         }
       },
       "imports": [
-        "./pool/IRamsesV3PoolImmutables.sol",
-        "./pool/IRamsesV3PoolState.sol",
-        "./pool/IRamsesV3PoolDerivedState.sol",
-        "./pool/IRamsesV3PoolActions.sol",
-        "./pool/IRamsesV3PoolOwnerActions.sol",
-        "./pool/IRamsesV3PoolErrors.sol",
-        "./pool/IRamsesV3PoolEvents.sol"
+        "../proxy/utils/Initializable.sol"
       ],
       "versionPragmas": [
-        ">=0.5.0"
+        "^0.8.0"
       ],
       "artifacts": [
-        "IRamsesV3Pool"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol": {
-      "lastModificationDate": 1753586714138,
-      "contentHash": "a049d73c1c3505de4c464ade7dcb092a",
-      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IRamsesV3PoolState"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol": {
-      "lastModificationDate": 1753586714137,
-      "contentHash": "ed5f72d8f13be1686940a16d0dd54da2",
-      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IRamsesV3PoolActions"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol": {
-      "lastModificationDate": 1753586714137,
-      "contentHash": "35a36af7dc69d96c0bbc97cd3229e857",
-      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IRamsesV3PoolDerivedState"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol": {
-      "lastModificationDate": 1753155072717,
-      "contentHash": "8463a31a43d83db62057b77accbff302",
-      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IRamsesV3PoolImmutables"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol": {
-      "lastModificationDate": 1753155072721,
-      "contentHash": "2d4eca4c210172d0738af52eeb91b168",
-      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IRamsesV3PoolOwnerActions"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol": {
-      "lastModificationDate": 1753586714137,
-      "contentHash": "4936a022259883cb88603f236811702c",
-      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IRamsesV3PoolEvents"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol": {
-      "lastModificationDate": 1753155072715,
-      "contentHash": "7e6ab247af0f6f321a98d4f988558626",
-      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IRamsesV3PoolErrors"
+        "ReentrancyGuardUpgradeable"
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol": {
@@ -3070,582 +2947,6 @@
         "IERC20Permit"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/node_modules/@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol": {
-      "lastModificationDate": 1753058541952,
-      "contentHash": "1453fc85149da6598faf08c46b88182d",
-      "sourceName": "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../proxy/utils/Initializable.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.0"
-      ],
-      "artifacts": [
-        "ReentrancyGuardUpgradeable"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/lib/joe-v2/src/libraries/Clone.sol": {
-      "lastModificationDate": 1753586714130,
-      "contentHash": "acc674964c94d2bb142691b87c4171b1",
-      "sourceName": "joe-v2/libraries/Clone.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.10"
-      ],
-      "artifacts": [
-        "Clone"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/libraries/FixedPoint128.sol": {
-      "lastModificationDate": 1753155072648,
-      "contentHash": "1298041826d8bf2a444d660fc3b6aebd",
-      "sourceName": "contracts-shadow/CL/core/libraries/FixedPoint128.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.4.0"
-      ],
-      "artifacts": [
-        "FixedPoint128"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/libraries/PoolAddress.sol": {
-      "lastModificationDate": 1753586714147,
-      "contentHash": "b0179636ccfa6621613ff2e5bc0f1c5e",
-      "sourceName": "contracts-shadow/CL/periphery/libraries/PoolAddress.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "PoolAddress"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/INonfungiblePositionManager.sol": {
-      "lastModificationDate": 1753586714144,
-      "contentHash": "dd86c31ec2ca7a39e3213fe160121fba",
-      "sourceName": "contracts-shadow/CL/periphery/interfaces/INonfungiblePositionManager.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "./IPoolInitializer.sol",
-        "./IPeripheryPayments.sol",
-        "./IPeripheryImmutableState.sol",
-        "../libraries/PoolAddress.sol",
-        "@openzeppelin/contracts/token/ERC721/IERC721.sol",
-        "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol",
-        "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol",
-        "./IPeripheryErrors.sol"
-      ],
-      "versionPragmas": [
-        ">=0.7.5"
-      ],
-      "artifacts": [
-        "INonfungiblePositionManager"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/IPoolInitializer.sol": {
-      "lastModificationDate": 1753155072798,
-      "contentHash": "5513150d0320a114127fdc6e12b255b0",
-      "sourceName": "contracts-shadow/CL/periphery/interfaces/IPoolInitializer.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.7.5"
-      ],
-      "artifacts": [
-        "IPoolInitializer"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/IPeripheryPayments.sol": {
-      "lastModificationDate": 1753586714144,
-      "contentHash": "8aa07bcaad7779d2bae8089adef235bf",
-      "sourceName": "contracts-shadow/CL/periphery/interfaces/IPeripheryPayments.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.7.5"
-      ],
-      "artifacts": [
-        "IPeripheryPayments"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/IPeripheryImmutableState.sol": {
-      "lastModificationDate": 1753155072810,
-      "contentHash": "e26340d2682bfc085b39838fbb022de2",
-      "sourceName": "contracts-shadow/CL/periphery/interfaces/IPeripheryImmutableState.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IPeripheryImmutableState"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/IPeripheryErrors.sol": {
-      "lastModificationDate": 1753155072818,
-      "contentHash": "76343d02fb1c8cc7512f97d7046a6b01",
-      "sourceName": "contracts-shadow/CL/periphery/interfaces/IPeripheryErrors.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        ">=0.5.0"
-      ],
-      "artifacts": [
-        "IPeripheryErrors"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/token/ERC721/IERC721.sol": {
-      "lastModificationDate": 1749740560008,
-      "contentHash": "e505e7331de08de27d06ab12b009a7d3",
-      "sourceName": "@openzeppelin/contracts/token/ERC721/IERC721.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../../utils/introspection/IERC165.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "IERC721"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol": {
-      "lastModificationDate": 1749740560008,
-      "contentHash": "12c206f185cb951213799561fdcaa40d",
-      "sourceName": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../IERC721.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "IERC721Metadata"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol": {
-      "lastModificationDate": 1749740560008,
-      "contentHash": "3fdc14aab706458ae99314f6f7f529a2",
-      "sourceName": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../IERC721.sol"
-      ],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "IERC721Enumerable"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol": {
-      "lastModificationDate": 1749740560010,
-      "contentHash": "be6182f1f5355b6bc529761eb0d1dc82",
-      "sourceName": "@openzeppelin/contracts/utils/introspection/IERC165.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "IERC165"
-      ]
-    },
     "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/forge-std/src/console.sol": {
       "lastModificationDate": 1749740559952,
       "contentHash": "100b8a33b917da1147740d7ab8b0ded3",
@@ -3687,6 +2988,535 @@
       ],
       "artifacts": [
         "console"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol": {
+      "lastModificationDate": 1754703233268,
+      "contentHash": "f63c2e6d41338cc20b93cca748d599b8",
+      "sourceName": "contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./pool/IRamsesV3PoolImmutables.sol",
+        "./pool/IRamsesV3PoolState.sol",
+        "./pool/IRamsesV3PoolDerivedState.sol",
+        "./pool/IRamsesV3PoolActions.sol",
+        "./pool/IRamsesV3PoolOwnerActions.sol",
+        "./pool/IRamsesV3PoolErrors.sol",
+        "./pool/IRamsesV3PoolEvents.sol"
+      ],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IRamsesV3Pool"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "8463a31a43d83db62057b77accbff302",
+      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IRamsesV3PoolImmutables"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "2d4eca4c210172d0738af52eeb91b168",
+      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IRamsesV3PoolOwnerActions"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "a049d73c1c3505de4c464ade7dcb092a",
+      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IRamsesV3PoolState"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "35a36af7dc69d96c0bbc97cd3229e857",
+      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IRamsesV3PoolDerivedState"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "4936a022259883cb88603f236811702c",
+      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IRamsesV3PoolEvents"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "7e6ab247af0f6f321a98d4f988558626",
+      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IRamsesV3PoolErrors"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "ed5f72d8f13be1686940a16d0dd54da2",
+      "sourceName": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IRamsesV3PoolActions"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/libraries/FullMath.sol": {
+      "lastModificationDate": 1754703233270,
+      "contentHash": "eaad8358bd2c39b2f159083f9bdcbbc3",
+      "sourceName": "contracts-shadow/CL/core/libraries/FullMath.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.26"
+      ],
+      "artifacts": [
+        "FullMath"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/libraries/LiquidityAmounts.sol": {
+      "lastModificationDate": 1754703233277,
+      "contentHash": "659f4bb3e2a710ebdcf76596e91d7768",
+      "sourceName": "contracts-shadow/CL/periphery/libraries/LiquidityAmounts.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../../core/libraries/FullMath.sol",
+        "../../core/libraries/FixedPoint96.sol"
+      ],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "LiquidityAmounts"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/libraries/FixedPoint96.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "f3ab03d6bbfd7c6834ecd3fc311cb0e7",
+      "sourceName": "contracts-shadow/CL/core/libraries/FixedPoint96.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.0"
+      ],
+      "artifacts": [
+        "FixedPoint96"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
+      "lastModificationDate": 1753058541916,
+      "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
+      "sourceName": "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC20.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.0"
+      ],
+      "artifacts": [
+        "IERC20Metadata"
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/node_modules/@openzeppelin/contracts/access/Ownable.sol": {
@@ -3777,10 +3607,10 @@
         "Context"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol": {
-      "lastModificationDate": 1753058541916,
-      "contentHash": "909ab67fc5c25033fe6cd364f8c056f9",
-      "sourceName": "openzeppelin/token/ERC20/extensions/IERC20Metadata.sol",
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/INonfungiblePositionManager.sol": {
+      "lastModificationDate": 1754703233275,
+      "contentHash": "dd86c31ec2ca7a39e3213fe160121fba",
+      "sourceName": "contracts-shadow/CL/periphery/interfaces/INonfungiblePositionManager.sol",
       "solcConfig": {
         "version": "0.8.28",
         "settings": {
@@ -3813,19 +3643,26 @@
         }
       },
       "imports": [
-        "../IERC20.sol"
+        "./IPoolInitializer.sol",
+        "./IPeripheryPayments.sol",
+        "./IPeripheryImmutableState.sol",
+        "../libraries/PoolAddress.sol",
+        "@openzeppelin/contracts/token/ERC721/IERC721.sol",
+        "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol",
+        "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol",
+        "./IPeripheryErrors.sol"
       ],
       "versionPragmas": [
-        "^0.8.0"
+        ">=0.7.5"
       ],
       "artifacts": [
-        "IERC20Metadata"
+        "INonfungiblePositionManager"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/libraries/FullMath.sol": {
-      "lastModificationDate": 1753586714138,
-      "contentHash": "eaad8358bd2c39b2f159083f9bdcbbc3",
-      "sourceName": "contracts-shadow/CL/core/libraries/FullMath.sol",
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/libraries/PoolAddress.sol": {
+      "lastModificationDate": 1754703233277,
+      "contentHash": "b0179636ccfa6621613ff2e5bc0f1c5e",
+      "sourceName": "contracts-shadow/CL/periphery/libraries/PoolAddress.sol",
       "solcConfig": {
         "version": "0.8.28",
         "settings": {
@@ -3858,63 +3695,17 @@
         }
       },
       "imports": [],
-      "versionPragmas": [
-        "^0.8.26"
-      ],
-      "artifacts": [
-        "FullMath"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/libraries/LiquidityAmounts.sol": {
-      "lastModificationDate": 1753586714146,
-      "contentHash": "659f4bb3e2a710ebdcf76596e91d7768",
-      "sourceName": "contracts-shadow/CL/periphery/libraries/LiquidityAmounts.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../../core/libraries/FullMath.sol",
-        "../../core/libraries/FixedPoint96.sol"
-      ],
       "versionPragmas": [
         ">=0.5.0"
       ],
       "artifacts": [
-        "LiquidityAmounts"
+        "PoolAddress"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/libraries/FixedPoint96.sol": {
-      "lastModificationDate": 1753155072650,
-      "contentHash": "f3ab03d6bbfd7c6834ecd3fc311cb0e7",
-      "sourceName": "contracts-shadow/CL/core/libraries/FixedPoint96.sol",
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/IPeripheryPayments.sol": {
+      "lastModificationDate": 1754703233275,
+      "contentHash": "8aa07bcaad7779d2bae8089adef235bf",
+      "sourceName": "contracts-shadow/CL/periphery/interfaces/IPeripheryPayments.sol",
       "solcConfig": {
         "version": "0.8.28",
         "settings": {
@@ -3948,14 +3739,321 @@
       },
       "imports": [],
       "versionPragmas": [
-        ">=0.4.0"
+        ">=0.7.5"
       ],
       "artifacts": [
-        "FixedPoint96"
+        "IPeripheryPayments"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/IPeripheryImmutableState.sol": {
+      "lastModificationDate": 1754703233275,
+      "contentHash": "e26340d2682bfc085b39838fbb022de2",
+      "sourceName": "contracts-shadow/CL/periphery/interfaces/IPeripheryImmutableState.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IPeripheryImmutableState"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/IPeripheryErrors.sol": {
+      "lastModificationDate": 1754703233275,
+      "contentHash": "76343d02fb1c8cc7512f97d7046a6b01",
+      "sourceName": "contracts-shadow/CL/periphery/interfaces/IPeripheryErrors.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.5.0"
+      ],
+      "artifacts": [
+        "IPeripheryErrors"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/periphery/interfaces/IPoolInitializer.sol": {
+      "lastModificationDate": 1754703233275,
+      "contentHash": "5513150d0320a114127fdc6e12b255b0",
+      "sourceName": "contracts-shadow/CL/periphery/interfaces/IPoolInitializer.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.7.5"
+      ],
+      "artifacts": [
+        "IPoolInitializer"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/token/ERC721/IERC721.sol": {
+      "lastModificationDate": 1749740560008,
+      "contentHash": "e505e7331de08de27d06ab12b009a7d3",
+      "sourceName": "@openzeppelin/contracts/token/ERC721/IERC721.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../../utils/introspection/IERC165.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IERC721"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Enumerable.sol": {
+      "lastModificationDate": 1749740560008,
+      "contentHash": "3fdc14aab706458ae99314f6f7f529a2",
+      "sourceName": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC721.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IERC721Enumerable"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/token/ERC721/extensions/IERC721Metadata.sol": {
+      "lastModificationDate": 1749740560008,
+      "contentHash": "12c206f185cb951213799561fdcaa40d",
+      "sourceName": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "../IERC721.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IERC721Metadata"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/utils/introspection/IERC165.sol": {
+      "lastModificationDate": 1749740560010,
+      "contentHash": "be6182f1f5355b6bc529761eb0d1dc82",
+      "sourceName": "@openzeppelin/contracts/utils/introspection/IERC165.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "IERC165"
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/libraries/TickMath.sol": {
-      "lastModificationDate": 1753586714139,
+      "lastModificationDate": 1754703233271,
       "contentHash": "9bf93c807d05634cfa1c94372fa216dc",
       "sourceName": "contracts-shadow/CL/core/libraries/TickMath.sol",
       "solcConfig": {
@@ -3995,6 +4093,92 @@
       ],
       "artifacts": [
         "TickMath"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/lib/joe-v2/src/libraries/Clone.sol": {
+      "lastModificationDate": 1753586714130,
+      "contentHash": "acc674964c94d2bb142691b87c4171b1",
+      "sourceName": "joe-v2/libraries/Clone.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.10"
+      ],
+      "artifacts": [
+        "Clone"
+      ]
+    },
+    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/CL/core/libraries/FixedPoint128.sol": {
+      "lastModificationDate": 1754703233269,
+      "contentHash": "1298041826d8bf2a444d660fc3b6aebd",
+      "sourceName": "contracts-shadow/CL/core/libraries/FixedPoint128.sol",
+      "solcConfig": {
+        "version": "0.8.28",
+        "settings": {
+          "viaIR": true,
+          "optimizer": {
+            "enabled": true,
+            "runs": 200,
+            "details": {
+              "yulDetails": {
+                "optimizerSteps": "u"
+              }
+            }
+          },
+          "evmVersion": "paris",
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        ">=0.4.0"
+      ],
+      "artifacts": [
+        "FixedPoint128"
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/interfaces/IWNative.sol": {
@@ -4216,107 +4400,8 @@
         "Hooks"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/OracleRewardShadowVault.sol": {
-      "lastModificationDate": 1754267216670,
-      "contentHash": "8846d2207497944bc2e3b103ae728475",
-      "sourceName": "contracts-shadow/src/OracleRewardShadowVault.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "joe-v2/libraries/Clone.sol",
-        "openzeppelin-upgradeable/token/ERC20/ERC20Upgradeable.sol",
-        "openzeppelin-upgradeable/token/ERC20/IERC20Upgradeable.sol",
-        "../CL/core/interfaces/IRamsesV3Pool.sol",
-        "joe-v2/libraries/math/Uint256x256Math.sol",
-        "openzeppelin-upgradeable/security/ReentrancyGuardUpgradeable.sol",
-        "openzeppelin-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol",
-        "joe-v2/libraries/math/SafeCast.sol",
-        "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol",
-        "./interfaces/IShadowStrategy.sol",
-        "../../contracts-metropolis/src/interfaces/IVaultFactory.sol",
-        "../../contracts-metropolis/src/interfaces/IWNative.sol",
-        "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol",
-        "../CL/core/libraries/TickMath.sol",
-        "../../contracts-metropolis/src/libraries/TokenHelper.sol",
-        "../../contracts-metropolis/src/libraries/Precision.sol",
-        "../../contracts-metropolis/src/libraries/Math.sol",
-        "./interfaces/IOracleRewardShadowVault.sol",
-        "../CL/core/libraries/FullMath.sol",
-        "./libraries/ShadowPriceHelper.sol"
-      ],
-      "versionPragmas": [
-        "0.8.26"
-      ],
-      "artifacts": [
-        "OracleRewardShadowVault"
-      ]
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/libraries/ShadowPriceHelper.sol": {
-      "lastModificationDate": 1754171652499,
-      "contentHash": "7dc93181c03a50f2f9bfc547032a1228",
-      "sourceName": "contracts-shadow/src/libraries/ShadowPriceHelper.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../../CL/core/interfaces/IRamsesV3Pool.sol",
-        "../../CL/core/libraries/TickMath.sol",
-        "../../CL/core/libraries/FullMath.sol"
-      ],
-      "versionPragmas": [
-        "0.8.26"
-      ],
-      "artifacts": [
-        "ShadowPriceHelper"
-      ]
-    },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/MockERC20.sol": {
-      "lastModificationDate": 1753650074140,
+      "lastModificationDate": 1754763036559,
       "contentHash": "41caeafbd2e4ef18637b15b4cb39215c",
       "sourceName": "contracts-metropolis/src/MockERC20.sol",
       "solcConfig": {
@@ -4946,49 +5031,6 @@
         "Address"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol": {
-      "lastModificationDate": 1749740560005,
-      "contentHash": "0a5c323fd908535580597848b8e550fb",
-      "sourceName": "@openzeppelin/contracts/proxy/beacon/IBeacon.sol",
-      "solcConfig": {
-        "version": "0.8.28",
-        "settings": {
-          "viaIR": true,
-          "optimizer": {
-            "enabled": true,
-            "runs": 200,
-            "details": {
-              "yulDetails": {
-                "optimizerSteps": "u"
-              }
-            }
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [],
-      "versionPragmas": [
-        "^0.8.20"
-      ],
-      "artifacts": [
-        "IBeacon"
-      ]
-    },
     "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/utils/StorageSlot.sol": {
       "lastModificationDate": 1749740560010,
       "contentHash": "7762519b985a5a4153f32ca1e2089dee",
@@ -5032,10 +5074,10 @@
         "StorageSlot"
       ]
     },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/ProxyImports.sol": {
-      "lastModificationDate": 1753650696311,
-      "contentHash": "579f277ca19b4038e03c3a699529961c",
-      "sourceName": "contracts-metropolis/src/ProxyImports.sol",
+    "/home/raph/WBS/crypto/arca-contracts/lib/joe-v2/lib/openzeppelin-contracts/contracts/proxy/beacon/IBeacon.sol": {
+      "lastModificationDate": 1749740560005,
+      "contentHash": "0a5c323fd908535580597848b8e550fb",
+      "sourceName": "@openzeppelin/contracts/proxy/beacon/IBeacon.sol",
       "solcConfig": {
         "version": "0.8.28",
         "settings": {
@@ -5067,54 +5109,12 @@
           }
         }
       },
-      "imports": [
-        "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol",
-        "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol",
-        "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol"
-      ],
+      "imports": [],
       "versionPragmas": [
-        "^0.8.0"
-      ],
-      "artifacts": []
-    },
-    "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/ShadowPriceHelperWrapper.sol": {
-      "lastModificationDate": 1754277850246,
-      "contentHash": "350d2d5da854a123f791cca3a8e083dc",
-      "sourceName": "contracts-shadow/src/ShadowPriceHelperWrapper.sol",
-      "solcConfig": {
-        "version": "0.8.26",
-        "settings": {
-          "optimizer": {
-            "enabled": true,
-            "runs": 200
-          },
-          "evmVersion": "paris",
-          "outputSelection": {
-            "*": {
-              "*": [
-                "abi",
-                "evm.bytecode",
-                "evm.deployedBytecode",
-                "evm.methodIdentifiers",
-                "metadata",
-                "storageLayout"
-              ],
-              "": [
-                "ast"
-              ]
-            }
-          }
-        }
-      },
-      "imports": [
-        "../CL/core/interfaces/IRamsesV3Pool.sol",
-        "./libraries/ShadowPriceHelper.sol"
-      ],
-      "versionPragmas": [
-        "0.8.26"
+        "^0.8.20"
       ],
       "artifacts": [
-        "ShadowPriceHelperWrapper"
+        "IBeacon"
       ]
     }
   }

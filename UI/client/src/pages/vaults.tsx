@@ -215,13 +215,10 @@ export default function Vaults() {
       <div className="overflow-hidden">
         {/* Desktop Table Header */}
         <div className="hidden sm:block mx-4 mb-4">
-          <div className="grid grid-cols-4 gap-6 px-6 py-4">
+          <div className="grid grid-cols-3 gap-6 px-6 py-4">
             <div className="text-arca-secondary font-medium text-sm">POOL</div>
             <div className="text-arca-secondary font-medium text-sm">
-              POOL TVL
-            </div>
-            <div className="text-arca-secondary font-medium text-sm">
-              FARM TVL
+              VAULT TVL
             </div>
             <div className="text-arca-secondary font-medium text-sm">
               REWARDS
