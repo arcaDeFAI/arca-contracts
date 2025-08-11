@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import type { DeploymentConfig } from "../deployArcaSystem";
+import type { DeploymentConfig } from "../../archive/deployArcaSystem";
 
 export interface NetworkConfig {
   name: string;
