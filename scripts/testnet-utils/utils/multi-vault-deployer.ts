@@ -7,8 +7,8 @@ import type { DeployedToken } from "./token-deployer";
 import { deployAllTokens, deploySpecificTokens, deployMockToken } from "./token-deployer";
 import type { DeployedLBPair } from "./lb-pair-manager";
 import { getOrCreateLBPair, addInitialLiquidity, deployMockLBRouter, deployMockLBFactory } from "./lb-pair-manager";
-import type { DeploymentAddresses} from "../deployArcaSystem";
-import { DeploymentConfig } from "../deployArcaSystem";
+import type { DeploymentAddresses} from "../../archive/deployArcaSystem";
+import { DeploymentConfig } from "../../archive/deployArcaSystem";
 import fs from "fs";
 import path from "path";
 

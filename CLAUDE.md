@@ -175,7 +175,6 @@ npm run dev:testnet:status  # Check testnet readiness and contract status
 - License compliance: GPL-3.0 for Shadow integration, MIT for Metropolis base
 
 ### Testing Standards
-- **FOLLOW TDD**: Tests define requirements, code implements them
 - **PRECISION IS MANDATORY**: Always test exact values, never use vague assertions like `gt(0)` or `to.be.a("bigint")`. Calculate and verify specific expected amounts based on business logic
 - Use Hardhat's testing framework with TypeScript
 - Test files located in `test/` directory with pattern `*.test.ts`
@@ -198,7 +197,6 @@ npm run dev:testnet:status  # Check testnet readiness and contract status
 ## External Dependencies
 
 ### Blockchain Integrations
-- **Joe V2 (Trader Joe)**: Core library for Metropolis DLMM interfaces (submodule at `lib/joe-v2/`)
 - **Metropolis DLMM**: Bin-based liquidity provision with hooks and rewards
 - **Shadow (Ramses V3)**: Concentrated liquidity with NFT positions and gauge rewards
 - **OpenZeppelin**: Standard library for upgradeable contracts and security
@@ -208,44 +206,6 @@ npm run dev:testnet:status  # Check testnet readiness and contract status
 - Hardhat with TypeScript toolbox
 - Custom interface generator for ABI exports
 - Contract size analyzer for optimization
-
-## Testing Strategy
-
-### Test Organization
-The test suite is organized into several categories:
-
-**Unit Tests** (`*.test.ts`):
-- Core deposit/withdrawal flows with fee calculations
-- Queue management and processing logic
-- Individual contract functionality
-
-**Integration Tests** (`*.integration.test.ts`):
-- Cross-contract interactions
-- Full system workflows (deposit → rebalance → withdraw)
-- Ownership transfer scenarios
-- Reward compounding end-to-end flows
-
-**Precision Tests** (`*.precise.test.ts`):
-- Mathematical accuracy verification
-- Share calculation precision
-- Fee calculation accuracy
-- Edge cases with small/large numbers
-
-### Mock System
-Comprehensive mocking infrastructure for isolated testing:
-- `MockERC20`: Token behavior simulation
-- `MockLBRouter`: DEX router functionality
-- `MockLBPair`: Liquidity pair simulation
-- `MockLBHooksBaseRewarder`: Reward mechanism testing
-
-### Testing Best Practices
-- **Always run full test suite**: `npm run test` before making changes
-- **Test-driven development**: Write tests for new features first
-- **Integration focus**: Test complex multi-contract interactions
-- **Edge case coverage**: Test boundary conditions and error states
-- **Gas optimization**: Monitor gas usage in tests
-
-Run the full test suite before making changes to ensure system integrity.
 
 ## Important Notes
 
