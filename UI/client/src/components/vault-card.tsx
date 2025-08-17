@@ -194,7 +194,7 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
         });
       }
       // Refetch user shares
-      refetchVaultShares();
+      void refetchVaultShares();
     }
   }, [isConfirmed, activeTab, toast, refetchVaultShares]);
 
@@ -209,9 +209,9 @@ export default function VaultCard({ vault, onClick }: VaultCardProps) {
     if (isApprovalConfirmed) {
       setApprovalStep("none");
       // Refetch allowances to update the UI
-      refetchTokenYAllowance();
-      refetchScusdAllowance();
-      refetchUsdcAllowance();
+      void refetchTokenYAllowance();
+      void refetchScusdAllowance();
+      void refetchUsdcAllowance();
     }
   }, [
     isApprovalConfirmed,

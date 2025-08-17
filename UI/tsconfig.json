@@ -1,6 +1,6 @@
 {
-  "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "include": ["client/src/**/*", "shared/**/*", "server/**/*", "*.ts", "*.js"],
+  "exclude": ["node_modules", "build", "dist"],
   "compilerOptions": {
     "target": "ES2020",
     "incremental": true,
