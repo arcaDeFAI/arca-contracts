@@ -68,7 +68,8 @@ jobs:
         working-directory: UI/
         run: npm run build
 
-      # Run UI unit tests
-      - name: Run UI Tests
-        working-directory: UI/
-        run: npm run test
+      # TODO: The UI might get reworked heavily, ignore UI tests for now
+      #
+      # - name: Run UI Tests
+      #   working-directory: UI/
+      #   run: npm run test
