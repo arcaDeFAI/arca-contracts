@@ -2,10 +2,10 @@
 // User authentication handled by wallet connection
 // This storage layer can be extended for caching on-chain data or UI preferences
 
-export interface IStorage {
+export type IStorage = object & {
   // Future: Add methods for caching vault data, user preferences, etc.
   // Example: getUserPreferences(walletAddress: string): Promise<UserPreferences | undefined>;
-}
+};
 
 export class MemStorage implements IStorage {
   constructor() {
