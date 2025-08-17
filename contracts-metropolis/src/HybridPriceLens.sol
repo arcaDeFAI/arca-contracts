@@ -2,14 +2,13 @@
 
 pragma solidity 0.8.26;
 
-import "./interfaces/IPriceLens.sol";
-import "./interfaces/IAggregatorV3.sol";
+import {IPriceLens} from "./interfaces/IPriceLens.sol";
+import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
 import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {IRamsesV3Pool} from "../../contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol";
-import {TickMath} from "../../contracts-shadow/CL/core/libraries/TickMath.sol";
-import {FullMath} from "../../contracts-shadow/CL/core/libraries/FullMath.sol";
+import {
+    IERC20Metadata
+} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title HybridPriceLens
