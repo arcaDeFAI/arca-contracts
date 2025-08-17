@@ -1238,8 +1238,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-metropolis/src/HybridPriceLens.sol": {
-      "lastModificationDate": 1754884760274,
-      "contentHash": "8240f04dc5d564be7e510e18e55a1ac4",
+      "lastModificationDate": 1755470345329,
+      "contentHash": "0bdcf3d50c81790e76a9916433cf30e4",
       "sourceName": "contracts-metropolis/src/HybridPriceLens.sol",
       "solcConfig": {
         "version": "0.8.26",
@@ -1271,10 +1271,7 @@
         "./interfaces/IAggregatorV3.sol",
         "@arca/joe-v2/interfaces/ILBPair.sol",
         "@openzeppelin/contracts/access/Ownable.sol",
-        "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol",
-        "../../contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol",
-        "../../contracts-shadow/CL/core/libraries/TickMath.sol",
-        "../../contracts-shadow/CL/core/libraries/FullMath.sol"
+        "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol"
       ],
       "versionPragmas": [
         "0.8.26"
