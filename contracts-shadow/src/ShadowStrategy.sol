@@ -422,12 +422,16 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
      * @param tickUpper The upper tick of the new position
      * @param desiredTick The desired current tick (for slippage check)
      * @param slippageTick The allowed tick slippage
+     * @param amountX The amount of token X to deposit
+     * @param amountY The amount of token Y to deposit
      */
     function rebalance(
         int32 tickLower,
         int32 tickUpper,
         int32 desiredTick,
-        int32 slippageTick
+        int32 slippageTick,
+        uint256 amountX,
+        uint256 amountY
     ) external onlyOperators {
         // Check cooldown
         uint256 lastRebalance = _lastRebalance;
@@ -484,21 +488,28 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 );
             }
 
-            // Get current balances
-            uint256 balance0 = _tokenX().balanceOf(address(this));
-            uint256 balance1 = _tokenY().balanceOf(address(this));
-
-            // Enter new position if we have tokens
-            if (balance0 > 0 || balance1 > 0) {
-                _enterPosition(
-                    tickLower24,
-                    tickUpper24,
-                    balance0,
-                    balance1,
-                    0, // amount0Min
-                    0 // amount1Min
-                );
+            // Check that at least one amount is non-zero
+            if (amountX == 0 && amountY == 0) {
+                revert Strategy__ZeroAmounts();
             }
+
+            // Get current balances and ensure we don't try to deposit more than available
+            uint256 availableX = _tokenX().balanceOf(address(this));
+            uint256 availableY = _tokenY().balanceOf(address(this));
+            
+            // Cap amounts at available balance
+            uint256 depositX = amountX > availableX ? availableX : amountX;
+            uint256 depositY = amountY > availableY ? availableY : amountY;
+
+            // Enter new position with specified amounts (capped at available)
+            _enterPosition(
+                tickLower24,
+                tickUpper24,
+                depositX,
+                depositY,
+                0, // amount0Min
+                0 // amount1Min
+            );
         }
     }
 

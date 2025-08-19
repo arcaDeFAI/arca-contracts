@@ -476,40 +476,96 @@ class ShadowVaultTester {
         
         // Show current pool state
         try {
-            const currentTick = await this.pool!.tick();
-            console.log(chalk.gray(`Current Pool Tick: ${currentTick}`));
+            const slot0 = await this.pool!.slot0();
+            const currentTick = slot0[1];
+            const tickSpacing = await this.pool!.tickSpacing();
+            console.log(chalk.gray(`Current Pool Tick: ${currentTick}, tick spacing: ${tickSpacing}`)); 
             
             // Try to get current position if any
-            const positionTokenId = await this.strategy!.positionTokenId();
+            const [positionTokenId, tickLower, tickUpper] = await this.strategy!.getPosition();
             if (positionTokenId && positionTokenId !== 0n) {
                 console.log(chalk.gray(`Current Position Token ID: ${positionTokenId}`));
+                console.log(chalk.gray(`Current Position Range: [${tickLower}, ${tickUpper}]`));
             }
+            
+            // Show current idle balances to help operator decide reserve amounts
+            const [idleX, idleY] = await this.strategy!.getIdleBalances();
+            console.log(chalk.cyan("\n💰 Current Idle Balances (available for deposit):"));
+            console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(idleX, this.tokenX!)}`));
+            console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(idleY, this.tokenY!)}`));
+            console.log(chalk.yellow("\n💡 Tip: Specify amounts to deposit. Remaining will be kept as reserves."));
+            console.log(chalk.yellow("   Enter the amounts in wei. At least one must be non-zero.\n"));
         } catch (e) {
             console.log(chalk.gray("Could not fetch current pool state"));
+            console.log(e);
         }
         
         const tickLower = await this.question("Enter tick lower: ");
         const tickUpper = await this.question("Enter tick upper: ");
         const desiredTick = await this.question("Enter desired tick: ");
         const slippageTick = await this.question("Enter slippage tick: ");
+        const amountX = await this.question("Enter amount X to deposit (in wei): ");
+        const amountY = await this.question("Enter amount Y to deposit (in wei): ");
         
         const params = {
             tickLower: parseInt(tickLower),
             tickUpper: parseInt(tickUpper),
             desiredTick: parseInt(desiredTick),
-            slippageTick: parseInt(slippageTick)
+            slippageTick: parseInt(slippageTick),
+            amountX: BigInt(amountX || "0"),
+            amountY: BigInt(amountY || "0")
         };
+        
+        // Validate that at least one amount is non-zero
+        if (params.amountX === 0n && params.amountY === 0n) {
+            console.log(chalk.red("\n❌ Error: At least one deposit amount must be non-zero"));
+            return;
+        }
+        
+        // Get current idle balances for validation
+        const [currentIdleX, currentIdleY] = await this.strategy!.getIdleBalances();
+        
+        // Check if amounts exceed available balance and warn
+        if (params.amountX > currentIdleX) {
+            console.log(chalk.yellow(`\n⚠️  Warning: Amount X (${params.amountX}) exceeds available balance (${currentIdleX})`));
+            console.log(chalk.yellow(`   Will be capped at: ${await formatters.formatBalance(currentIdleX, this.tokenX!)}`));
+            params.amountX = currentIdleX; // Update for display
+        }
+        if (params.amountY > currentIdleY) {
+            console.log(chalk.yellow(`\n⚠️  Warning: Amount Y (${params.amountY}) exceeds available balance (${currentIdleY})`));
+            console.log(chalk.yellow(`   Will be capped at: ${await formatters.formatBalance(currentIdleY, this.tokenY!)}`));
+            params.amountY = currentIdleY; // Update for display
+        }
         
         // Show visual range
         const currentTick = parseInt(desiredTick);
         displayVisualRange(params.tickLower, params.tickUpper, currentTick, "tick");
+        
+        // Show deposit summary with reserve calculation
+        console.log(chalk.cyan("\n📊 Deposit Summary:"));
+        console.log(chalk.gray(`  Amount X to deposit: ${await formatters.formatBalance(params.amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Amount Y to deposit: ${await formatters.formatBalance(params.amountY, this.tokenY!)}`));
+        
+        const reserveX = currentIdleX - params.amountX;
+        const reserveY = currentIdleY - params.amountY;
+        if (reserveX > 0n || reserveY > 0n) {
+            console.log(chalk.yellow("\n  Remaining as Reserves:"));
+            if (reserveX > 0n) {
+                console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(reserveX, this.tokenX!)}`));
+            }
+            if (reserveY > 0n) {
+                console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(reserveY, this.tokenY!)}`));
+            }
+        }
         
         await this.executeAction("Rebalance", async () => {
             return this.strategy!.rebalance(
                 params.tickLower,
                 params.tickUpper,
                 params.desiredTick,
-                params.slippageTick
+                params.slippageTick,
+                params.amountX,
+                params.amountY
             );
         }, params);
     }
@@ -871,6 +927,7 @@ class ShadowVaultTester {
             const operator = await this.strategy!.getOperator();
             const lastRebalance = await this.strategy!.getLastRebalance();
             const [idleX, idleY] = await this.strategy!.getIdleBalances();
+            const [totalX, totalY] = await this.strategy!.getBalances();
             
             console.log(chalk.white("Position:"));
             console.log(chalk.gray(`  Token ID: ${position.toString()}`));
@@ -881,9 +938,32 @@ class ShadowVaultTester {
             console.log(chalk.gray(`  Operator: ${operator}`));
             console.log(chalk.gray(`  Last Rebalance: ${new Date(Number(lastRebalance) * 1000).toLocaleString()}`));
             
-            console.log(chalk.white("\nIdle Balances:"));
-            console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(idleX, this.tokenX!)}`));
-            console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(idleY, this.tokenY!)}`));
+            // Calculate invested amounts (total - idle = invested in position)
+            const investedX = totalX - idleX;
+            const investedY = totalY - idleY;
+            
+            console.log(chalk.white("\n💰 Fund Allocation:"));
+            console.log(chalk.cyan("  Total Balances:"));
+            console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(totalX, this.tokenX!)}`));
+            console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(totalY, this.tokenY!)}`));
+            
+            console.log(chalk.cyan("\n  Invested in Position:"));
+            console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(investedX, this.tokenX!)}`));
+            console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(investedY, this.tokenY!)}`));
+            
+            console.log(chalk.cyan("\n  Reserves (Idle):"));
+            console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(idleX, this.tokenX!)}`));
+            console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(idleY, this.tokenY!)}`));
+            
+            // Calculate percentages
+            if (totalX > 0n) {
+                const reservePercentX = (idleX * 100n) / totalX;
+                console.log(chalk.yellow(`    Reserve % X: ${reservePercentX.toString()}%`));
+            }
+            if (totalY > 0n) {
+                const reservePercentY = (idleY * 100n) / totalY;
+                console.log(chalk.yellow(`    Reserve % Y: ${reservePercentY.toString()}%`));
+            }
             
         } catch (error) {
             console.error(chalk.red("Error fetching strategy info:"), error);
