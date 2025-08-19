@@ -9086,7 +9086,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18820",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -9102,7 +9102,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18389_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -9144,7 +9144,7 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18389_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
@@ -9164,7 +9164,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IMetropolisStrategy)18820": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -9180,7 +9180,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18389_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -9230,9 +9230,9 @@
         "solcVersion": "0.8.26"
       },
       "contracts-metropolis/src/HybridPriceLens.sol:HybridPriceLens": {
-        "src": "contracts-metropolis/src/HybridPriceLens.sol:19",
+        "src": "contracts-metropolis/src/HybridPriceLens.sol:18",
         "version": {
-          "withMetadata": "c0dc461aacd81c93399bdc02a2123c272486bfd78bb2da244536de0cdb7fa9d0",
+          "withMetadata": "b050d089d3d58e5eb6e8a417ae26229e8ce5cb93dbb041d1aba8b6aadf1fcbf8",
           "withoutMetadata": "fecb8c44f1521cf1e426a77a7ef5b8b8bd8f4d0b4e79a00c0a4765de19329b5f",
           "linkedWithoutMetadata": "fecb8c44f1521cf1e426a77a7ef5b8b8bd8f4d0b4e79a00c0a4765de19329b5f"
         },
@@ -9257,17 +9257,17 @@
           {
             "kind": "constructor",
             "contract": "HybridPriceLens",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:72"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:71"
           },
           {
             "kind": "state-variable-immutable",
             "name": "wnative",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:25"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:24"
           },
           {
             "kind": "state-variable-assignment",
             "name": "defaultMaxStaleness",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:52"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:51"
           }
         ],
         "layout": {
@@ -9284,9 +9284,9 @@
               "label": "priceFeeds",
               "offset": 0,
               "slot": "1",
-              "type": "t_mapping(t_address,t_struct(PriceFeed)10428_storage)",
+              "type": "t_mapping(t_address,t_struct(PriceFeed)10422_storage)",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:46"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:45"
             },
             {
               "label": "isReferenceToken",
@@ -9294,7 +9294,7 @@
               "slot": "2",
               "type": "t_mapping(t_address,t_bool)",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:49"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:48"
             },
             {
               "label": "defaultMaxStaleness",
@@ -9302,7 +9302,7 @@
               "slot": "3",
               "type": "t_uint32",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:52"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:51"
             }
           ],
           "types": {
@@ -9314,7 +9314,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_enum(OracleType)10412": {
+            "t_enum(OracleType)10406": {
               "label": "enum HybridPriceLens.OracleType",
               "members": [
                 "None",
@@ -9327,11 +9327,11 @@
               "label": "mapping(address => bool)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(PriceFeed)10428_storage)": {
+            "t_mapping(t_address,t_struct(PriceFeed)10422_storage)": {
               "label": "mapping(address => struct HybridPriceLens.PriceFeed)",
               "numberOfBytes": "32"
             },
-            "t_struct(PriceFeed)10428_storage": {
+            "t_struct(PriceFeed)10422_storage": {
               "label": "struct HybridPriceLens.PriceFeed",
               "members": [
                 {
@@ -9360,7 +9360,7 @@
                 },
                 {
                   "label": "oracleType",
-                  "type": "t_enum(OracleType)10412",
+                  "type": "t_enum(OracleType)10406",
                   "offset": 24,
                   "slot": "2"
                 },
@@ -9693,7 +9693,7 @@
               "label": "_oracleParameters",
               "offset": 0,
               "slot": "1",
-              "type": "t_struct(OracleParameters)18914_storage",
+              "type": "t_struct(OracleParameters)18908_storage",
               "contract": "OracleHelper",
               "src": "contracts-metropolis/src/OracleHelper.sol:42"
             },
@@ -9701,7 +9701,7 @@
               "label": "_sequencerUptimeFeed",
               "offset": 0,
               "slot": "6",
-              "type": "t_contract(IAggregatorV3)18303",
+              "type": "t_contract(IAggregatorV3)18297",
               "contract": "OracleHelper",
               "src": "contracts-metropolis/src/OracleHelper.sol:45"
             }
@@ -9715,11 +9715,11 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IAggregatorV3)18303": {
+            "t_contract(IAggregatorV3)18297": {
               "label": "contract IAggregatorV3",
               "numberOfBytes": "20"
             },
-            "t_struct(OracleParameters)18914_storage": {
+            "t_struct(OracleParameters)18908_storage": {
               "label": "struct IOracleHelper.OracleParameters",
               "members": [
                 {
@@ -9950,7 +9950,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18820",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -9966,7 +9966,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18389_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -10014,7 +10014,7 @@
               "label": "_users",
               "offset": 0,
               "slot": "158",
-              "type": "t_mapping(t_address,t_struct(User)19051_storage)",
+              "type": "t_mapping(t_address,t_struct(User)19045_storage)",
               "contract": "OracleRewardVault",
               "src": "contracts-metropolis/src/OracleRewardVault.sol:33"
             },
@@ -10030,7 +10030,7 @@
               "label": "cachedRewardTokens",
               "offset": 0,
               "slot": "160",
-              "type": "t_array(t_struct(Reward)19059_storage)dyn_storage",
+              "type": "t_array(t_struct(Reward)19053_storage)dyn_storage",
               "contract": "OracleRewardVault",
               "src": "contracts-metropolis/src/OracleRewardVault.sol:36"
             }
@@ -10040,11 +10040,11 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18389_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
-            "t_array(t_struct(Reward)19059_storage)dyn_storage": {
+            "t_array(t_struct(Reward)19053_storage)dyn_storage": {
               "label": "struct IOracleRewardVault.Reward[]",
               "numberOfBytes": "32"
             },
@@ -10068,7 +10068,7 @@
               "label": "contract IERC20",
               "numberOfBytes": "20"
             },
-            "t_contract(IMetropolisStrategy)18820": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -10080,7 +10080,7 @@
               "label": "mapping(address => mapping(address => uint256))",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(User)19051_storage)": {
+            "t_mapping(t_address,t_struct(User)19045_storage)": {
               "label": "mapping(address => struct IOracleRewardVault.User)",
               "numberOfBytes": "32"
             },
@@ -10092,7 +10092,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18389_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -10122,7 +10122,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(Reward)19059_storage": {
+            "t_struct(Reward)19053_storage": {
               "label": "struct IOracleRewardVault.Reward",
               "members": [
                 {
@@ -10146,7 +10146,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(User)19051_storage": {
+            "t_struct(User)19045_storage": {
               "label": "struct IOracleRewardVault.User",
               "members": [
                 {
@@ -10317,7 +10317,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18820",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -10333,7 +10333,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18389_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -10375,7 +10375,7 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18389_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
@@ -10395,7 +10395,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IMetropolisStrategy)18820": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -10411,7 +10411,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18389_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -10607,7 +10607,7 @@
               "label": "_vaults",
               "offset": 0,
               "slot": "151",
-              "type": "t_mapping(t_enum(VaultType)19400,t_array(t_address)dyn_storage)",
+              "type": "t_mapping(t_enum(VaultType)19394,t_array(t_address)dyn_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:63"
             },
@@ -10615,7 +10615,7 @@
               "label": "_strategies",
               "offset": 0,
               "slot": "152",
-              "type": "t_mapping(t_enum(StrategyType)19404,t_array(t_address)dyn_storage)",
+              "type": "t_mapping(t_enum(StrategyType)19398,t_array(t_address)dyn_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:64"
             },
@@ -10623,7 +10623,7 @@
               "label": "_vaultType",
               "offset": 0,
               "slot": "153",
-              "type": "t_mapping(t_address,t_enum(VaultType)19400)",
+              "type": "t_mapping(t_address,t_enum(VaultType)19394)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:66"
             },
@@ -10631,7 +10631,7 @@
               "label": "_strategyType",
               "offset": 0,
               "slot": "154",
-              "type": "t_mapping(t_address,t_enum(StrategyType)19404)",
+              "type": "t_mapping(t_address,t_enum(StrategyType)19398)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:67"
             },
@@ -10639,7 +10639,7 @@
               "label": "_vaultImplementation",
               "offset": 0,
               "slot": "155",
-              "type": "t_mapping(t_enum(VaultType)19400,t_address)",
+              "type": "t_mapping(t_enum(VaultType)19394,t_address)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:69"
             },
@@ -10647,7 +10647,7 @@
               "label": "_strategyImplementation",
               "offset": 0,
               "slot": "156",
-              "type": "t_mapping(t_enum(StrategyType)19404,t_address)",
+              "type": "t_mapping(t_enum(StrategyType)19398,t_address)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:70"
             },
@@ -10703,7 +10703,7 @@
               "label": "_vaultSettings",
               "offset": 0,
               "slot": "163",
-              "type": "t_mapping(t_address,t_struct(RebalanceSetting)19419_storage)",
+              "type": "t_mapping(t_address,t_struct(RebalanceSetting)19413_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:86"
             },
@@ -10735,7 +10735,7 @@
               "label": "_defaultSequencerUptimeFeed",
               "offset": 0,
               "slot": "167",
-              "type": "t_contract(IAggregatorV3)18303",
+              "type": "t_contract(IAggregatorV3)18297",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:99"
             },
@@ -10817,11 +10817,11 @@
               "label": "bytes",
               "numberOfBytes": "32"
             },
-            "t_contract(IAggregatorV3)18303": {
+            "t_contract(IAggregatorV3)18297": {
               "label": "contract IAggregatorV3",
               "numberOfBytes": "20"
             },
-            "t_enum(StrategyType)19404": {
+            "t_enum(StrategyType)19398": {
               "label": "enum IVaultFactory.StrategyType",
               "members": [
                 "None",
@@ -10830,7 +10830,7 @@
               ],
               "numberOfBytes": "1"
             },
-            "t_enum(VaultType)19400": {
+            "t_enum(VaultType)19394": {
               "label": "enum IVaultFactory.VaultType",
               "members": [
                 "None",
@@ -10853,35 +10853,35 @@
               "label": "mapping(address => bool)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_enum(StrategyType)19404)": {
+            "t_mapping(t_address,t_enum(StrategyType)19398)": {
               "label": "mapping(address => enum IVaultFactory.StrategyType)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_enum(VaultType)19400)": {
+            "t_mapping(t_address,t_enum(VaultType)19394)": {
               "label": "mapping(address => enum IVaultFactory.VaultType)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(RebalanceSetting)19419_storage)": {
+            "t_mapping(t_address,t_struct(RebalanceSetting)19413_storage)": {
               "label": "mapping(address => struct IVaultFactory.RebalanceSetting)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(StrategyType)19404,t_address)": {
+            "t_mapping(t_enum(StrategyType)19398,t_address)": {
               "label": "mapping(enum IVaultFactory.StrategyType => address)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(StrategyType)19404,t_array(t_address)dyn_storage)": {
+            "t_mapping(t_enum(StrategyType)19398,t_array(t_address)dyn_storage)": {
               "label": "mapping(enum IVaultFactory.StrategyType => address[])",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(VaultType)19400,t_address)": {
+            "t_mapping(t_enum(VaultType)19394,t_address)": {
               "label": "mapping(enum IVaultFactory.VaultType => address)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(VaultType)19400,t_array(t_address)dyn_storage)": {
+            "t_mapping(t_enum(VaultType)19394,t_array(t_address)dyn_storage)": {
               "label": "mapping(enum IVaultFactory.VaultType => address[])",
               "numberOfBytes": "32"
             },
-            "t_struct(RebalanceSetting)19419_storage": {
+            "t_struct(RebalanceSetting)19413_storage": {
               "label": "struct IVaultFactory.RebalanceSetting",
               "members": [
                 {
@@ -12126,7 +12126,7 @@
               "label": "_strategy",
               "offset": 4,
               "slot": "151",
-              "type": "t_contract(IStrategyCommon)19347",
+              "type": "t_contract(IStrategyCommon)19341",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:79"
             },
@@ -12150,7 +12150,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)28907_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)28901_storage)dyn_storage",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:83"
             },
@@ -12182,7 +12182,7 @@
               "label": "_users",
               "offset": 0,
               "slot": "156",
-              "type": "t_mapping(t_address,t_struct(User)28914_storage)",
+              "type": "t_mapping(t_address,t_struct(User)28908_storage)",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:89"
             },
@@ -12206,7 +12206,7 @@
               "label": "cachedRewardTokens",
               "offset": 0,
               "slot": "159",
-              "type": "t_array(t_struct(Reward)28922_storage)dyn_storage",
+              "type": "t_array(t_struct(Reward)28916_storage)dyn_storage",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:92"
             }
@@ -12216,11 +12216,11 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)28907_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)28901_storage)dyn_storage": {
               "label": "struct IOracleRewardShadowVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
-            "t_array(t_struct(Reward)28922_storage)dyn_storage": {
+            "t_array(t_struct(Reward)28916_storage)dyn_storage": {
               "label": "struct IOracleRewardShadowVault.Reward[]",
               "numberOfBytes": "32"
             },
@@ -12244,7 +12244,7 @@
               "label": "contract IERC20",
               "numberOfBytes": "20"
             },
-            "t_contract(IStrategyCommon)19347": {
+            "t_contract(IStrategyCommon)19341": {
               "label": "contract IStrategyCommon",
               "numberOfBytes": "20"
             },
@@ -12256,7 +12256,7 @@
               "label": "mapping(address => mapping(address => uint256))",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(User)28914_storage)": {
+            "t_mapping(t_address,t_struct(User)28908_storage)": {
               "label": "mapping(address => struct IOracleRewardShadowVault.User)",
               "numberOfBytes": "32"
             },
@@ -12268,7 +12268,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)28907_storage": {
+            "t_struct(QueuedWithdrawal)28901_storage": {
               "label": "struct IOracleRewardShadowVault.QueuedWithdrawal",
               "members": [
                 {
@@ -12298,7 +12298,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(Reward)28922_storage": {
+            "t_struct(Reward)28916_storage": {
               "label": "struct IOracleRewardShadowVault.Reward",
               "members": [
                 {
@@ -12322,7 +12322,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(User)28914_storage": {
+            "t_struct(User)28908_storage": {
               "label": "struct IOracleRewardShadowVault.User",
               "members": [
                 {
@@ -16635,7 +16635,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18818",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -16651,7 +16651,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -16693,7 +16693,7 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
@@ -16713,7 +16713,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IMetropolisStrategy)18818": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -16729,7 +16729,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18387_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -16779,9 +16779,9 @@
         "solcVersion": "0.8.26"
       },
       "contracts-metropolis/src/HybridPriceLens.sol:HybridPriceLens": {
-        "src": "contracts-metropolis/src/HybridPriceLens.sol:19",
+        "src": "contracts-metropolis/src/HybridPriceLens.sol:18",
         "version": {
-          "withMetadata": "efdd994a70b6ae9ebd5d7199ac732ffa41661ffec1dd5c033363927fa0a0e513",
+          "withMetadata": "b050d089d3d58e5eb6e8a417ae26229e8ce5cb93dbb041d1aba8b6aadf1fcbf8",
           "withoutMetadata": "fecb8c44f1521cf1e426a77a7ef5b8b8bd8f4d0b4e79a00c0a4765de19329b5f",
           "linkedWithoutMetadata": "fecb8c44f1521cf1e426a77a7ef5b8b8bd8f4d0b4e79a00c0a4765de19329b5f"
         },
@@ -16806,17 +16806,17 @@
           {
             "kind": "constructor",
             "contract": "HybridPriceLens",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:72"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:71"
           },
           {
             "kind": "state-variable-immutable",
             "name": "wnative",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:25"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:24"
           },
           {
             "kind": "state-variable-assignment",
             "name": "defaultMaxStaleness",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:52"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:51"
           }
         ],
         "layout": {
@@ -16833,9 +16833,9 @@
               "label": "priceFeeds",
               "offset": 0,
               "slot": "1",
-              "type": "t_mapping(t_address,t_struct(PriceFeed)10426_storage)",
+              "type": "t_mapping(t_address,t_struct(PriceFeed)10422_storage)",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:46"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:45"
             },
             {
               "label": "isReferenceToken",
@@ -16843,7 +16843,7 @@
               "slot": "2",
               "type": "t_mapping(t_address,t_bool)",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:49"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:48"
             },
             {
               "label": "defaultMaxStaleness",
@@ -16851,7 +16851,7 @@
               "slot": "3",
               "type": "t_uint32",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:52"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:51"
             }
           ],
           "types": {
@@ -16863,7 +16863,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_enum(OracleType)10410": {
+            "t_enum(OracleType)10406": {
               "label": "enum HybridPriceLens.OracleType",
               "members": [
                 "None",
@@ -16876,11 +16876,11 @@
               "label": "mapping(address => bool)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(PriceFeed)10426_storage)": {
+            "t_mapping(t_address,t_struct(PriceFeed)10422_storage)": {
               "label": "mapping(address => struct HybridPriceLens.PriceFeed)",
               "numberOfBytes": "32"
             },
-            "t_struct(PriceFeed)10426_storage": {
+            "t_struct(PriceFeed)10422_storage": {
               "label": "struct HybridPriceLens.PriceFeed",
               "members": [
                 {
@@ -16909,7 +16909,7 @@
                 },
                 {
                   "label": "oracleType",
-                  "type": "t_enum(OracleType)10410",
+                  "type": "t_enum(OracleType)10406",
                   "offset": 24,
                   "slot": "2"
                 },
@@ -17242,7 +17242,7 @@
               "label": "_oracleParameters",
               "offset": 0,
               "slot": "1",
-              "type": "t_struct(OracleParameters)18912_storage",
+              "type": "t_struct(OracleParameters)18908_storage",
               "contract": "OracleHelper",
               "src": "contracts-metropolis/src/OracleHelper.sol:42"
             },
@@ -17250,7 +17250,7 @@
               "label": "_sequencerUptimeFeed",
               "offset": 0,
               "slot": "6",
-              "type": "t_contract(IAggregatorV3)18301",
+              "type": "t_contract(IAggregatorV3)18297",
               "contract": "OracleHelper",
               "src": "contracts-metropolis/src/OracleHelper.sol:45"
             }
@@ -17264,11 +17264,11 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IAggregatorV3)18301": {
+            "t_contract(IAggregatorV3)18297": {
               "label": "contract IAggregatorV3",
               "numberOfBytes": "20"
             },
-            "t_struct(OracleParameters)18912_storage": {
+            "t_struct(OracleParameters)18908_storage": {
               "label": "struct IOracleHelper.OracleParameters",
               "members": [
                 {
@@ -17499,7 +17499,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18818",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -17515,7 +17515,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -17563,7 +17563,7 @@
               "label": "_users",
               "offset": 0,
               "slot": "158",
-              "type": "t_mapping(t_address,t_struct(User)19049_storage)",
+              "type": "t_mapping(t_address,t_struct(User)19045_storage)",
               "contract": "OracleRewardVault",
               "src": "contracts-metropolis/src/OracleRewardVault.sol:33"
             },
@@ -17579,7 +17579,7 @@
               "label": "cachedRewardTokens",
               "offset": 0,
               "slot": "160",
-              "type": "t_array(t_struct(Reward)19057_storage)dyn_storage",
+              "type": "t_array(t_struct(Reward)19053_storage)dyn_storage",
               "contract": "OracleRewardVault",
               "src": "contracts-metropolis/src/OracleRewardVault.sol:36"
             }
@@ -17589,11 +17589,11 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
-            "t_array(t_struct(Reward)19057_storage)dyn_storage": {
+            "t_array(t_struct(Reward)19053_storage)dyn_storage": {
               "label": "struct IOracleRewardVault.Reward[]",
               "numberOfBytes": "32"
             },
@@ -17617,7 +17617,7 @@
               "label": "contract IERC20",
               "numberOfBytes": "20"
             },
-            "t_contract(IMetropolisStrategy)18818": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -17629,7 +17629,7 @@
               "label": "mapping(address => mapping(address => uint256))",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(User)19049_storage)": {
+            "t_mapping(t_address,t_struct(User)19045_storage)": {
               "label": "mapping(address => struct IOracleRewardVault.User)",
               "numberOfBytes": "32"
             },
@@ -17641,7 +17641,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18387_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -17671,7 +17671,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(Reward)19057_storage": {
+            "t_struct(Reward)19053_storage": {
               "label": "struct IOracleRewardVault.Reward",
               "members": [
                 {
@@ -17695,7 +17695,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(User)19049_storage": {
+            "t_struct(User)19045_storage": {
               "label": "struct IOracleRewardVault.User",
               "members": [
                 {
@@ -17866,7 +17866,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18818",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -17882,7 +17882,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -17924,7 +17924,7 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
@@ -17944,7 +17944,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IMetropolisStrategy)18818": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -17960,7 +17960,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18387_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -18156,7 +18156,7 @@
               "label": "_vaults",
               "offset": 0,
               "slot": "151",
-              "type": "t_mapping(t_enum(VaultType)19398,t_array(t_address)dyn_storage)",
+              "type": "t_mapping(t_enum(VaultType)19394,t_array(t_address)dyn_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:63"
             },
@@ -18164,7 +18164,7 @@
               "label": "_strategies",
               "offset": 0,
               "slot": "152",
-              "type": "t_mapping(t_enum(StrategyType)19402,t_array(t_address)dyn_storage)",
+              "type": "t_mapping(t_enum(StrategyType)19398,t_array(t_address)dyn_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:64"
             },
@@ -18172,7 +18172,7 @@
               "label": "_vaultType",
               "offset": 0,
               "slot": "153",
-              "type": "t_mapping(t_address,t_enum(VaultType)19398)",
+              "type": "t_mapping(t_address,t_enum(VaultType)19394)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:66"
             },
@@ -18180,7 +18180,7 @@
               "label": "_strategyType",
               "offset": 0,
               "slot": "154",
-              "type": "t_mapping(t_address,t_enum(StrategyType)19402)",
+              "type": "t_mapping(t_address,t_enum(StrategyType)19398)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:67"
             },
@@ -18188,7 +18188,7 @@
               "label": "_vaultImplementation",
               "offset": 0,
               "slot": "155",
-              "type": "t_mapping(t_enum(VaultType)19398,t_address)",
+              "type": "t_mapping(t_enum(VaultType)19394,t_address)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:69"
             },
@@ -18196,7 +18196,7 @@
               "label": "_strategyImplementation",
               "offset": 0,
               "slot": "156",
-              "type": "t_mapping(t_enum(StrategyType)19402,t_address)",
+              "type": "t_mapping(t_enum(StrategyType)19398,t_address)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:70"
             },
@@ -18252,7 +18252,7 @@
               "label": "_vaultSettings",
               "offset": 0,
               "slot": "163",
-              "type": "t_mapping(t_address,t_struct(RebalanceSetting)19417_storage)",
+              "type": "t_mapping(t_address,t_struct(RebalanceSetting)19413_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:86"
             },
@@ -18284,7 +18284,7 @@
               "label": "_defaultSequencerUptimeFeed",
               "offset": 0,
               "slot": "167",
-              "type": "t_contract(IAggregatorV3)18301",
+              "type": "t_contract(IAggregatorV3)18297",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:99"
             },
@@ -18366,11 +18366,11 @@
               "label": "bytes",
               "numberOfBytes": "32"
             },
-            "t_contract(IAggregatorV3)18301": {
+            "t_contract(IAggregatorV3)18297": {
               "label": "contract IAggregatorV3",
               "numberOfBytes": "20"
             },
-            "t_enum(StrategyType)19402": {
+            "t_enum(StrategyType)19398": {
               "label": "enum IVaultFactory.StrategyType",
               "members": [
                 "None",
@@ -18379,7 +18379,7 @@
               ],
               "numberOfBytes": "1"
             },
-            "t_enum(VaultType)19398": {
+            "t_enum(VaultType)19394": {
               "label": "enum IVaultFactory.VaultType",
               "members": [
                 "None",
@@ -18402,35 +18402,35 @@
               "label": "mapping(address => bool)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_enum(StrategyType)19402)": {
+            "t_mapping(t_address,t_enum(StrategyType)19398)": {
               "label": "mapping(address => enum IVaultFactory.StrategyType)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_enum(VaultType)19398)": {
+            "t_mapping(t_address,t_enum(VaultType)19394)": {
               "label": "mapping(address => enum IVaultFactory.VaultType)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(RebalanceSetting)19417_storage)": {
+            "t_mapping(t_address,t_struct(RebalanceSetting)19413_storage)": {
               "label": "mapping(address => struct IVaultFactory.RebalanceSetting)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(StrategyType)19402,t_address)": {
+            "t_mapping(t_enum(StrategyType)19398,t_address)": {
               "label": "mapping(enum IVaultFactory.StrategyType => address)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(StrategyType)19402,t_array(t_address)dyn_storage)": {
+            "t_mapping(t_enum(StrategyType)19398,t_array(t_address)dyn_storage)": {
               "label": "mapping(enum IVaultFactory.StrategyType => address[])",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(VaultType)19398,t_address)": {
+            "t_mapping(t_enum(VaultType)19394,t_address)": {
               "label": "mapping(enum IVaultFactory.VaultType => address)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(VaultType)19398,t_array(t_address)dyn_storage)": {
+            "t_mapping(t_enum(VaultType)19394,t_array(t_address)dyn_storage)": {
               "label": "mapping(enum IVaultFactory.VaultType => address[])",
               "numberOfBytes": "32"
             },
-            "t_struct(RebalanceSetting)19417_storage": {
+            "t_struct(RebalanceSetting)19413_storage": {
               "label": "struct IVaultFactory.RebalanceSetting",
               "members": [
                 {
@@ -19675,7 +19675,7 @@
               "label": "_strategy",
               "offset": 4,
               "slot": "151",
-              "type": "t_contract(IStrategyCommon)19345",
+              "type": "t_contract(IStrategyCommon)19341",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:79"
             },
@@ -19699,7 +19699,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)28905_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)28901_storage)dyn_storage",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:83"
             },
@@ -19731,7 +19731,7 @@
               "label": "_users",
               "offset": 0,
               "slot": "156",
-              "type": "t_mapping(t_address,t_struct(User)28912_storage)",
+              "type": "t_mapping(t_address,t_struct(User)28908_storage)",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:89"
             },
@@ -19755,7 +19755,7 @@
               "label": "cachedRewardTokens",
               "offset": 0,
               "slot": "159",
-              "type": "t_array(t_struct(Reward)28920_storage)dyn_storage",
+              "type": "t_array(t_struct(Reward)28916_storage)dyn_storage",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:92"
             }
@@ -19765,11 +19765,11 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)28905_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)28901_storage)dyn_storage": {
               "label": "struct IOracleRewardShadowVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
-            "t_array(t_struct(Reward)28920_storage)dyn_storage": {
+            "t_array(t_struct(Reward)28916_storage)dyn_storage": {
               "label": "struct IOracleRewardShadowVault.Reward[]",
               "numberOfBytes": "32"
             },
@@ -19793,7 +19793,7 @@
               "label": "contract IERC20",
               "numberOfBytes": "20"
             },
-            "t_contract(IStrategyCommon)19345": {
+            "t_contract(IStrategyCommon)19341": {
               "label": "contract IStrategyCommon",
               "numberOfBytes": "20"
             },
@@ -19805,7 +19805,7 @@
               "label": "mapping(address => mapping(address => uint256))",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(User)28912_storage)": {
+            "t_mapping(t_address,t_struct(User)28908_storage)": {
               "label": "mapping(address => struct IOracleRewardShadowVault.User)",
               "numberOfBytes": "32"
             },
@@ -19817,7 +19817,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)28905_storage": {
+            "t_struct(QueuedWithdrawal)28901_storage": {
               "label": "struct IOracleRewardShadowVault.QueuedWithdrawal",
               "members": [
                 {
@@ -19847,7 +19847,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(Reward)28920_storage": {
+            "t_struct(Reward)28916_storage": {
               "label": "struct IOracleRewardShadowVault.Reward",
               "members": [
                 {
@@ -19871,7 +19871,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(User)28912_storage": {
+            "t_struct(User)28908_storage": {
               "label": "struct IOracleRewardShadowVault.User",
               "members": [
                 {
@@ -24184,7 +24184,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18818",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -24200,7 +24200,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -24242,7 +24242,7 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
@@ -24262,7 +24262,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IMetropolisStrategy)18818": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -24278,7 +24278,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18387_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -24328,9 +24328,9 @@
         "solcVersion": "0.8.26"
       },
       "contracts-metropolis/src/HybridPriceLens.sol:HybridPriceLens": {
-        "src": "contracts-metropolis/src/HybridPriceLens.sol:19",
+        "src": "contracts-metropolis/src/HybridPriceLens.sol:18",
         "version": {
-          "withMetadata": "efdd994a70b6ae9ebd5d7199ac732ffa41661ffec1dd5c033363927fa0a0e513",
+          "withMetadata": "b050d089d3d58e5eb6e8a417ae26229e8ce5cb93dbb041d1aba8b6aadf1fcbf8",
           "withoutMetadata": "fecb8c44f1521cf1e426a77a7ef5b8b8bd8f4d0b4e79a00c0a4765de19329b5f",
           "linkedWithoutMetadata": "fecb8c44f1521cf1e426a77a7ef5b8b8bd8f4d0b4e79a00c0a4765de19329b5f"
         },
@@ -24355,17 +24355,17 @@
           {
             "kind": "constructor",
             "contract": "HybridPriceLens",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:72"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:71"
           },
           {
             "kind": "state-variable-immutable",
             "name": "wnative",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:25"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:24"
           },
           {
             "kind": "state-variable-assignment",
             "name": "defaultMaxStaleness",
-            "src": "contracts-metropolis/src/HybridPriceLens.sol:52"
+            "src": "contracts-metropolis/src/HybridPriceLens.sol:51"
           }
         ],
         "layout": {
@@ -24382,9 +24382,9 @@
               "label": "priceFeeds",
               "offset": 0,
               "slot": "1",
-              "type": "t_mapping(t_address,t_struct(PriceFeed)10426_storage)",
+              "type": "t_mapping(t_address,t_struct(PriceFeed)10422_storage)",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:46"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:45"
             },
             {
               "label": "isReferenceToken",
@@ -24392,7 +24392,7 @@
               "slot": "2",
               "type": "t_mapping(t_address,t_bool)",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:49"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:48"
             },
             {
               "label": "defaultMaxStaleness",
@@ -24400,7 +24400,7 @@
               "slot": "3",
               "type": "t_uint32",
               "contract": "HybridPriceLens",
-              "src": "contracts-metropolis/src/HybridPriceLens.sol:52"
+              "src": "contracts-metropolis/src/HybridPriceLens.sol:51"
             }
           ],
           "types": {
@@ -24412,7 +24412,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_enum(OracleType)10410": {
+            "t_enum(OracleType)10406": {
               "label": "enum HybridPriceLens.OracleType",
               "members": [
                 "None",
@@ -24425,11 +24425,11 @@
               "label": "mapping(address => bool)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(PriceFeed)10426_storage)": {
+            "t_mapping(t_address,t_struct(PriceFeed)10422_storage)": {
               "label": "mapping(address => struct HybridPriceLens.PriceFeed)",
               "numberOfBytes": "32"
             },
-            "t_struct(PriceFeed)10426_storage": {
+            "t_struct(PriceFeed)10422_storage": {
               "label": "struct HybridPriceLens.PriceFeed",
               "members": [
                 {
@@ -24458,7 +24458,7 @@
                 },
                 {
                   "label": "oracleType",
-                  "type": "t_enum(OracleType)10410",
+                  "type": "t_enum(OracleType)10406",
                   "offset": 24,
                   "slot": "2"
                 },
@@ -24791,7 +24791,7 @@
               "label": "_oracleParameters",
               "offset": 0,
               "slot": "1",
-              "type": "t_struct(OracleParameters)18912_storage",
+              "type": "t_struct(OracleParameters)18908_storage",
               "contract": "OracleHelper",
               "src": "contracts-metropolis/src/OracleHelper.sol:42"
             },
@@ -24799,7 +24799,7 @@
               "label": "_sequencerUptimeFeed",
               "offset": 0,
               "slot": "6",
-              "type": "t_contract(IAggregatorV3)18301",
+              "type": "t_contract(IAggregatorV3)18297",
               "contract": "OracleHelper",
               "src": "contracts-metropolis/src/OracleHelper.sol:45"
             }
@@ -24813,11 +24813,11 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IAggregatorV3)18301": {
+            "t_contract(IAggregatorV3)18297": {
               "label": "contract IAggregatorV3",
               "numberOfBytes": "20"
             },
-            "t_struct(OracleParameters)18912_storage": {
+            "t_struct(OracleParameters)18908_storage": {
               "label": "struct IOracleHelper.OracleParameters",
               "members": [
                 {
@@ -25048,7 +25048,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18818",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -25064,7 +25064,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -25112,7 +25112,7 @@
               "label": "_users",
               "offset": 0,
               "slot": "158",
-              "type": "t_mapping(t_address,t_struct(User)19049_storage)",
+              "type": "t_mapping(t_address,t_struct(User)19045_storage)",
               "contract": "OracleRewardVault",
               "src": "contracts-metropolis/src/OracleRewardVault.sol:33"
             },
@@ -25128,7 +25128,7 @@
               "label": "cachedRewardTokens",
               "offset": 0,
               "slot": "160",
-              "type": "t_array(t_struct(Reward)19057_storage)dyn_storage",
+              "type": "t_array(t_struct(Reward)19053_storage)dyn_storage",
               "contract": "OracleRewardVault",
               "src": "contracts-metropolis/src/OracleRewardVault.sol:36"
             }
@@ -25138,11 +25138,11 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
-            "t_array(t_struct(Reward)19057_storage)dyn_storage": {
+            "t_array(t_struct(Reward)19053_storage)dyn_storage": {
               "label": "struct IOracleRewardVault.Reward[]",
               "numberOfBytes": "32"
             },
@@ -25166,7 +25166,7 @@
               "label": "contract IERC20",
               "numberOfBytes": "20"
             },
-            "t_contract(IMetropolisStrategy)18818": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -25178,7 +25178,7 @@
               "label": "mapping(address => mapping(address => uint256))",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(User)19049_storage)": {
+            "t_mapping(t_address,t_struct(User)19045_storage)": {
               "label": "mapping(address => struct IOracleRewardVault.User)",
               "numberOfBytes": "32"
             },
@@ -25190,7 +25190,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18387_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -25220,7 +25220,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(Reward)19057_storage": {
+            "t_struct(Reward)19053_storage": {
               "label": "struct IOracleRewardVault.Reward",
               "members": [
                 {
@@ -25244,7 +25244,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(User)19049_storage": {
+            "t_struct(User)19045_storage": {
               "label": "struct IOracleRewardVault.User",
               "members": [
                 {
@@ -25415,7 +25415,7 @@
               "label": "_strategy",
               "offset": 0,
               "slot": "151",
-              "type": "t_contract(IMetropolisStrategy)18818",
+              "type": "t_contract(IMetropolisStrategy)18814",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:56"
             },
@@ -25431,7 +25431,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage",
               "contract": "BaseVault",
               "src": "contracts-metropolis/src/BaseVault.sol:59"
             },
@@ -25473,7 +25473,7 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)18387_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)18383_storage)dyn_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
@@ -25493,7 +25493,7 @@
               "label": "bool",
               "numberOfBytes": "1"
             },
-            "t_contract(IMetropolisStrategy)18818": {
+            "t_contract(IMetropolisStrategy)18814": {
               "label": "contract IMetropolisStrategy",
               "numberOfBytes": "20"
             },
@@ -25509,7 +25509,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)18387_storage": {
+            "t_struct(QueuedWithdrawal)18383_storage": {
               "label": "struct IBaseVault.QueuedWithdrawal",
               "members": [
                 {
@@ -25705,7 +25705,7 @@
               "label": "_vaults",
               "offset": 0,
               "slot": "151",
-              "type": "t_mapping(t_enum(VaultType)19398,t_array(t_address)dyn_storage)",
+              "type": "t_mapping(t_enum(VaultType)19394,t_array(t_address)dyn_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:63"
             },
@@ -25713,7 +25713,7 @@
               "label": "_strategies",
               "offset": 0,
               "slot": "152",
-              "type": "t_mapping(t_enum(StrategyType)19402,t_array(t_address)dyn_storage)",
+              "type": "t_mapping(t_enum(StrategyType)19398,t_array(t_address)dyn_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:64"
             },
@@ -25721,7 +25721,7 @@
               "label": "_vaultType",
               "offset": 0,
               "slot": "153",
-              "type": "t_mapping(t_address,t_enum(VaultType)19398)",
+              "type": "t_mapping(t_address,t_enum(VaultType)19394)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:66"
             },
@@ -25729,7 +25729,7 @@
               "label": "_strategyType",
               "offset": 0,
               "slot": "154",
-              "type": "t_mapping(t_address,t_enum(StrategyType)19402)",
+              "type": "t_mapping(t_address,t_enum(StrategyType)19398)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:67"
             },
@@ -25737,7 +25737,7 @@
               "label": "_vaultImplementation",
               "offset": 0,
               "slot": "155",
-              "type": "t_mapping(t_enum(VaultType)19398,t_address)",
+              "type": "t_mapping(t_enum(VaultType)19394,t_address)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:69"
             },
@@ -25745,7 +25745,7 @@
               "label": "_strategyImplementation",
               "offset": 0,
               "slot": "156",
-              "type": "t_mapping(t_enum(StrategyType)19402,t_address)",
+              "type": "t_mapping(t_enum(StrategyType)19398,t_address)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:70"
             },
@@ -25801,7 +25801,7 @@
               "label": "_vaultSettings",
               "offset": 0,
               "slot": "163",
-              "type": "t_mapping(t_address,t_struct(RebalanceSetting)19417_storage)",
+              "type": "t_mapping(t_address,t_struct(RebalanceSetting)19413_storage)",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:86"
             },
@@ -25833,7 +25833,7 @@
               "label": "_defaultSequencerUptimeFeed",
               "offset": 0,
               "slot": "167",
-              "type": "t_contract(IAggregatorV3)18301",
+              "type": "t_contract(IAggregatorV3)18297",
               "contract": "VaultFactory",
               "src": "contracts-metropolis/src/VaultFactory.sol:99"
             },
@@ -25915,11 +25915,11 @@
               "label": "bytes",
               "numberOfBytes": "32"
             },
-            "t_contract(IAggregatorV3)18301": {
+            "t_contract(IAggregatorV3)18297": {
               "label": "contract IAggregatorV3",
               "numberOfBytes": "20"
             },
-            "t_enum(StrategyType)19402": {
+            "t_enum(StrategyType)19398": {
               "label": "enum IVaultFactory.StrategyType",
               "members": [
                 "None",
@@ -25928,7 +25928,7 @@
               ],
               "numberOfBytes": "1"
             },
-            "t_enum(VaultType)19398": {
+            "t_enum(VaultType)19394": {
               "label": "enum IVaultFactory.VaultType",
               "members": [
                 "None",
@@ -25951,35 +25951,35 @@
               "label": "mapping(address => bool)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_enum(StrategyType)19402)": {
+            "t_mapping(t_address,t_enum(StrategyType)19398)": {
               "label": "mapping(address => enum IVaultFactory.StrategyType)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_enum(VaultType)19398)": {
+            "t_mapping(t_address,t_enum(VaultType)19394)": {
               "label": "mapping(address => enum IVaultFactory.VaultType)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(RebalanceSetting)19417_storage)": {
+            "t_mapping(t_address,t_struct(RebalanceSetting)19413_storage)": {
               "label": "mapping(address => struct IVaultFactory.RebalanceSetting)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(StrategyType)19402,t_address)": {
+            "t_mapping(t_enum(StrategyType)19398,t_address)": {
               "label": "mapping(enum IVaultFactory.StrategyType => address)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(StrategyType)19402,t_array(t_address)dyn_storage)": {
+            "t_mapping(t_enum(StrategyType)19398,t_array(t_address)dyn_storage)": {
               "label": "mapping(enum IVaultFactory.StrategyType => address[])",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(VaultType)19398,t_address)": {
+            "t_mapping(t_enum(VaultType)19394,t_address)": {
               "label": "mapping(enum IVaultFactory.VaultType => address)",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_enum(VaultType)19398,t_array(t_address)dyn_storage)": {
+            "t_mapping(t_enum(VaultType)19394,t_array(t_address)dyn_storage)": {
               "label": "mapping(enum IVaultFactory.VaultType => address[])",
               "numberOfBytes": "32"
             },
-            "t_struct(RebalanceSetting)19417_storage": {
+            "t_struct(RebalanceSetting)19413_storage": {
               "label": "struct IVaultFactory.RebalanceSetting",
               "members": [
                 {
@@ -27224,7 +27224,7 @@
               "label": "_strategy",
               "offset": 4,
               "slot": "151",
-              "type": "t_contract(IStrategyCommon)19345",
+              "type": "t_contract(IStrategyCommon)19341",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:79"
             },
@@ -27248,7 +27248,7 @@
               "label": "_queuedWithdrawalsByRound",
               "offset": 0,
               "slot": "152",
-              "type": "t_array(t_struct(QueuedWithdrawal)28905_storage)dyn_storage",
+              "type": "t_array(t_struct(QueuedWithdrawal)28901_storage)dyn_storage",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:83"
             },
@@ -27280,7 +27280,7 @@
               "label": "_users",
               "offset": 0,
               "slot": "156",
-              "type": "t_mapping(t_address,t_struct(User)28912_storage)",
+              "type": "t_mapping(t_address,t_struct(User)28908_storage)",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:89"
             },
@@ -27304,7 +27304,7 @@
               "label": "cachedRewardTokens",
               "offset": 0,
               "slot": "159",
-              "type": "t_array(t_struct(Reward)28920_storage)dyn_storage",
+              "type": "t_array(t_struct(Reward)28916_storage)dyn_storage",
               "contract": "OracleRewardShadowVault",
               "src": "contracts-shadow/src/OracleRewardShadowVault.sol:92"
             }
@@ -27314,11 +27314,11 @@
               "label": "address",
               "numberOfBytes": "20"
             },
-            "t_array(t_struct(QueuedWithdrawal)28905_storage)dyn_storage": {
+            "t_array(t_struct(QueuedWithdrawal)28901_storage)dyn_storage": {
               "label": "struct IOracleRewardShadowVault.QueuedWithdrawal[]",
               "numberOfBytes": "32"
             },
-            "t_array(t_struct(Reward)28920_storage)dyn_storage": {
+            "t_array(t_struct(Reward)28916_storage)dyn_storage": {
               "label": "struct IOracleRewardShadowVault.Reward[]",
               "numberOfBytes": "32"
             },
@@ -27342,7 +27342,7 @@
               "label": "contract IERC20",
               "numberOfBytes": "20"
             },
-            "t_contract(IStrategyCommon)19345": {
+            "t_contract(IStrategyCommon)19341": {
               "label": "contract IStrategyCommon",
               "numberOfBytes": "20"
             },
@@ -27354,7 +27354,7 @@
               "label": "mapping(address => mapping(address => uint256))",
               "numberOfBytes": "32"
             },
-            "t_mapping(t_address,t_struct(User)28912_storage)": {
+            "t_mapping(t_address,t_struct(User)28908_storage)": {
               "label": "mapping(address => struct IOracleRewardShadowVault.User)",
               "numberOfBytes": "32"
             },
@@ -27366,7 +27366,7 @@
               "label": "string",
               "numberOfBytes": "32"
             },
-            "t_struct(QueuedWithdrawal)28905_storage": {
+            "t_struct(QueuedWithdrawal)28901_storage": {
               "label": "struct IOracleRewardShadowVault.QueuedWithdrawal",
               "members": [
                 {
@@ -27396,7 +27396,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(Reward)28920_storage": {
+            "t_struct(Reward)28916_storage": {
               "label": "struct IOracleRewardShadowVault.Reward",
               "members": [
                 {
@@ -27420,7 +27420,7 @@
               ],
               "numberOfBytes": "96"
             },
-            "t_struct(User)28912_storage": {
+            "t_struct(User)28908_storage": {
               "label": "struct IOracleRewardShadowVault.User",
               "members": [
                 {
