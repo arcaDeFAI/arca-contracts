@@ -26,10 +26,10 @@ Built on battle-tested code from audited Metropolis Maker Vaults, Arca extends s
 ## Quick Start
 
 ### Prerequisites
-
-- Node.js v18 or higher
-- npm or yarn
 - Git
+- Recommended: VS Code with [dev container](https://code.visualstudio.com/docs/devcontainers/containers)
+- Recommended: working within a *Linux* development environment (symlinks are used)
+  - Windows users can work in [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install)
 
 ### Installation
 
@@ -37,15 +37,14 @@ Built on battle-tested code from audited Metropolis Maker Vaults, Arca extends s
 # Clone the repository
 git clone https://github.com/your-org/arca-contracts.git
 cd arca-contracts
-
-# Install dependencies
-npm install
-
-# Install UI dependencies
-cd UI && npm install && cd ..
-
-# Initialize git submodules (for joe-v2 library)
-git submodule update --init --recursive
+code .
+```
+Then, accept the VS Code prompt to **"Reopen in Container"**.
+This will take care of installing the dependencies (forge, etc.).
+After the initial installation, you might need to close and re-open the VS Code terminal in order to source the bash profiles.
+You can then test that everything was installed correctly by forcing a recompilation of the solidity files:
+```bash
+npm run compile -- --force
 ```
 
 ### Build Configuration Note
@@ -56,6 +55,12 @@ The project uses `@arca/joe-v2` imports for the Joe V2 library dependencies. The
 
 ```bash
 npm run compile
+```
+
+Force re-compilation:
+
+```bash
+npm run compile -- --force
 ```
 
 ### Run Tests
@@ -69,11 +74,6 @@ npm run test:sol
 
 # Run only UI tests
 npm run test:ui
-
-# Run specific test files
-npx hardhat test test/ArcaTestnet.test.ts
-npx hardhat test test/*.integration.test.ts
-npx hardhat test test/*.precise.test.ts
 ```
 
 ### Deploy Contracts
@@ -207,49 +207,6 @@ npm run test
 npm run lint:fix
 ```
 
-## Deployment Guide
-
-We follow a three-tier testing approach:
-
-### 1. Local Development
-```bash
-# Start local blockchain
-npx hardhat node
-
-# Deploy contracts with mocks
-npm run deploy:local
-
-# Run integration tests
-npm run deploy:test:local
-```
-
-### 2. Testnet Deployment
-```bash
-# Check testnet status
-npm run dev:testnet:status
-
-# Deploy to Sonic Blaze Testnet
-npm run deploy:testnet
-
-# Verify contracts
-npm run deploy:verify:testnet
-
-# Get testnet tokens
-npm run dev:testnet:faucet
-```
-
-### 3. Mainnet Deployment
-```bash
-# Check mainnet readiness
-npm run dev:check
-
-# Deploy to Sonic mainnet
-npm run deploy:mainnet
-
-# Verify contracts
-npm run deploy:verify:mainnet
-```
-
 ## Contract Addresses
 
 ### Sonic Mainnet
@@ -295,14 +252,6 @@ npm run lint:fix
 # Check contract sizes
 npm run compile  # Warns if contracts exceed size limits
 ```
-
-### Testing Best Practices
-
-1. **Always run full test suite** before making changes
-2. **Test-driven development**: Write tests first
-3. **Integration focus**: Test multi-contract interactions
-4. **Precision testing**: Verify mathematical accuracy
-5. **Edge case coverage**: Test boundary conditions
 
 ## Security
 
