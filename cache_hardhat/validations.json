@@ -2,6 +2,1608 @@
   "version": "3.4",
   "log": [
     {
+      "@arca/joe-v2/interfaces/ILBFactory.sol:ILBFactory": {
+        "src": "@arca/joe-v2/interfaces/ILBFactory.sol:15",
+        "inherit": [
+          "@arca/joe-v2/interfaces/IPendingOwnable.sol:IPendingOwnable"
+        ],
+        "libraries": [],
+        "methods": [
+          "getMinBinStep()",
+          "getFeeRecipient()",
+          "getMaxFlashLoanFee()",
+          "getFlashLoanFee()",
+          "getLBPairImplementation()",
+          "getNumberOfLBPairs()",
+          "getLBPairAtIndex(uint256)",
+          "getNumberOfQuoteAssets()",
+          "getQuoteAssetAtIndex(uint256)",
+          "isQuoteAsset(address)",
+          "getLBPairInformation(address,address,uint256)",
+          "getPreset(uint256)",
+          "getAllBinSteps()",
+          "getOpenBinSteps()",
+          "getAllLBPairs(address,address)",
+          "setLBPairImplementation(address)",
+          "createLBPair(address,address,uint24,uint16)",
+          "setLBPairIgnored(address,address,uint16,bool)",
+          "setPreset(uint16,uint16,uint16,uint16,uint16,uint24,uint16,uint24,bool)",
+          "setPresetOpenState(uint16,bool)",
+          "removePreset(uint16)",
+          "setFeesParametersOnPair(address,address,uint16,uint16,uint16,uint16,uint16,uint24,uint16,uint24)",
+          "setFeeRecipient(address)",
+          "setFlashLoanFee(uint256)",
+          "addQuoteAsset(address)",
+          "removeQuoteAsset(address)",
+          "forceDecay(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@arca/joe-v2/interfaces/ILBFlashLoanCallback.sol:ILBFlashLoanCallback": {
+        "src": "@arca/joe-v2/interfaces/ILBFlashLoanCallback.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "LBFlashLoanCallback(address,address,address,bytes32,bytes32,bytes)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@arca/joe-v2/interfaces/ILBPair.sol:ILBPair": {
+        "src": "@arca/joe-v2/interfaces/ILBPair.sol:11",
+        "inherit": [
+          "@arca/joe-v2/interfaces/ILBToken.sol:ILBToken"
+        ],
+        "libraries": [],
+        "methods": [
+          "initialize(uint16,uint16,uint16,uint16,uint24,uint16,uint24,uint24)",
+          "getFactory()",
+          "getTokenX()",
+          "getTokenY()",
+          "getBinStep()",
+          "getReserves()",
+          "getActiveId()",
+          "getBin(uint24)",
+          "getNextNonEmptyBin(bool,uint24)",
+          "getProtocolFees()",
+          "getStaticFeeParameters()",
+          "getVariableFeeParameters()",
+          "getOracleParameters()",
+          "getOracleSampleAt(uint40)",
+          "getPriceFromId(uint24)",
+          "getIdFromPrice(uint256)",
+          "getSwapIn(uint128,bool)",
+          "getSwapOut(uint128,bool)",
+          "swap(bool,address)",
+          "flashLoan(address,bytes32,bytes)",
+          "mint(address,bytes32[],address)",
+          "burn(address,address,uint256[],uint256[])",
+          "collectProtocolFees()",
+          "increaseOracleLength(uint16)",
+          "setStaticFeeParameters(uint16,uint16,uint16,uint16,uint24,uint16,uint24)",
+          "forceDecay()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@arca/joe-v2/interfaces/ILBToken.sol:ILBToken": {
+        "src": "@arca/joe-v2/interfaces/ILBToken.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "name()",
+          "symbol()",
+          "totalSupply(uint256)",
+          "balanceOf(address,uint256)",
+          "balanceOfBatch(address[],uint256[])",
+          "isApprovedForAll(address,address)",
+          "approveForAll(address,bool)",
+          "batchTransferFrom(address,address,uint256[],uint256[])"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@arca/joe-v2/interfaces/IPendingOwnable.sol:IPendingOwnable": {
+        "src": "@arca/joe-v2/interfaces/IPendingOwnable.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "owner()",
+          "pendingOwner()",
+          "setPendingOwner(address)",
+          "revokePendingOwner()",
+          "becomeOwner()",
+          "renounceOwnership()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@arca/joe-v2/libraries/Clone.sol:Clone": {
+        "src": "@arca/joe-v2/libraries/Clone.sol:13",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@arca/joe-v2/libraries/math/SafeCast.sol:SafeCast": {
+        "src": "@arca/joe-v2/libraries/math/SafeCast.sol:10",
+        "version": {
+          "withMetadata": "56a2e4e7b6017cba9caa594d7be2b8cd0bfba72deb93bd2443c91610dfa6046c",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@arca/joe-v2/libraries/math/Uint256x256Math.sol:Uint256x256Math": {
+        "src": "@arca/joe-v2/libraries/math/Uint256x256Math.sol:10",
+        "version": {
+          "withMetadata": "07557aa4840023b0d5b150a14f6276ceeb695c71d0b592ad5a59eadc1b64412e",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable": {
+        "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:57",
+        "inherit": [],
+        "libraries": [
+          "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol:AddressUpgradeable"
+        ],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "_initialized",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint8",
+              "contract": "Initializable",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+              "retypedFrom": "bool"
+            },
+            {
+              "label": "_initializing",
+              "offset": 1,
+              "slot": "0",
+              "type": "t_bool",
+              "contract": "Initializable",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+            }
+          ],
+          "types": {
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:ReentrancyGuardUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:23",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable"
+        ],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "_initialized",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint8",
+              "contract": "Initializable",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+              "retypedFrom": "bool"
+            },
+            {
+              "label": "_initializing",
+              "offset": 1,
+              "slot": "0",
+              "type": "t_bool",
+              "contract": "Initializable",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+            },
+            {
+              "label": "_status",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_uint256",
+              "contract": "ReentrancyGuardUpgradeable",
+              "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+            },
+            {
+              "label": "__gap",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_array(t_uint256)49_storage",
+              "contract": "ReentrancyGuardUpgradeable",
+              "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:80"
+            }
+          ],
+          "types": {
+            "t_array(t_uint256)49_storage": {
+              "label": "uint256[49]",
+              "numberOfBytes": "1568"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol:IERC20Upgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "totalSupply()",
+          "balanceOf(address)",
+          "transfer(address,uint256)",
+          "allowance(address,address)",
+          "approve(address,uint256)",
+          "transferFrom(address,address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-IERC20PermitUpgradeable.sol:IERC20PermitUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/draft-IERC20PermitUpgradeable.sol:14",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "permit(address,address,uint256,uint256,uint8,bytes32,bytes32)",
+          "nonces(address)",
+          "DOMAIN_SEPARATOR()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol:SafeERC20Upgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol:19",
+        "version": {
+          "withMetadata": "b96126ddee2e4474f993f6956161eb57e866657e4e8fac7650ce8fe93774af0f",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [
+          "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol:AddressUpgradeable"
+        ],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol:AddressUpgradeable": {
+        "src": "@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol:9",
+        "version": {
+          "withMetadata": "2c52b5ee1bc1aaca99921935111c8d676f2cb0472cacab9507714015b7735f4f",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20": {
+        "src": "@openzeppelin/contracts/token/ERC20/IERC20.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "totalSupply()",
+          "balanceOf(address)",
+          "transfer(address,uint256)",
+          "allowance(address,address)",
+          "approve(address,uint256)",
+          "transferFrom(address,address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts/token/ERC721/IERC721.sol:IERC721": {
+        "src": "@openzeppelin/contracts/token/ERC721/IERC721.sol:11",
+        "inherit": [
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165"
+        ],
+        "libraries": [],
+        "methods": [
+          "balanceOf(address)",
+          "ownerOf(uint256)",
+          "safeTransferFrom(address,address,uint256,bytes)",
+          "safeTransferFrom(address,address,uint256)",
+          "transferFrom(address,address,uint256)",
+          "approve(address,uint256)",
+          "setApprovalForAll(address,bool)",
+          "getApproved(uint256)",
+          "isApprovedForAll(address,address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol:IERC721Enumerable": {
+        "src": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol:12",
+        "inherit": [
+          "@openzeppelin/contracts/token/ERC721/IERC721.sol:IERC721",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165"
+        ],
+        "libraries": [],
+        "methods": [
+          "totalSupply()",
+          "tokenOfOwnerByIndex(address,uint256)",
+          "tokenByIndex(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol:IERC721Metadata": {
+        "src": "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol:12",
+        "inherit": [
+          "@openzeppelin/contracts/token/ERC721/IERC721.sol:IERC721",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165"
+        ],
+        "libraries": [],
+        "methods": [
+          "name()",
+          "symbol()",
+          "tokenURI(uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165": {
+        "src": "@openzeppelin/contracts/utils/introspection/IERC165.sol:15",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "supportsInterface(bytes4)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IAggregatorV3.sol:IAggregatorV3": {
+        "src": "contracts-metropolis/src/interfaces/IAggregatorV3.sol:10",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "decimals()",
+          "description()",
+          "version()",
+          "getRoundData(uint80)",
+          "latestRoundData()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IBaseVault.sol:IBaseVault": {
+        "src": "contracts-metropolis/src/interfaces/IBaseVault.sol:19",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol:IERC20Upgradeable",
+          "contracts-metropolis/src/interfaces/IMinimalVault.sol:IMinimalVault"
+        ],
+        "libraries": [],
+        "methods": [
+          "version()",
+          "getFactory()",
+          "getPair()",
+          "getTokenX()",
+          "getTokenY()",
+          "getAumAnnualFee()",
+          "getRange()",
+          "getOperators()",
+          "getBalances()",
+          "previewShares(uint256,uint256)",
+          "previewAmounts(uint256)",
+          "isDepositsPaused()",
+          "getCurrentRound()",
+          "getQueuedWithdrawal(uint256,address)",
+          "getTotalQueuedWithdrawal(uint256)",
+          "getCurrentTotalQueuedWithdrawal()",
+          "getRedeemableAmounts(uint256,address)",
+          "deposit(uint256,uint256,uint256)",
+          "depositNative(uint256,uint256,uint256)",
+          "queueWithdrawal(uint256,address)",
+          "cancelQueuedWithdrawal(uint256)",
+          "redeemQueuedWithdrawal(uint256,address)",
+          "redeemQueuedWithdrawalNative(uint256,address)",
+          "emergencyWithdraw()",
+          "executeQueuedWithdrawals()",
+          "initialize(string,string)",
+          "setStrategy(address)",
+          "pauseDeposits()",
+          "resumeDeposits()",
+          "isFlaggedForShutdown()",
+          "submitShutdown()",
+          "cancelShutdown()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IHooksRewarder.sol:IHooksRewarder": {
+        "src": "contracts-metropolis/src/interfaces/IHooksRewarder.sol:7",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "getRewardToken()",
+          "getLBHooksManager()",
+          "isStopped()",
+          "getRewardedRange()",
+          "getPendingRewards(address,uint256[])",
+          "claim(address,uint256[])",
+          "getExtraHooksParameters()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IMetropolisStrategy.sol:IMetropolisStrategy": {
+        "src": "contracts-metropolis/src/interfaces/IMetropolisStrategy.sol:13",
+        "inherit": [
+          "contracts-metropolis/src/interfaces/IStrategyCommon.sol:IStrategyCommon"
+        ],
+        "libraries": [],
+        "methods": [
+          "getPair()",
+          "getRange()",
+          "getMaxRange()",
+          "rebalance(int32,int32,int32,int32,uint256,uint256,bytes)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IMinimalVault.sol:IMinimalVault": {
+        "src": "contracts-metropolis/src/interfaces/IMinimalVault.sol:16",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "getVaultType()",
+          "getStrategy()",
+          "setEmergencyMode()",
+          "recoverERC20(address,address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IOracleHelper.sol:IOracleHelper": {
+        "src": "contracts-metropolis/src/interfaces/IOracleHelper.sol:7",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(address,uint24,uint24,uint256,uint256,address)",
+          "setOracleParameters((uint256,uint256,uint24,uint24,uint256,bool,uint40))",
+          "setSequencerUptimeFeed(address)",
+          "setTwapParams(bool,uint40,uint256)",
+          "checkPriceInDeviation()",
+          "getPrice()",
+          "getDataFeedX()",
+          "getDataFeedY()",
+          "getValueInY(uint256,uint256,uint256)",
+          "getOracleParameters()",
+          "getSequencerUptimeFeed()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IOracleRewardVault.sol:IOracleRewardVault": {
+        "src": "contracts-metropolis/src/interfaces/IOracleRewardVault.sol:13",
+        "inherit": [
+          "contracts-metropolis/src/interfaces/IOracleVault.sol:IOracleVault",
+          "contracts-metropolis/src/interfaces/IBaseVault.sol:IBaseVault",
+          "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol:IERC20Upgradeable",
+          "contracts-metropolis/src/interfaces/IMinimalVault.sol:IMinimalVault"
+        ],
+        "libraries": [],
+        "methods": [
+          "getUserInfo(address)",
+          "getPendingRewards(address)",
+          "claim()",
+          "notifyRewardToken(address)",
+          "updateAccRewardsPerShare()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IOracleVault.sol:IOracleVault": {
+        "src": "contracts-metropolis/src/interfaces/IOracleVault.sol:13",
+        "inherit": [
+          "contracts-metropolis/src/interfaces/IBaseVault.sol:IBaseVault",
+          "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol:IERC20Upgradeable",
+          "contracts-metropolis/src/interfaces/IMinimalVault.sol:IMinimalVault"
+        ],
+        "libraries": [],
+        "methods": [
+          "getPrice()",
+          "getOracleParameters()",
+          "checkPriceInDeviation()",
+          "getOracleHelper()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IStrategyCommon.sol:IStrategyCommon": {
+        "src": "contracts-metropolis/src/interfaces/IStrategyCommon.sol:15",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "getFactory()",
+          "getVault()",
+          "getTokenX()",
+          "getTokenY()",
+          "getOperator()",
+          "getStrategyType()",
+          "getAumAnnualFee()",
+          "getPendingAumAnnualFee()",
+          "setPendingAumAnnualFee(uint16)",
+          "resetPendingAumAnnualFee()",
+          "getBalances()",
+          "getIdleBalances()",
+          "getRewardTokens()",
+          "hasRewards()",
+          "hasExtraRewards()",
+          "harvestRewards()",
+          "getLastRebalance()",
+          "setRebalanceCoolDown(uint256)",
+          "initialize()",
+          "withdrawAll()",
+          "setOperator(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/interfaces/IVaultFactory.sol:IVaultFactory": {
+        "src": "contracts-metropolis/src/interfaces/IVaultFactory.sol:20",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "getWNative()",
+          "getVaultAt(uint8,uint256)",
+          "createMarketMakerShadowOracleRewardVault(address,uint16,uint32)",
+          "createMarketMakerOracleVault(address,uint16)",
+          "getVaultType(address)",
+          "getStrategyAt(uint8,uint256)",
+          "getStrategyType(address)",
+          "getNumberOfVaults(uint8)",
+          "getNumberOfStrategies(uint8)",
+          "getDefaultOperator()",
+          "getFeeRecipient()",
+          "getFeeRecipientByVault(address)",
+          "getVaultImplementation(uint8)",
+          "getStrategyImplementation(uint8)",
+          "getDepositToWithdrawCooldown()",
+          "isTransferIgnored(address)",
+          "getTransferIgnoreList()",
+          "isPairWhitelisted(address)",
+          "setVaultImplementation(uint8,address)",
+          "setStrategyImplementation(uint8,address)",
+          "setDefaultOperator(address)",
+          "setOperator(address,address)",
+          "setPendingAumAnnualFee(address,uint16)",
+          "resetPendingAumAnnualFee(address)",
+          "setFeeRecipient(address)",
+          "setDefaultSequencerUptimeFeed(address)",
+          "setSequencerUptimeFeed(address,address)",
+          "setOracleParameters(address,(uint256,uint256,uint24,uint24,uint256,bool,uint40))",
+          "setPairWhitelist(address[],bool)",
+          "linkVaultToStrategy(address,address)",
+          "setEmergencyMode(address)",
+          "cancelShutdown(address)",
+          "recoverERC20(address,address,address,uint256)",
+          "setTransferIgnoreList(address[])",
+          "setRebalanceCoolDown(address,uint256)",
+          "getShadowNonfungiblePositionManager()",
+          "getShadowVoter()",
+          "setShadowNonfungiblePositionManager(address)",
+          "setShadowVoter(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-metropolis/src/libraries/Math.sol:Math": {
+        "src": "contracts-metropolis/src/libraries/Math.sol:10",
+        "version": {
+          "withMetadata": "951f3bb12702647bc52a317ba4a48b4432b175724b2688430b2a0e1e5c7d1202",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol:IRamsesV3Pool": {
+        "src": "contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol:16",
+        "inherit": [
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol:IRamsesV3PoolEvents",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol:IRamsesV3PoolErrors",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol:IRamsesV3PoolOwnerActions",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol:IRamsesV3PoolActions",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol:IRamsesV3PoolDerivedState",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol:IRamsesV3PoolState",
+          "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol:IRamsesV3PoolImmutables"
+        ],
+        "libraries": [],
+        "methods": [
+          "_advancePeriod()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol:IRamsesV3PoolActions": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolActions.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "initialize(uint160)",
+          "mint(address,uint256,int24,int24,uint128,bytes)",
+          "collect(address,uint256,int24,int24,uint128,uint128)",
+          "burn(uint256,int24,int24,uint128)",
+          "swap(address,bool,int256,uint160,bytes)",
+          "flash(address,uint256,uint256,bytes)",
+          "increaseObservationCardinalityNext(uint16)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol:IRamsesV3PoolDerivedState": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolDerivedState.sol:7",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "observe(uint32[])",
+          "snapshotCumulativesInside(int24,int24)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol:IRamsesV3PoolErrors": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolErrors.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol:IRamsesV3PoolEvents": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolEvents.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol:IRamsesV3PoolImmutables": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolImmutables.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "factory()",
+          "token0()",
+          "token1()",
+          "fee()",
+          "tickSpacing()",
+          "maxLiquidityPerTick()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol:IRamsesV3PoolOwnerActions": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolOwnerActions.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "setFeeProtocol()",
+          "collectProtocol(address,uint128,uint128)",
+          "setFee(uint24)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol:IRamsesV3PoolState": {
+        "src": "contracts-shadow/CL/core/interfaces/pool/IRamsesV3PoolState.sol:7",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "slot0()",
+          "feeGrowthGlobal0X128()",
+          "feeGrowthGlobal1X128()",
+          "protocolFees()",
+          "liquidity()",
+          "ticks(int24)",
+          "tickBitmap(int16)",
+          "positions(bytes32)",
+          "observations(uint256)",
+          "positionPeriodSecondsInRange(uint256,address,uint256,int24,int24)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/libraries/FixedPoint96.sol:FixedPoint96": {
+        "src": "contracts-shadow/CL/core/libraries/FixedPoint96.sol:7",
+        "version": {
+          "withMetadata": "997bdf410edf2e7515a2e7859592991c848809cab9903831a4c9d1509b1c02f9",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/libraries/FullMath.sol:FullMath": {
+        "src": "contracts-shadow/CL/core/libraries/FullMath.sol:7",
+        "version": {
+          "withMetadata": "d7e036812c391f3a60fb37e68f0cd9f7ccace63046848920231b101a207d43ba",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/core/libraries/TickMath.sol:TickMath": {
+        "src": "contracts-shadow/CL/core/libraries/TickMath.sol:7",
+        "version": {
+          "withMetadata": "fe0dd7be5bb436ac792ae331034551f4583da2ed85cf0aa8aaf3c217132e85ac",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/periphery/interfaces/INonfungiblePositionManager.sol:INonfungiblePositionManager": {
+        "src": "contracts-shadow/CL/periphery/interfaces/INonfungiblePositionManager.sol:19",
+        "inherit": [
+          "@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol:IERC721Enumerable",
+          "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol:IERC721Metadata",
+          "@openzeppelin/contracts/token/ERC721/IERC721.sol:IERC721",
+          "@openzeppelin/contracts/utils/introspection/IERC165.sol:IERC165",
+          "contracts-shadow/CL/periphery/interfaces/IPeripheryImmutableState.sol:IPeripheryImmutableState",
+          "contracts-shadow/CL/periphery/interfaces/IPeripheryPayments.sol:IPeripheryPayments",
+          "contracts-shadow/CL/periphery/interfaces/IPoolInitializer.sol:IPoolInitializer",
+          "contracts-shadow/CL/periphery/interfaces/IPeripheryErrors.sol:IPeripheryErrors"
+        ],
+        "libraries": [],
+        "methods": [
+          "positions(uint256)",
+          "mint((address,address,int24,int24,int24,uint256,uint256,uint256,uint256,address,uint256))",
+          "increaseLiquidity((uint256,uint256,uint256,uint256,uint256,uint256))",
+          "decreaseLiquidity((uint256,uint128,uint256,uint256,uint256))",
+          "collect((uint256,address,uint128,uint128))",
+          "burn(uint256)",
+          "getReward(uint256,address[])"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/periphery/interfaces/IPeripheryErrors.sol:IPeripheryErrors": {
+        "src": "contracts-shadow/CL/periphery/interfaces/IPeripheryErrors.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/periphery/interfaces/IPeripheryImmutableState.sol:IPeripheryImmutableState": {
+        "src": "contracts-shadow/CL/periphery/interfaces/IPeripheryImmutableState.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "deployer()",
+          "WETH9()"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/periphery/interfaces/IPeripheryPayments.sol:IPeripheryPayments": {
+        "src": "contracts-shadow/CL/periphery/interfaces/IPeripheryPayments.sol:6",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "unwrapWETH9(uint256,address)",
+          "refundETH()",
+          "sweepToken(address,uint256,address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/periphery/interfaces/IPoolInitializer.sol:IPoolInitializer": {
+        "src": "contracts-shadow/CL/periphery/interfaces/IPoolInitializer.sol:8",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "createAndInitializePoolIfNecessary(address,address,int24,uint160)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/periphery/libraries/LiquidityAmounts.sol:LiquidityAmounts": {
+        "src": "contracts-shadow/CL/periphery/libraries/LiquidityAmounts.sol:9",
+        "version": {
+          "withMetadata": "4261b60ef8211b200eadc7f3870ae770ec2b813bcc4d17ff95a22c2a685ebe75",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [
+          "contracts-shadow/CL/core/libraries/FixedPoint96.sol:FixedPoint96",
+          "contracts-shadow/CL/core/libraries/FullMath.sol:FullMath"
+        ],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/CL/periphery/libraries/PoolAddress.sol:PoolAddress": {
+        "src": "contracts-shadow/CL/periphery/libraries/PoolAddress.sol:5",
+        "version": {
+          "withMetadata": "17db61552e016463088f8394a91864841262e10c1abf8dd90160d4c6ca41a355",
+          "withoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db",
+          "linkedWithoutMetadata": "a64c6cf9c6ba9368f5132c93a0196b3204a7963dbb4dd05dfddb4ab23126b8db"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/src/ShadowStrategy.sol:ShadowStrategy": {
+        "src": "contracts-shadow/src/ShadowStrategy.sol:51",
+        "version": {
+          "withMetadata": "cb85a8a8ca7d43ce5bdd775f395a478ce9aa01c184ff245833ff25dcf4bd9abe",
+          "withoutMetadata": "34d83b55d08765da5d215a6453cf8f6af9c38fde989d546a8ec4532df75e8b61",
+          "linkedWithoutMetadata": "34d83b55d08765da5d215a6453cf8f6af9c38fde989d546a8ec4532df75e8b61"
+        },
+        "inherit": [
+          "contracts-shadow/src/interfaces/IShadowStrategy.sol:IShadowStrategy",
+          "contracts-metropolis/src/interfaces/IStrategyCommon.sol:IStrategyCommon",
+          "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:ReentrancyGuardUpgradeable",
+          "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:Initializable",
+          "@arca/joe-v2/libraries/Clone.sol:Clone"
+        ],
+        "libraries": [
+          "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol:SafeERC20Upgradeable",
+          "@arca/joe-v2/libraries/math/SafeCast.sol:SafeCast",
+          "contracts-metropolis/src/libraries/Math.sol:Math",
+          "@arca/joe-v2/libraries/math/Uint256x256Math.sol:Uint256x256Math",
+          "contracts-shadow/CL/core/libraries/TickMath.sol:TickMath",
+          "contracts-shadow/CL/periphery/libraries/LiquidityAmounts.sol:LiquidityAmounts"
+        ],
+        "methods": [
+          "(address,uint256)",
+          "()",
+          "()",
+          "initialize()",
+          "getFactory()",
+          "getVault()",
+          "getPool()",
+          "getTokenX()",
+          "getTokenY()",
+          "getOperator()",
+          "getRange()",
+          "getStrategyType()",
+          "getAumAnnualFee()",
+          "getPendingAumAnnualFee()",
+          "getBalances()",
+          "getIdleBalances()",
+          "getLastRebalance()",
+          "getMaxRange()",
+          "setOperator(address)",
+          "setRebalanceCoolDown(uint256)",
+          "setPendingAumAnnualFee(uint16)",
+          "resetPendingAumAnnualFee()",
+          "getPosition()",
+          "getShadowNonfungiblePositionManager()",
+          "getRewardTokens()",
+          "hasRewards()",
+          "hasExtraRewards()",
+          "harvestRewards()",
+          "withdrawAll()",
+          "rebalance(int32,int32,int32,int32,uint256,uint256)",
+          "getRewardStatus()"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "ShadowStrategy",
+            "src": "contracts-shadow/src/ShadowStrategy.sol:148"
+          },
+          {
+            "kind": "state-variable-immutable",
+            "name": "_factory",
+            "src": "contracts-shadow/src/ShadowStrategy.sol:82"
+          },
+          {
+            "kind": "state-variable-immutable",
+            "name": "_MAX_RANGE",
+            "src": "contracts-shadow/src/ShadowStrategy.sol:83"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "_initialized",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_uint8",
+              "contract": "Initializable",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:62",
+              "retypedFrom": "bool"
+            },
+            {
+              "label": "_initializing",
+              "offset": 1,
+              "slot": "0",
+              "type": "t_bool",
+              "contract": "Initializable",
+              "src": "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol:67"
+            },
+            {
+              "label": "_status",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_uint256",
+              "contract": "ReentrancyGuardUpgradeable",
+              "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:38"
+            },
+            {
+              "label": "__gap",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_array(t_uint256)49_storage",
+              "contract": "ReentrancyGuardUpgradeable",
+              "src": "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol:80"
+            },
+            {
+              "label": "_positionTokenId",
+              "offset": 0,
+              "slot": "51",
+              "type": "t_uint256",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:86"
+            },
+            {
+              "label": "_currentTickLower",
+              "offset": 0,
+              "slot": "52",
+              "type": "t_int24",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:87"
+            },
+            {
+              "label": "_currentTickUpper",
+              "offset": 3,
+              "slot": "52",
+              "type": "t_int24",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:88"
+            },
+            {
+              "label": "_aumAnnualFee",
+              "offset": 6,
+              "slot": "52",
+              "type": "t_uint16",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:91"
+            },
+            {
+              "label": "_lastRebalance",
+              "offset": 8,
+              "slot": "52",
+              "type": "t_uint64",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:92"
+            },
+            {
+              "label": "_pendingAumAnnualFee",
+              "offset": 16,
+              "slot": "52",
+              "type": "t_uint16",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:93"
+            },
+            {
+              "label": "_pendingAumAnnualFeeSet",
+              "offset": 18,
+              "slot": "52",
+              "type": "t_bool",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:94"
+            },
+            {
+              "label": "_rebalanceCoolDown",
+              "offset": 0,
+              "slot": "53",
+              "type": "t_uint256",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:97"
+            },
+            {
+              "label": "_operator",
+              "offset": 0,
+              "slot": "54",
+              "type": "t_address",
+              "contract": "ShadowStrategy",
+              "src": "contracts-shadow/src/ShadowStrategy.sol:98"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_array(t_uint256)49_storage": {
+              "label": "uint256[49]",
+              "numberOfBytes": "1568"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_int24": {
+              "label": "int24",
+              "numberOfBytes": "3"
+            },
+            "t_uint16": {
+              "label": "uint16",
+              "numberOfBytes": "2"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint64": {
+              "label": "uint64",
+              "numberOfBytes": "8"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/src/interfaces/IMinimalGauge.sol:IMinimalGauge": {
+        "src": "contracts-shadow/src/interfaces/IMinimalGauge.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "rewardToken()",
+          "rewardsList()",
+          "earned(address,address)",
+          "getReward(address,address[])",
+          "getRewardAndExit(address,address[])",
+          "rewardData(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/src/interfaces/IMinimalVoter.sol:IMinimalVoter": {
+        "src": "contracts-shadow/src/interfaces/IMinimalVoter.sol:9",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "gaugeForPool(address)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol:IOracleRewardShadowVault": {
+        "src": "contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol:27",
+        "inherit": [
+          "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol:IERC20Upgradeable",
+          "contracts-metropolis/src/interfaces/IMinimalVault.sol:IMinimalVault"
+        ],
+        "libraries": [],
+        "methods": [
+          "initialize(string,string)",
+          "version()",
+          "decimals()",
+          "getFactory()",
+          "getVaultType()",
+          "getPool()",
+          "getTokenX()",
+          "getTokenY()",
+          "getStrategy()",
+          "getTwapInterval()",
+          "setTwapInterval(uint32)",
+          "getAumAnnualFee()",
+          "getOperators()",
+          "getBalances()",
+          "isDepositsPaused()",
+          "isFlaggedForShutdown()",
+          "getCurrentRound()",
+          "getQueuedWithdrawal(uint256,address)",
+          "getTotalQueuedWithdrawal(uint256)",
+          "getCurrentTotalQueuedWithdrawal()",
+          "getRedeemableAmounts(uint256,address)",
+          "previewShares(uint256,uint256)",
+          "previewAmounts(uint256)",
+          "deposit(uint256,uint256,uint256)",
+          "depositNative(uint256,uint256,uint256)",
+          "queueWithdrawal(uint256,address)",
+          "cancelQueuedWithdrawal(uint256)",
+          "redeemQueuedWithdrawal(uint256,address)",
+          "redeemQueuedWithdrawalNative(uint256,address)",
+          "emergencyWithdraw()",
+          "executeQueuedWithdrawals()",
+          "getUserInfo(address)",
+          "getPendingRewards(address)",
+          "notifyRewardToken(address)",
+          "updateAccRewardsPerShare()",
+          "setStrategy(address)",
+          "pauseDeposits()",
+          "resumeDeposits()",
+          "submitShutdown()",
+          "cancelShutdown()",
+          "setEmergencyMode()",
+          "recoverERC20(address,address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      },
+      "contracts-shadow/src/interfaces/IShadowStrategy.sol:IShadowStrategy": {
+        "src": "contracts-shadow/src/interfaces/IShadowStrategy.sol:17",
+        "inherit": [
+          "contracts-metropolis/src/interfaces/IStrategyCommon.sol:IStrategyCommon"
+        ],
+        "libraries": [],
+        "methods": [
+          "getPosition()",
+          "getShadowNonfungiblePositionManager()",
+          "getPool()",
+          "rebalance(int32,int32,int32,int32,uint256,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.26"
+      }
+    },
+    {
       "@arca/joe-v2-periphery/periphery/LiquidityAmounts.sol:LiquidityAmounts": {
         "src": "@arca/joe-v2-periphery/periphery/LiquidityAmounts.sol:16",
         "version": {

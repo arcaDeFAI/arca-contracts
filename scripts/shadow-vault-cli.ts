@@ -29,7 +29,19 @@ import {
     estimateTokensFromShares,
     calculateOptimalRatio,
     displayVisualRange,
-    estimateGasWithCost
+    estimateGasWithCost,
+    calculateDefaultTickRange,
+    calculateOptimalDepositAmounts,
+    displayStrategyAllocation,
+    parseTokenAmount,
+    parseShareAmount,
+    clearReadlineBuffer,
+    promptAndParseAmount,
+    promptWithDefault,
+    checkEmergencyMode,
+    validateEmergencyWithdraw,
+    displayEmergencyStatus,
+    estimateEmergencyWithdrawal
 } from "./test-vault-utils";
 
 class ShadowVaultTester {
@@ -126,6 +138,16 @@ class ShadowVaultTester {
         });
     }
 
+    async questionWithDefault(prompt: string, defaultValue: string, formatDefault?: string): Promise<string> {
+        const formattedDefault = formatDefault || defaultValue;
+        const fullPrompt = `${prompt} [${chalk.gray(formattedDefault)}]: `;
+        
+        return new Promise((resolve) => {
+            this.rl.question(chalk.yellow(fullPrompt), (answer) => {
+                resolve(answer.trim() || defaultValue);
+            });
+        });
+    }
 
     async confirm(prompt: string): Promise<boolean> {
         const answer = await this.question(`${prompt} (y/n): `);
@@ -366,14 +388,39 @@ class ShadowVaultTester {
         // Show token info and suggested amounts
         await this.showTokenAmountSuggestions();
         
-        const amountX = await this.question("Enter amount X (in wei): ");
-        const amountY = await this.question("Enter amount Y (in wei): ");
-        const minShares = await this.question("Enter minimum shares (in wei): ");
+        // Get token decimals and symbols for parsing
+        const [decimalsX, decimalsY, symbolX, symbolY] = await Promise.all([
+            getTokenDecimals(this.tokenX!),
+            getTokenDecimals(this.tokenY!),
+            getTokenSymbol(this.tokenX!),
+            getTokenSymbol(this.tokenY!)
+        ]);
+        
+        // Parse amount X with validation
+        const amountXStr = await this.question("Enter amount X (e.g., '1.5', '1000000' wei): ");
+        const parsedX = parseTokenAmount(amountXStr, decimalsX, symbolX);
+        if (!parsedX.success) {
+            console.log(chalk.red(`\n❌ ${parsedX.error}`));
+            return;
+        }
+        
+        // Parse amount Y with validation
+        const amountYStr = await this.question("Enter amount Y (e.g., '10 USDC', '100000' wei): ");
+        const parsedY = parseTokenAmount(amountYStr, decimalsY, symbolY);
+        if (!parsedY.success) {
+            console.log(chalk.red(`\n❌ ${parsedY.error}`));
+            return;
+        }
+        
+        // Parse minimum shares
+        const vaultDecimals = Number(await this.vault!.decimals());
+        const minSharesStr = await this.question("Enter minimum shares (or 0 for no minimum): ");
+        const parsedShares = parseTokenAmount(minSharesStr || "0", vaultDecimals);
         
         const params = {
-            amountX: BigInt(amountX || "0"),
-            amountY: BigInt(amountY || "0"),
-            minShares: BigInt(minShares || "0")
+            amountX: parsedX.value!,
+            amountY: parsedY.value!,
+            minShares: parsedShares.value || 0n
         };
         
         // Debug: Check if contracts are loaded
@@ -427,22 +474,27 @@ class ShadowVaultTester {
         const sharesInput = await this.question("");
         const recipient = await this.question("Enter recipient address (or press enter for self): ");
         
-        // Handle "max" input
-        let shares: bigint;
-        if (sharesInput.toLowerCase() === "max") {
-            // Calculate available shares (total - queued)
-            const totalShares = await this.vault!.balanceOf(this.signer.address);
-            const currentRound = await this.vault!.getCurrentRound();
-            let totalQueued = 0n;
-            for (let i = 0; i <= Number(currentRound); i++) {
-                const queued = await this.vault!.getQueuedWithdrawal(i, this.signer.address);
-                totalQueued += queued;
-            }
-            shares = totalShares - totalQueued;
-            console.log(chalk.cyan(`Using max available shares: ${shares.toString()}`));
-        } else {
-            shares = BigInt(sharesInput || "0");
+        // Get available shares for percentage/max calculations
+        const totalShares = await this.vault!.balanceOf(this.signer.address);
+        const currentRound = await this.vault!.getCurrentRound();
+        let totalQueued = 0n;
+        for (let i = 0; i <= Number(currentRound); i++) {
+            const queued = await this.vault!.getQueuedWithdrawal(i, this.signer.address);
+            totalQueued += queued;
         }
+        const availableShares = totalShares - totalQueued;
+        
+        // Parse shares input with proper decimal handling
+        const decimals = Number(await this.vault!.decimals());
+        const parsed = parseShareAmount(sharesInput, decimals, availableShares);
+        
+        if (!parsed.success) {
+            console.log(chalk.red(`\n❌ ${parsed.error}`));
+            console.log(chalk.yellow("Valid formats: '1.5', '50%', 'max', or amount in wei"));
+            return;
+        }
+        
+        const shares = parsed.value!;
         
         const params = {
             shares,
@@ -469,6 +521,144 @@ class ShadowVaultTester {
         await this.executeAction("Queue Withdrawal", async () => {
             return this.vault!.queueWithdrawal(params.shares, params.recipient);
         }, params);
+    }
+
+    async testEmergencyWithdraw() {
+        console.log(chalk.blue("\n🚨 Emergency Withdraw\n"));
+        
+        // Check emergency status
+        await displayEmergencyStatus(this.vault!);
+        
+        // Validate emergency withdraw
+        const validation = await validateEmergencyWithdraw(this.vault!, this.signer);
+        if (!validation.valid) {
+            console.log(chalk.red(`\n❌ ${validation.message}`));
+            return;
+        }
+        
+        const shares = validation.shares!;
+        const decimals = Number(await this.vault!.decimals());
+        
+        console.log(chalk.cyan("\n📊 Your Position:"));
+        console.log(chalk.gray(`  Shares: ${formatters.formatShareAmount(shares, decimals)}`));
+        
+        // Estimate what user will receive
+        const { amountX, amountY } = await estimateEmergencyWithdrawal(
+            this.vault!,
+            shares,
+            this.tokenX!,
+            this.tokenY!
+        );
+        
+        console.log(chalk.cyan("\n💰 You will receive (estimated):"));
+        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        
+        console.log(chalk.red("\n⚠️  WARNING:"));
+        console.log(chalk.red("• This will burn ALL your shares"));
+        console.log(chalk.red("• No rewards will be paid out"));
+        console.log(chalk.red("• This action cannot be undone"));
+        
+        const confirmed = await this.confirm("\nProceed with emergency withdrawal?");
+        if (!confirmed) {
+            console.log(chalk.yellow("Emergency withdrawal cancelled"));
+            return;
+        }
+        
+        await this.executeAction("Emergency Withdraw", async () => {
+            return this.vault!.emergencyWithdraw();
+        }, { shares: shares.toString() });
+    }
+
+    async testRedeemNative() {
+        console.log(chalk.blue("\n💸 Redeem Native\n"));
+        
+        // Get current round
+        const currentRound = await this.vault!.getCurrentRound();
+        
+        // Check for available withdrawals
+        const availableAmount = await this.vault!.getAvailableToWithdraw(this.signer.address);
+        
+        if (availableAmount === 0n) {
+            console.log(chalk.yellow("\n⚠️  No available withdrawals to redeem"));
+            console.log(chalk.gray("You need to have a processed withdrawal from a previous round"));
+            return;
+        }
+        
+        console.log(chalk.cyan("\n💰 Available to Redeem:"));
+        const [amountX, amountY] = await this.vault!.previewAmounts(availableAmount);
+        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        
+        console.log(chalk.yellow("\n💡 This will convert wS (wrapped Sonic) to native S"));
+        
+        if (!await this.confirm("\nProceed with native redemption?")) {
+            console.log(chalk.yellow("Redemption cancelled"));
+            return;
+        }
+        
+        await this.executeAction("Redeem Native", async () => {
+            return this.vault!.redeemNative();
+        }, {});
+    }
+
+    async testCancelQueuedWithdrawal() {
+        console.log(chalk.blue("\n❌ Cancel Queued Withdrawal\n"));
+        
+        // Get current round and check if user has queued withdrawals
+        const currentRound = await this.vault!.getCurrentRound();
+        const queuedShares = await this.vault!.getQueuedWithdrawal(currentRound, this.signer.address);
+        
+        if (queuedShares === 0n) {
+            console.log(chalk.yellow("\n⚠️  You have no queued withdrawals in the current round"));
+            return;
+        }
+        
+        const decimals = Number(await this.vault!.decimals());
+        console.log(chalk.cyan("\n📊 Queued Withdrawal:"));
+        console.log(chalk.gray(`  Round: ${currentRound}`));
+        console.log(chalk.gray(`  Shares: ${formatters.formatShareAmount(queuedShares, decimals)}`));
+        
+        // Estimate what they would have received
+        const { amountX, amountY } = await estimateTokensFromShares(this.vault!, queuedShares);
+        console.log(chalk.gray(`  Est. Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Est. Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        
+        if (!await this.confirm("\nCancel this withdrawal?")) {
+            console.log(chalk.yellow("Cancellation aborted"));
+            return;
+        }
+        
+        await this.executeAction("Cancel Queued Withdrawal", async () => {
+            return this.vault!.cancelQueuedWithdrawal();
+        }, { shares: queuedShares.toString() });
+    }
+
+    async testRedeemWithdrawal() {
+        console.log(chalk.blue("\n💰 Redeem Withdrawal\n"));
+        
+        // Check for available withdrawals
+        const availableAmount = await this.vault!.getAvailableToWithdraw(this.signer.address);
+        
+        if (availableAmount === 0n) {
+            console.log(chalk.yellow("\n⚠️  No available withdrawals to redeem"));
+            console.log(chalk.gray("You need to have a processed withdrawal from a previous round"));
+            return;
+        }
+        
+        console.log(chalk.cyan("\n💰 Available to Redeem:"));
+        const [amountX, amountY] = await this.vault!.previewAmounts(availableAmount);
+        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        
+        if (!await this.confirm("\nProceed with redemption?")) {
+            console.log(chalk.yellow("Redemption cancelled"));
+            return;
+        }
+        
+        await this.executeAction("Redeem Withdrawal", async () => {
+            return this.vault!.redeem();
+        }, {});
     }
 
     async testRebalance() {
@@ -500,12 +690,57 @@ class ShadowVaultTester {
             console.log(e);
         }
         
-        const tickLower = await this.question("Enter tick lower: ");
-        const tickUpper = await this.question("Enter tick upper: ");
-        const desiredTick = await this.question("Enter desired tick: ");
-        const slippageTick = await this.question("Enter slippage tick: ");
-        const amountX = await this.question("Enter amount X to deposit (in wei): ");
-        const amountY = await this.question("Enter amount Y to deposit (in wei): ");
+        // Calculate smart defaults
+        const slot0 = await this.pool!.slot0();
+        const currentTick = Number(slot0[1]);
+        const tickSpacing = Number(await this.pool!.tickSpacing());
+        const [idleX, idleY] = await this.strategy!.getIdleBalances();
+        
+        // Default tick range: ±5% around current tick
+        const defaultRange = calculateDefaultTickRange(currentTick, tickSpacing, 5);
+        
+        // Default amounts: 90% of available (keeping 10% as reserve)
+        const defaultAmounts = calculateOptimalDepositAmounts(idleX, idleY, 10);
+        
+        // Get user inputs with defaults
+        const tickLower = await this.questionWithDefault(
+            "Enter tick lower",
+            defaultRange.lower.toString(),
+            `${defaultRange.lower} (5% below current)`
+        );
+        const tickUpper = await this.questionWithDefault(
+            "Enter tick upper",
+            defaultRange.upper.toString(),
+            `${defaultRange.upper} (5% above current)`
+        );
+        const desiredTick = await this.questionWithDefault(
+            "Enter desired tick",
+            currentTick.toString(),
+            `${currentTick} (current)`
+        );
+        const slippageTick = await this.questionWithDefault(
+            "Enter slippage tick",
+            "100",
+            "100 (standard slippage)"
+        );
+        
+        // Show amount suggestions
+        if (idleX > 0n || idleY > 0n) {
+            console.log(chalk.cyan("\n💡 Suggested amounts (90% of available, 10% reserve):"));
+            console.log(chalk.gray(`  Token X: ${defaultAmounts.amountX} wei (reserve: ${defaultAmounts.reserveX} wei)`));
+            console.log(chalk.gray(`  Token Y: ${defaultAmounts.amountY} wei (reserve: ${defaultAmounts.reserveY} wei)`));
+        }
+        
+        const amountX = await this.questionWithDefault(
+            "Enter amount X to deposit (in wei)",
+            defaultAmounts.amountX.toString(),
+            `${defaultAmounts.amountX} (90% of available)`
+        );
+        const amountY = await this.questionWithDefault(
+            "Enter amount Y to deposit (in wei)",
+            defaultAmounts.amountY.toString(),
+            `${defaultAmounts.amountY} (90% of available)`
+        );
         
         const params = {
             tickLower: parseInt(tickLower),
@@ -538,8 +773,8 @@ class ShadowVaultTester {
         }
         
         // Show visual range
-        const currentTick = parseInt(desiredTick);
-        displayVisualRange(params.tickLower, params.tickUpper, currentTick, "tick");
+        const displayTick = parseInt(desiredTick);
+        displayVisualRange(params.tickLower, params.tickUpper, displayTick, "tick");
         
         // Show deposit summary with reserve calculation
         console.log(chalk.cyan("\n📊 Deposit Summary:"));
@@ -677,41 +912,52 @@ class ShadowVaultTester {
         
         let running = true;
         while (running) {
-            const choice = await this.showMainMenu();
-            
-            switch (choice) {
-                case '1':
-                    await this.showVaultInfo();
-                    break;
-                case '2':
-                    await this.showUserInfo();
-                    break;
-                case '3':
-                    await this.showDepositMenu();
-                    break;
-                case '4':
-                    await this.showWithdrawalMenu();
-                    break;
-                case '5':
-                    await this.showStrategyMenu();
-                    break;
-                case '6':
-                    await this.showRewardMenu();
-                    break;
-                case '7':
-                    await this.showAdminMenu();
-                    break;
-                case '8':
-                    await this.showTestScenarios();
-                    break;
-                case '9':
-                    await this.exportResults();
-                    break;
-                case '0':
-                    running = false;
-                    break;
-                default:
-                    console.log(chalk.red("Invalid option"));
+            try {
+                const choice = await this.showMainMenu();
+                
+                switch (choice) {
+                    case '1':
+                        await this.showVaultInfo();
+                        break;
+                    case '2':
+                        await this.showUserInfo();
+                        break;
+                    case '3':
+                        await this.showDepositMenu();
+                        break;
+                    case '4':
+                        await this.showWithdrawalMenu();
+                        break;
+                    case '5':
+                        await this.showStrategyMenu();
+                        break;
+                    case '6':
+                        await this.showRewardMenu();
+                        break;
+                    case '7':
+                        await this.showAdminMenu();
+                        break;
+                    case '8':
+                        await this.showTestScenarios();
+                        break;
+                    case '9':
+                        await this.exportResults();
+                        break;
+                    case '0':
+                        running = false;
+                        break;
+                    default:
+                        if (choice.trim() !== '') {
+                            console.log(chalk.red("Invalid option"));
+                        }
+                        // Clear any buffered input
+                        clearReadlineBuffer(this.rl);
+                }
+            } catch (error) {
+                console.error(chalk.red("\n❌ An error occurred:"), error);
+                console.log(chalk.yellow("\nPress Enter to continue..."));
+                await this.question("");
+                clearReadlineBuffer(this.rl);
             }
         }
         
@@ -761,6 +1007,12 @@ class ShadowVaultTester {
                 break;
             case '3':
                 await this.testRedeemWithdrawal();
+                break;
+            case '4':
+                await this.testRedeemNative();
+                break;
+            case '5':
+                await this.testEmergencyWithdraw();
                 break;
             case '6':
                 await this.showQueueStatus();
@@ -820,7 +1072,123 @@ class ShadowVaultTester {
         
         const choice = await this.question("\nSelect option: ");
         
-        // TODO: Admin function implementations...
+        switch (choice) {
+            case '1':
+                await this.testToggleDepositsPaused();
+                break;
+            case '2':
+                // TODO: Set TWAP Interval
+                console.log(chalk.yellow("Not implemented yet"));
+                break;
+            case '3':
+                // TODO: Submit/Cancel Shutdown
+                console.log(chalk.yellow("Not implemented yet"));
+                break;
+            case '4':
+                await this.testSetEmergencyMode();
+                break;
+            case '5':
+                // TODO: Recover ERC20
+                console.log(chalk.yellow("Not implemented yet"));
+                break;
+        }
+    }
+    
+    async testSetEmergencyMode() {
+        console.log(chalk.blue("\n🚨 Set Emergency Mode\n"));
+        
+        // Check current emergency status
+        await displayEmergencyStatus(this.vault!);
+        
+        const isEmergency = await checkEmergencyMode(this.vault!);
+        if (isEmergency) {
+            console.log(chalk.yellow("\n⚠️  Vault is already in emergency mode"));
+            return;
+        }
+        
+        console.log(chalk.red("\n⚠️  WARNING - SETTING EMERGENCY MODE:"));
+        console.log(chalk.red("• This will withdraw ALL funds from strategy"));
+        console.log(chalk.red("• Strategy will be set to address(0)"));
+        console.log(chalk.red("• No new deposits will be allowed"));
+        console.log(chalk.red("• Users can only emergency withdraw"));
+        console.log(chalk.red("• This action is IRREVERSIBLE"));
+        
+        console.log(chalk.yellow("\n📋 Steps to trigger emergency mode:"));
+        console.log(chalk.gray("1. Call flagShutdown() to notify users"));
+        console.log(chalk.gray("2. Wait at least 1 block"));
+        console.log(chalk.gray("3. Call setEmergencyMode() through VaultFactory"));
+        
+        console.log(chalk.yellow("\n⚠️  Note: This requires VaultFactory owner permissions"));
+        
+        const confirmed = await this.confirm("\nProceed with emergency mode activation?");
+        if (!confirmed) {
+            console.log(chalk.yellow("Emergency mode activation cancelled"));
+            return;
+        }
+        
+        try {
+            // Get VaultFactory address
+            const vaultFactoryAddress = await this.vault!.factory();
+            console.log(chalk.gray(`\nVaultFactory: ${vaultFactoryAddress}`));
+            
+            // Get VaultFactory contract
+            const vaultFactory = await ethers.getContractAt("IVaultFactory", vaultFactoryAddress, this.signer);
+            
+            // Call setEmergencyMode through factory
+            console.log(chalk.blue("\n📤 Calling setEmergencyMode through VaultFactory..."));
+            
+            await this.executeAction("Set Emergency Mode", async () => {
+                return vaultFactory.setEmergencyMode(await this.vault!.getAddress());
+            }, {});
+            
+            // Check if it worked
+            const isEmergencyAfter = await checkEmergencyMode(this.vault!);
+            if (isEmergencyAfter) {
+                console.log(chalk.green("\n✅ Emergency mode activated successfully"));
+            } else {
+                console.log(chalk.red("\n❌ Failed to activate emergency mode"));
+            }
+        } catch (error: any) {
+            console.error(chalk.red("\n❌ Error setting emergency mode:"), error.message || error);
+            
+            if (error.message?.includes("Ownable")) {
+                console.log(chalk.yellow("\n💡 You need to be the VaultFactory owner to set emergency mode"));
+            }
+        }
+    }
+    
+    async testToggleDepositsPaused() {
+        console.log(chalk.blue("\n⏸️  Toggle Deposits Paused\n"));
+        
+        try {
+            const isPaused = await this.vault!.isDepositsPaused();
+            console.log(chalk.cyan(`Current state: Deposits are ${isPaused ? 'PAUSED' : 'ACTIVE'}`));
+            
+            const action = isPaused ? "resume" : "pause";
+            const confirmed = await this.confirm(`\n${isPaused ? 'Resume' : 'Pause'} deposits?`);
+            
+            if (!confirmed) {
+                console.log(chalk.yellow("Operation cancelled"));
+                return;
+            }
+            
+            await this.executeAction(`${isPaused ? 'Resume' : 'Pause'} Deposits`, async () => {
+                if (isPaused) {
+                    return this.vault!.unpauseDeposits();
+                } else {
+                    return this.vault!.pauseDeposits();
+                }
+            }, {});
+            
+            const isPausedAfter = await this.vault!.isDepositsPaused();
+            console.log(chalk.green(`\n✅ Deposits are now ${isPausedAfter ? 'PAUSED' : 'ACTIVE'}`));
+        } catch (error: any) {
+            console.error(chalk.red("\n❌ Error toggling deposits:"), error.message || error);
+            
+            if (error.message?.includes("OnlyOperator") || error.message?.includes("Ownable")) {
+                console.log(chalk.yellow("\n💡 You need operator or owner permissions to toggle deposits"));
+            }
+        }
     }
 
     // Additional helper methods
@@ -938,32 +1306,8 @@ class ShadowVaultTester {
             console.log(chalk.gray(`  Operator: ${operator}`));
             console.log(chalk.gray(`  Last Rebalance: ${new Date(Number(lastRebalance) * 1000).toLocaleString()}`));
             
-            // Calculate invested amounts (total - idle = invested in position)
-            const investedX = totalX - idleX;
-            const investedY = totalY - idleY;
-            
-            console.log(chalk.white("\n💰 Fund Allocation:"));
-            console.log(chalk.cyan("  Total Balances:"));
-            console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(totalX, this.tokenX!)}`));
-            console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(totalY, this.tokenY!)}`));
-            
-            console.log(chalk.cyan("\n  Invested in Position:"));
-            console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(investedX, this.tokenX!)}`));
-            console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(investedY, this.tokenY!)}`));
-            
-            console.log(chalk.cyan("\n  Reserves (Idle):"));
-            console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(idleX, this.tokenX!)}`));
-            console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(idleY, this.tokenY!)}`));
-            
-            // Calculate percentages
-            if (totalX > 0n) {
-                const reservePercentX = (idleX * 100n) / totalX;
-                console.log(chalk.yellow(`    Reserve % X: ${reservePercentX.toString()}%`));
-            }
-            if (totalY > 0n) {
-                const reservePercentY = (idleY * 100n) / totalY;
-                console.log(chalk.yellow(`    Reserve % Y: ${reservePercentY.toString()}%`));
-            }
+            // Use shared display function
+            await displayStrategyAllocation(this.strategy!, this.tokenX!, this.tokenY!);
             
         } catch (error) {
             console.error(chalk.red("Error fetching strategy info:"), error);
@@ -1084,7 +1428,25 @@ async function main() {
 // Run the script
 if (require.main === module) {
     main().catch((error) => {
-        console.error(chalk.red("\n❌ Fatal error:"), error);
+        // Better error handling for main process
+        if (error && typeof error === 'object') {
+            if (error.message) {
+                console.error(chalk.red("\n❌ Fatal error:"), error.message);
+                
+                // Provide helpful hints based on error type
+                if (error.message.includes('BigInt')) {
+                    console.log(chalk.yellow("\n💡 Hint: Enter amounts in decimal format (e.g., '1.5') or wei"));
+                } else if (error.message.includes('ECONNREFUSED')) {
+                    console.log(chalk.yellow("\n💡 Hint: Make sure your local Hardhat node is running"));
+                } else if (error.message.includes('nonce')) {
+                    console.log(chalk.yellow("\n💡 Hint: Transaction nonce mismatch - try restarting the node"));
+                }
+            } else {
+                console.error(chalk.red("\n❌ Fatal error:"), error);
+            }
+        } else {
+            console.error(chalk.red("\n❌ Fatal error:"), error);
+        }
         process.exit(1);
     });
 }
