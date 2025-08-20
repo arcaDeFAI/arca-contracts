@@ -31,7 +31,19 @@ import {
     estimateTokensFromShares,
     calculateOptimalRatio,
     displayVisualRange,
-    estimateGasWithCost
+    estimateGasWithCost,
+    calculateDefaultBinRange,
+    calculateOptimalDepositAmounts,
+    displayStrategyAllocation,
+    parseTokenAmount,
+    parseShareAmount,
+    clearReadlineBuffer,
+    promptAndParseAmount,
+    promptWithDefault,
+    checkEmergencyMode,
+    validateEmergencyWithdraw,
+    displayEmergencyStatus,
+    estimateEmergencyWithdrawal
 } from "./test-vault-utils";
 
 class MetropolisVaultTester {
@@ -146,6 +158,17 @@ class MetropolisVaultTester {
         return new Promise((resolve) => {
             this.rl.question(chalk.yellow(prompt), (answer) => {
                 resolve(answer);
+            });
+        });
+    }
+
+    async questionWithDefault(prompt: string, defaultValue: string, formatDefault?: string): Promise<string> {
+        const formattedDefault = formatDefault || defaultValue;
+        const fullPrompt = `${prompt} [${chalk.gray(formattedDefault)}]: `;
+        
+        return new Promise((resolve) => {
+            this.rl.question(chalk.yellow(fullPrompt), (answer) => {
+                resolve(answer.trim() || defaultValue);
             });
         });
     }
@@ -439,14 +462,39 @@ class MetropolisVaultTester {
         // Show token info and suggested amounts
         await this.showTokenAmountSuggestions();
         
-        const amountX = await this.question("Enter amount X (in wei): ");
-        const amountY = await this.question("Enter amount Y (in wei): ");
-        const minShares = await this.question("Enter minimum shares (in wei): ");
+        // Get token decimals and symbols for parsing
+        const [decimalsX, decimalsY, symbolX, symbolY] = await Promise.all([
+            getTokenDecimals(this.tokenX!),
+            getTokenDecimals(this.tokenY!),
+            getTokenSymbol(this.tokenX!),
+            getTokenSymbol(this.tokenY!)
+        ]);
+        
+        // Parse amount X with validation
+        const amountXStr = await this.question("Enter amount X (e.g., '1.5', '1000000' wei): ");
+        const parsedX = parseTokenAmount(amountXStr, decimalsX, symbolX);
+        if (!parsedX.success) {
+            console.log(chalk.red(`\n❌ ${parsedX.error}`));
+            return;
+        }
+        
+        // Parse amount Y with validation
+        const amountYStr = await this.question("Enter amount Y (e.g., '10 USDC', '100000' wei): ");
+        const parsedY = parseTokenAmount(amountYStr, decimalsY, symbolY);
+        if (!parsedY.success) {
+            console.log(chalk.red(`\n❌ ${parsedY.error}`));
+            return;
+        }
+        
+        // Parse minimum shares
+        const vaultDecimals = Number(await this.vault!.decimals());
+        const minSharesStr = await this.question("Enter minimum shares (or 0 for no minimum): ");
+        const parsedShares = parseTokenAmount(minSharesStr || "0", vaultDecimals);
         
         const params = {
-            amountX: BigInt(amountX || "0"),
-            amountY: BigInt(amountY || "0"),
-            minShares: BigInt(minShares || "0")
+            amountX: parsedX.value!,
+            amountY: parsedY.value!,
+            minShares: parsedShares.value || 0n
         };
         
         // Debug: Check if contracts are loaded
@@ -514,7 +562,17 @@ class MetropolisVaultTester {
             shares = totalShares - totalQueued;
             console.log(chalk.cyan(`Using max available shares: ${shares.toString()}`));
         } else {
-            shares = BigInt(sharesInput || "0");
+            // Parse shares input with proper decimal handling
+            const decimals = Number(await this.vault!.decimals());
+            const parsed = parseShareAmount(sharesInput, decimals, totalShares - totalQueued);
+            
+            if (!parsed.success) {
+                console.log(chalk.red(`\n❌ ${parsed.error}`));
+                console.log(chalk.yellow("Valid formats: '1.5', '50%', 'max', or amount in wei"));
+                return;
+            }
+            
+            shares = parsed.value!;
         }
         
         const params = {
@@ -544,6 +602,112 @@ class MetropolisVaultTester {
         }, params);
     }
 
+    async testEmergencyWithdraw() {
+        console.log(chalk.blue("\n🚨 Emergency Withdraw\n"));
+        
+        // Check emergency status
+        await displayEmergencyStatus(this.vault!);
+        
+        // Validate emergency withdraw
+        const validation = await validateEmergencyWithdraw(this.vault!, this.signer);
+        if (!validation.valid) {
+            console.log(chalk.red(`\n❌ ${validation.message}`));
+            return;
+        }
+        
+        const shares = validation.shares!;
+        const decimals = Number(await this.vault!.decimals());
+        
+        console.log(chalk.cyan("\n📊 Your Position:"));
+        console.log(chalk.gray(`  Shares: ${formatters.formatShareAmount(shares, decimals)}`));
+        
+        // Estimate what user will receive
+        const { amountX, amountY } = await estimateEmergencyWithdrawal(
+            this.vault!,
+            shares,
+            this.tokenX!,
+            this.tokenY!
+        );
+        
+        console.log(chalk.cyan("\n💰 You will receive (estimated):"));
+        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        
+        console.log(chalk.red("\n⚠️  WARNING:"));
+        console.log(chalk.red("• This will burn ALL your shares"));
+        console.log(chalk.red("• No rewards will be paid out"));
+        console.log(chalk.red("• This action cannot be undone"));
+        
+        const confirmed = await this.confirm("\nProceed with emergency withdrawal?");
+        if (!confirmed) {
+            console.log(chalk.yellow("Emergency withdrawal cancelled"));
+            return;
+        }
+        
+        await this.executeAction("Emergency Withdraw", async () => {
+            return this.vault!.emergencyWithdraw();
+        }, { shares: shares.toString() });
+    }
+
+    async testCancelQueuedWithdrawal() {
+        console.log(chalk.blue("\n❌ Cancel Queued Withdrawal\n"));
+        
+        // Get current round and check if user has queued withdrawals
+        const currentRound = await this.vault!.getCurrentRound();
+        const queuedShares = await this.vault!.getQueuedWithdrawal(currentRound, this.signer.address);
+        
+        if (queuedShares === 0n) {
+            console.log(chalk.yellow("\n⚠️  You have no queued withdrawals in the current round"));
+            return;
+        }
+        
+        const decimals = Number(await this.vault!.decimals());
+        console.log(chalk.cyan("\n📊 Queued Withdrawal:"));
+        console.log(chalk.gray(`  Round: ${currentRound}`));
+        console.log(chalk.gray(`  Shares: ${formatters.formatShareAmount(queuedShares, decimals)}`));
+        
+        // Estimate what they would have received
+        const { amountX, amountY } = await estimateTokensFromShares(this.vault!, queuedShares);
+        console.log(chalk.gray(`  Est. Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Est. Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        
+        if (!await this.confirm("\nCancel this withdrawal?")) {
+            console.log(chalk.yellow("Cancellation aborted"));
+            return;
+        }
+        
+        await this.executeAction("Cancel Queued Withdrawal", async () => {
+            return this.vault!.cancelQueuedWithdrawal();
+        }, { shares: queuedShares.toString() });
+    }
+
+    async testRedeemWithdrawal() {
+        console.log(chalk.blue("\n💰 Redeem Withdrawal\n"));
+        
+        // Check for available withdrawals
+        const availableAmount = await this.vault!.getAvailableToWithdraw(this.signer.address);
+        
+        if (availableAmount === 0n) {
+            console.log(chalk.yellow("\n⚠️  No available withdrawals to redeem"));
+            console.log(chalk.gray("You need to have a processed withdrawal from a previous round"));
+            return;
+        }
+        
+        console.log(chalk.cyan("\n💰 Available to Redeem:"));
+        const [amountX, amountY] = await this.vault!.previewAmounts(availableAmount);
+        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        
+        if (!await this.confirm("\nProceed with redemption?")) {
+            console.log(chalk.yellow("Redemption cancelled"));
+            return;
+        }
+        
+        await this.executeAction("Redeem Withdrawal", async () => {
+            return this.vault!.redeem();
+        }, {});
+    }
+
     async testRebalance() {
         console.log(chalk.blue("\n🔄 Test Rebalance\n"));
         
@@ -561,14 +725,62 @@ class MetropolisVaultTester {
             console.log(chalk.gray(`Current Bin Range: Not set`));
         }
         
-        const newLower = await this.question("Enter new lower bin ID: ");
-        const newUpper = await this.question("Enter new upper bin ID: ");
-        const desiredActiveId = await this.question("Enter desired active bin ID: ");
-        const slippageActiveId = await this.question("Enter slippage active bin ID: ");
-
-        // Get current balances for the rebalance
-        const [amountX, amountY] = await this.vault!.getBalances();
-        console.log(chalk.gray(`\nCurrent vault balances: X=${amountX}, Y=${amountY}`));
+        // Calculate smart defaults
+        const currentActiveBin = Number(activeId);
+        const defaultRange = calculateDefaultBinRange(currentActiveBin, 51); // 51 bins total
+        
+        // Get current strategy balances for amount defaults
+        const [idleX, idleY] = await this.strategy!.getIdleBalances();
+        const defaultAmounts = calculateOptimalDepositAmounts(idleX, idleY, 10);
+        
+        // Get user inputs with defaults
+        const newLower = await this.questionWithDefault(
+            "Enter new lower bin ID",
+            defaultRange.lower.toString(),
+            `${defaultRange.lower} (25 bins below active)`
+        );
+        const newUpper = await this.questionWithDefault(
+            "Enter new upper bin ID",
+            defaultRange.upper.toString(),
+            `${defaultRange.upper} (25 bins above active)`
+        );
+        const desiredActiveId = await this.questionWithDefault(
+            "Enter desired active bin ID",
+            currentActiveBin.toString(),
+            `${currentActiveBin} (current)`
+        );
+        const slippageActiveId = await this.questionWithDefault(
+            "Enter slippage active bin ID",
+            "5",
+            "5 (standard slippage)"
+        );
+        
+        // Show amount suggestions
+        if (idleX > 0n || idleY > 0n) {
+            console.log(chalk.cyan("\n💡 Suggested amounts (90% of available, 10% reserve):"));
+            console.log(chalk.gray(`  Token X: ${defaultAmounts.amountX} wei`));
+            console.log(chalk.gray(`  Token Y: ${defaultAmounts.amountY} wei`));
+        } else {
+            // If no idle balance, use vault balance
+            const [vaultX, vaultY] = await this.vault!.getBalances();
+            defaultAmounts.amountX = vaultX;
+            defaultAmounts.amountY = vaultY;
+            console.log(chalk.gray(`\nUsing vault balances: X=${vaultX}, Y=${vaultY}`));
+        }
+        
+        const amountXInput = await this.questionWithDefault(
+            "Enter amount X to deposit (in wei)",
+            defaultAmounts.amountX.toString(),
+            `${defaultAmounts.amountX} (90% of available)`
+        );
+        const amountYInput = await this.questionWithDefault(
+            "Enter amount Y to deposit (in wei)",
+            defaultAmounts.amountY.toString(),
+            `${defaultAmounts.amountY} (90% of available)`
+        );
+        
+        const amountX = BigInt(amountXInput);
+        const amountY = BigInt(amountYInput);
         
         // For simplicity, we'll create a uniform distribution
         const numBins = parseInt(newUpper) - parseInt(newLower) + 1;
@@ -724,41 +936,52 @@ class MetropolisVaultTester {
         
         let running = true;
         while (running) {
-            const choice = await this.showMainMenu();
-            
-            switch (choice) {
-                case '1':
-                    await this.showVaultInfo();
-                    break;
-                case '2':
-                    await this.showUserInfo();
-                    break;
-                case '3':
-                    await this.showDepositMenu();
-                    break;
-                case '4':
-                    await this.showWithdrawalMenu();
-                    break;
-                case '5':
-                    await this.showStrategyMenu();
-                    break;
-                case '6':
-                    await this.showRewardMenu();
-                    break;
-                case '7':
-                    await this.showAdminMenu();
-                    break;
-                case '8':
-                    await this.showTestScenarios();
-                    break;
-                case '9':
-                    await this.exportResults();
-                    break;
-                case '0':
-                    running = false;
-                    break;
-                default:
-                    console.log(chalk.red("Invalid option"));
+            try {
+                const choice = await this.showMainMenu();
+                
+                switch (choice) {
+                    case '1':
+                        await this.showVaultInfo();
+                        break;
+                    case '2':
+                        await this.showUserInfo();
+                        break;
+                    case '3':
+                        await this.showDepositMenu();
+                        break;
+                    case '4':
+                        await this.showWithdrawalMenu();
+                        break;
+                    case '5':
+                        await this.showStrategyMenu();
+                        break;
+                    case '6':
+                        await this.showRewardMenu();
+                        break;
+                    case '7':
+                        await this.showAdminMenu();
+                        break;
+                    case '8':
+                        await this.showTestScenarios();
+                        break;
+                    case '9':
+                        await this.exportResults();
+                        break;
+                    case '0':
+                        running = false;
+                        break;
+                    default:
+                        if (choice.trim() !== '') {
+                            console.log(chalk.red("Invalid option"));
+                        }
+                        // Clear any buffered input
+                        clearReadlineBuffer(this.rl);
+                }
+            } catch (error) {
+                console.error(chalk.red("\n❌ An error occurred:"), error);
+                console.log(chalk.yellow("\nPress Enter to continue..."));
+                await this.question("");
+                clearReadlineBuffer(this.rl);
             }
         }
         
@@ -805,7 +1028,7 @@ class MetropolisVaultTester {
                 await this.testRedeemWithdrawal();
                 break;
             case '4':
-                // TODO
+                await this.testEmergencyWithdraw();
                 break;
             case '5':
                 await this.showQueueStatus();
@@ -872,7 +1095,120 @@ class MetropolisVaultTester {
         
         const choice = await this.question("\nSelect option: ");
         
-        // TODO: Admin function implementations...
+        switch (choice) {
+            case '1':
+                await this.testToggleDepositsPaused();
+                break;
+            case '2':
+                // TODO: Set TWAP Interval
+                console.log(chalk.yellow("Not implemented yet"));
+                break;
+            case '3':
+                // TODO: Submit/Cancel Shutdown
+                console.log(chalk.yellow("Not implemented yet"));
+                break;
+            case '4':
+                await this.testSetEmergencyMode();
+                break;
+            case '5':
+                // TODO: Recover ERC20
+                console.log(chalk.yellow("Not implemented yet"));
+                break;
+        }
+    }
+    
+    async testSetEmergencyMode() {
+        console.log(chalk.blue("\n🚨 Set Emergency Mode\n"));
+        
+        // Check current emergency status
+        await displayEmergencyStatus(this.vault!);
+        
+        const isEmergency = await checkEmergencyMode(this.vault!);
+        if (isEmergency) {
+            console.log(chalk.yellow("\n⚠️  Vault is already in emergency mode"));
+            return;
+        }
+        
+        console.log(chalk.red("\n⚠️  WARNING - SETTING EMERGENCY MODE:"));
+        console.log(chalk.red("• This will withdraw ALL funds from strategy"));
+        console.log(chalk.red("• Strategy will be set to address(0)"));
+        console.log(chalk.red("• No new deposits will be allowed"));
+        console.log(chalk.red("• Users can only emergency withdraw"));
+        console.log(chalk.red("• This action is IRREVERSIBLE"));
+        
+        console.log(chalk.yellow("\n📋 Steps to trigger emergency mode:"));
+        console.log(chalk.gray("1. Call flagShutdown() to notify users"));
+        console.log(chalk.gray("2. Wait at least 1 block"));
+        console.log(chalk.gray("3. Call setEmergencyMode() through VaultFactory"));
+        
+        console.log(chalk.yellow("\n⚠️  Note: This requires VaultFactory owner permissions"));
+        
+        const confirmed = await this.confirm("\nProceed with emergency mode activation?");
+        if (!confirmed) {
+            console.log(chalk.yellow("Emergency mode activation cancelled"));
+            return;
+        }
+        
+        try {
+            // Get VaultFactory address
+            const vaultFactoryAddress = await this.vaultFactory!.getAddress();
+            console.log(chalk.gray(`\nVaultFactory: ${vaultFactoryAddress}`));
+            
+            // Call setEmergencyMode through factory
+            console.log(chalk.blue("\n📤 Calling setEmergencyMode through VaultFactory..."));
+            
+            await this.executeAction("Set Emergency Mode", async () => {
+                return this.vaultFactory!.setEmergencyMode(await this.vault!.getAddress());
+            }, {});
+            
+            // Check if it worked
+            const isEmergencyAfter = await checkEmergencyMode(this.vault!);
+            if (isEmergencyAfter) {
+                console.log(chalk.green("\n✅ Emergency mode activated successfully"));
+            } else {
+                console.log(chalk.red("\n❌ Failed to activate emergency mode"));
+            }
+        } catch (error: any) {
+            console.error(chalk.red("\n❌ Error setting emergency mode:"), error.message || error);
+            
+            if (error.message?.includes("Ownable")) {
+                console.log(chalk.yellow("\n💡 You need to be the VaultFactory owner to set emergency mode"));
+            }
+        }
+    }
+    
+    async testToggleDepositsPaused() {
+        console.log(chalk.blue("\n⏸️  Toggle Deposits Paused\n"));
+        
+        try {
+            const isPaused = await this.vault!.isDepositsPaused();
+            console.log(chalk.cyan(`Current state: Deposits are ${isPaused ? 'PAUSED' : 'ACTIVE'}`));
+            
+            const action = isPaused ? "resume" : "pause";
+            const confirmed = await this.confirm(`\n${isPaused ? 'Resume' : 'Pause'} deposits?`);
+            
+            if (!confirmed) {
+                console.log(chalk.yellow("Operation cancelled"));
+                return;
+            }
+            
+            await this.executeAction(`${isPaused ? 'Resume' : 'Pause'} Deposits`, async () => {
+                if (isPaused) {
+                    return this.vault!.unpauseDeposits();
+                } else {
+                    return this.vault!.pauseDeposits();
+                }
+            }, {});
+            
+            const isPausedAfter = await this.vault!.isDepositsPaused();
+            console.log(chalk.green(`\n✅ Deposits are now ${isPausedAfter ? 'PAUSED' : 'ACTIVE'}`));
+        } catch (error: any) {
+            console.error(chalk.red("\n❌ Error toggling deposits:"), error.message || error);
+            
+            if (error.message?.includes("OnlyOperator") || error.message?.includes("Ownable")) {
+                console.log(chalk.yellow("\n💡 You need operator or owner permissions to toggle deposits"));
+            }
+        }
     }
 
     // Additional helper methods
@@ -974,15 +1310,10 @@ class MetropolisVaultTester {
         try {
             const operator = await this.strategy!.getOperator();
             const lastRebalance = await this.strategy!.getLastRebalance();
-            const [idleX, idleY] = await this.strategy!.getIdleBalances();
             
             console.log(chalk.white("Management:"));
             console.log(chalk.gray(`  Operator: ${operator}`));
             console.log(chalk.gray(`  Last Rebalance: ${new Date(Number(lastRebalance) * 1000).toLocaleString()}`));
-            
-            console.log(chalk.white("\nIdle Balances:"));
-            console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(idleX, this.tokenX!)}`));
-            console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(idleY, this.tokenY!)}`));
             
             // Try to get range
             try {
@@ -994,6 +1325,9 @@ class MetropolisVaultTester {
             } catch (e) {
                 console.log(chalk.yellow("\nBin Range: Not set"));
             }
+            
+            // Use shared display function for fund allocation
+            await displayStrategyAllocation(this.strategy!, this.tokenX!, this.tokenY!);
             
         } catch (error) {
             console.error(chalk.red("Error fetching strategy info:"), error);
@@ -1122,7 +1456,25 @@ async function main() {
 // Run the script
 if (require.main === module) {
     main().catch((error) => {
-        console.error(chalk.red("\n❌ Fatal error:"), error);
+        // Better error handling for main process
+        if (error && typeof error === 'object') {
+            if (error.message) {
+                console.error(chalk.red("\n❌ Fatal error:"), error.message);
+                
+                // Provide helpful hints based on error type
+                if (error.message.includes('BigInt')) {
+                    console.log(chalk.yellow("\n💡 Hint: Enter amounts in decimal format (e.g., '1.5') or wei"));
+                } else if (error.message.includes('ECONNREFUSED')) {
+                    console.log(chalk.yellow("\n💡 Hint: Make sure your local Hardhat node is running"));
+                } else if (error.message.includes('nonce')) {
+                    console.log(chalk.yellow("\n💡 Hint: Transaction nonce mismatch - try restarting the node"));
+                }
+            } else {
+                console.error(chalk.red("\n❌ Fatal error:"), error);
+            }
+        } else {
+            console.error(chalk.red("\n❌ Fatal error:"), error);
+        }
         process.exit(1);
     });
 }

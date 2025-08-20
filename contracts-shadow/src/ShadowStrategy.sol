@@ -496,7 +496,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             // Get current balances and ensure we don't try to deposit more than available
             uint256 availableX = _tokenX().balanceOf(address(this));
             uint256 availableY = _tokenY().balanceOf(address(this));
-            
+
             // Cap amounts at available balance
             uint256 depositX = amountX > availableX ? availableX : amountX;
             uint256 depositY = amountY > availableY ? availableY : amountY;

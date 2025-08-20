@@ -1,6 +1,7 @@
 import { ethers } from "hardhat";
 import chalk from "chalk";
 import fs from "fs";
+import type * as readline from "readline";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import type { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 
@@ -475,22 +476,69 @@ export async function executeWithCapture(
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(chalk.red("\n❌ Error:"), errorMessage);
         
-        // Try to get more details about the revert
-        if (error && typeof error === 'object' && 'reason' in error) {
-            console.error(chalk.red("Reason:"), error.reason);
-        }
-        if (error && typeof error === 'object' && 'data' in error && options.vault) {
-            try {
-                const decodedError = options.vault.interface.parseError((error as {data: string}).data);
-                if (decodedError) {
-                    console.error(chalk.red("Decoded error:"), decodedError.name, decodedError.args);
+        // Enhanced error decoding
+        let decodedError: string | null = null;
+        
+        // Try to extract revert reason
+        if (error && typeof error === 'object') {
+            // Check for standard revert reason
+            if ('reason' in error && error.reason) {
+                console.error(chalk.red("Reason:"), error.reason);
+                decodedError = error.reason;
+            }
+            
+            // Check for transaction receipt with status 0 (failed)
+            if ('receipt' in error && error.receipt && error.receipt.status === 0) {
+                console.error(chalk.red("Transaction failed (status: 0)"));
+                
+                // Try to decode the error data
+                if ('data' in error && error.data && options.vault) {
+                    try {
+                        const parsed = options.vault.interface.parseError(error.data);
+                        if (parsed) {
+                            const errorName = parsed.name;
+                            const errorArgs = parsed.args ? Object.entries(parsed.args)
+                                .filter(([key]) => isNaN(Number(key)))
+                                .map(([key, value]) => `${key}: ${value}`)
+                                .join(', ') : '';
+                            decodedError = errorArgs ? `${errorName}(${errorArgs})` : errorName;
+                            console.error(chalk.red("Contract Error:"), decodedError);
+                        }
+                    } catch (e) {
+                        // Try alternative error extraction
+                        if (typeof error.data === 'string' && error.data.startsWith('0x')) {
+                            // Common error signatures
+                            const errorSignatures: Record<string, string> = {
+                                '0x08c379a0': 'Error(string)',
+                                '0x4e487b71': 'Panic(uint256)',
+                                '0xf92ee8a9': 'NotInitialized',
+                                '0xdf92cc9d': 'InsufficientBalance',
+                                '0x7939f424': 'TransferFromFailed',
+                                '0x23830e66': 'TransferFailed',
+                            };
+                            
+                            const selector = error.data.slice(0, 10);
+                            if (errorSignatures[selector]) {
+                                console.error(chalk.red("Error Type:"), errorSignatures[selector]);
+                            }
+                        }
+                    }
                 }
-            } catch (e) {
-                // Could not decode error
+            }
+            
+            // Check for common patterns in error message
+            if (errorMessage.includes('insufficient funds')) {
+                console.error(chalk.yellow("💡 Hint: Check that you have enough tokens and gas"));
+            } else if (errorMessage.includes('nonce')) {
+                console.error(chalk.yellow("💡 Hint: Transaction nonce issue - may need to reset"));
+            } else if (errorMessage.includes('gas')) {
+                console.error(chalk.yellow("💡 Hint: Gas estimation failed - transaction may revert"));
+            } else if (errorMessage.includes('reverted')) {
+                console.error(chalk.yellow("💡 Hint: Transaction reverted - check contract requirements"));
             }
         }
         
-        result.error = error.message || error.toString();
+        result.error = decodedError || errorMessage || error.toString();
     }
 
     return result;
@@ -758,4 +806,336 @@ export async function validateDeposit(
     }
     
     return true;
+}
+
+// Smart default calculation functions
+export function calculateDefaultTickRange(currentTick: number, tickSpacing: number, rangePercent: number = 10): { lower: number; upper: number } {
+    // Calculate a range around current tick based on percentage
+    // Round to nearest valid tick spacing
+    const range = Math.floor((rangePercent / 100) * 887272); // Max tick range
+    const halfRange = Math.floor(range / 2);
+    
+    // Round to tick spacing
+    const lower = Math.floor((currentTick - halfRange) / tickSpacing) * tickSpacing;
+    const upper = Math.ceil((currentTick + halfRange) / tickSpacing) * tickSpacing;
+    
+    // Ensure within valid tick range
+    const MIN_TICK = -887272;
+    const MAX_TICK = 887272;
+    
+    return {
+        lower: Math.max(MIN_TICK, lower),
+        upper: Math.min(MAX_TICK, upper)
+    };
+}
+
+export function calculateDefaultBinRange(activeBin: number, binCount: number = 51): { lower: number; upper: number } {
+    // Default to ±25 bins around active (51 total, typical for concentrated liquidity)
+    const halfRange = Math.floor(binCount / 2);
+    return {
+        lower: activeBin - halfRange,
+        upper: activeBin + halfRange
+    };
+}
+
+export function calculateOptimalDepositAmounts(
+    availableX: bigint,
+    availableY: bigint,
+    reservePercent: number = 10
+): { amountX: bigint; amountY: bigint; reserveX: bigint; reserveY: bigint } {
+    // Calculate deposit amounts keeping a reserve percentage
+    const depositPercent = BigInt(100 - reservePercent);
+    const hundred = BigInt(100);
+    
+    const amountX = (availableX * depositPercent) / hundred;
+    const amountY = (availableY * depositPercent) / hundred;
+    
+    return {
+        amountX,
+        amountY,
+        reserveX: availableX - amountX,
+        reserveY: availableY - amountY
+    };
+}
+
+// Enhanced prompt with default support
+export async function promptWithDefault(
+    rl: readline.Interface,
+    prompt: string,
+    defaultValue: string,
+    formatDefault?: string
+): Promise<string> {
+    const formattedDefault = formatDefault || defaultValue;
+    const fullPrompt = `${prompt} [${chalk.gray(formattedDefault)}]: `;
+    
+    return new Promise((resolve) => {
+        rl.question(chalk.yellow(fullPrompt), (answer: string) => {
+            resolve(answer.trim() || defaultValue);
+        });
+    });
+}
+
+// Display strategy allocation (reserves vs invested)
+export async function displayStrategyAllocation(
+    strategy: { getIdleBalances: () => Promise<[bigint, bigint]>; getBalances: () => Promise<[bigint, bigint]> },
+    tokenX: IERC20MetadataUpgradeable,
+    tokenY: IERC20MetadataUpgradeable
+): Promise<void> {
+    try {
+        const [idleX, idleY] = await strategy.getIdleBalances();
+        const [totalX, totalY] = await strategy.getBalances();
+        
+        // Calculate invested amounts (total - idle = invested in position)
+        const investedX = totalX - idleX;
+        const investedY = totalY - idleY;
+        
+        console.log(chalk.white("\n💰 Fund Allocation:"));
+        console.log(chalk.cyan("  Total Balances:"));
+        console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(totalX, tokenX)}`));
+        console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(totalY, tokenY)}`));
+        
+        console.log(chalk.cyan("\n  Invested in Position:"));
+        console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(investedX, tokenX)}`));
+        console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(investedY, tokenY)}`));
+        
+        console.log(chalk.cyan("\n  Reserves (Idle):"));
+        console.log(chalk.gray(`    Token X: ${await formatters.formatBalance(idleX, tokenX)}`));
+        console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(idleY, tokenY)}`));
+        
+        // Calculate percentages
+        if (totalX > 0n) {
+            const reservePercentX = (idleX * 100n) / totalX;
+            console.log(chalk.yellow(`    Reserve % X: ${reservePercentX.toString()}%`));
+        }
+        if (totalY > 0n) {
+            const reservePercentY = (idleY * 100n) / totalY;
+            console.log(chalk.yellow(`    Reserve % Y: ${reservePercentY.toString()}%`));
+        }
+    } catch (error) {
+        console.error(chalk.red("Error fetching strategy allocation:"), error);
+    }
+}
+
+// Input parsing utilities for better UX
+export function parseTokenAmount(
+    input: string,
+    decimals: number,
+    symbol?: string
+): { success: boolean; value?: bigint; error?: string } {
+    try {
+        // Handle empty input
+        if (!input || input.trim() === "") {
+            return { success: false, error: "Empty input" };
+        }
+        
+        const cleaned = input.trim().toLowerCase();
+        
+        // Check if already in wei (all digits)
+        if (/^\d+$/.test(cleaned)) {
+            return { success: true, value: BigInt(cleaned) };
+        }
+        
+        // Remove token symbol if present (e.g., "1.5 USDC" -> "1.5")
+        let numStr = cleaned;
+        if (symbol) {
+            const symbolLower = symbol.toLowerCase();
+            numStr = numStr.replace(new RegExp(`\\s*${symbolLower}$`), '');
+        }
+        
+        // Parse decimal number
+        const num = parseFloat(numStr);
+        if (isNaN(num) || num < 0) {
+            return { success: false, error: `Invalid amount: ${input}` };
+        }
+        
+        // Convert to wei
+        const multiplier = 10 ** decimals;
+        const wei = BigInt(Math.floor(num * multiplier));
+        
+        return { success: true, value: wei };
+    } catch (error) {
+        return { success: false, error: `Failed to parse amount: ${error}` };
+    }
+}
+
+export function parseShareAmount(
+    input: string,
+    decimals: number,
+    totalShares?: bigint
+): { success: boolean; value?: bigint; error?: string } {
+    try {
+        const cleaned = input.trim().toLowerCase();
+        
+        // Handle "max" input
+        if (cleaned === "max" && totalShares !== undefined) {
+            return { success: true, value: totalShares };
+        }
+        
+        // Handle percentage input (e.g., "50%")
+        if (cleaned.endsWith('%') && totalShares !== undefined) {
+            const percentStr = cleaned.slice(0, -1);
+            const percent = parseFloat(percentStr);
+            if (isNaN(percent) || percent < 0 || percent > 100) {
+                return { success: false, error: `Invalid percentage: ${input}` };
+            }
+            const value = (totalShares * BigInt(Math.floor(percent * 100))) / 10000n;
+            return { success: true, value };
+        }
+        
+        // Handle decimal shares (e.g., "1.5")
+        return parseTokenAmount(cleaned, decimals, "shares");
+    } catch (error) {
+        return { success: false, error: `Failed to parse shares: ${error}` };
+    }
+}
+
+export function parsePercentage(
+    input: string
+): { success: boolean; value?: number; error?: string } {
+    try {
+        const cleaned = input.trim().toLowerCase();
+        
+        // Remove % sign if present
+        const numStr = cleaned.endsWith('%') ? cleaned.slice(0, -1) : cleaned;
+        const percent = parseFloat(numStr);
+        
+        if (isNaN(percent) || percent < 0 || percent > 100) {
+            return { success: false, error: `Invalid percentage: ${input} (must be 0-100)` };
+        }
+        
+        return { success: true, value: percent };
+    } catch (error) {
+        return { success: false, error: `Failed to parse percentage: ${error}` };
+    }
+}
+
+// Helper to validate and parse user input with retry
+export async function promptAndParseAmount(
+    rl: readline.Interface,
+    prompt: string,
+    decimals: number,
+    symbol?: string,
+    defaultValue?: string,
+    validator?: (value: bigint) => { valid: boolean; error?: string }
+): Promise<bigint> {
+    while (true) {
+        const input = await promptWithDefault(rl, prompt, defaultValue || "0");
+        const parsed = parseTokenAmount(input, decimals, symbol);
+        
+        if (!parsed.success) {
+            console.log(chalk.red(`❌ ${parsed.error}`));
+            console.log(chalk.yellow("Please enter a valid amount (e.g., '1.5', '1000000', '10 USDC')"));
+            continue;
+        }
+        
+        if (validator && parsed.value !== undefined) {
+            const validation = validator(parsed.value);
+            if (!validation.valid) {
+                console.log(chalk.red(`❌ ${validation.error}`));
+                continue;
+            }
+        }
+        
+        return parsed.value!;
+    }
+}
+
+// Clear readline buffer to prevent "Invalid option" after errors
+export function clearReadlineBuffer(rl: readline.Interface): void {
+    // Type assertion to access internal properties
+    const rlInternal = rl as readline.Interface & { _line_buffer?: string; line?: string };
+    if (rlInternal._line_buffer) {
+        rlInternal._line_buffer = '';
+    }
+    if (rlInternal.line) {
+        rlInternal.line = '';
+    }
+}
+
+// Emergency mode helper functions
+export async function checkEmergencyMode(vault: IVaultContract): Promise<boolean> {
+    try {
+        const strategyAddress = await vault.getStrategy();
+        return strategyAddress === ethers.ZeroAddress;
+    } catch (error) {
+        console.error(chalk.red("Error checking emergency mode:"), error);
+        return false;
+    }
+}
+
+export async function validateEmergencyWithdraw(
+    vault: IVaultContract,
+    signer: SignerWithAddress
+): Promise<{ valid: boolean; shares?: bigint; message?: string }> {
+    try {
+        // Check if vault is in emergency mode
+        const isEmergency = await checkEmergencyMode(vault);
+        if (!isEmergency) {
+            return { 
+                valid: false, 
+                message: "Vault is not in emergency mode. Emergency withdraw is not available." 
+            };
+        }
+        
+        // Get user's share balance
+        const shares = await vault.balanceOf(signer.address);
+        if (shares === 0n) {
+            return { 
+                valid: false, 
+                message: "You have no shares to withdraw." 
+            };
+        }
+        
+        return { valid: true, shares };
+    } catch (error) {
+        return { 
+            valid: false, 
+            message: `Validation failed: ${error}` 
+        };
+    }
+}
+
+export async function displayEmergencyStatus(vault: IVaultContract): Promise<void> {
+    try {
+        const isEmergency = await checkEmergencyMode(vault);
+        
+        if (isEmergency) {
+            console.log(chalk.red("\n⚠️  VAULT IS IN EMERGENCY MODE ⚠️"));
+            console.log(chalk.yellow("• Strategy has been removed"));
+            console.log(chalk.yellow("• No new deposits allowed"));
+            console.log(chalk.yellow("• Emergency withdrawals available"));
+            console.log(chalk.yellow("• Normal operations suspended"));
+        } else {
+            const strategyAddress = await vault.getStrategy();
+            console.log(chalk.green("\n✓ Vault operating normally"));
+            console.log(chalk.gray(`Strategy: ${strategyAddress}`));
+        }
+    } catch (error) {
+        console.error(chalk.red("Error checking emergency status:"), error);
+    }
+}
+
+export async function estimateEmergencyWithdrawal(
+    vault: IVaultContract,
+    shares: bigint,
+    tokenX: IERC20MetadataUpgradeable,
+    tokenY: IERC20MetadataUpgradeable
+): Promise<{ amountX: bigint; amountY: bigint }> {
+    try {
+        const [balanceX, balanceY] = await vault.getBalances();
+        const totalSupply = await vault.totalSupply();
+        
+        if (totalSupply === 0n) {
+            return { amountX: 0n, amountY: 0n };
+        }
+        
+        // Calculate proportional amounts
+        const amountX = (balanceX * shares) / totalSupply;
+        const amountY = (balanceY * shares) / totalSupply;
+        
+        return { amountX, amountY };
+    } catch (error) {
+        console.error(chalk.red("Error estimating emergency withdrawal:"), error);
+        return { amountX: 0n, amountY: 0n };
+    }
 }

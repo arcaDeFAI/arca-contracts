@@ -1108,8 +1108,8 @@
       ]
     },
     "/home/raph/WBS/crypto/arca-contracts/contracts-shadow/src/ShadowStrategy.sol": {
-      "lastModificationDate": 1755646538048,
-      "contentHash": "951c533c2d97bff2dd612efa3c2e11aa",
+      "lastModificationDate": 1755647501943,
+      "contentHash": "4ac1119914a2c7f0b82e4d46cfcaf5b2",
       "sourceName": "contracts-shadow/src/ShadowStrategy.sol",
       "solcConfig": {
         "version": "0.8.26",
