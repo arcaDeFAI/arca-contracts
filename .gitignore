@@ -31,8 +31,8 @@ bin/flatten.sh
 /artifacts
 /artifacts-forge
 /cache-forge
+cache_hardhat
 
-typechain-types
 dist
 node_modules
 .env
