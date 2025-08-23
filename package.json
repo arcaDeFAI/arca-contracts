@@ -12,7 +12,7 @@
     "deploy:local": "hardhat run scripts/deploy-multi-dex.ts --network localhost",
     "deploy:testnet": "hardhat run scripts/deploy-multi-dex.ts --network sonic-testnet",
     "deploy:fork": "hardhat run scripts/deploy-multi-dex.ts --network sonic-fork",
-    "deploy:mainnet": "hardhat run scripts/deploy-multi-dex.ts --network sonic-mainnet",
+    "deploy:mainnet": "hardhat clean && hardhat compile && hardhat run scripts/deploy-multi-dex.ts --network sonic-mainnet",
     "deploy:verify:local": "hardhat run scripts/verify-multi-dex.ts --network localhost",
     "deploy:verify:testnet": "hardhat run scripts/verify-multi-dex.ts --network sonic-testnet",
     "deploy:verify:fork": "hardhat run scripts/verify-multi-dex.ts --network sonic-fork",
