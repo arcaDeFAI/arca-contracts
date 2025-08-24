@@ -1,8 +1,8 @@
 import { ethers, network } from "hardhat";
 import * as fs from "fs";
 
-const VAULT_ADDRESS = "0x9541962342A344569FEAD20F6f824856aAC8cad9";
-const STRATEGY_ADDRESS = "0xe4b564f305f762363B526697f9fb682c8BA2605F";
+const VAULT_ADDRESS = "0xD0A83B5eA878193cCe3E084E39748a2417160c29";
+const STRATEGY_ADDRESS = "0x56965Cd708DCF9db05176bAc4dEe04a0d5768B91";
 
 async function main() {
   console.log(`🔍 Discovering contracts for market maker vault verification on ${network.name}...\n`);
