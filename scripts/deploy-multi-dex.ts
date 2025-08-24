@@ -1,6 +1,6 @@
 import type { Contract, TransactionReceipt, TransactionResponse } from "ethers";
 import { ethers, network } from "hardhat";
-import type { OracleHelperFactory, ShadowPriceHelper, ShadowPriceHelperWrapper } from "typechain-types";
+import type { OracleHelperFactory, ProxyAdmin, ShadowPriceHelper, ShadowPriceHelperWrapper } from "typechain-types";
 
 // Gas tracking utility
 interface GasTransaction {
@@ -272,6 +272,8 @@ async function main() {
 
   // -------------------------------------- CONFIG ZONE END --------------------------------------
 
+  const [proxyAdmin, proxyAdminAddress] = await deployProxyAdmin(gasTracker, deployer.address);
+
   if (network.name === "localhost" || network.name === "hardhat") {
     // For localhost, deploy a mock wS
     const MockERC20 = await ethers.getContractFactory("MockERC20");
@@ -325,17 +327,6 @@ async function main() {
     gasTracker
   );
 
-  // Deploy ProxyAdmin to control upgrades
-  const ProxyAdmin = await ethers.getContractFactory(
-    "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
-  );
-  const proxyAdmin = await deployContract(
-    "ProxyAdmin",
-    ProxyAdmin,
-    [deployer.address],
-    gasTracker
-  );
-
   // Deploy TransparentUpgradeableProxy with ProxyAdmin
   const TransparentUpgradeableProxy = await ethers.getContractFactory(
     "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol:TransparentUpgradeableProxy"
@@ -352,7 +343,7 @@ async function main() {
     TransparentUpgradeableProxy,
     [
       await vaultFactoryImpl.getAddress(),
-      await proxyAdmin.getAddress(),
+      proxyAdminAddress,
       initData
     ],
     gasTracker,
@@ -733,4 +724,20 @@ async function deployShadowPriceHelperWrapper(gasTracker: GasTracker, shadowPric
   );
   const contractAddress = await contractDeployed.getAddress();
   return [contractDeployed, contractAddress];
+}
+
+async function deployProxyAdmin(gasTracker: GasTracker, deployAddress: string) : Promise<[ProxyAdmin, string]> {
+  // Deploy ProxyAdmin to control upgrades
+  const ProxyAdmin = await ethers.getContractFactory(
+    "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin"
+  , );
+  const proxyAdmin = await deployContract<ProxyAdmin>(
+    "ProxyAdmin",
+    ProxyAdmin,
+    [],
+    gasTracker
+  );
+
+  const contractAddress = await proxyAdmin.getAddress();
+  return [proxyAdmin, contractAddress];
 }
