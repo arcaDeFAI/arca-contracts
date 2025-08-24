@@ -1,22 +1,22 @@
 {
   "network": "sonic-mainnet",
-  "timestamp": "2025-08-24T15:15:25.974Z",
+  "timestamp": "2025-08-24T19:11:15.441Z",
   "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
   "addresses": {
-    "vaultFactory": "0x9585e1731608DeEddc2ca870Ee43D58fD19e3bE8",
-    "vaultFactoryImpl": "0x77712963F1E08ee5fE558de8EB87bBF93E3f6030",
-    "proxyAdmin": "0xDD13e23923dE6B1e75E428184145636f3d96E77d",
+    "vaultFactory": "0xd0A93dEbF757049AD71a7Be2Ca887ef61ea22C5d",
+    "vaultFactoryImpl": "0xbC855CAE319A31Fe28c68062937F0F7EBd8f2a98",
+    "proxyAdmin": "0x6FB1734308C7Ccd61D775B74D628958E94347069",
     "oracleVaultImpl": null,
-    "oracleRewardVaultImpl": "0x8c9C0576A15f30e7Dce110e8538545C8Ab69D1F2",
-    "oracleRewardShadowVaultImpl": "0x12A6bcf9C0187354a186731585632F52e57bB179",
-    "strategyImpl": "0x72339EcC24f4994851e2AF418FE6DDf75e088412",
-    "shadowStrategyImpl": "0xACce261D5B848977D92eB77A2F9113cf1c5e1be5",
+    "oracleRewardVaultImpl": "0x798eC2200fa423Fe843cDc7f1d1fEa8D33078e9C",
+    "oracleRewardShadowVaultImpl": "0x068EdbF5f75Dc780615D880192950316B0448963",
+    "strategyImpl": "0x88213544C4923d56C750A0d66af4D29cF86Fe1Aa",
+    "shadowStrategyImpl": "0x3737700d35b68252cA4bc2f3E9DdC23595f880F8",
     "shadowNPM": "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406",
     "shadowVoter": "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D",
-    "priceLens": "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B",
+    "priceLens": "0x19Aca8B621413830c4D3c7500B54e87225808a6F",
     "wnative": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
     "oracleHelperFactory": "0x1c4be246e60A602d09A2e5074ff99942353Cf750",
-    "shadowPriceHelper": "0xC56201399746D0465D348A391cE2526F5BfE4EfC",
+    "shadowPriceHelper": "0x90dD5cDEbC8b7f32BA7133eC7F5361Dee521c12a",
     "shadowPriceHelperWrapper": "0xa8D204f63885bdD531c1b5Bde9d8e540e76F2E53"
   },
   "configuration": {
@@ -32,7 +32,7 @@
         "0x64B93267B73CE6bb431b5799ED8674f9160CE214",
         "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC"
       ],
-      "priceLens": "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B"
+      "priceLens": "0x19Aca8B621413830c4D3c7500B54e87225808a6F"
     }
   }
 }

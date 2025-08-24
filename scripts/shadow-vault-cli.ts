@@ -1401,6 +1401,8 @@ async function main() {
             });
         }
         
+        rl.close();
+
         if (!vaultAddress || !ethers.isAddress(vaultAddress)) {
             console.error(chalk.red("\n❌ Invalid vault address provided"));
             process.exit(1);
