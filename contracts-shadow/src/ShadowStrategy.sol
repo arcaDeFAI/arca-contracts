@@ -442,8 +442,12 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             revert Strategy__RebalanceCoolDown();
         }
 
+        emit RebalanceStepCount(0);
+
         // Exit current position if it exists
         _exitPosition();
+
+        emit RebalanceStepCount(1);
 
         // Process withdrawals and apply AUM fee
         (
@@ -452,6 +456,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             uint256 queuedAmountY
         ) = _withdrawAndApplyAumAnnualFee();
 
+
         // Execute queued withdrawals
         _transferAndExecuteQueuedAmounts(
             queuedShares,
@@ -459,8 +464,13 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             queuedAmountY
         );
 
+        emit RebalanceStepCount(2);
+
         // Try to harvest rewards
         try this.harvestRewards() {} catch {}
+
+        emit RebalanceStepCount(3);
+
         // Validate tick range
         require(
             tickLower >= TickMath.MIN_TICK && tickUpper <= TickMath.MAX_TICK,
@@ -478,6 +488,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             int24 tickSpacing = _pool().tickSpacing();
             _validateTicks(tickLower24, tickUpper24, tickSpacing);
 
+            emit RebalanceStepCount(4);
+
             // Check slippage
             if (desiredTick != 0 || slippageTick != 0) {
                 (, int24 currentTick, , , , , ) = _pool().slot0();
@@ -492,6 +504,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             if (amountX == 0 && amountY == 0) {
                 revert Strategy__ZeroAmounts();
             }
+
+            emit RebalanceStepCount(5);
 
             // Get current balances and ensure we don't try to deposit more than available
             uint256 availableX = _tokenX().balanceOf(address(this));
@@ -510,6 +524,10 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 0, // amount0Min
                 0 // amount1Min
             );
+
+            emit RebalanceStepCount(6);
+        } else {
+            emit RebalanceStepCount(99);
         }
     }
 

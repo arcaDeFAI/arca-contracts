@@ -19,7 +19,23 @@ interface IMetropolisStrategy is IStrategyCommon {
     error Strategy__InvalidLength();
 
     // Metropolis-specific events
-    event RangeSet(int32 low, int32 upper);
+    event RangeSet(uint24 low, uint24 upper);
+
+    // SANITY CHECK EVENTS FOR REBALANCE OPERATION
+    event RebalanceStart(uint24 newLower,
+                            uint24 newUpper,
+                            uint24 desiredActiveId,
+                            uint24 slippageActiveId,
+                            uint256 amountX,
+                            uint256 amountY);
+
+    event RebalanceWithdrawAndApplyFee(
+        uint256 queuedShares,
+        uint256 queuedAmountX,
+        uint256 queuedAmountY
+    );
+
+    event RebalanceReadyToDepositToLB(uint24 lower, uint24 upper, uint256 amountX, uint256 amountY);
 
     // Metropolis-specific getters
     function getPair() external pure returns (ILBPair);
@@ -28,10 +44,10 @@ interface IMetropolisStrategy is IStrategyCommon {
 
     // Metropolis-specific rebalance
     function rebalance(
-        int32 newLower,
-        int32 newUpper,
-        int32 desiredActiveId,
-        int32 slippageActiveId,
+        uint24 newLower,
+        uint24 newUpper,
+        uint24 desiredActiveId,
+        uint24 slippageActiveId,
         uint256 amountX,
         uint256 amountY,
         bytes calldata distributions

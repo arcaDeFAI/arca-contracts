@@ -449,10 +449,10 @@ contract MetropolisStrategy is
      * @param amountY The amount of token Y to deposit.
      */
     function rebalance(
-        int32 newLower,
-        int32 newUpper,
-        int32 desiredActiveId,
-        int32 slippageActiveId,
+        uint24 newLower,
+        uint24 newUpper,
+        uint24 desiredActiveId,
+        uint24 slippageActiveId,
         uint256 amountX,
         uint256 amountY,
         bytes calldata distributions
@@ -464,6 +464,9 @@ contract MetropolisStrategy is
         ) revert Strategy__RebalanceCoolDown();
 
         {
+            emit RebalanceStepCount(0);
+            emit RebalanceStart(newLower, newUpper, desiredActiveId, slippageActiveId, amountX, amountY);
+
             // Withdraw all the tokens from the LB pool and return the amounts and the queued withdrawals.
             // It will also charge the AUM annual fee based on the last time a rebalance was executed.
             (
@@ -471,6 +474,10 @@ contract MetropolisStrategy is
                 uint256 queuedAmountX,
                 uint256 queuedAmountY
             ) = _withdrawAndApplyAumAnnualFee();
+
+            emit RebalanceStepCount(1);
+            emit RebalanceWithdrawAndApplyFee(queuedShares, queuedAmountX, queuedAmountY);
+
             // Execute the queued withdrawals and send the tokens to the vault.
             _transferAndExecuteQueuedAmounts(
                 queuedShares,
@@ -478,32 +485,36 @@ contract MetropolisStrategy is
                 queuedAmountY
             );
 
+            emit RebalanceStepCount(2);
+
             // harvest rewards if pair has an LB hook
             // we catch the error to avoid reverting the rebalance
             try this.harvestRewards() {} catch {
                 // do nothing
             }
+
+            emit RebalanceStepCount(3);
         }
 
         // Validate non-negative for Metropolis bins
-        require(
-            newLower >= 0 &&
+        require(newLower >= 0 &&
                 newUpper >= 0 &&
                 desiredActiveId >= 0 &&
                 slippageActiveId >= 0,
             "Strategy__NegativeRange"
         );
 
-        // Convert to uint24 for Metropolis
-        uint24 lower = uint24(uint32(newLower));
-        uint24 upper = uint24(uint32(newUpper));
-        uint24 desiredId = uint24(uint32(desiredActiveId));
-        uint24 slippageId = uint24(uint32(slippageActiveId));
+        uint24 lower = newLower;
+        uint24 upper = newUpper;
+        uint24 desiredId = desiredActiveId;
+        uint24 slippageId = slippageActiveId;
 
         // Check if the operator wants to deposit tokens.
         if (desiredId > 0 || slippageId > 0) {
             // check price;  will revert if not in deviation
             _checkPrice();
+
+            emit RebalanceStepCount(4);
 
             // Adjust the range and get the active id, in case the active id changed.
             uint24 activeId;
@@ -514,6 +525,8 @@ contract MetropolisStrategy is
                 slippageId
             );
 
+            emit RebalanceStepCount(5);
+
             // Get the distributions and the amounts to deposit
             bytes32[] memory liquidityConfigs = _getLiquidityConfigs(
                 lower,
@@ -521,8 +534,15 @@ contract MetropolisStrategy is
                 distributions
             );
 
+            emit RebalanceStepCount(6);
+            emit RebalanceReadyToDepositToLB(lower, upper, amountX, amountY);
+
             // Deposit the tokens to the LB pool.
             _depositToLB(lower, upper, liquidityConfigs, amountX, amountY);
+
+            emit RebalanceStepCount(7);
+        } else {
+            emit RebalanceStepCount(99);
         }
     }
 
@@ -796,7 +816,7 @@ contract MetropolisStrategy is
         _lowerRange = newLower;
         _upperRange = newUpper;
 
-        emit RangeSet(int32(uint32(newLower)), int32(uint32(newUpper)));
+        emit RangeSet(newLower, newUpper);
     }
 
     /**
