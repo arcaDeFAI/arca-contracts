@@ -82,6 +82,7 @@ class ShadowVaultTester {
             // Load price helper wrapper if available
             console.log(chalk.gray("Loading price helper wrapper..."));
             const deploymentPath = path.join(__dirname, "../deployments", `metropolis-${network.name}.json`);
+
             if (fs.existsSync(deploymentPath)) {
                 const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
                 const priceHelperAddress = deployment.addresses?.shadowPriceHelperWrapper;
@@ -1366,22 +1367,45 @@ async function main() {
     let vaultAddress = process.argv[2] || process.env.SHADOW_VAULT_ADDRESS;
     
     if (!vaultAddress) {
+        const cacheShadowVaultPath = path.join(__dirname, "../cache", "shadow-vault.json");
+        if (fs.existsSync(cacheShadowVaultPath)) {
+            const cachedAddress = JSON.parse(fs.readFileSync(cacheShadowVaultPath, 'utf8'));
+            vaultAddress = cachedAddress;
+            if (vaultAddress && vaultAddress !== ethers.ZeroAddress) {
+                console.log(chalk.gray(`✓ Shadow vault address loaded at: ${vaultAddress}`));
+            } else {
+                console.log(chalk.yellow(`⚠️  Invalid shadow vault address found in cache ${cacheShadowVaultPath}`));
+                vaultAddress = ethers.ZeroAddress;
+            }
+        } else {
+            console.log(chalk.gray(`No shadow vault address cache found.`));
+        }
+
         // Create readline interface for user input
         const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout
         });
-        
-        vaultAddress = await new Promise<string>((resolve) => {
-            rl.question(chalk.yellow("Enter OracleRewardShadowVault address: "), (answer) => {
-                rl.close();
-                resolve(answer.trim());
+
+        if (vaultAddress && vaultAddress !== ethers.ZeroAddress) {
+            vaultAddress = await promptWithDefault(rl,
+                "Enter OracleRewardShadowVault address",
+                vaultAddress.toString(),
+                `${vaultAddress}`);
+        } else {
+            vaultAddress = await new Promise<string>((resolve) => {
+                rl.question(chalk.yellow("Enter OracleRewardShadowVault address: "), (answer) => {
+                    rl.close();
+                    resolve(answer.trim());
+                });
             });
-        });
+        }
         
         if (!vaultAddress || !ethers.isAddress(vaultAddress)) {
             console.error(chalk.red("\n❌ Invalid vault address provided"));
             process.exit(1);
+        } else {
+            fs.writeFileSync(cacheShadowVaultPath, JSON.stringify(vaultAddress));
         }
     }
     

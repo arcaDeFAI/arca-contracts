@@ -1394,22 +1394,45 @@ async function main() {
     let vaultAddress = process.argv[2] || process.env.METROPOLIS_VAULT_ADDRESS;
     
     if (!vaultAddress) {
+        const cacheMetropolisVaultPath = path.join(__dirname, "../cache", "metropolis-vault.json");
+        if (fs.existsSync(cacheMetropolisVaultPath)) {
+            const cachedAddress = JSON.parse(fs.readFileSync(cacheMetropolisVaultPath, 'utf8'));
+            vaultAddress = cachedAddress;
+            if (vaultAddress && vaultAddress !== ethers.ZeroAddress) {
+                console.log(chalk.gray(`✓ Metropolis vault address loaded at: ${vaultAddress}`));
+            } else {
+                console.log(chalk.yellow(`⚠️  Invalid metropolis vault address found in cache ${cacheMetropolisVaultPath}`));
+                vaultAddress = ethers.ZeroAddress;
+            }
+        } else {
+            console.log(chalk.gray(`No metropolis vault address cache found.`));
+        }
+
         // Create readline interface for user input
         const rl = readline.createInterface({
             input: process.stdin,
             output: process.stdout
         });
-        
-        vaultAddress = await new Promise<string>((resolve) => {
-            rl.question(chalk.yellow("Enter OracleRewardVault address: "), (answer) => {
-                rl.close();
-                resolve(answer.trim());
+
+        if (vaultAddress && vaultAddress !== ethers.ZeroAddress) {
+            vaultAddress = await promptWithDefault(rl,
+                "Enter OracleRewardVault address",
+                vaultAddress.toString(),
+                `${vaultAddress}`);
+        } else {
+            vaultAddress = await new Promise<string>((resolve) => {
+                rl.question(chalk.yellow("Enter OracleRewardVault address: "), (answer) => {
+                    rl.close();
+                    resolve(answer.trim());
+                });
             });
-        });
+        }
         
         if (!vaultAddress || !ethers.isAddress(vaultAddress)) {
             console.error(chalk.red("\n❌ Invalid vault address provided"));
             process.exit(1);
+        } else {
+            fs.writeFileSync(cacheMetropolisVaultPath, JSON.stringify(vaultAddress));
         }
     }
     
