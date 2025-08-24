@@ -712,7 +712,7 @@ class MetropolisVaultTester {
         console.log(chalk.blue("\n🔄 Test Rebalance\n"));
         
         // Show current state
-        const { activeId } = await this.pair!.getActiveId();
+        const activeId  = await this.pair!.getActiveId();
         console.log(chalk.gray(`Current Active Bin ID: ${activeId}`));
         
         try {
@@ -751,8 +751,8 @@ class MetropolisVaultTester {
         );
         const slippageActiveId = await this.questionWithDefault(
             "Enter slippage active bin ID",
-            "5",
-            "5 (standard slippage)"
+            "10",
+            "10 (standard slippage)"
         );
         
         // Show amount suggestions
