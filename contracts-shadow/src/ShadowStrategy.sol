@@ -456,7 +456,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             uint256 queuedAmountY
         ) = _withdrawAndApplyAumAnnualFee();
 
-
         // Execute queued withdrawals
         _transferAndExecuteQueuedAmounts(
             queuedShares,
@@ -468,7 +467,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
         // Try to harvest rewards
         try this.harvestRewards() {} catch {}
-
         emit RebalanceStepCount(3);
 
         // Validate tick range
