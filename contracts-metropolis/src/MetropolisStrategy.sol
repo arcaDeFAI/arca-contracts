@@ -465,7 +465,14 @@ contract MetropolisStrategy is
 
         {
             emit RebalanceStepCount(0);
-            emit RebalanceStart(newLower, newUpper, desiredActiveId, slippageActiveId, amountX, amountY);
+            emit RebalanceStart(
+                newLower,
+                newUpper,
+                desiredActiveId,
+                slippageActiveId,
+                amountX,
+                amountY
+            );
 
             // Withdraw all the tokens from the LB pool and return the amounts and the queued withdrawals.
             // It will also charge the AUM annual fee based on the last time a rebalance was executed.
@@ -476,7 +483,11 @@ contract MetropolisStrategy is
             ) = _withdrawAndApplyAumAnnualFee();
 
             emit RebalanceStepCount(1);
-            emit RebalanceWithdrawAndApplyFee(queuedShares, queuedAmountX, queuedAmountY);
+            emit RebalanceWithdrawAndApplyFee(
+                queuedShares,
+                queuedAmountX,
+                queuedAmountY
+            );
 
             // Execute the queued withdrawals and send the tokens to the vault.
             _transferAndExecuteQueuedAmounts(
@@ -492,12 +503,12 @@ contract MetropolisStrategy is
             try this.harvestRewards() {} catch {
                 // do nothing
             }
-
             emit RebalanceStepCount(3);
         }
 
         // Validate non-negative for Metropolis bins
-        require(newLower >= 0 &&
+        require(
+            newLower >= 0 &&
                 newUpper >= 0 &&
                 desiredActiveId >= 0 &&
                 slippageActiveId >= 0,

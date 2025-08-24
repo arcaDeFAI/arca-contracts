@@ -101,7 +101,7 @@ async function main() {
     process.exit(1);
   }
 
-  if (priceLensDeployment.addresses.wnative != addresses.wnative) {
+  if (priceLensDeployment.addresses.wnative !== addresses.wnative) {
     console.error("Mismatch between price lens' wnative", priceLensDeployment.addresses.wnative, " and ", addresses.wnative);
     console.error(priceLensDeployment);
     process.exit(1);

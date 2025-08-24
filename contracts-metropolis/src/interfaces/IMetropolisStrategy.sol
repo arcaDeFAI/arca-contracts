@@ -22,12 +22,14 @@ interface IMetropolisStrategy is IStrategyCommon {
     event RangeSet(uint24 low, uint24 upper);
 
     // SANITY CHECK EVENTS FOR REBALANCE OPERATION
-    event RebalanceStart(uint24 newLower,
-                            uint24 newUpper,
-                            uint24 desiredActiveId,
-                            uint24 slippageActiveId,
-                            uint256 amountX,
-                            uint256 amountY);
+    event RebalanceStart(
+        uint24 newLower,
+        uint24 newUpper,
+        uint24 desiredActiveId,
+        uint24 slippageActiveId,
+        uint256 amountX,
+        uint256 amountY
+    );
 
     event RebalanceWithdrawAndApplyFee(
         uint256 queuedShares,
@@ -35,7 +37,12 @@ interface IMetropolisStrategy is IStrategyCommon {
         uint256 queuedAmountY
     );
 
-    event RebalanceReadyToDepositToLB(uint24 lower, uint24 upper, uint256 amountX, uint256 amountY);
+    event RebalanceReadyToDepositToLB(
+        uint24 lower,
+        uint24 upper,
+        uint256 amountX,
+        uint256 amountY
+    );
 
     // Metropolis-specific getters
     function getPair() external pure returns (ILBPair);
