@@ -240,7 +240,7 @@ async function main() {
   let shadowPriceHelperAddress: string = "0x0000000000000000000000000000000000000000";
   let shadowPriceHelperWrapperAddress: string = "0xa8D204f63885bdD531c1b5Bde9d8e540e76F2E53";
 
-  const creationFee = 0n; // Default 0 for testnet
+  const creationFee = 0n; // Default 0
   
   // Shadow protocol addresses configuration
   const deploymentConfig: { [key: string]: { npm: string; voter: string, priceLens: string, whitelist: string[] } } = {
@@ -254,7 +254,7 @@ async function main() {
         "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC"  // Metropolis LB Pair wS/USDC
       ], // Whitelist pools/LB Pairs that you want to use
       // Set a price lens here if you want to re-use a deployed price lens contract
-      priceLens: "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B", 
+      priceLens: "0x19Aca8B621413830c4D3c7500B54e87225808a6F", 
     },
     "sonic-testnet": {
       npm: "0x0000000000000000000000000000000000000000", // TODO: Add testnet Shadow NPM address
