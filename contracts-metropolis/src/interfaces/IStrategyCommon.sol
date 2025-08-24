@@ -40,6 +40,9 @@ interface IStrategyCommon {
     event PendingAumAnnualFeeSet(uint256 fee);
     event PendingAumAnnualFeeReset();
 
+    // SANITY CHECKS FOR REBALANCE OPERATION
+    event RebalanceStepCount(uint256 stepCount);
+
     // Core getters
     function getFactory() external view returns (IVaultFactory);
     function getVault() external pure returns (address);
