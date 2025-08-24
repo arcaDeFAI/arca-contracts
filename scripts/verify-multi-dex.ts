@@ -75,9 +75,37 @@ async function main() {
     console.error(`Run deployment first: npm run deploy:metropolis:${network.name}`);
     process.exit(1);
   }
+  
+  const hybridPriceLensPath = `./deployments/hybrid-price-lens-${network.name}.json`;
+  if (!fs.existsSync(hybridPriceLensPath)) {
+    console.error(`❌ Hybrid Price Lens Deployment file not found: ${deploymentPath}`);
+    console.error(`Run deployment first: npx hardhat run scripts/deploy-hybrid-price-lens.ts --network ${network.name}`);
+    process.exit(1);
+  }
 
   const deployment: DeploymentFile = JSON.parse(fs.readFileSync(deploymentPath, "utf-8"));
   const addresses = deployment.addresses;
+
+  const priceLensDeployment = JSON.parse(fs.readFileSync(hybridPriceLensPath, "utf-8"));
+  const hybridPriceLensAddress = priceLensDeployment.addresses.hybridPriceLens;
+
+  if (!hybridPriceLensAddress || hybridPriceLensAddress === "0x0000000000000000000000000000000000000000") {
+    console.error("No price lens addresses found");
+    console.error(priceLensDeployment);
+    process.exit(1);
+  }
+
+  if (!priceLensDeployment.addresses.wnative) {
+    console.error("No wnative address from price lens addresses found");
+    console.error(priceLensDeployment);
+    process.exit(1);
+  }
+
+  if (priceLensDeployment.addresses.wnative != addresses.wnative) {
+    console.error("Mismatch between price lens' wnative", priceLensDeployment.addresses.wnative, " and ", addresses.wnative);
+    console.error(priceLensDeployment);
+    process.exit(1);
+  }
 
   console.log("Loaded deployment from:", deploymentPath);
   console.log("Timestamp:", deployment.timestamp);
@@ -116,6 +144,13 @@ async function main() {
 
   // Build verifications array dynamically to handle optional contracts
   const verifications: VerificationEntry[] = [];
+
+  verifications.push({
+    name: "HybridPriceLens Implementation",
+    address: hybridPriceLensAddress,
+    constructorArguments: [addresses.wnative],
+    contract: "contracts-metropolis/src/HybridPriceLens.sol:HybridPriceLens"
+  });
 
   // Add OracleHelperFactory if present
   if (addresses.oracleHelperFactory && addresses.oracleHelperFactory !== "0x0000000000000000000000000000000000000000") {

@@ -1,9 +1,9 @@
 {
   "network": "sonic-mainnet",
-  "timestamp": "2025-07-29T03:51:33.611Z",
+  "timestamp": "2025-08-23T23:02:24.878Z",
   "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
   "addresses": {
-    "hybridPriceLens": "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B",
+    "hybridPriceLens": "0x19Aca8B621413830c4D3c7500B54e87225808a6F",
     "wnative": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"
   },
   "configuration": {
