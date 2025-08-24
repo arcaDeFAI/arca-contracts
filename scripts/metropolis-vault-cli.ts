@@ -1413,6 +1413,7 @@ async function main() {
             input: process.stdin,
             output: process.stdout
         });
+        
 
         if (vaultAddress && vaultAddress !== ethers.ZeroAddress) {
             vaultAddress = await promptWithDefault(rl,
@@ -1427,13 +1428,16 @@ async function main() {
                 });
             });
         }
-        
+
+        rl.close();
+
         if (!vaultAddress || !ethers.isAddress(vaultAddress)) {
             console.error(chalk.red("\n❌ Invalid vault address provided"));
             process.exit(1);
         } else {
             fs.writeFileSync(cacheMetropolisVaultPath, JSON.stringify(vaultAddress));
         }
+
     }
     
     console.log(chalk.gray(`Vault: ${vaultAddress}`));
