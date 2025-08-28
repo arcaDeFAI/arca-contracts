@@ -426,10 +426,10 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
      * @param amountY The amount of token Y to deposit
      */
     function rebalance(
-        int32 tickLower,
-        int32 tickUpper,
-        int32 desiredTick,
-        int32 slippageTick,
+        int24 tickLower,
+        int24 tickUpper,
+        int24 desiredTick,
+        int24 slippageTick,
         uint256 amountX,
         uint256 amountY
     ) external onlyOperators {
@@ -478,13 +478,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
         // Check if we should enter a new position
         if (tickUpper > tickLower) {
-            // Convert to int24 for Shadow ticks
-            int24 tickLower24 = int24(tickLower);
-            int24 tickUpper24 = int24(tickUpper);
-
             // Validate tick spacing
             int24 tickSpacing = _pool().tickSpacing();
-            _validateTicks(tickLower24, tickUpper24, tickSpacing);
+            _validateTicks(tickLower, tickUpper, tickSpacing);
 
             emit RebalanceStepCount(4);
 
@@ -492,7 +488,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             if (desiredTick != 0 || slippageTick != 0) {
                 (, int24 currentTick, , , , , ) = _pool().slot0();
                 _validateActiveTickSlippage(
-                    int32(currentTick),
+                    currentTick,
                     desiredTick,
                     slippageTick
                 );
@@ -515,8 +511,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
             // Enter new position with specified amounts (capped at available)
             _enterPosition(
-                tickLower24,
-                tickUpper24,
+                tickLower,
+                tickUpper,
                 depositX,
                 depositY,
                 0, // amount0Min
@@ -557,9 +553,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
      * @notice Validates active tick slippage
      */
     function _validateActiveTickSlippage(
-        int32 currentTick,
-        int32 desiredTick,
-        int32 slippageTick
+        int24 currentTick,
+        int24 desiredTick,
+        int24 slippageTick
     ) internal pure {
         if (
             currentTick < desiredTick - slippageTick ||

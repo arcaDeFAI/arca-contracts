@@ -479,6 +479,12 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         emit TransferIgnoreListSet(addresses);
     }
 
+    // TODO: add an external function that does pretty much the following:
+    // strategy = _createShadowStrategy(vault, pool, tokenX, tokenY);
+    //_linkVaultToStrategy(IMinimalVault(vault), strategy);
+    // IStrategyCommon(strategy).setOperator(msg.sender);
+    // Something like this will allow us to complete the deploy-shadow-strategy script
+
     /**
      * @notice Creates a new Shadow oracle reward vault and strategy for market makers.
      * @dev Pool must be whitelisted. Uses pool-based TWAP oracle.

@@ -37,10 +37,10 @@ interface IShadowStrategy is IStrategyCommon {
 
     // Shadow-specific rebalance - clean interface without unused parameters
     function rebalance(
-        int32 tickLower,
-        int32 tickUpper,
-        int32 desiredTick,
-        int32 slippageTick,
+        int24 tickLower,
+        int24 tickUpper,
+        int24 desiredTick,
+        int24 slippageTick,
         uint256 amountX,
         uint256 amountY
     ) external;
