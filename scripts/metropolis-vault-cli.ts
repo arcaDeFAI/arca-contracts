@@ -11,8 +11,8 @@ import type {
     HybridPriceLens,
     IVaultFactory
 } from "../typechain-types";
-import type { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
-import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import type { IERC20MetadataUpgradeable } from "../typechain-types/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
+import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import type {
     TestResult,
     VaultState
@@ -45,6 +45,7 @@ import {
     displayEmergencyStatus,
     estimateEmergencyWithdrawal
 } from "./test-vault-utils";
+import type { ContractTransactionResponse } from "ethers";
 
 class MetropolisVaultTester {
     private rl: readline.Interface;
@@ -198,33 +199,10 @@ class MetropolisVaultTester {
 
     async executeAction(
         actionName: string, 
-        actionFn: () => Promise<{hash: string; wait(): Promise<{gasUsed: bigint; events?: Array<{event?: string; args?: Record<string, unknown>}>}>}>, 
+        actionFn: () => Promise<ContractTransactionResponse>, 
         params: Record<string, unknown> = {},
         skipConfirmation: boolean = false
     ): Promise<TestResult> {
-        // Gas estimation
-        if (!this.config.dryRun && !skipConfirmation) {
-            try {
-                console.log(chalk.gray("\n⛽ Estimating gas..."));
-                const gasInfo = await estimateGasWithCost(actionFn);
-                console.log(chalk.gray(`  Estimated gas: ${gasInfo.gas.toString()}`));
-                console.log(chalk.gray(`  Estimated cost: ${gasInfo.costEth} ETH`));
-                
-                const confirmed = await this.confirm(`\nProceed with ${actionName}?`);
-                if (!confirmed) {
-                    console.log(chalk.yellow("Transaction cancelled"));
-                    return {
-                        timestamp: Date.now(),
-                        action: actionName,
-                        params,
-                        error: "User cancelled"
-                    };
-                }
-            } catch (error) {
-                console.log(chalk.yellow("Could not estimate gas, continuing..."));
-            }
-        }
-        
         const result = await executeWithCapture(actionName, actionFn, {
             signer: this.signer,
             dryRun: this.config.dryRun,
@@ -545,35 +523,31 @@ class MetropolisVaultTester {
         // Show withdrawal context with balance and suggestions
         await ui.showShareWithdrawalContext(this.vault!, this.signer, this.tokenX!, this.tokenY!);
         
-        const sharesInput = await this.question("");
+        const sharesInput = await this.questionWithDefault("Enter the amount of shares to withdraw (in wei, or as a percentage)", "100%", "100%")
         const recipient = await this.question("Enter recipient address (or press enter for self): ");
         
-        // Handle "max" input
-        let shares: bigint;
-        if (sharesInput.toLowerCase() === "max") {
-            // Calculate available shares (total - queued)
-            const totalShares = await this.vault!.balanceOf(this.signer.address);
-            const currentRound = await this.vault!.getCurrentRound();
-            let totalQueued = 0n;
-            for (let i = 0; i <= Number(currentRound); i++) {
-                const queued = await this.vault!.getQueuedWithdrawal(i, this.signer.address);
-                totalQueued += queued;
-            }
-            shares = totalShares - totalQueued;
-            console.log(chalk.cyan(`Using max available shares: ${shares.toString()}`));
-        } else {
-            // Parse shares input with proper decimal handling
-            const decimals = Number(await this.vault!.decimals());
-            const parsed = parseShareAmount(sharesInput, decimals, totalShares - totalQueued);
-            
-            if (!parsed.success) {
-                console.log(chalk.red(`\n❌ ${parsed.error}`));
-                console.log(chalk.yellow("Valid formats: '1.5', '50%', 'max', or amount in wei"));
-                return;
-            }
-            
-            shares = parsed.value!;
+        // Get available shares for percentage/max calculations
+        const totalShares = await this.vault!.balanceOf(this.signer.address);
+        const currentRound = await this.vault!.getCurrentRound();
+        let totalQueued = 0n;
+        for (let i = 0; i <= Number(currentRound); i++) {
+            const queued = await this.vault!.getQueuedWithdrawal(i, this.signer.address);
+            totalQueued += queued;
         }
+        const availableShares = totalShares - totalQueued;
+        
+        // Parse shares input with proper decimal handling
+        const decimals = Number(await this.vault!.decimals());
+        const parsed = parseShareAmount(sharesInput, decimals, availableShares);
+        
+        if (!parsed.success) {
+            console.log(chalk.red(`\n❌ ${parsed.error}`));
+            console.log(chalk.yellow("Valid formats: '1.5', '50%', 'max', or amount in wei"));
+            return;
+        }
+        
+        const shares = parsed.value!;
+        
         
         const params = {
             shares,
@@ -677,34 +651,39 @@ class MetropolisVaultTester {
         }
         
         await this.executeAction("Cancel Queued Withdrawal", async () => {
-            return this.vault!.cancelQueuedWithdrawal();
+            return this.vault!.cancelQueuedWithdrawal(queuedShares);
         }, { shares: queuedShares.toString() });
     }
 
     async testRedeemWithdrawal() {
         console.log(chalk.blue("\n💰 Redeem Withdrawal\n"));
         
-        // Check for available withdrawals
-        const availableAmount = await this.vault!.getAvailableToWithdraw(this.signer.address);
+        // Get current round
+        const currentRound = await this.vault!.getCurrentRound();
+        console.log(chalk.gray(`Current round: ${currentRound}`));
         
-        if (availableAmount === 0n) {
+        const recipient = (await this.question("Enter recipient (or press enter for self): ")) || this.signer.address;
+
+        // Check for available withdrawals
+        const [availableAmountX, availableAmountY] = await this.vault!.getRedeemableAmounts(currentRound, recipient);
+        
+        if (availableAmountX === 0n && availableAmountY === 0n) {
             console.log(chalk.yellow("\n⚠️  No available withdrawals to redeem"));
             console.log(chalk.gray("You need to have a processed withdrawal from a previous round"));
             return;
         }
         
         console.log(chalk.cyan("\n💰 Available to Redeem:"));
-        const [amountX, amountY] = await this.vault!.previewAmounts(availableAmount);
-        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
-        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
-        
+        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(availableAmountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(availableAmountY, this.tokenY!)}`));
+
         if (!await this.confirm("\nProceed with redemption?")) {
             console.log(chalk.yellow("Redemption cancelled"));
             return;
         }
         
         await this.executeAction("Redeem Withdrawal", async () => {
-            return this.vault!.redeem();
+            return this.vault!.redeemQueuedWithdrawal(currentRound, recipient);
         }, {});
     }
 
@@ -1194,7 +1173,7 @@ class MetropolisVaultTester {
             
             await this.executeAction(`${isPaused ? 'Resume' : 'Pause'} Deposits`, async () => {
                 if (isPaused) {
-                    return this.vault!.unpauseDeposits();
+                    return this.vault!.resumeDeposits();
                 } else {
                     return this.vault!.pauseDeposits();
                 }
@@ -1234,45 +1213,6 @@ class MetropolisVaultTester {
         } catch (error) {
             console.error(chalk.red("Error previewing shares:"), error);
         }
-    }
-
-    async testCancelQueuedWithdrawal() {
-        console.log(chalk.blue("\n❌ Test Cancel Queued Withdrawal\n"));
-        
-        // First show what's queued
-        const currentRound = await this.vault!.getCurrentRound();
-        const queuedShares = await this.vault!.getQueuedWithdrawal(currentRound, this.signer.address);
-        
-        if (queuedShares === 0n) {
-            console.log(chalk.yellow("You have no queued withdrawals in the current round"));
-            return;
-        }
-        
-        const decimals = Number(await this.vault!.decimals());
-        const queuedFormatted = formatters.formatShareAmount(queuedShares, decimals);
-        console.log(chalk.cyan(`Your queued withdrawal: ${queuedFormatted}`));
-        
-        // TODO: help the user enter a correct amount (writing a share amount in wei is not intuitive)
-        // We can possibly refactor and then re-use the code for the "Queue Withdrawal" where we suggest amounts and offer the "max" option
-        const shares = await this.question("Enter shares to cancel (in wei): ");
-        
-        await this.executeAction("Cancel Queued Withdrawal", async () => {
-            return this.vault!.cancelQueuedWithdrawal(BigInt(shares || "0"));
-        });
-    }
-
-    async testRedeemWithdrawal() {
-        console.log(chalk.blue("\n💸 Test Redeem Withdrawal\n"));
-        
-        const round = await this.question("Enter round number: ");
-        const recipient = await this.question("Enter recipient (or press enter for self): ");
-        
-        await this.executeAction("Redeem Withdrawal", async () => {
-            return this.vault!.redeemQueuedWithdrawal(
-                BigInt(round || "0"),
-                recipient || this.signer.address
-            );
-        });
     }
 
     async showQueueStatus() {
