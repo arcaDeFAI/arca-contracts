@@ -31,7 +31,6 @@ import {
     estimateTokensFromShares,
     calculateOptimalRatio,
     displayVisualRange,
-    estimateGasWithCost,
     calculateDefaultBinRange,
     calculateOptimalDepositAmounts,
     displayStrategyAllocation,
@@ -199,16 +198,13 @@ class MetropolisVaultTester {
 
     async executeAction(
         actionName: string, 
-        actionFn: () => Promise<ContractTransactionResponse>, 
-        params: Record<string, unknown> = {},
-        skipConfirmation: boolean = false
+        actionFn: () => Promise<ContractTransactionResponse>
     ): Promise<TestResult> {
         const result = await executeWithCapture(actionName, actionFn, {
             signer: this.signer,
             dryRun: this.config.dryRun,
             vault: this.vault,
-            captureState: () => this.captureState(),
-            params
+            captureState: () => this.captureState()
         });
         
         this.resultManager.captureResult(result);
@@ -495,7 +491,7 @@ class MetropolisVaultTester {
             params.amountX,
             params.amountY,
             this.signer,
-            (name, fn, params, skipConfirm) => this.executeAction(name, fn, params || {}, skipConfirm)
+            (name, fn) => this.executeAction(name, fn)
         );
         
         // Validate deposit
@@ -514,7 +510,7 @@ class MetropolisVaultTester {
         
         await this.executeAction("Deposit", async () => {
             return this.vault!.deposit(params.amountX, params.amountY, params.minShares);
-        }, params);
+        });
     }
 
     async testQueueWithdrawal() {
@@ -573,7 +569,7 @@ class MetropolisVaultTester {
         
         await this.executeAction("Queue Withdrawal", async () => {
             return this.vault!.queueWithdrawal(params.shares, params.recipient);
-        }, params);
+        });
     }
 
     async testEmergencyWithdraw() {
@@ -620,7 +616,7 @@ class MetropolisVaultTester {
         
         await this.executeAction("Emergency Withdraw", async () => {
             return this.vault!.emergencyWithdraw();
-        }, { shares: shares.toString() });
+        });
     }
 
     async testCancelQueuedWithdrawal() {
@@ -652,7 +648,7 @@ class MetropolisVaultTester {
         
         await this.executeAction("Cancel Queued Withdrawal", async () => {
             return this.vault!.cancelQueuedWithdrawal(queuedShares);
-        }, { shares: queuedShares.toString() });
+        });
     }
 
     async testRedeemWithdrawal() {
@@ -684,7 +680,7 @@ class MetropolisVaultTester {
         
         await this.executeAction("Redeem Withdrawal", async () => {
             return this.vault!.redeemQueuedWithdrawal(currentRound, recipient);
-        }, {});
+        });
     }
 
     async testRebalance() {
@@ -805,7 +801,7 @@ class MetropolisVaultTester {
                 amountY,
                 distributions
             );
-        }, params);
+        });
     }
 
     async showTestScenarios() {
@@ -1138,7 +1134,7 @@ class MetropolisVaultTester {
             
             await this.executeAction("Set Emergency Mode", async () => {
                 return this.vaultFactory!.setEmergencyMode(await this.vault!.getAddress());
-            }, {});
+            });
             
             // Check if it worked
             const isEmergencyAfter = await checkEmergencyMode(this.vault!);
@@ -1177,7 +1173,7 @@ class MetropolisVaultTester {
                 } else {
                     return this.vault!.pauseDeposits();
                 }
-            }, {});
+            });
             
             const isPausedAfter = await this.vault!.isDepositsPaused();
             console.log(chalk.green(`\n✅ Deposits are now ${isPausedAfter ? 'PAUSED' : 'ACTIVE'}`));

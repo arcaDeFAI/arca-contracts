@@ -23,7 +23,6 @@ export interface TestConfig {
 export interface TestResult {
     timestamp: number;
     action: string;
-    params: Record<string, unknown>;
     txHash?: string;
     gasUsed?: string;
     events?: Array<{event?: string; args?: Record<string, unknown>}>;
@@ -406,12 +405,11 @@ export async function estimateGasWithCost(
 export async function executeWithCapture(
     actionName: string,
     actionFn: () => Promise<ContractTransactionResponse>,
-    options: ExecuteOptions & { params?: Record<string, unknown> }
+    options: ExecuteOptions
 ): Promise<TestResult> {
     const result: TestResult = {
         timestamp: Date.now(),
-        action: actionName,
-        params: options.params || {}
+        action: actionName
     };
 
     try {
@@ -696,7 +694,7 @@ export async function checkAndApproveTokens(
     amountX: bigint,
     amountY: bigint,
     signer: SignerWithAddress,
-    executeAction: (name: string, fn: () => Promise<ContractTransactionResponse>, params?: Record<string, unknown>, skipConfirm?: boolean) => Promise<TestResult>
+    executeAction: (name: string, fn: () => Promise<ContractTransactionResponse>) => Promise<TestResult>
 ): Promise<void> {
     const [allowanceX, allowanceY] = await Promise.all([
         tokenX.allowance(signer.address, vaultAddress),
@@ -709,13 +707,13 @@ export async function checkAndApproveTokens(
         if (allowanceX < amountX) {
             await executeAction("Approve Token X", async () => {
                 return tokenX.approve(vaultAddress, ethers.MaxUint256);
-            }, {}, true); // Skip confirmation for approvals
+            });
         }
         
         if (allowanceY < amountY) {
             await executeAction("Approve Token Y", async () => {
                 return tokenY.approve(vaultAddress, ethers.MaxUint256);
-            }, {}, true); // Skip confirmation for approvals
+            });
         }
     }
 }
