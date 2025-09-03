@@ -483,7 +483,9 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     // strategy = _createShadowStrategy(vault, pool, tokenX, tokenY);
     //_linkVaultToStrategy(IMinimalVault(vault), strategy);
     // IStrategyCommon(strategy).setOperator(msg.sender);
+    //
     // Something like this will allow us to complete the deploy-shadow-strategy script
+    // See TODOs in there to understand
 
     /**
      * @notice Creates a new Shadow oracle reward vault and strategy for market makers.
@@ -674,6 +676,51 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
             revert VaultFactory__InvalidStrategy();
 
         _linkVaultToStrategy(vault, strategy);
+    }
+
+    /// @notice Creates and links a new Shadow Strategy to an existing vault.
+    /// @dev Deploys strategy, links it to vault, and sets operator.
+    /// @param vault The address of the vault to link.
+    /// @param pool The address of the liquidity pool.
+    /// @param tokenX The address of token X.
+    /// @param tokenY The address of token Y.
+    /// @return strategy The address of the deployed Shadow Strategy.
+    function createAndLinkShadowStrategy(
+        address vault,
+        address pool,
+        address tokenX,
+        address tokenY
+    ) external onlyOwner returns (address strategy) {
+        // Deploy Shadow Strategy
+        strategy = _createShadowStrategy(vault, pool, tokenX, tokenY);
+
+        // Link the vault and strategy
+        _linkVaultToStrategy(IMinimalVault(vault), strategy);
+
+        // Set the strategy operator to the caller
+        IStrategyCommon(strategy).setOperator(msg.sender);
+
+        // Emit event for transparency
+        emit ShadowStrategyCreatedAndLinked(vault, strategy, msg.sender);
+    }
+
+    function createAndLinkMetropolisStrategy(
+        address vault,
+        ILBPair lbpair,
+        address tokenX,
+        address tokenY
+    ) external onlyOwner returns (address strategy) {
+        // Deploy Shadow Strategy
+        strategy = _createDefaultStrategy(vault, lbpair, tokenX, tokenY);
+
+        // Link the vault and strategy
+        _linkVaultToStrategy(IMinimalVault(vault), strategy);
+
+        // Set the strategy operator to the caller
+        IStrategyCommon(strategy).setOperator(msg.sender);
+
+        // Emit event for transparency
+        emit MetropolisStrategyCreatedAndLinked(vault, strategy, msg.sender);
     }
 
     /**

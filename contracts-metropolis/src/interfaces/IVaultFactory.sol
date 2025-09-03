@@ -80,6 +80,18 @@ interface IVaultFactory {
 
     event TransferIgnoreListSet(address[] addresses);
 
+    event ShadowStrategyCreatedAndLinked(
+        address indexed vault,
+        address indexed strategy,
+        address indexed operator
+    );
+
+    event MetropolisStrategyCreatedAndLinked(
+        address indexed vault,
+        address indexed strategy,
+        address indexed operator
+    );
+
     event VaultImplementationSet(
         VaultType indexed vType,
         address indexed vaultImplementation
