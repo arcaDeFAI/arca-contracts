@@ -176,16 +176,13 @@ class ShadowVaultTester {
 
     async executeAction(
         actionName: string, 
-        actionFn: () => Promise<ContractTransactionResponse>, 
-        params: Record<string, unknown> = {},
-        skipConfirmation: boolean = false
+        actionFn: () => Promise<ContractTransactionResponse>
     ): Promise<TestResult> {
         const result = await executeWithCapture(actionName, actionFn, {
             signer: this.signer,
             dryRun: this.config.dryRun,
             vault: this.vault,
-            captureState: () => this.captureState(),
-            params
+            captureState: () => this.captureState()
         });
         
         this.resultManager.captureResult(result);
@@ -422,7 +419,7 @@ class ShadowVaultTester {
             params.amountX,
             params.amountY,
             this.signer,
-            (name, fn, params, skipConfirm) => this.executeAction(name, fn, params || {}, skipConfirm)
+            (name, fn) => this.executeAction(name, fn)
         );
         
         // Validate deposit
@@ -441,7 +438,7 @@ class ShadowVaultTester {
         
         await this.executeAction("Deposit", async () => {
             return this.vault!.deposit(params.amountX, params.amountY, params.minShares);
-        }, params);
+        });
     }
 
     async testQueueWithdrawal() {
@@ -499,7 +496,7 @@ class ShadowVaultTester {
         
         await this.executeAction("Queue Withdrawal", async () => {
             return this.vault!.queueWithdrawal(params.shares, params.recipient);
-        }, params);
+        });
     }
 
     async testEmergencyWithdraw() {
@@ -546,7 +543,7 @@ class ShadowVaultTester {
         
         await this.executeAction("Emergency Withdraw", async () => {
             return this.vault!.emergencyWithdraw();
-        }, { shares: shares.toString() });
+        });
     }
 
     async testRedeemNative() {
@@ -612,7 +609,7 @@ class ShadowVaultTester {
         
         await this.executeAction("Cancel Queued Withdrawal", async () => {
             return this.vault!.cancelQueuedWithdrawal(queuedShares);
-        }, { shares: queuedShares.toString() });
+        });
     }
 
     async testRedeemWithdrawal() {
@@ -648,7 +645,7 @@ class ShadowVaultTester {
 
         await this.executeAction("Redeem Withdrawal", async () => {
             return this.vault!.redeemQueuedWithdrawal(currentRound, recipient);
-        }, {});
+        });
     }
 
     async testRebalance() {
@@ -783,7 +780,7 @@ class ShadowVaultTester {
                 params.amountX,
                 params.amountY
             );
-        }, params);
+        });
     }
 
     async showTestScenarios() {
@@ -1120,7 +1117,7 @@ class ShadowVaultTester {
             
             await this.executeAction("Set Emergency Mode", async () => {
                 return vaultFactory.setEmergencyMode(await this.vault!.getAddress());
-            }, {});
+            });
             
             // Check if it worked
             const isEmergencyAfter = await checkEmergencyMode(this.vault!);
@@ -1159,7 +1156,7 @@ class ShadowVaultTester {
                 } else {
                     return this.vault!.pauseDeposits();
                 }
-            }, {});
+            });
             
             const isPausedAfter = await this.vault!.isDepositsPaused();
             console.log(chalk.green(`\n✅ Deposits are now ${isPausedAfter ? 'PAUSED' : 'ACTIVE'}`));
