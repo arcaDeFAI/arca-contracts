@@ -418,108 +418,108 @@ export async function executeWithCapture(
         // Capture state before if capture function provided
         if (options.captureState) {
             const state = await options.captureState(options.signer.address);
-
-            if (state) {
-                result.stateBefore = state;
-            }
+            if (state) result.stateBefore = state;
         }
 
         console.log(chalk.blue("\n📤 Executing transaction..."));
         const tx = await actionFn();
         console.log(chalk.gray("Transaction hash:"), tx.hash);
-        
+
         const receipt = await tx.wait();
 
         if (receipt) {
             console.log(chalk.green("✅ Transaction confirmed"));
             console.log(chalk.gray("Gas used:"), receipt.gasUsed.toString());
-
             result.txHash = tx.hash;
             result.gasUsed = receipt.gasUsed.toString();
         } else {
-            console.log(chalk.red("No transaction (tx) receipt could be obtained."))
+            console.log(chalk.red("No transaction (tx) receipt could be obtained."));
         }
 
         // Capture state after if capture function provided
         if (options.captureState && !options.dryRun) {
             const state = await options.captureState(options.signer.address);
-            if (state) {
-                result.stateAfter = state;
-            }
-            
-            // Show state changes
+            if (state) result.stateAfter = state;
             if (result.stateBefore && result.stateAfter) {
                 formatters.stateChanges(result.stateBefore, result.stateAfter);
             }
         }
 
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+    } catch (error: any) {
+        let errorMessage = error?.message || String(error);
+        let decodedError: string | null = null;
+
         console.error(chalk.red("\n❌ Error:"), errorMessage);
-        
-        // Enhanced error decoding
-        let decodedError: string | null | unknown = null;
-        
+
         // Try to extract revert reason
-        if (error && typeof error === 'object') {
-            // Check for standard revert reason
-            if ('reason' in error && error.reason) {
-                console.error(chalk.red("Reason:"), error.reason);
+        if (error) {
+            // ethers v6 error shape
+            if (error.reason) {
                 decodedError = error.reason;
+                console.error(chalk.red("Reason:"), error.reason);
             }
-            
-            // Check for transaction receipt with status 0 (failed)
-            if ('receipt' in error && error.receipt) {
+
+            // Transaction receipt with status 0 (failed)
+            if (error.receipt) {
                 console.error(chalk.red("Transaction failed (status: 0)"));
-                
-                // Try to decode the error data
-                if ('data' in error && error.data && options.vault) {
-                    try {
-                        const parsed = options.vault.interface.parseError(String(error.data));
-                        if (parsed) {
-                            const errorName = parsed.name;
-                            const errorArgs = parsed.args ? Object.entries(parsed.args)
+            }
+
+            // Try to decode contract error data
+            if (error.data && typeof error.data === "string" && options.vault) {
+                try {
+                    const parsed = options.vault.interface.parseError(error.data);
+                    if (parsed) {
+                        const errorName = parsed.name;
+                        const errorArgs = parsed.args && typeof parsed.args === "object"
+                            ? Object.entries(parsed.args)
                                 .filter(([key]) => isNaN(Number(key)))
                                 .map(([key, value]) => `${key}: ${value}`)
-                                .join(', ') : '';
-                            decodedError = errorArgs ? `${errorName}(${errorArgs})` : errorName;
-                            console.error(chalk.red("Contract Error:"), decodedError);
-                        }
-                    } catch (e) {
-                        // Try alternative error extraction
-                        if (typeof error.data === 'string' && error.data.startsWith('0x')) {
-                            // Common error signatures
-                            const errorSignatures: Record<string, string> = {
-                                '0x08c379a0': 'Error(string)',
-                                '0x4e487b71': 'Panic(uint256)',
-                                '0xf92ee8a9': 'NotInitialized',
-                                '0xdf92cc9d': 'InsufficientBalance',
-                                '0x7939f424': 'TransferFromFailed',
-                                '0x23830e66': 'TransferFailed',
-                            };
-                            
-                            const selector = error.data.slice(0, 10);
-                            if (errorSignatures[selector]) {
-                                console.error(chalk.red("Error Type:"), errorSignatures[selector]);
-                            }
+                                .join(', ')
+                            : '';
+                        decodedError = errorArgs ? `${errorName}(${errorArgs})` : errorName;
+                        console.error(chalk.red("Contract Error:"), decodedError);
+                    }
+                } catch (decodeErr) {
+                    // Fallback: try to match known error selectors
+                    if (typeof error.data === 'string' && error.data.startsWith('0x')) {
+                        const errorSignatures: Record<string, string> = {
+                            '0x08c379a0': 'Error(string)',
+                            '0x4e487b71': 'Panic(uint256)',
+                            '0xf92ee8a9': 'NotInitialized',
+                            '0xdf92cc9d': 'InsufficientBalance',
+                            '0x7939f424': 'TransferFromFailed',
+                            '0x23830e66': 'TransferFailed',
+                        };
+                        const selector = error.data.slice(0, 10);
+                        if (errorSignatures[selector]) {
+                            decodedError = errorSignatures[selector];
+                            console.error(chalk.red("Error Type:"), errorSignatures[selector]);
                         }
                     }
                 }
             }
-            
-            // Check for common patterns in error message
-            if (errorMessage.includes('insufficient funds')) {
+
+            // ethers v6 error shape: error.cause?.message
+            if (error.cause && error.cause.message) {
+                errorMessage += ` | Cause: ${error.cause.message}`;
+                console.error(chalk.red("Cause:"), error.cause.message);
+            }
+
+            // Common error hints
+            if (/insufficient funds/i.test(errorMessage)) {
                 console.error(chalk.yellow("💡 Hint: Check that you have enough tokens and gas"));
-            } else if (errorMessage.includes('nonce')) {
+            } else if (/nonce/i.test(errorMessage)) {
                 console.error(chalk.yellow("💡 Hint: Transaction nonce issue - may need to reset"));
-            } else if (errorMessage.includes('gas')) {
+            } else if (/gas/i.test(errorMessage)) {
                 console.error(chalk.yellow("💡 Hint: Gas estimation failed - transaction may revert"));
-            } else if (errorMessage.includes('reverted')) {
+            } else if (/revert|reverted/i.test(errorMessage)) {
                 console.error(chalk.yellow("💡 Hint: Transaction reverted - check contract requirements"));
+            } else if (/execution reverted/i.test(errorMessage)) {
+                console.error(chalk.yellow("💡 Hint: Execution reverted - check input values and contract state"));
             }
         }
-        
-        result.error = String((decodedError || errorMessage || String(error)));
+
+        result.error = String(decodedError || errorMessage || error);
     }
 
     return result;
