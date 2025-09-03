@@ -373,7 +373,7 @@ async function main() {
           console.log("Consider adding `deployAndSetStrategy` function to VaultFactory");
           
           // Alternative: Direct call to setStrategy with manually deployed clone
-          // This would require deploying the clone ourselves using ImmutableClone
+          // This would require deploying the clone ourselves using ImmutableClone TODO
           
           const proceedWithManual = await promptConfirm("\n⚠️  This feature requires VaultFactory modification. Continue anyway?");
           
