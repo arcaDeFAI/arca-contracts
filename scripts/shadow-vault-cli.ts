@@ -9,8 +9,8 @@ import type {
     IRamsesV3Pool,
     ShadowPriceHelperWrapper
 } from "../typechain-types";
-import type { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
-import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import type { IERC20MetadataUpgradeable } from "../typechain-types/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
+import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import type {
     TestResult,
     VaultState
@@ -43,6 +43,7 @@ import {
     displayEmergencyStatus,
     estimateEmergencyWithdrawal
 } from "./test-vault-utils";
+import type { ContractTransactionResponse } from "ethers";
 
 class ShadowVaultTester {
     private rl: readline.Interface;
@@ -175,33 +176,10 @@ class ShadowVaultTester {
 
     async executeAction(
         actionName: string, 
-        actionFn: () => Promise<{hash: string; wait(): Promise<{gasUsed: bigint; events?: Array<{event?: string; args?: Record<string, unknown>}>}>}>, 
+        actionFn: () => Promise<ContractTransactionResponse>, 
         params: Record<string, unknown> = {},
         skipConfirmation: boolean = false
     ): Promise<TestResult> {
-        // Gas estimation
-        if (!this.config.dryRun && !skipConfirmation) {
-            try {
-                console.log(chalk.gray("\n⛽ Estimating gas..."));
-                const gasInfo = await estimateGasWithCost(actionFn);
-                console.log(chalk.gray(`  Estimated gas: ${gasInfo.gas.toString()}`));
-                console.log(chalk.gray(`  Estimated cost: ${gasInfo.costEth} ETH`));
-                
-                const confirmed = await this.confirm(`\nProceed with ${actionName}?`);
-                if (!confirmed) {
-                    console.log(chalk.yellow("Transaction cancelled"));
-                    return {
-                        timestamp: Date.now(),
-                        action: actionName,
-                        params,
-                        error: "User cancelled"
-                    };
-                }
-            } catch (error) {
-                console.log(chalk.yellow("Could not estimate gas, continuing..."));
-            }
-        }
-        
         const result = await executeWithCapture(actionName, actionFn, {
             signer: this.signer,
             dryRun: this.config.dryRun,
@@ -472,7 +450,7 @@ class ShadowVaultTester {
         // Show withdrawal context with balance and suggestions
         await ui.showShareWithdrawalContext(this.vault!, this.signer, this.tokenX!, this.tokenY!);
         
-        const sharesInput = await this.question("");
+        const sharesInput = await this.questionWithDefault("Enter the amount of shares to withdraw (in wei or as a percentage)", "100%", "100%")
         const recipient = await this.question("Enter recipient address (or press enter for self): ");
         
         // Get available shares for percentage/max calculations
@@ -576,20 +554,22 @@ class ShadowVaultTester {
         
         // Get current round
         const currentRound = await this.vault!.getCurrentRound();
+        console.log(chalk.gray(`Current round: ${currentRound}`));
+
+        const recipient = (await this.question("Enter recipient (or press enter for self): ")) || this.signer.address;
         
         // Check for available withdrawals
-        const availableAmount = await this.vault!.getAvailableToWithdraw(this.signer.address);
+        const [availableAmountX, availableAmountY] = await this.vault!.getRedeemableAmounts(currentRound, recipient);
         
-        if (availableAmount === 0n) {
+        if (availableAmountX === 0n && availableAmountY === 0n) {
             console.log(chalk.yellow("\n⚠️  No available withdrawals to redeem"));
             console.log(chalk.gray("You need to have a processed withdrawal from a previous round"));
             return;
         }
         
         console.log(chalk.cyan("\n💰 Available to Redeem:"));
-        const [amountX, amountY] = await this.vault!.previewAmounts(availableAmount);
-        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
-        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(availableAmountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(availableAmountY, this.tokenY!)}`));
         
         console.log(chalk.yellow("\n💡 This will convert wS (wrapped Sonic) to native S"));
         
@@ -599,8 +579,8 @@ class ShadowVaultTester {
         }
         
         await this.executeAction("Redeem Native", async () => {
-            return this.vault!.redeemNative();
-        }, {});
+            return this.vault!.redeemQueuedWithdrawalNative(currentRound, recipient);
+        });
     }
 
     async testCancelQueuedWithdrawal() {
@@ -631,34 +611,43 @@ class ShadowVaultTester {
         }
         
         await this.executeAction("Cancel Queued Withdrawal", async () => {
-            return this.vault!.cancelQueuedWithdrawal();
+            return this.vault!.cancelQueuedWithdrawal(queuedShares);
         }, { shares: queuedShares.toString() });
     }
 
     async testRedeemWithdrawal() {
         console.log(chalk.blue("\n💰 Redeem Withdrawal\n"));
+
+        // Get current round
+        const currentRound = await this.vault!.getCurrentRound();
+        console.log(chalk.gray(`Current round: ${currentRound}`));
+
+        let recipient = await this.question("Enter recipient (or press enter for self): ");
+        
+        if (!recipient) {
+            recipient = this.signer.address;
+        }
         
         // Check for available withdrawals
-        const availableAmount = await this.vault!.getAvailableToWithdraw(this.signer.address);
+        const [availableAmountX, availableAmountY] = await this.vault!.getRedeemableAmounts(currentRound, recipient);
         
-        if (availableAmount === 0n) {
+        if (availableAmountX === 0n && availableAmountY === 0n) {
             console.log(chalk.yellow("\n⚠️  No available withdrawals to redeem"));
             console.log(chalk.gray("You need to have a processed withdrawal from a previous round"));
             return;
         }
         
         console.log(chalk.cyan("\n💰 Available to Redeem:"));
-        const [amountX, amountY] = await this.vault!.previewAmounts(availableAmount);
-        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(amountX, this.tokenX!)}`));
-        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(amountY, this.tokenY!)}`));
+        console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(availableAmountX, this.tokenX!)}`));
+        console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(availableAmountY, this.tokenY!)}`));
         
         if (!await this.confirm("\nProceed with redemption?")) {
             console.log(chalk.yellow("Redemption cancelled"));
             return;
         }
-        
+
         await this.executeAction("Redeem Withdrawal", async () => {
-            return this.vault!.redeem();
+            return this.vault!.redeemQueuedWithdrawal(currentRound, recipient);
         }, {});
     }
 
@@ -695,13 +684,13 @@ class ShadowVaultTester {
         const slot0 = await this.pool!.slot0();
         const currentTick = Number(slot0[1]);
         const tickSpacing = Number(await this.pool!.tickSpacing());
-        const [idleX, idleY] = await this.strategy!.getIdleBalances();
+        const [balanceX, balanceY] = await this.strategy!.getBalances();
         
         // Default tick range: ±5% around current tick
         const defaultRange = calculateDefaultTickRange(currentTick, tickSpacing, 5);
         
         // Default amounts: 90% of available (keeping 10% as reserve)
-        const defaultAmounts = calculateOptimalDepositAmounts(idleX, idleY, 10);
+        const defaultAmounts = calculateOptimalDepositAmounts(balanceX, balanceY, 10);
         
         // Get user inputs with defaults
         const tickLower = await this.questionWithDefault(
@@ -726,7 +715,7 @@ class ShadowVaultTester {
         );
         
         // Show amount suggestions
-        if (idleX > 0n || idleY > 0n) {
+        if (balanceX > 0n || balanceY > 0n) {
             console.log(chalk.cyan("\n💡 Suggested amounts (90% of available, 10% reserve):"));
             console.log(chalk.gray(`  Token X: ${defaultAmounts.amountX} wei (reserve: ${defaultAmounts.reserveX} wei)`));
             console.log(chalk.gray(`  Token Y: ${defaultAmounts.amountY} wei (reserve: ${defaultAmounts.reserveY} wei)`));
@@ -752,25 +741,16 @@ class ShadowVaultTester {
             amountY: BigInt(amountY || "0")
         };
         
-        // Validate that at least one amount is non-zero
-        if (params.amountX === 0n && params.amountY === 0n) {
-            console.log(chalk.red("\n❌ Error: At least one deposit amount must be non-zero"));
-            return;
-        }
-        
-        // Get current idle balances for validation
-        const [currentIdleX, currentIdleY] = await this.strategy!.getIdleBalances();
-        
         // Check if amounts exceed available balance and warn
-        if (params.amountX > currentIdleX) {
-            console.log(chalk.yellow(`\n⚠️  Warning: Amount X (${params.amountX}) exceeds available balance (${currentIdleX})`));
-            console.log(chalk.yellow(`   Will be capped at: ${await formatters.formatBalance(currentIdleX, this.tokenX!)}`));
-            params.amountX = currentIdleX; // Update for display
+        if (params.amountX > balanceX) {
+            console.log(chalk.yellow(`\n⚠️  Warning: Amount X (${params.amountX}) exceeds available balance (${balanceX})`));
+            console.log(chalk.yellow(`   Will be capped at: ${await formatters.formatBalance(balanceX, this.tokenX!)}`));
+            params.amountX = balanceX; // Update for display
         }
-        if (params.amountY > currentIdleY) {
-            console.log(chalk.yellow(`\n⚠️  Warning: Amount Y (${params.amountY}) exceeds available balance (${currentIdleY})`));
-            console.log(chalk.yellow(`   Will be capped at: ${await formatters.formatBalance(currentIdleY, this.tokenY!)}`));
-            params.amountY = currentIdleY; // Update for display
+        if (params.amountY > balanceY) {
+            console.log(chalk.yellow(`\n⚠️  Warning: Amount Y (${params.amountY}) exceeds available balance (${balanceY})`));
+            console.log(chalk.yellow(`   Will be capped at: ${await formatters.formatBalance(balanceY, this.tokenY!)}`));
+            params.amountY = balanceY; // Update for display
         }
         
         // Show visual range
@@ -782,8 +762,8 @@ class ShadowVaultTester {
         console.log(chalk.gray(`  Amount X to deposit: ${await formatters.formatBalance(params.amountX, this.tokenX!)}`));
         console.log(chalk.gray(`  Amount Y to deposit: ${await formatters.formatBalance(params.amountY, this.tokenY!)}`));
         
-        const reserveX = currentIdleX - params.amountX;
-        const reserveY = currentIdleY - params.amountY;
+        const reserveX = balanceX - params.amountX;
+        const reserveY = balanceY - params.amountY;
         if (reserveX > 0n || reserveY > 0n) {
             console.log(chalk.yellow("\n  Remaining as Reserves:"));
             if (reserveX > 0n) {
@@ -1129,7 +1109,7 @@ class ShadowVaultTester {
         
         try {
             // Get VaultFactory address
-            const vaultFactoryAddress = await this.vault!.factory();
+            const vaultFactoryAddress = await this.vault!.getFactory();
             console.log(chalk.gray(`\nVaultFactory: ${vaultFactoryAddress}`));
             
             // Get VaultFactory contract
@@ -1175,7 +1155,7 @@ class ShadowVaultTester {
             
             await this.executeAction(`${isPaused ? 'Resume' : 'Pause'} Deposits`, async () => {
                 if (isPaused) {
-                    return this.vault!.unpauseDeposits();
+                    return this.vault!.resumeDeposits();
                 } else {
                     return this.vault!.pauseDeposits();
                 }
@@ -1220,43 +1200,6 @@ class ShadowVaultTester {
         } catch (error) {
             console.error(chalk.red("Error previewing shares:"), error);
         }
-    }
-
-    async testCancelQueuedWithdrawal() {
-        console.log(chalk.blue("\n❌ Test Cancel Queued Withdrawal\n"));
-        
-        // First show what's queued
-        const currentRound = await this.vault!.getCurrentRound();
-        const queuedShares = await this.vault!.getQueuedWithdrawal(currentRound, this.signer.address);
-        
-        if (queuedShares === 0n) {
-            console.log(chalk.yellow("You have no queued withdrawals in the current round"));
-            return;
-        }
-        
-        const decimals = Number(await this.vault!.decimals());
-        const queuedFormatted = formatters.formatShareAmount(queuedShares, decimals);
-        console.log(chalk.cyan(`Your queued withdrawal: ${queuedFormatted}`));
-        
-        const shares = await this.question("Enter shares to cancel (in wei): ");
-        
-        await this.executeAction("Cancel Queued Withdrawal", async () => {
-            return this.vault!.cancelQueuedWithdrawal(BigInt(shares || "0"));
-        });
-    }
-
-    async testRedeemWithdrawal() {
-        console.log(chalk.blue("\n💸 Test Redeem Withdrawal\n"));
-        
-        const round = await this.question("Enter round number: ");
-        const recipient = await this.question("Enter recipient (or press enter for self): ");
-        
-        await this.executeAction("Redeem Withdrawal", async () => {
-            return this.vault!.redeemQueuedWithdrawal(
-                BigInt(round || "0"),
-                recipient || this.signer.address
-            );
-        });
     }
 
     async showQueueStatus() {

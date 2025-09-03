@@ -2,8 +2,13 @@ import { ethers } from "hardhat";
 import chalk from "chalk";
 import fs from "fs";
 import type * as readline from "readline";
-import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import type { IERC20MetadataUpgradeable } from "../typechain-types/openzeppelin-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
+import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
+import type { IERC20MetadataUpgradeable } from "../typechain-types/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
+import type { ContractTransactionResponse } from "ethers";
+import type { 
+    OracleRewardShadowVault,
+    OracleRewardVault
+} from "../typechain-types";
 
 // Common test configuration
 export interface TestConfig {
@@ -68,7 +73,7 @@ export interface IVaultContract {
 export interface ExecuteOptions {
     signer: SignerWithAddress;
     dryRun: boolean;
-    vault?: IVaultContract;
+    vault?: IVaultContract | OracleRewardShadowVault | OracleRewardVault;
     captureState?: (user: string) => Promise<VaultState | null>;
 }
 
@@ -237,7 +242,7 @@ export function generateShareSuggestions(
 
 // Estimate tokens from shares
 export async function estimateTokensFromShares(
-    vault: IVaultContract,
+    vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault,
     shares: bigint
 ): Promise<{amountX: bigint, amountY: bigint}> {
     try {
@@ -266,7 +271,7 @@ export function formatTimeAgo(timestamp: number): string {
 
 // Calculate optimal deposit ratio
 export async function calculateOptimalRatio(
-    vault: IVaultContract,
+    vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault,
     tokenX: IERC20MetadataUpgradeable,
     tokenY: IERC20MetadataUpgradeable
 ): Promise<{ratioX: number, ratioY: number, message: string}> {
@@ -336,7 +341,7 @@ export class TestResultManager {
 
 // Capture vault state
 export async function captureVaultState(
-    vault: IVaultContract,
+    vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault,
     tokenX: IERC20MetadataUpgradeable,
     tokenY: IERC20MetadataUpgradeable,
     user: string
@@ -378,7 +383,12 @@ export async function estimateGasWithCost(
         const gas = BigInt(estimatedGas.toString());
         
         // Use provided gas price or fetch current
-        const effectiveGasPrice = gasPrice || (await ethers.provider.getGasPrice());
+        const effectiveGasPrice = gasPrice || ((await ethers.provider.getFeeData()).gasPrice);
+
+        if (!effectiveGasPrice) {
+            throw new Error("No gas price fallback available from ethers.providers.getFeeData")
+        }
+
         const costWei = gas * effectiveGasPrice;
         const costEth = ethers.formatEther(costWei);
         
@@ -395,7 +405,7 @@ export async function estimateGasWithCost(
 // Transaction execution wrapper
 export async function executeWithCapture(
     actionName: string,
-    actionFn: () => Promise<{hash: string; wait(): Promise<{gasUsed: bigint; events?: Array<{event?: string; args?: Record<string, unknown>}>}>}>,
+    actionFn: () => Promise<ContractTransactionResponse>,
     options: ExecuteOptions & { params?: Record<string, unknown> }
 ): Promise<TestResult> {
     const result: TestResult = {
@@ -414,49 +424,20 @@ export async function executeWithCapture(
             }
         }
 
-        if (options.dryRun) {
-            console.log(chalk.yellow("\n🔍 DRY RUN - Transaction not executed"));
-            console.log(chalk.gray("Parameters:"), options.params);
-            
-            // Estimate gas if possible
-            try {
-                const estimatedGas = await actionFn();
-                console.log(chalk.gray("Estimated gas:"), estimatedGas.toString());
-            } catch (error) {
-                // TODO FIX ME: gas estimates always fail
-                console.log(chalk.gray(`Gas estimation failed: ${error}`));
-            }
-            
-            result.error = "Dry run - not executed";
-        } else {
-            console.log(chalk.blue("\n📤 Executing transaction..."));
-            const tx = await actionFn();
-            console.log(chalk.gray("Transaction hash:"), tx.hash);
-            
-            const receipt = await tx.wait();
+        console.log(chalk.blue("\n📤 Executing transaction..."));
+        const tx = await actionFn();
+        console.log(chalk.gray("Transaction hash:"), tx.hash);
+        
+        const receipt = await tx.wait();
+
+        if (receipt) {
             console.log(chalk.green("✅ Transaction confirmed"));
             console.log(chalk.gray("Gas used:"), receipt.gasUsed.toString());
-            
+
             result.txHash = tx.hash;
             result.gasUsed = receipt.gasUsed.toString();
-            result.events = receipt.events;
-            
-            // Log events
-            if (receipt.events && receipt.events.length > 0) {
-                console.log(chalk.blue("\n📋 Events:"));
-                receipt.events.forEach((event) => {
-                    if (event.event) {
-                        console.log(chalk.cyan(`  - ${event.event}`));
-                        if (event.args) {
-                            Object.entries(event.args).forEach(([key, value]) => {
-                                if (isNaN(Number(key))) {
-                                    console.log(chalk.gray(`    ${key}: ${value?.toString() || 'N/A'}`));
-                                }
-                            });
-                        }
-                    }
-                });
-            }
+        } else {
+            console.log(chalk.red("No transaction (tx) receipt could be obtained."))
         }
 
         // Capture state after if capture function provided
@@ -477,7 +458,7 @@ export async function executeWithCapture(
         console.error(chalk.red("\n❌ Error:"), errorMessage);
         
         // Enhanced error decoding
-        let decodedError: string | null = null;
+        let decodedError: string | null | unknown = null;
         
         // Try to extract revert reason
         if (error && typeof error === 'object') {
@@ -488,13 +469,13 @@ export async function executeWithCapture(
             }
             
             // Check for transaction receipt with status 0 (failed)
-            if ('receipt' in error && error.receipt && error.receipt.status === 0) {
+            if ('receipt' in error && error.receipt) {
                 console.error(chalk.red("Transaction failed (status: 0)"));
                 
                 // Try to decode the error data
                 if ('data' in error && error.data && options.vault) {
                     try {
-                        const parsed = options.vault.interface.parseError(error.data);
+                        const parsed = options.vault.interface.parseError(String(error.data));
                         if (parsed) {
                             const errorName = parsed.name;
                             const errorArgs = parsed.args ? Object.entries(parsed.args)
@@ -538,7 +519,7 @@ export async function executeWithCapture(
             }
         }
         
-        result.error = decodedError || errorMessage || error.toString();
+        result.error = String((decodedError || errorMessage || String(error)));
     }
 
     return result;
@@ -635,7 +616,7 @@ export const ui = {
     },
     
     showShareWithdrawalContext: async (
-        vault: IVaultContract,
+        vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault,
         signer: SignerWithAddress,
         tokenX: IERC20MetadataUpgradeable,
         tokenY: IERC20MetadataUpgradeable
@@ -701,8 +682,6 @@ export const ui = {
                     // Skip preview if estimation fails
                 }
             }
-            
-            console.log(chalk.gray('\nEnter shares to withdraw (in wei) or type "max":'));
         } catch (error) {
             console.error(chalk.red("Error showing withdrawal context:"), error);
         }
@@ -717,7 +696,7 @@ export async function checkAndApproveTokens(
     amountX: bigint,
     amountY: bigint,
     signer: SignerWithAddress,
-    executeAction: (name: string, fn: () => Promise<{hash: string; wait(): Promise<{gasUsed: bigint}>}>, params?: Record<string, unknown>, skipConfirm?: boolean) => Promise<TestResult>
+    executeAction: (name: string, fn: () => Promise<ContractTransactionResponse>, params?: Record<string, unknown>, skipConfirm?: boolean) => Promise<TestResult>
 ): Promise<void> {
     const [allowanceX, allowanceY] = await Promise.all([
         tokenX.allowance(signer.address, vaultAddress),
@@ -743,7 +722,7 @@ export async function checkAndApproveTokens(
 
 // Pre-deposit validation checks
 export async function validateDeposit(
-    vault: IVaultContract,
+    vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault,
     tokenX: IERC20MetadataUpgradeable,
     tokenY: IERC20MetadataUpgradeable,
     amountX: bigint,
@@ -1053,7 +1032,7 @@ export function clearReadlineBuffer(rl: readline.Interface): void {
 }
 
 // Emergency mode helper functions
-export async function checkEmergencyMode(vault: IVaultContract): Promise<boolean> {
+export async function checkEmergencyMode(vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault): Promise<boolean> {
     try {
         const strategyAddress = await vault.getStrategy();
         return strategyAddress === ethers.ZeroAddress;
@@ -1064,7 +1043,7 @@ export async function checkEmergencyMode(vault: IVaultContract): Promise<boolean
 }
 
 export async function validateEmergencyWithdraw(
-    vault: IVaultContract,
+    vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault,
     signer: SignerWithAddress
 ): Promise<{ valid: boolean; shares?: bigint; message?: string }> {
     try {
@@ -1095,7 +1074,7 @@ export async function validateEmergencyWithdraw(
     }
 }
 
-export async function displayEmergencyStatus(vault: IVaultContract): Promise<void> {
+export async function displayEmergencyStatus(vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault): Promise<void> {
     try {
         const isEmergency = await checkEmergencyMode(vault);
         
@@ -1116,7 +1095,7 @@ export async function displayEmergencyStatus(vault: IVaultContract): Promise<voi
 }
 
 export async function estimateEmergencyWithdrawal(
-    vault: IVaultContract,
+    vault: IVaultContract | OracleRewardShadowVault | OracleRewardVault,
     shares: bigint,
     tokenX: IERC20MetadataUpgradeable,
     tokenY: IERC20MetadataUpgradeable
