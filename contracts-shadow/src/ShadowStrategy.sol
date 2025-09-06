@@ -72,6 +72,54 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     event RewardClaimFailed(address[] tokens);
     event XShadowConversionFailed();
     event VaultAccountingUpdateFailed(address vault);
+    // Detailed rebalance debugging events
+    event RebalanceStarted(
+        address indexed operator,
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amountX,
+        uint256 amountY
+    );
+
+    event RebalanceCheckFailed(string reason, uint256 timestamp);
+
+    event RebalanceStepFailed(uint8 step, string reason);
+
+    event RebalanceStepSuccess(uint8 step, bytes32 data);
+
+    event TickValidationFailed(string reason, int24 value1, int24 value2);
+
+    event SlippageCheckFailed(
+        int24 currentTick,
+        int24 desiredTick,
+        int24 slippageTick
+    );
+
+    event InsufficientBalance(
+        uint256 requestedX,
+        uint256 requestedY,
+        uint256 availableX,
+        uint256 availableY
+    );
+
+    event RebalanceCompleted(
+        uint256 newTokenId,
+        uint256 depositedX,
+        uint256 depositedY
+    );
+
+    event RebalanceAborted(string reason, uint8 step);
+    event NftBurnFailure(uint256 tokenId);
+
+    // Structure to reduce stack variables
+    struct RebalanceParams {
+        int24 tickLower;
+        int24 tickUpper;
+        int24 desiredTick;
+        int24 slippageTick;
+        uint256 amountX;
+        uint256 amountY;
+    }
 
     uint256 private constant _PRECISION = 1e18;
     uint256 private constant _BASIS_POINTS = 1e4;
@@ -417,7 +465,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     }
 
     /**
-     * @notice Shadow-specific rebalance
+     * @notice Shadow-specific rebalance, defensive version
      * @param tickLower The lower tick of the new position
      * @param tickUpper The upper tick of the new position
      * @param desiredTick The desired current tick (for slippage check)
@@ -433,21 +481,244 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         uint256 amountX,
         uint256 amountY
     ) external onlyOperators {
-        // Check cooldown
+        // Pack parameters into struct to reduce stack usage
+        RebalanceParams memory params = RebalanceParams({
+            tickLower: tickLower,
+            tickUpper: tickUpper,
+            desiredTick: desiredTick,
+            slippageTick: slippageTick,
+            amountX: amountX,
+            amountY: amountY
+        });
+
+        emit RebalanceStarted(
+            msg.sender,
+            params.tickLower,
+            params.tickUpper,
+            params.amountX,
+            params.amountY
+        );
+
+        // Step 0: Check cooldown defensively
+        if (!_checkCooldown()) {
+            emit RebalanceAborted("Cooldown not met", 0);
+            return; // Early return
+        }
+        emit RebalanceStepCount(0);
+
+        // Step 1: Exit current position defensively
+        _exitPositionSafe();
+        emit RebalanceStepCount(1);
+
+        // Step 2: Process withdrawals and fees
+        _processWithdrawalsAndFees();
+        emit RebalanceStepCount(2);
+
+        // Step 3: Harvest rewards defensively
+        _harvestRewardsSafe();
+        emit RebalanceStepCount(3);
+
+        // Step 4-6: Enter new position if valid
+        _attemptNewPosition(params);
+    }
+
+    // Separate function to check cooldown
+    function _checkCooldown() internal view returns (bool) {
         uint256 lastRebalance = _lastRebalance;
         if (
             lastRebalance > 0 &&
             block.timestamp < lastRebalance + _rebalanceCoolDown
         ) {
-            revert Strategy__RebalanceCoolDown();
+            return false;
+        }
+        return true;
+    }
+
+    // Safe exit position
+    function _exitPositionSafe() internal {
+        if (_positionTokenId == 0) return;
+
+        try this.exitPositionExternal() {
+            emit RebalanceStepSuccess(1, bytes32(uint256(1)));
+        } catch Error(string memory reason) {
+            emit RebalanceStepFailed(1, reason);
+        } catch {
+            emit RebalanceStepFailed(1, "Unknown error");
+        }
+    }
+
+    // Process withdrawals and fees safely
+    function _processWithdrawalsAndFees() internal {
+        try this.processWithdrawalsExternal() {
+            emit RebalanceStepSuccess(2, bytes32(uint256(2)));
+        } catch Error(string memory reason) {
+            emit RebalanceStepFailed(2, reason);
+        } catch {
+            emit RebalanceStepFailed(2, "Unknown error");
+        }
+    }
+
+    // Safe harvest
+    function _harvestRewardsSafe() internal {
+        try this.harvestRewards() {
+            emit RebalanceStepSuccess(3, bytes32(uint256(3)));
+        } catch Error(string memory reason) {
+            emit RebalanceStepFailed(3, reason);
+        } catch {
+            emit RebalanceStepFailed(3, "Unknown error");
+        }
+    }
+
+    // Attempt to enter new position
+    function _attemptNewPosition(RebalanceParams memory params) internal {
+        // Validate ticks
+        if (!_validateTickRange(params.tickLower, params.tickUpper)) {
+            emit RebalanceAborted("Tick validation failed", 4);
+            return;
+        }
+        emit RebalanceStepCount(4);
+
+        // Check slippage if needed
+        if (
+            (params.desiredTick != 0 || params.slippageTick != 0) &&
+            !_checkSlippage(params.desiredTick, params.slippageTick)
+        ) {
+            emit RebalanceAborted("Slippage check failed", 5);
+            return;
         }
 
-        emit RebalanceStepCount(0);
+        // Check amounts
+        if (params.amountX == 0 && params.amountY == 0) {
+            emit RebalanceAborted("Both amounts are zero", 5);
+            return;
+        }
+        emit RebalanceStepCount(5);
 
-        // Exit current position if it exists
+        // Enter position
+        _enterNewPositionSafe(params);
+    }
+
+    // Enter new position safely
+    function _enterNewPositionSafe(RebalanceParams memory params) internal {
+        // Get balances and cap amounts
+        uint256 availableX = _tokenX().balanceOf(address(this));
+        uint256 availableY = _tokenY().balanceOf(address(this));
+
+        if (params.amountX > availableX || params.amountY > availableY) {
+            emit InsufficientBalance(
+                params.amountX,
+                params.amountY,
+                availableX,
+                availableY
+            );
+        }
+
+        uint256 depositX = params.amountX > availableX
+            ? availableX
+            : params.amountX;
+        uint256 depositY = params.amountY > availableY
+            ? availableY
+            : params.amountY;
+
+        try
+            this.enterPositionExternal(
+                params.tickLower,
+                params.tickUpper,
+                depositX,
+                depositY
+            )
+        returns (uint256 tokenId) {
+            emit RebalanceStepCount(6);
+            emit RebalanceCompleted(tokenId, depositX, depositY);
+        } catch Error(string memory reason) {
+            emit RebalanceStepFailed(6, reason);
+            emit RebalanceAborted("Position entry failed", 6);
+        } catch {
+            emit RebalanceStepFailed(6, "Unknown error");
+            emit RebalanceAborted("Position entry failed", 6);
+        }
+    }
+
+    // Validate tick range
+    function _validateTickRange(
+        int24 tickLower,
+        int24 tickUpper
+    ) internal returns (bool) {
+        // Basic checks
+        if (tickLower < TickMath.MIN_TICK || tickUpper > TickMath.MAX_TICK) {
+            emit TickValidationFailed("Out of range", tickLower, tickUpper);
+            return false;
+        }
+
+        if (tickLower >= tickUpper) {
+            emit TickValidationFailed("Invalid order", tickLower, tickUpper);
+            return false;
+        }
+
+        // Get tick spacing
+        int24 tickSpacing;
+        try _pool().tickSpacing() returns (int24 spacing) {
+            tickSpacing = spacing;
+        } catch {
+            emit TickValidationFailed("Failed to get spacing", 0, 0);
+            return false;
+        }
+        // Check alignment
+        if (tickLower % tickSpacing != 0 || tickUpper % tickSpacing != 0) {
+            emit TickValidationFailed("Not aligned", tickLower, tickUpper);
+            return false;
+        }
+
+        // Check range width
+        if (uint24(tickUpper - tickLower) > _MAX_RANGE) {
+            emit TickValidationFailed("Range too wide", tickLower, tickUpper);
+            return false;
+        }
+
+        return true;
+    }
+
+    // Check slippage
+    function _checkSlippage(
+        int24 desiredTick,
+        int24 slippageTick
+    ) internal returns (bool) {
+        int24 currentTick;
+
+        try _pool().slot0() returns (
+            uint160,
+            int24 tick,
+            uint16,
+            uint16,
+            uint16,
+            uint8,
+            bool
+        ) {
+            currentTick = tick;
+        } catch {
+            emit SlippageCheckFailed(0, desiredTick, slippageTick);
+            return false;
+        }
+        if (
+            currentTick < desiredTick - slippageTick ||
+            currentTick > desiredTick + slippageTick
+        ) {
+            emit SlippageCheckFailed(currentTick, desiredTick, slippageTick);
+            return false;
+        }
+
+        return true;
+    }
+
+    // External helper functions for try-catch
+
+    function exitPositionExternal() external {
+        require(msg.sender == address(this), "Only self");
         _exitPosition();
+    }
 
-        emit RebalanceStepCount(1);
+    function processWithdrawalsExternal() external {
+        require(msg.sender == address(this), "Only self");
 
         // Process withdrawals and apply AUM fee
         (
@@ -462,69 +733,27 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             queuedAmountX,
             queuedAmountY
         );
-
-        emit RebalanceStepCount(2);
-
-        // Try to harvest rewards
-        try this.harvestRewards() {} catch {}
-        emit RebalanceStepCount(3);
-
-        // Validate tick range
-        require(
-            tickLower >= TickMath.MIN_TICK && tickUpper <= TickMath.MAX_TICK,
-            "ShadowStrategy: tick out of range"
-        );
-        require(tickLower < tickUpper, "ShadowStrategy: invalid range");
-
-        // Check if we should enter a new position
-        if (tickUpper > tickLower) {
-            // Validate tick spacing
-            int24 tickSpacing = _pool().tickSpacing();
-            _validateTicks(tickLower, tickUpper, tickSpacing);
-
-            emit RebalanceStepCount(4);
-
-            // Check slippage
-            if (desiredTick != 0 || slippageTick != 0) {
-                (, int24 currentTick, , , , , ) = _pool().slot0();
-                _validateActiveTickSlippage(
-                    currentTick,
-                    desiredTick,
-                    slippageTick
-                );
-            }
-
-            // Check that at least one amount is non-zero
-            if (amountX == 0 && amountY == 0) {
-                revert Strategy__ZeroAmounts();
-            }
-
-            emit RebalanceStepCount(5);
-
-            // Get current balances and ensure we don't try to deposit more than available
-            uint256 availableX = _tokenX().balanceOf(address(this));
-            uint256 availableY = _tokenY().balanceOf(address(this));
-
-            // Cap amounts at available balance
-            uint256 depositX = amountX > availableX ? availableX : amountX;
-            uint256 depositY = amountY > availableY ? availableY : amountY;
-
-            // Enter new position with specified amounts (capped at available)
-            _enterPosition(
-                tickLower,
-                tickUpper,
-                depositX,
-                depositY,
-                0, // amount0Min
-                0 // amount1Min
-            );
-
-            emit RebalanceStepCount(6);
-        } else {
-            emit RebalanceStepCount(99);
-        }
     }
 
+    function enterPositionExternal(
+        int24 tickLower,
+        int24 tickUpper,
+        uint256 amount0Desired,
+        uint256 amount1Desired
+    ) external returns (uint256) {
+        require(msg.sender == address(this), "Only self");
+
+        (uint256 tokenId, , , ) = _enterPosition(
+            tickLower,
+            tickUpper,
+            amount0Desired,
+            amount1Desired,
+            0,
+            0
+        );
+
+        return tokenId;
+    }
     // ============ Internal Functions ============
 
     /**
@@ -611,10 +840,11 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         _claimRewards(_positionTokenId);
 
         // Burn the NFT
-        npm.burn(_positionTokenId);
-
-        emit PositionBurned(_positionTokenId);
-
+        try npm.burn(_positionTokenId) {
+            emit PositionBurned(_positionTokenId);
+        } catch {
+            emit NftBurnFailure(_positionTokenId);
+        }
         // Reset state
         _positionTokenId = 0;
         _currentTickLower = 0;
