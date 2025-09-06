@@ -373,29 +373,21 @@ class ShadowVaultTester {
         ]);
         
         // Parse amount X with validation
-        const amountXStr = await this.question("Enter amount X (e.g., '1.5', '1000000' wei): ");
-        const parsedX = parseTokenAmount(amountXStr, decimalsX, symbolX);
-        if (!parsedX.success) {
-            console.log(chalk.red(`\n❌ ${parsedX.error}`));
-            return;
-        }
+        const amountXStr = await this.question("Enter amount X (e.g., '1000000' wei): ");
+        const parsedX = BigInt(amountXStr);
         
         // Parse amount Y with validation
-        const amountYStr = await this.question("Enter amount Y (e.g., '10 USDC', '100000' wei): ");
-        const parsedY = parseTokenAmount(amountYStr, decimalsY, symbolY);
-        if (!parsedY.success) {
-            console.log(chalk.red(`\n❌ ${parsedY.error}`));
-            return;
-        }
-        
+        const amountYStr = await this.question("Enter amount Y (e.g., '100000' wei): ");
+        const parsedY = BigInt(amountYStr);
+
         // Parse minimum shares
         const vaultDecimals = Number(await this.vault!.decimals());
         const minSharesStr = await this.question("Enter minimum shares (or 0 for no minimum): ");
         const parsedShares = parseTokenAmount(minSharesStr || "0", vaultDecimals);
         
         const params = {
-            amountX: parsedX.value!,
-            amountY: parsedY.value!,
+            amountX: parsedX!,
+            amountY: parsedY!,
             minShares: parsedShares.value || 0n
         };
         
