@@ -29,14 +29,15 @@ import {
     estimateTokensFromShares,
     calculateOptimalRatio,
     displayVisualRange,
-    estimateGasWithCost,
+    tickToPrice,
     calculateDefaultTickRange,
-    calculateOptimalDepositAmounts,
+    calculateOptimalDepositAmountsShadow,
     displayStrategyAllocation,
     parseTokenAmount,
     parseShareAmount,
     clearReadlineBuffer,
-    promptAndParseAmount,
+    formatPercent,
+    parseTick,
     promptWithDefault,
     checkEmergencyMode,
     validateEmergencyWithdraw,
@@ -667,6 +668,7 @@ class ShadowVaultTester {
         } catch (e) {
             console.log(chalk.gray("Could not fetch current pool state"));
             console.log(e);
+            throw e;
         }
         
         // Calculate smart defaults
@@ -674,58 +676,95 @@ class ShadowVaultTester {
         const currentTick = Number(slot0[1]);
         const tickSpacing = Number(await this.pool!.tickSpacing());
         const [balanceX, balanceY] = await this.strategy!.getBalances();
-        
-        // Default tick range: ±5% around current tick
-        const defaultRange = calculateDefaultTickRange(currentTick, tickSpacing, 5);
-        
-        // Default amounts: 90% of available (keeping 10% as reserve)
-        const defaultAmounts = calculateOptimalDepositAmounts(balanceX, balanceY, 10);
-        
-        // Get user inputs with defaults
-        const tickLower = await this.questionWithDefault(
-            "Enter tick lower",
-            defaultRange.lower.toString(),
-            `${defaultRange.lower} (5% below current)`
+
+        // Default tick range: ±5% around current tick (considers tick spacing)
+        const defaultRange = calculateDefaultTickRange(currentTick, tickSpacing, 5); 
+
+        // Get user inputs with defaults (strings)
+        const tickLowerStr = await this.questionWithDefault(
+        "Enter tick lower",
+        defaultRange.lower.toString(),
+        `${defaultRange.lower} (~5% below current)`
         );
-        const tickUpper = await this.questionWithDefault(
-            "Enter tick upper",
-            defaultRange.upper.toString(),
-            `${defaultRange.upper} (5% above current)`
+        const tickUpperStr = await this.questionWithDefault(
+        "Enter tick upper",
+        defaultRange.upper.toString(),
+        `${defaultRange.upper} (~5% above current)`
         );
-        const desiredTick = await this.questionWithDefault(
-            "Enter desired tick",
-            currentTick.toString(),
-            `${currentTick} (current)`
+        const desiredTickStr = await this.questionWithDefault(
+        "Enter desired tick",
+        currentTick.toString(),
+        `${currentTick} (current)`
         );
-        const slippageTick = await this.questionWithDefault(
-            "Enter slippage tick",
-            "100",
-            "100 (standard slippage)"
+        const slippageTickStr = await this.questionWithDefault(
+        "Enter slippage tick",
+        "100",
+        "100 (standard slippage)"
         );
-        
+
+        // Parse once
+        const tickLower = parseTick(tickLowerStr, "tick lower");
+        const tickUpper = parseTick(tickUpperStr, "tick upper");
+        const desiredTick = parseTick(desiredTickStr, "desired tick");
+        const slippageTick = parseTick(slippageTickStr, "slippage tick");
+
+        // Validate range & spacing
+        if (tickLower >= tickUpper) {
+            throw new Error(`tick lower (${tickLower}) must be < tick upper (${tickUpper})`);
+        }
+
+        if ((tickLower - currentTick) % tickSpacing !== 0 || (tickUpper - currentTick) % tickSpacing !== 0) {
+            console.warn(`⚠️  Ticks are not aligned to spacing ${tickSpacing}. Proceeding, but consider snapping to spacing.`);
+        }
+
+        // Prices from the user's ticks
+        const lowerPrice = tickToPrice(tickLower);
+        const upperPrice = tickToPrice(tickUpper);
+        const currentPrice = tickToPrice(currentTick);
+
+        // Default amounts: aim for 90% of available (keeping 10% as reserve)
+        const defaultAmounts = calculateOptimalDepositAmountsShadow(
+            balanceX,
+            balanceY,
+            10, // keep 10% reserves
+            currentPrice,
+            lowerPrice,
+            upperPrice
+        );
+
         // Show amount suggestions
         if (balanceX > 0n || balanceY > 0n) {
-            console.log(chalk.cyan("\n💡 Suggested amounts (90% of available, 10% reserve):"));
-            console.log(chalk.gray(`  Token X: ${defaultAmounts.amountX} wei (reserve: ${defaultAmounts.reserveX} wei)`));
-            console.log(chalk.gray(`  Token Y: ${defaultAmounts.amountY} wei (reserve: ${defaultAmounts.reserveY} wei)`));
+        console.log(chalk.cyan("\n💡 Suggested amounts (90% of available, 10% reserve, CL ratio-aware):"));
+        console.log(
+            chalk.gray(
+            `  Token X: ${defaultAmounts.amountX} wei (reserve: ${defaultAmounts.reserveX} wei, ` +
+            `${formatPercent(defaultAmounts.amountX, balanceX)} of available)`
+            )
+        );
+        console.log(
+            chalk.gray(
+            `  Token Y: ${defaultAmounts.amountY} wei (reserve: ${defaultAmounts.reserveY} wei, ` +
+            `${formatPercent(defaultAmounts.amountY, balanceY)} of available)`
+            )
+        );
         }
-        
+
         const amountX = await this.questionWithDefault(
             "Enter amount X to deposit (in wei)",
             defaultAmounts.amountX.toString(),
-            `${defaultAmounts.amountX} (90% of available)`
+            `${defaultAmounts.amountX} (${formatPercent(defaultAmounts.amountX, balanceX)} of available)`
         );
         const amountY = await this.questionWithDefault(
             "Enter amount Y to deposit (in wei)",
             defaultAmounts.amountY.toString(),
-            `${defaultAmounts.amountY} (90% of available)`
+            `${defaultAmounts.amountY} (${formatPercent(defaultAmounts.amountY, balanceY)} of available)`
         );
         
         const params = {
-            tickLower: parseInt(tickLower),
-            tickUpper: parseInt(tickUpper),
-            desiredTick: parseInt(desiredTick),
-            slippageTick: parseInt(slippageTick),
+            tickLower: tickLower,
+            tickUpper: tickUpper,
+            desiredTick: desiredTick,
+            slippageTick: slippageTick,
             amountX: BigInt(amountX || "0"),
             amountY: BigInt(amountY || "0")
         };
@@ -743,7 +782,7 @@ class ShadowVaultTester {
         }
         
         // Show visual range
-        const displayTick = parseInt(desiredTick);
+        const displayTick = desiredTick;
         displayVisualRange(params.tickLower, params.tickUpper, displayTick, "tick");
         
         // Show deposit summary with reserve calculation
@@ -770,7 +809,10 @@ class ShadowVaultTester {
                 params.desiredTick,
                 params.slippageTick,
                 params.amountX,
-                params.amountY
+                params.amountY,
+                {
+                   gasLimit: 10_000_000n
+                }
             );
         });
     }

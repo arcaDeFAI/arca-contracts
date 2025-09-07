@@ -111,6 +111,32 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     event RebalanceAborted(string reason, uint8 step);
     event NftBurnFailure(uint256 tokenId);
 
+    // Enhanced error events for better debugging
+    event PositionExitFailed(uint256 tokenId, string reason);
+    event WithdrawalProcessingFailed(uint256 queuedShares, string reason);
+    event RewardHarvestFailed(address gauge, string reason);
+
+    // events for exit position
+    event LiquidityDecreased(uint256 indexed tokenId, uint128 liquidity);
+    event LiquidityDecreaseFailed(uint256 indexed tokenId, string reason);
+    event TokensCollected(
+        uint256 indexed tokenId,
+        uint256 amount0,
+        uint256 amount1
+    );
+    event CollectFailed(uint256 indexed tokenId, string reason);
+    event AdditionalTokensCollected(
+        uint256 indexed tokenId,
+        uint256 amount0,
+        uint256 amount1
+    );
+    event PositionNotReadyForBurn(
+        uint256 indexed tokenId,
+        uint128 liquidity,
+        uint128 tokensOwed0,
+        uint128 tokensOwed1
+    );
+
     // Structure to reduce stack variables
     struct RebalanceParams {
         int24 tickLower;
@@ -345,8 +371,17 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         emit PendingAumAnnualFeeReset();
     }
 
-    // ============ IShadowStrategy Implementation ============
+    function getNpmLiquidity() external view onlyFactory returns (uint128 liquidity, uint128 tokensOwed0, uint128 tokensOwed1) {
+        INonfungiblePositionManager npm = INonfungiblePositionManager(
+                _factory.getShadowNonfungiblePositionManager()
+            );
 
+        (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm.positions(
+            _positionTokenId
+        );
+    }
+
+    // ============ IShadowStrategy Implementation ============
     function getPosition()
         external
         view
@@ -367,7 +402,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     }
 
     // ============ Reward Functions ============
-
     function getRewardTokens() external view returns (address[] memory) {
         // Early return if no position
         if (_positionTokenId == 0) {
@@ -506,19 +540,37 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         }
         emit RebalanceStepCount(0);
 
-        // Step 1: Exit current position defensively
-        _exitPositionSafe();
+        // Step 1: Exit current position (includes reward harvesting)
+        if (_positionTokenId != 0) {
+            bool success = this.exitPositionExternal();
+            if (!success) {
+                emit RebalanceStepFailed(1, "Exit position failed");
+                emit PositionExitFailed(
+                    _positionTokenId,
+                    "Failed to exit position"
+                );
+                emit RebalanceAborted("Exit position failed", 1);
+                return;
+            }
+            emit RebalanceStepSuccess(1, bytes32(uint256(1)));
+        }
         emit RebalanceStepCount(1);
 
         // Step 2: Process withdrawals and fees
-        _processWithdrawalsAndFees();
+        bool withdrawalSuccess = this.processWithdrawalsExternal();
+        if (!withdrawalSuccess) {
+            emit RebalanceStepFailed(2, "Withdrawal processing failed");
+            emit WithdrawalProcessingFailed(0, "Failed to process withdrawals");
+            emit RebalanceAborted("Withdrawal processing failed", 2);
+            return;
+        }
+        emit RebalanceStepSuccess(2, bytes32(uint256(2)));
         emit RebalanceStepCount(2);
 
-        // Step 3: Harvest rewards defensively
-        _harvestRewardsSafe();
+        // Step 3: Rewards already harvested in exit position
         emit RebalanceStepCount(3);
 
-        // Step 4-6: Enter new position if valid
+        // Steps 4-6: Enter new position
         _attemptNewPosition(params);
     }
 
@@ -532,41 +584,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             return false;
         }
         return true;
-    }
-
-    // Safe exit position
-    function _exitPositionSafe() internal {
-        if (_positionTokenId == 0) return;
-
-        try this.exitPositionExternal() {
-            emit RebalanceStepSuccess(1, bytes32(uint256(1)));
-        } catch Error(string memory reason) {
-            emit RebalanceStepFailed(1, reason);
-        } catch {
-            emit RebalanceStepFailed(1, "Unknown error");
-        }
-    }
-
-    // Process withdrawals and fees safely
-    function _processWithdrawalsAndFees() internal {
-        try this.processWithdrawalsExternal() {
-            emit RebalanceStepSuccess(2, bytes32(uint256(2)));
-        } catch Error(string memory reason) {
-            emit RebalanceStepFailed(2, reason);
-        } catch {
-            emit RebalanceStepFailed(2, "Unknown error");
-        }
-    }
-
-    // Safe harvest
-    function _harvestRewardsSafe() internal {
-        try this.harvestRewards() {
-            emit RebalanceStepSuccess(3, bytes32(uint256(3)));
-        } catch Error(string memory reason) {
-            emit RebalanceStepFailed(3, reason);
-        } catch {
-            emit RebalanceStepFailed(3, "Unknown error");
-        }
     }
 
     // Attempt to enter new position
@@ -712,12 +729,22 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
     // External helper functions for try-catch
 
-    function exitPositionExternal() external {
+    function exitPositionExternal() external returns (bool success) {
         require(msg.sender == address(this), "Only self");
-        _exitPosition();
+        return _exitPosition();
     }
 
-    function processWithdrawalsExternal() external {
+    function processWithdrawalsExternal() external returns (bool success) {
+        require(msg.sender == address(this), "Only self");
+
+        try this._processWithdrawalsInternal() {
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
+    function _processWithdrawalsInternal() external {
         require(msg.sender == address(this), "Only self");
 
         // Process withdrawals and apply AUM fee
@@ -757,98 +784,133 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     // ============ Internal Functions ============
 
     /**
-     * @notice Validates that ticks are properly aligned with tick spacing
-     */
-    function _validateTicks(
-        int24 tickLower,
-        int24 tickUpper,
-        int24 tickSpacing
-    ) internal view {
-        require(
-            tickLower % tickSpacing == 0,
-            "ShadowStrategy: tickLower not aligned"
-        );
-        require(
-            tickUpper % tickSpacing == 0,
-            "ShadowStrategy: tickUpper not aligned"
-        );
-        require(
-            uint24(tickUpper - tickLower) <= _MAX_RANGE,
-            "ShadowStrategy: range too wide"
-        );
-    }
-
-    /**
-     * @notice Validates active tick slippage
-     */
-    function _validateActiveTickSlippage(
-        int24 currentTick,
-        int24 desiredTick,
-        int24 slippageTick
-    ) internal pure {
-        if (
-            currentTick < desiredTick - slippageTick ||
-            currentTick > desiredTick + slippageTick
-        ) {
-            revert Strategy__ActiveIdSlippage();
-        }
-    }
-
-    /**
      * @notice Exits the current position completely
      * @dev Burns the NFT after collecting all liquidity and fees
      */
-    function _exitPosition() internal {
-        if (_positionTokenId == 0) return;
+    function _exitPosition() internal returns (bool) {
+        if (_positionTokenId == 0) return true;
 
         INonfungiblePositionManager npm = INonfungiblePositionManager(
-            _factory.getShadowNonfungiblePositionManager()
+            _factory.getShadowNonfungiblePositionManager() // Returns 0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406 implementation of npm
         );
 
         // Get position details
         uint128 liquidity;
-        (, , , , , liquidity, , , , ) = npm.positions(_positionTokenId);
+        uint128 tokensOwed0;
+        uint128 tokensOwed1;
+        (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm.positions(
+            _positionTokenId
+        );
 
-        // Only decrease liquidity if there is any
+        // Step 1: Remove all liquidity if there is any
         if (liquidity > 0) {
-            // Remove all liquidity
-            INonfungiblePositionManager.DecreaseLiquidityParams
-                memory decreaseParams = INonfungiblePositionManager
-                    .DecreaseLiquidityParams({
-                        tokenId: _positionTokenId,
-                        liquidity: liquidity,
-                        amount0Min: 0,
-                        amount1Min: 0,
-                        deadline: block.timestamp
-                    });
+            INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager.DecreaseLiquidityParams({
+                tokenId: _positionTokenId,
+                liquidity: liquidity,
+                amount0Min: 0,
+                amount1Min: 0,
+                deadline: block.timestamp + 600 // 10 minute timeout
+            });
 
-            npm.decreaseLiquidity(decreaseParams);
+            try npm.decreaseLiquidity(decreaseParams) {
+                emit LiquidityDecreased(_positionTokenId, liquidity);
+            } catch Error(string memory reason) {
+                emit LiquidityDecreaseFailed(_positionTokenId, reason);
+                return false; // Exit early if we can't decrease liquidity
+            } catch {
+                emit LiquidityDecreaseFailed(_positionTokenId, "Unknown");
+                return false;
+            }
         }
 
-        // Collect all tokens (including fees)
+        // Step 2: Collect all tokens (fees + tokens from liquidity removal)
+        // We need to collect twice - once for any existing fees, once for tokens from liquidity removal
         INonfungiblePositionManager.CollectParams
             memory collectParams = INonfungiblePositionManager.CollectParams({
                 tokenId: _positionTokenId,
-                recipient: address(this),
+                recipient: address(npm),
                 amount0Max: type(uint128).max,
                 amount1Max: type(uint128).max
             });
 
-        npm.collect(collectParams);
+        try npm.collect(collectParams) returns (
+            uint256 amount0,
+            uint256 amount1
+        ) {
+            emit TokensCollected(_positionTokenId, amount0, amount1);
+        } catch Error(string memory reason) {
+            emit CollectFailed(_positionTokenId, reason);
+            return false; // Exit early if we can't collect
+        } catch {
+            emit CollectFailed(_positionTokenId, "Unkown");
+            return false; // Exit early if we can't collect
+        }
 
-        // Claim rewards if gauge exists
+        // Step 3: Verify position is ready for burning
+        // Check that liquidity is 0 and no tokens are owed
+        (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm.positions(
+            _positionTokenId
+        );
+
+        if (liquidity > 0 || tokensOwed0 > 0 || tokensOwed1 > 0) {
+            emit PositionNotReadyForBurn(
+                _positionTokenId,
+                liquidity,
+                tokensOwed0,
+                tokensOwed1
+            );
+
+            // Try one more collection if there are still tokens owed
+            if (tokensOwed0 > 0 || tokensOwed1 > 0) {
+                try npm.collect(collectParams) returns (
+                    uint256 amount0,
+                    uint256 amount1
+                ) {
+                    emit AdditionalTokensCollected(
+                        _positionTokenId,
+                        amount0,
+                        amount1
+                    );
+
+                    // Re-check if position is now ready
+                    (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm
+                        .positions(_positionTokenId);
+                    if (liquidity > 0 || tokensOwed0 > 0 || tokensOwed1 > 0) {
+                        emit PositionNotReadyForBurn(
+                            _positionTokenId,
+                            liquidity,
+                            tokensOwed0,
+                            tokensOwed1
+                        );
+                        return false; // Still not ready, abort burn
+                    }
+                } catch {
+                    // If second collection fails, we can't proceed with burn
+                    return false;
+                }
+            } else {
+                // Only liquidity remains, cannot burn
+                return false;
+            }
+        }
+
+        // Step 4: Claim rewards if available (defensive, works for pools with/without gauges)
         _claimRewards(_positionTokenId);
 
-        // Burn the NFT
+        // Step 5: Burn the NFT
         try npm.burn(_positionTokenId) {
             emit PositionBurned(_positionTokenId);
         } catch {
             emit NftBurnFailure(_positionTokenId);
+            // Don't return here - still reset state even if burn fails
         }
-        // Reset state
+        
+        // Step 6: Reset state
         _positionTokenId = 0;
         _currentTickLower = 0;
         _currentTickUpper = 0;
+
+        return true; // Successfully exited position
     }
 
     /**
@@ -863,17 +925,23 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         address gauge = voter.gaugeForPool(address(_pool()));
         if (gauge == address(0)) return;
 
-        // Claim rewards
+        // Try to get reward token address
+        address rewardToken;
+        try IMinimalGauge(gauge).rewardToken() returns (address token) {
+            rewardToken = token;
+        } catch {
+            return; // No reward token available
+        }
+        // Try to claim rewards
         address[] memory tokens = new address[](1);
-        tokens[0] = IMinimalGauge(gauge).rewardToken();
+        tokens[0] = rewardToken;
 
         INonfungiblePositionManager npm = INonfungiblePositionManager(
             _factory.getShadowNonfungiblePositionManager()
         );
 
-        // Try to claim rewards, return early if it fails
         try npm.getReward(tokenId, tokens) {} catch {
-            return;
+            return; // Claim failed
         }
     }
 
@@ -908,11 +976,11 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         // Approve tokens to NPM (reset to 0 first to handle non-standard tokens)
         if (amount0Desired > 0) {
             _tokenX().safeApprove(address(npm), 0);
-            _tokenX().safeApprove(address(npm), amount0Desired);
+            _tokenX().safeIncreaseAllowance(address(npm), amount0Desired);
         }
         if (amount1Desired > 0) {
             _tokenY().safeApprove(address(npm), 0);
-            _tokenY().safeApprove(address(npm), amount1Desired);
+            _tokenY().safeIncreaseAllowance(address(npm), amount1Desired);
         }
 
         // Get tickSpacing from the pool contract
@@ -931,7 +999,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 amount0Min: amount0Min,
                 amount1Min: amount1Min,
                 recipient: address(this),
-                deadline: block.timestamp
+                deadline: block.timestamp + 600 // 10 minute timeout
             })
         );
 
