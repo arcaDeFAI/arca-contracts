@@ -789,7 +789,8 @@ export async function validateDeposit(
 export function calculateDefaultTickRange(currentTick: number, tickSpacing: number, rangePercent: number = 10): { lower: number; upper: number } {
     // Calculate a range around current tick based on percentage
     // Round to nearest valid tick spacing
-    const range = Math.floor((rangePercent / 100) * 887272); // Max tick range
+    const MAX_TICK = 887272;
+    const range = Math.floor((rangePercent / 100) * MAX_TICK); // Max tick range
     const halfRange = Math.floor(range / 2);
     
     // Round to tick spacing
@@ -798,7 +799,6 @@ export function calculateDefaultTickRange(currentTick: number, tickSpacing: numb
     
     // Ensure within valid tick range
     const MIN_TICK = -887272;
-    const MAX_TICK = 887272;
     
     return {
         lower: Math.max(MIN_TICK, lower),
@@ -818,7 +818,7 @@ export function calculateDefaultBinRange(activeBin: number, binCount: number = 5
 export function calculateOptimalDepositAmounts(
     availableX: bigint,
     availableY: bigint,
-    reservePercent: number = 10
+    reservePercent: number,
 ): { amountX: bigint; amountY: bigint; reserveX: bigint; reserveY: bigint } {
     // Calculate deposit amounts keeping a reserve percentage
     const depositPercent = BigInt(100 - reservePercent);
@@ -834,6 +834,102 @@ export function calculateOptimalDepositAmounts(
         reserveY: availableY - amountY
     };
 }
+
+export function tickToPrice(tick: number): number {
+  // Assumes price = Y per X (token1 per token0) like Uniswap v3 default.
+  // If your pool uses the inverse orientation, return 1 / Math.pow(1.0001, tick)
+  return Math.pow(1.0001, tick);
+}
+
+// BigInt percent as "xx.yy%"
+export function formatPercent(numer: bigint, denom: bigint, decimals = 2): string {
+  if (denom === 0n) return "0%";
+  const scale = 10n ** BigInt(decimals);
+  // round half up
+  const pctScaled = (numer * 100n * scale + denom / 2n) / denom;
+  const intPart = pctScaled / scale;
+  const fracPart = (pctScaled % scale).toString().padStart(decimals, "0");
+  return `${intPart.toString()}.${fracPart}%`;
+}
+
+// Basic integer parsing with message
+export function parseTick(input: string, label: string): number {
+  const n = Number(input);
+  if (!Number.isFinite(n) || !Number.isInteger(n)) {
+    throw new Error(`Invalid ${label}: ${input}`);
+  }
+  return n;
+}
+
+export function calculateOptimalDepositAmountsShadow(
+    availableX: bigint,
+    availableY: bigint,
+    reservePercent: number,
+    currentPrice: number,   // spot price P
+    lowerPrice: number,     // Pa
+    upperPrice: number      // Pb
+): { amountX: bigint; amountY: bigint; reserveX: bigint; reserveY: bigint } {
+    const depositPercent = BigInt(100 - reservePercent);
+    const hundred = BigInt(100);
+
+    // If the range is entirely above current spot -> only token X
+    if (currentPrice <= lowerPrice) {
+        const amountX = (availableX * depositPercent) / hundred;
+        return {
+            amountX,
+            amountY: 0n,
+            reserveX: availableX - amountX,
+            reserveY: availableY
+        };
+    }
+
+    // If the range is entirely below current spot -> only token Y
+    if (currentPrice >= upperPrice) {
+        const amountY = (availableY * depositPercent) / hundred;
+        return {
+            amountX: 0n,
+            amountY,
+            reserveX: availableX,
+            reserveY: availableY - amountY
+        };
+    }
+
+    // Otherwise: range straddles current spot -> need both tokens
+    const sqrtP = Math.sqrt(currentPrice);
+    const sqrtPa = Math.sqrt(lowerPrice);
+    const sqrtPb = Math.sqrt(upperPrice);
+
+    // Ideal ratio Y per X
+    const ratio = ((sqrtP - sqrtPa) * sqrtP * sqrtPb) / (sqrtPb - sqrtP);
+
+    // Apply deposit percentage to balances
+    const adjAvailableX = Number((availableX * depositPercent) / hundred);
+    const adjAvailableY = Number((availableY * depositPercent) / hundred);
+
+    // Figure out limiting token
+    let amountX: number, amountY: number;
+    if (adjAvailableY >= adjAvailableX * ratio) {
+        // X is limiting
+        amountX = adjAvailableX;
+        amountY = adjAvailableX * ratio;
+    } else {
+        // Y is limiting
+        amountY = adjAvailableY;
+        amountX = adjAvailableY / ratio;
+    }
+
+    // Convert back to bigint
+    const amountXBig = BigInt(Math.floor(amountX));
+    const amountYBig = BigInt(Math.floor(amountY));
+
+    return {
+        amountX: amountXBig,
+        amountY: amountYBig,
+        reserveX: availableX - amountXBig,
+        reserveY: availableY - amountYBig
+    };
+}
+
 
 // Enhanced prompt with default support
 export async function promptWithDefault(
