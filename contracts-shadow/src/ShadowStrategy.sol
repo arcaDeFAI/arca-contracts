@@ -296,8 +296,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         return _operator;
     }
 
-    function getRange() external view returns (int32 lower, int32 upper) {
-        return (int32(_currentTickLower), int32(_currentTickUpper));
+    function getRange() external view returns (int24 lower, int24 upper) {
+        return (_currentTickLower, _currentTickUpper);
     }
 
     function getStrategyType()
@@ -371,14 +371,21 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         emit PendingAumAnnualFeeReset();
     }
 
-    function getNpmLiquidity() external view onlyFactory returns (uint128 liquidity, uint128 tokensOwed0, uint128 tokensOwed1) {
+    function getNpmLiquidity()
+        external
+        view
+        onlyFactory
+        returns (uint128 liquidity, uint128 tokensOwed0, uint128 tokensOwed1)
+    {
         INonfungiblePositionManager npm = INonfungiblePositionManager(
-                _factory.getShadowNonfungiblePositionManager()
-            );
+            _factory.getShadowNonfungiblePositionManager()
+        );
 
         (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm.positions(
             _positionTokenId
         );
+
+        return (liquidity, tokensOwed0, tokensOwed1);
     }
 
     // ============ IShadowStrategy Implementation ============
@@ -568,7 +575,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         emit RebalanceStepCount(2);
 
         // Step 3: Rewards already harvested in exit position
-        emit RebalanceStepCount(3);
+        emit RebalanceStepCount(3); // TODO cleanup events
 
         // Steps 4-6: Enter new position
         _attemptNewPosition(params);
@@ -804,13 +811,15 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
         // Step 1: Remove all liquidity if there is any
         if (liquidity > 0) {
-            INonfungiblePositionManager.DecreaseLiquidityParams memory decreaseParams = INonfungiblePositionManager.DecreaseLiquidityParams({
-                tokenId: _positionTokenId,
-                liquidity: liquidity,
-                amount0Min: 0,
-                amount1Min: 0,
-                deadline: block.timestamp + 600 // 10 minute timeout
-            });
+            INonfungiblePositionManager.DecreaseLiquidityParams
+                memory decreaseParams = INonfungiblePositionManager
+                    .DecreaseLiquidityParams({
+                        tokenId: _positionTokenId,
+                        liquidity: liquidity,
+                        amount0Min: 0,
+                        amount1Min: 0,
+                        deadline: block.timestamp + 600 // 10 minute timeout
+                    });
 
             try npm.decreaseLiquidity(decreaseParams) {
                 emit LiquidityDecreased(_positionTokenId, liquidity);
@@ -845,7 +854,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             emit CollectFailed(_positionTokenId, "Unkown");
             return false; // Exit early if we can't collect
         }
-
         // Step 3: Verify position is ready for burning
         // Check that liquidity is 0 and no tokens are owed
         (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm.positions(
@@ -904,7 +912,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             emit NftBurnFailure(_positionTokenId);
             // Don't return here - still reset state even if burn fails
         }
-        
         // Step 6: Reset state
         _positionTokenId = 0;
         _currentTickLower = 0;

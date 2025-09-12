@@ -274,13 +274,13 @@ abstract contract BaseVault is
         view
         virtual
         override
-        returns (int32 low, int32 upper)
+        returns (uint24 low, uint24 upper)
     {
         IMetropolisStrategy strategy = _strategy;
 
         return
             address(strategy) == address(0)
-                ? (int32(0), int32(0))
+                ? (uint24(0), uint24(0))
                 : strategy.getRange();
     }
 

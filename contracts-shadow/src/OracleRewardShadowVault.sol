@@ -803,45 +803,25 @@ contract OracleRewardShadowVault is
 
         (uint256 totalX, uint256 totalY) = _getBalances(strategy);
         uint256 totalShares = totalSupply();
+        uint256 valueInY = _getValueInY(amountX, amountY);
 
-        if (totalShares == 0 || (totalX == 0 && totalY == 0)) {
+        if (totalShares == 0) {
             // For initial deposit, use total value in Y (following Metropolis pattern)
-            uint256 valueInY = _getValueInY(amountX, amountY);
-
             // Shares = value * precision (just like Metropolis)
             shares = valueInY * _SHARES_PRECISION;
-
-            // Calculate effective amounts for the actual deposit
-            (effectiveX, effectiveY) = _calculateInitialAmounts(
-                amountX,
-                amountY
-            );
+            return (shares, amountX, amountY);
         } else {
-            uint256 amountXInY = 0;
-            uint256 amountYInX = 0;
+            uint256 totalXInY = 0;
 
             if (totalX > 0) {
-                amountXInY = _calculateAmountInOtherToken(amountX, true);
-            }
-            if (totalY > 0) {
-                amountYInX = _calculateAmountInOtherToken(amountY, false);
+                totalXInY = _calculateAmountInOtherToken(totalX, true);
             }
 
-            uint256 ratioX = totalX > 0
-                ? ((amountYInX + amountX) * _SHARES_PRECISION) / totalX
-                : type(uint256).max;
-            uint256 ratioY = totalY > 0
-                ? ((amountXInY + amountY) * _SHARES_PRECISION) / totalY
-                : type(uint256).max;
+            uint256 totalValueInY = totalXInY + totalY;
 
-            (effectiveX, effectiveY) = ratioX < ratioY
-                ? (amountX, totalY.mulDivRoundDown(amountX, totalX))
-                : (totalX.mulDivRoundDown(amountY, totalY), amountY);
+            shares = valueInY.mulDivRoundDown(totalShares, totalValueInY);
 
-            shares = totalShares.mulDivRoundDown(
-                effectiveX + effectiveY,
-                totalX + totalY
-            );
+            return (shares, amountX, amountY);
         }
     }
 
@@ -859,45 +839,16 @@ contract OracleRewardShadowVault is
         amountY = totalY.mulDivRoundDown(shares, totalShares);
     }
 
-    function _calculateInitialAmounts(
-        uint256 amountX,
-        uint256 amountY
-    ) internal view returns (uint256 effectiveX, uint256 effectiveY) {
-        // Get price of X in terms of Y (e.g., 0.29 USDC per wS)
-        uint256 priceXInY = _getOraclePrice(true);
-
-        // Calculate value of X in Y terms
-        uint256 valueXInY = amountX.mulDivRoundDown(
-            priceXInY,
-            10 ** _decimalsX()
-        );
-
-        // Total value of Y is simply amountY (since 1 Y = 1 Y)
-        uint256 valueY = amountY;
-
-        // Take the minimum value and balance accordingly
-        if (valueXInY < valueY) {
-            // X is limiting factor, keep all X and reduce Y
-            effectiveX = amountX;
-            effectiveY = valueXInY;
-        } else {
-            // Y is limiting factor, keep all Y and reduce X
-            effectiveX = valueY.mulDivRoundDown(10 ** _decimalsX(), priceXInY);
-            effectiveY = amountY;
-        }
-    }
-
     function _calculateAmountInOtherToken(
         uint256 amount,
         bool isTokenX
     ) internal view returns (uint256) {
+        uint256 priceXInY = _getOraclePrice(true);
         if (isTokenX) {
             // Converting X to Y: multiply by price of X in Y
-            uint256 priceXInY = _getOraclePrice(true);
             return amount.mulDivRoundDown(priceXInY, 10 ** _decimalsX());
         } else {
             // Converting Y to X: divide by price of X in Y
-            uint256 priceXInY = _getOraclePrice(true);
             return amount.mulDivRoundDown(10 ** _decimalsX(), priceXInY);
         }
     }
@@ -989,10 +940,12 @@ contract OracleRewardShadowVault is
         userDeposited[msg.sender] = block.timestamp;
 
         if (totalSupply() == 0) {
+            // Avoid exploit when very little shares, min of total shares will always be _SHARES_PRECISION (1e6)
             shares -= _SHARES_PRECISION;
             _mint(address(this), _SHARES_PRECISION);
         }
 
+        // Mint the shares
         _mint(msg.sender, shares);
 
         emit Deposited(msg.sender, effectiveX, effectiveY, shares);
