@@ -229,7 +229,7 @@ export function generateShareSuggestions(
         { label: "25%", percentage: 25 },
         { label: "50%", percentage: 50 },
         { label: "75%", percentage: 75 },
-        { label: "Max (100%)", percentage: 100 }
+        { label: "100%", percentage: 100 }
     ];
     
     return suggestions.map(s => ({

@@ -1,7 +1,7 @@
 import { ethers, network, run } from "hardhat";
 import * as fs from "fs";
 import * as readline from "readline";
-import type { Contract, TransactionReceipt, TransactionResponse } from "ethers";
+import type { BaseContract, Contract, ContractFactory, ContractTransactionResponse, TransactionReceipt, TransactionResponse } from "ethers";
 import type { 
   VaultFactory, 
   ShadowStrategy, 
@@ -19,10 +19,17 @@ interface GasTransaction {
   category: "deployment" | "configuration" | "migration";
 }
 
+const replacer = (key: unknown, value: unknown) => {
+  if (typeof value === 'bigint') {
+    return value.toString(); // Convert BigInt to string
+  }
+  return value;
+}
+
 class GasTracker {
   private transactions: GasTransaction[] = [];
   
-  async trackDeployment(name: string, contract: Contract): Promise<void> {
+  async trackDeployment(name: string, contract: Contract | BaseContract & { deploymentTransaction(): ContractTransactionResponse; } & Omit<BaseContract, keyof BaseContract>): Promise<void> {
     const deployTx = contract.deploymentTransaction();
     if (!deployTx) {
       console.warn(`⚠️  No deployment transaction found for ${name}`);
@@ -93,7 +100,7 @@ class GasTracker {
 // ================================
 async function deployContract<T extends Contract>(
   displayName: string,
-  factory: { deploy: (...args: unknown[]) => Promise<T> },
+  factory: ContractFactory,
   args: unknown[],
   gasTracker: GasTracker
 ): Promise<T> {
@@ -265,23 +272,21 @@ async function main() {
     );
 
     // Verify the contract with Sonic Explorer
-    
     newImplementation = await shadowStrategyImpl.getAddress();
-    
     let successMessage = false
 
     try {
           await run("verify:verify", {
                 address: newImplementation,
                 constructorArguments: shadowArgs,
-                contract: ShadowStrategyFactory,
+                contract: "contracts-shadow/src/ShadowStrategy.sol:ShadowStrategy",
                 force: true, // Force verification even if already verified
               });
               successMessage = true;
     } catch (error) {
       successMessage = false;
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes("Already Verified") || 
+      const errorMessage = (error instanceof Error ? error.message : String(error)).toLowerCase();
+      if (errorMessage.includes("already verified") || 
           errorMessage.includes("already been verified")) {
         console.log(`✅ Shadow Strategy Implementation is already verified`);
       } else {
@@ -292,7 +297,6 @@ async function main() {
     if (successMessage) {
       console.log(`✅ Shadow Strategy Implementation verified successfully!`);
     }
-
 
     // Update factory if we're the owner
     if (isOwner) {
@@ -305,7 +309,14 @@ async function main() {
         const tx = await factory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, newImplementation);
         await gasTracker.trackTransaction("Update factory strategy implementation", tx);
         
-        console.log("✅ Factory updated with new implementation");
+        const confirmationOfSetOperation = (await factory.getStrategyImplementation(STRATEGY_TYPE_SHADOW)) === newImplementation
+
+        if (confirmationOfSetOperation) {
+          console.log("✅ Factory updated with new implementation [CONFIRMED]");
+        } else {
+          console.log("❌ Factory failed to be updated with new strategy implementation!");
+          return;
+        }
       }
     }
   }
@@ -345,7 +356,7 @@ async function main() {
           
           // Get current strategy
           const currentStrategy = await vault.getStrategy();
-          console.log("Current strategy:", currentStrategy);
+          console.log("Current strategy of vault:", currentStrategy);
           
           if (currentStrategy === ethers.ZeroAddress) {
             console.log("⚠️  Vault has no strategy (might be in emergency mode)");
@@ -358,31 +369,31 @@ async function main() {
           const tokenX = await vault.getTokenX();
           const tokenY = await vault.getTokenY();
           
-          // Prepare immutable data for clone
-          const immutableData = ethers.AbiCoder.defaultAbiCoder().encode(
-            ["address", "address", "address", "address"],
-            [selectedVault.address, selectedVault.pool, tokenX, tokenY]
-          );
-          
-          // Since we need to deploy through factory mechanisms, we'll need to use
-          // a different approach. The factory uses ImmutableClone internally.
-          
-          // For now, we'll need to call the factory as owner to create and link strategy
-          console.log("\n⚠️  Strategy deployment through factory requires custom implementation");
-          console.log("The VaultFactory needs a function to deploy and set a new strategy");
-          console.log("Consider adding `deployAndSetStrategy` function to VaultFactory");
-          
-          // Alternative: Direct call to setStrategy with manually deployed clone
-          // This would require deploying the clone ourselves using ImmutableClone TODO
-          
-          const proceedWithManual = await promptConfirm("\n⚠️  This feature requires VaultFactory modification. Continue anyway?");
-          
-          if (proceedWithManual) {
-            console.log("\n📝 To complete this operation manually:");
-            console.log("1. Deploy a strategy clone with ImmutableClone.cloneDeterministic()");
-            console.log("2. Initialize the strategy");
-            console.log("3. Call vault.setStrategy() as the factory");
-            console.log("\nThis requires custom contract calls outside this script");
+          // Since we need to deploy through factory mechanisms, we'll need to call createAndLinkShadowStrategy
+          // Internally, within the factory, this will call ImmutableClone.cloneDeterministic
+          console.log("\nCalling createAndLinkShadowStrategy(...) on the Vault Factory...");
+
+          const tx = await factory.createAndLinkShadowStrategy(selectedVault.address, selectedVault.pool, tokenX, tokenY)
+          await gasTracker.trackTransaction("Update factory strategy implementation", tx);
+          const finalResult = await tx.wait();
+
+          // if (finalResult) {
+          //   console.log("\nEvents:\n")
+          //   console.log(JSON.stringify(finalResult?.logs, replacer))
+          //   console.log("\n");
+          // }
+
+          if (finalResult && finalResult.status == 1) {
+            console.log(`\n✅ Success executing createAndLinkShadowStrategy!}`);
+          } else {
+            console.log(`\n❌ There was an error with createAndLinkShadowStrategy: ${JSON.stringify(finalResult, replacer) ?? JSON.stringify(tx, replacer)}`);
+          }
+
+          const latestVaultStrategy = await vault.getStrategy();
+          console.log("Latest strategy of vault:", latestVaultStrategy);
+
+          if (latestVaultStrategy === currentStrategy) {
+            console.log(`\n❌ Error: the vault strategy stayed the same: ${currentStrategy}`);
           }
         }
       }
@@ -393,17 +404,16 @@ async function main() {
   // Save Deployment Info
   // ================================
   if (newImplementation && newImplementation !== config.shadowStrategyImpl) {
-    // TODO: just update deployments/metropolis-sonic-mainnet.json instead
     const deployment = {
       network: network.name,
       timestamp: new Date().toISOString(),
       deployer: deployer.address,
       shadowStrategyImplementation: newImplementation,
-      gasReport: gasTracker.getReport()
     };
     
-    const deploymentPath = `./deployments/shadow-strategy-${network.name}-${Date.now()}.json`;
-    fs.writeFileSync(deploymentPath, JSON.stringify(deployment, null, 2));
+    await fs.promises.mkdir("./deployments", { recursive: true });
+    const deploymentPath = `./deployments/shadow-strategy-${network.name}.json`;
+    fs.writeFileSync(deploymentPath, JSON.stringify(deployment, replacer, 2));
     console.log(`\n💾 Deployment saved to ${deploymentPath}`);
   }
   

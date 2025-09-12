@@ -673,7 +673,7 @@ async function main() {
   const deploymentPath = `./deployments/metropolis-${network.name}.json`;
   await fs.promises.mkdir("./deployments", { recursive: true });
   await fs.promises.writeFile(deploymentPath, JSON.stringify(deployment, null, 2));
-  console.log(`\nDeployment addresses saved to ${deploymentPath}`);
+  console.log(`\n💾 Deployment addresses saved to ${deploymentPath}`);
 }
 
 main()
