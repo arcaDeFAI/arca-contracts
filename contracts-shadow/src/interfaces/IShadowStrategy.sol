@@ -34,7 +34,7 @@ interface IShadowStrategy is IStrategyCommon {
         view
         returns (INonfungiblePositionManager);
     function getPool() external pure returns (address);
-
+    function getRange() external view returns (int24 low, int24 upper);
     function getNpmLiquidity()
         external
         view
