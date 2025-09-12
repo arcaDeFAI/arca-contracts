@@ -203,9 +203,9 @@ contract MetropolisStrategy is
         view
         virtual
         override
-        returns (int32 lower, int32 upper)
+        returns (uint24 lower, uint24 upper)
     {
-        return (int32(uint32(_lowerRange)), int32(uint32(_upperRange)));
+        return (_lowerRange, _upperRange);
     }
 
     /**

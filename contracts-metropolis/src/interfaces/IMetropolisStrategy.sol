@@ -46,7 +46,7 @@ interface IMetropolisStrategy is IStrategyCommon {
 
     // Metropolis-specific getters
     function getPair() external pure returns (ILBPair);
-    function getRange() external view returns (int32 low, int32 upper);
+    function getRange() external view returns (uint24 low, uint24 upper);
     function getMaxRange() external view returns (uint256);
 
     // Metropolis-specific rebalance

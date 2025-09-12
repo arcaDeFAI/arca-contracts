@@ -35,7 +35,10 @@ interface IShadowStrategy is IStrategyCommon {
         returns (INonfungiblePositionManager);
     function getPool() external pure returns (address);
 
-    function getNpmLiquidity() external view returns (uint128 liquidity, uint128 tokensOwed0, uint128 tokensOwed1);
+    function getNpmLiquidity()
+        external
+        view
+        returns (uint128 liquidity, uint128 tokensOwed0, uint128 tokensOwed1);
 
     // Shadow-specific rebalance - clean interface without unused parameters
     function rebalance(
