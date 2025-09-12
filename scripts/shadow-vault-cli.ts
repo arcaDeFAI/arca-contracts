@@ -542,14 +542,17 @@ class ShadowVaultTester {
     async testRedeemNative() {
         console.log(chalk.blue("\n💸 Redeem Native\n"));
         
-        // Get current round
+        // Get current round for information
         const currentRound = await this.vault!.getCurrentRound();
         console.log(chalk.gray(`Current round: ${currentRound}`));
+        const defaultRound = String(currentRound - 1n < 0 ? 0 : currentRound - 1n );
+        const selectedRoundStr = await this.questionWithDefault("Enter round number: ", defaultRound, defaultRound);
+        const selectedRound : bigint = BigInt(selectedRoundStr);
 
         const recipient = (await this.question("Enter recipient (or press enter for self): ")) || this.signer.address;
         
         // Check for available withdrawals
-        const [availableAmountX, availableAmountY] = await this.vault!.getRedeemableAmounts(currentRound, recipient);
+        const [availableAmountX, availableAmountY] = await this.vault!.getRedeemableAmounts(selectedRound, recipient);
         
         if (availableAmountX === 0n && availableAmountY === 0n) {
             console.log(chalk.yellow("\n⚠️  No available withdrawals to redeem"));
@@ -569,7 +572,7 @@ class ShadowVaultTester {
         }
         
         await this.executeAction("Redeem Native", async () => {
-            return this.vault!.redeemQueuedWithdrawalNative(currentRound, recipient);
+            return this.vault!.redeemQueuedWithdrawalNative(selectedRound, recipient);
         });
     }
 
@@ -608,9 +611,12 @@ class ShadowVaultTester {
     async testRedeemWithdrawal() {
         console.log(chalk.blue("\n💰 Redeem Withdrawal\n"));
 
-        // Get current round
+        // Get current round for information
         const currentRound = await this.vault!.getCurrentRound();
         console.log(chalk.gray(`Current round: ${currentRound}`));
+        const defaultRound = String(currentRound - 1n < 0 ? 0 : currentRound - 1n );
+        const selectedRoundStr = await this.questionWithDefault("Enter round number: ", defaultRound, defaultRound);
+        const selectedRound : bigint = BigInt(selectedRoundStr);
 
         let recipient = await this.question("Enter recipient (or press enter for self): ");
         
@@ -619,7 +625,7 @@ class ShadowVaultTester {
         }
         
         // Check for available withdrawals
-        const [availableAmountX, availableAmountY] = await this.vault!.getRedeemableAmounts(currentRound, recipient);
+        const [availableAmountX, availableAmountY] = await this.vault!.getRedeemableAmounts(selectedRound, recipient);
         
         if (availableAmountX === 0n && availableAmountY === 0n) {
             console.log(chalk.yellow("\n⚠️  No available withdrawals to redeem"));
@@ -637,7 +643,7 @@ class ShadowVaultTester {
         }
 
         await this.executeAction("Redeem Withdrawal", async () => {
-            return this.vault!.redeemQueuedWithdrawal(currentRound, recipient);
+            return this.vault!.redeemQueuedWithdrawal(selectedRound, recipient);
         });
     }
 
@@ -1160,11 +1166,15 @@ class ShadowVaultTester {
             } else {
                 console.log(chalk.red("\n❌ Failed to activate emergency mode"));
             }
-        } catch (error: any) {
-            console.error(chalk.red("\n❌ Error setting emergency mode:"), error.message || error);
-            
-            if (error.message?.includes("Ownable")) {
-                console.log(chalk.yellow("\n💡 You need to be the VaultFactory owner to set emergency mode"));
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error(chalk.red("\n❌ Error setting emergency mode:"), error.message || error);
+                
+                if (error.message?.includes("Ownable")) {
+                    console.log(chalk.yellow("\n💡 You need to be the VaultFactory owner to set emergency mode"));
+                }
+            } else {
+                console.error(chalk.red("\n❌ Error setting emergency mode: UNKNOWN"));
             }
         }
     }
@@ -1194,12 +1204,16 @@ class ShadowVaultTester {
             
             const isPausedAfter = await this.vault!.isDepositsPaused();
             console.log(chalk.green(`\n✅ Deposits are now ${isPausedAfter ? 'PAUSED' : 'ACTIVE'}`));
-        } catch (error: any) {
-            console.error(chalk.red("\n❌ Error toggling deposits:"), error.message || error);
-            
-            if (error.message?.includes("OnlyOperator") || error.message?.includes("Ownable")) {
-                console.log(chalk.yellow("\n💡 You need operator or owner permissions to toggle deposits"));
-            }
+        } catch (error: unknown) {
+             if (error instanceof Error) {
+                console.error(chalk.red("\n❌ Error toggling deposits:"), error.message || error);
+                
+                if (error.message?.includes("OnlyOperator") || error.message?.includes("Ownable")) {
+                    console.log(chalk.yellow("\n💡 You need operator or owner permissions to toggle deposits"));
+                }
+             } else {
+                console.error(chalk.red("\n❌ Error toggling deposits: UNKNOWN"))
+             }
         }
     }
 
@@ -1269,13 +1283,16 @@ class ShadowVaultTester {
             const [position, tickLower, tickUpper] = await this.strategy!.getPosition();
             const operator = await this.strategy!.getOperator();
             const lastRebalance = await this.strategy!.getLastRebalance();
-            const [idleX, idleY] = await this.strategy!.getIdleBalances();
-            const [totalX, totalY] = await this.strategy!.getBalances();
+            //const [liquidity, tokenXOwed, tokenYOwed] = await this.strategy!.getNpmLiquidity();
             
             console.log(chalk.white("Position:"));
             console.log(chalk.gray(`  Token ID: ${position.toString()}`));
             console.log(chalk.gray(`  Tick Lower: ${tickLower}`));
             console.log(chalk.gray(`  Tick Upper: ${tickUpper}`));
+
+            //console.log(chalk.gray(`  LB Pair Liquidity: ${liquidity}`));
+            //console.log(chalk.gray(`  LB Pair TokenX Owed: ${tokenXOwed}`));
+            //console.log(chalk.gray(`  LB Pair TokenY Owed: ${tokenYOwed}`));
             
             console.log(chalk.white("\nManagement:"));
             console.log(chalk.gray(`  Operator: ${operator}`));

@@ -443,27 +443,39 @@ export async function executeWithCapture(
             }
         }
 
-    } catch (error: any) {
-        let errorMessage = error?.message || String(error);
+    } catch (error) {
+        let errorMessage = "";
         let decodedError: string | null = null;
 
-        console.error(chalk.red("\n❌ Error:"), errorMessage);
-
-        // Try to extract revert reason
-        if (error) {
+        // Strict error type checking
+        if (typeof error === "object" && error !== null) {
             // ethers v6 error shape
-            if (error.reason) {
+            if ("message" in error && typeof error.message === "string") {
+                errorMessage = error.message;
+                console.error(chalk.red("\n❌ Error:"), errorMessage);
+            } else {
+                errorMessage = String(error);
+                console.error(chalk.red("\n❌ Error:"), errorMessage);
+            }
+
+            // ethers v6 error shape
+            if ("reason" in error && typeof error.reason === "string") {
                 decodedError = error.reason;
                 console.error(chalk.red("Reason:"), error.reason);
             }
 
             // Transaction receipt with status 0 (failed)
-            if (error.receipt) {
+            if ("receipt" in error && typeof error.receipt === "object" && error.receipt !== null) {
                 console.error(chalk.red("Transaction failed (status: 0)"));
             }
 
             // Try to decode contract error data
-            if (error.data && typeof error.data === "string" && options.vault) {
+            if (
+                "data" in error &&
+                typeof error.data === "string" &&
+                options.vault &&
+                typeof options.vault.interface?.parseError === "function"
+            ) {
                 try {
                     const parsed = options.vault.interface.parseError(error.data);
                     if (parsed) {
@@ -477,7 +489,7 @@ export async function executeWithCapture(
                         decodedError = errorArgs ? `${errorName}(${errorArgs})` : errorName;
                         console.error(chalk.red("Contract Error:"), decodedError);
                     }
-                } catch (decodeErr) {
+                } catch {
                     // Fallback: try to match known error selectors
                     if (typeof error.data === 'string' && error.data.startsWith('0x')) {
                         const errorSignatures: Record<string, string> = {
@@ -498,7 +510,7 @@ export async function executeWithCapture(
             }
 
             // ethers v6 error shape: error.cause?.message
-            if (error.cause && error.cause.message) {
+            if ("cause" in error && error.cause && typeof error.cause === "object" && "message" in error.cause && typeof error.cause.message === "string") {
                 errorMessage += ` | Cause: ${error.cause.message}`;
                 console.error(chalk.red("Cause:"), error.cause.message);
             }
@@ -515,6 +527,9 @@ export async function executeWithCapture(
             } else if (/execution reverted/i.test(errorMessage)) {
                 console.error(chalk.yellow("💡 Hint: Execution reverted - check input values and contract state"));
             }
+        } else {
+            errorMessage = String(error);
+            console.error(chalk.red("\n❌ Error:"), errorMessage);
         }
 
         result.error = String(decodedError || errorMessage || error);
