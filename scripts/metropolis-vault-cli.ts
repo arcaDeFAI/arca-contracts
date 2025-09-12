@@ -761,6 +761,7 @@ class MetropolisVaultTester {
         const numBins = parseInt(newUpper) - parseInt(newLower) + 1;
         console.log(chalk.gray(`Number of bins: ${numBins}`));
         
+        // TODO REWRITE THIS USING PYTHON BOT EXAMPLE (Needs to sum to 1E18)
         // Create distribution bytes (simplified - uniform distribution)
         const distributionX: number[] = [];
         const distributionY: number[] = [];
@@ -804,76 +805,9 @@ class MetropolisVaultTester {
         });
     }
 
-    async showTestScenarios() {
-        console.log(chalk.blue("\n📋 Test Scenarios:\n"));
-        console.log(chalk.gray("1. Basic Deposit & Withdraw"));
-        console.log(chalk.gray("2. Deposit with Rebalance"));
-        console.log(chalk.gray("3. Emergency Withdrawal"));
-        console.log(chalk.gray("4. Reward Distribution"));
-        console.log(chalk.gray("5. Multi-User Simulation"));
-        console.log(chalk.gray("6. Gas Optimization Test"));
-        console.log(chalk.gray("7. Edge Case Testing"));
-        
-        const choice = await this.question("\nSelect scenario (1-7): ");
-        
-        switch (choice) {
-            case '1':
-                await this.scenarioBasicFlow();
-                break;
-            case '2':
-                await this.scenarioDepositWithRebalance();
-                break;
-            default:
-                console.log(chalk.red("Scenario not implemented yet"));
-        }
-    }
-
-    async scenarioBasicFlow() {
-        console.log(chalk.blue("\n🎯 Running Basic Deposit & Withdraw Scenario\n"));
-        
-        if (!await this.confirm("This will perform deposit, queue withdrawal, and redeem. Continue?")) {
-            return;
-        }
-        
-        // Step 1: Deposit
-        console.log(chalk.yellow("\nStep 1: Deposit"));
-        const depositAmount = BigInt("1000000"); // 1 USDC
-        await this.executeAction("Scenario: Deposit", async () => {
-            return this.vault!.deposit(0, depositAmount, 0);
-        });
-        
-        // Step 2: Queue Withdrawal
-        console.log(chalk.yellow("\nStep 2: Queue Withdrawal"));
-        const shares = await this.vault!.balanceOf(this.signer.address);
-        const halfShares = shares / 2n;
-        
-        await this.executeAction("Scenario: Queue Withdrawal", async () => {
-            return this.vault!.queueWithdrawal(halfShares, this.signer.address);
-        });
-        
-        // Step 3: Execute queued withdrawals (requires operator)
-        console.log(chalk.yellow("\nStep 3: Execute Queued Withdrawals"));
-        console.log(chalk.gray("Note: This requires operator permissions"));
-        
-        // Step 4: Redeem
-        console.log(chalk.yellow("\nStep 4: Redeem Withdrawal"));
-        const currentRound = await this.vault!.getCurrentRound();
-        if (currentRound > 0) {
-            await this.executeAction("Scenario: Redeem", async () => {
-                return this.vault!.redeemQueuedWithdrawal(currentRound - 1n, this.signer.address);
-            });
-        }
-    }
-
-    async scenarioDepositWithRebalance() {
-        console.log(chalk.blue("\n🎯 Running Deposit with Rebalance Scenario\n"));
-        
-        if (!await this.confirm("This will deposit and trigger a rebalance. Continue?")) {
-            return;
-        }
-        
-        // Implementation pending...
-        console.log(chalk.yellow("Scenario implementation pending..."));
+        const receipt = await tx.wait();
+        console.log(tx.hash);
+        console.log(receipt?.toJSON())
     }
 
     async exportResults() {
@@ -893,8 +827,7 @@ class MetropolisVaultTester {
         console.log(chalk.gray("5. Strategy Management"));
         console.log(chalk.gray("6. Reward Management"));
         console.log(chalk.gray("7. Admin Functions"));
-        console.log(chalk.gray("8. Test Scenarios"));
-        console.log(chalk.gray("9. Export Results"));
+        console.log(chalk.gray("8. Export Results"));
         console.log(chalk.gray("0. Exit"));
         
         return await this.question("\nSelect option: ");
@@ -937,9 +870,6 @@ class MetropolisVaultTester {
                         await this.showAdminMenu();
                         break;
                     case '8':
-                        await this.showTestScenarios();
-                        break;
-                    case '9':
                         await this.exportResults();
                         break;
                     case '0':
@@ -1143,11 +1073,15 @@ class MetropolisVaultTester {
             } else {
                 console.log(chalk.red("\n❌ Failed to activate emergency mode"));
             }
-        } catch (error: any) {
-            console.error(chalk.red("\n❌ Error setting emergency mode:"), error.message || error);
-            
-            if (error.message?.includes("Ownable")) {
-                console.log(chalk.yellow("\n💡 You need to be the VaultFactory owner to set emergency mode"));
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error(chalk.red("\n❌ Error setting emergency mode:"), error.message || error);
+                
+                if (error.message?.includes("Ownable")) {
+                    console.log(chalk.yellow("\n💡 You need to be the VaultFactory owner to set emergency mode"));
+                }
+            } else {
+                console.error(chalk.red("\n❌ Error setting emergency mode: UNKNOWN"));
             }
         }
     }
@@ -1177,11 +1111,15 @@ class MetropolisVaultTester {
             
             const isPausedAfter = await this.vault!.isDepositsPaused();
             console.log(chalk.green(`\n✅ Deposits are now ${isPausedAfter ? 'PAUSED' : 'ACTIVE'}`));
-        } catch (error: any) {
-            console.error(chalk.red("\n❌ Error toggling deposits:"), error.message || error);
-            
-            if (error.message?.includes("OnlyOperator") || error.message?.includes("Ownable")) {
-                console.log(chalk.yellow("\n💡 You need operator or owner permissions to toggle deposits"));
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error(chalk.red("\n❌ Error toggling deposits:"), error?.message || error);
+                
+                if (error.message?.includes("OnlyOperator") || error.message?.includes("Ownable")) {
+                    console.log(chalk.yellow("\n💡 You need operator or owner permissions to toggle deposits"));
+                }
+            } else {
+                console.error(chalk.red("\n❌ Error toggling deposits: UNKNOWN"));
             }
         }
     }

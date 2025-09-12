@@ -383,7 +383,7 @@ async function main() {
           //   console.log("\n");
           // }
 
-          if (finalResult && finalResult.status == 1) {
+          if (finalResult && finalResult.status === 1) {
             console.log(`\n✅ Success executing createAndLinkShadowStrategy!}`);
           } else {
             console.log(`\n❌ There was an error with createAndLinkShadowStrategy: ${JSON.stringify(finalResult, replacer) ?? JSON.stringify(tx, replacer)}`);
