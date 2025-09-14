@@ -791,19 +791,15 @@ class MetropolisVaultTester {
             distributions: distributions
         };
         
-        // TODO FIX ME (this operation reverts) there's an error somewhere
-        await this.executeAction("Rebalance", async () => {
-            return this.strategy!.rebalance(
-                params.newLower,
-                params.newUpper,
-                params.desiredActiveId,
-                params.slippageActiveId,
-                amountX,
-                amountY,
-                distributions
-            );
-        });
-    }
+        const tx = await this.strategy!.rebalance(
+            params.newLower,
+            params.newUpper,
+            params.desiredActiveId,
+            params.slippageActiveId,
+            amountX,
+            amountY,
+            distributions
+        );
 
         const receipt = await tx.wait();
         console.log(tx.hash);
