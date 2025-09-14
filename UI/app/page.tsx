@@ -20,8 +20,8 @@ const VAULT_CONFIGS = [
     apy: 18.7,
   },
   {
-    vaultAddress: '0xaEb8Af83857a5991a3B4Dc8e32FE627424fAf3c8',
-    stratAddress: '0x52ba56f76a86cd345a47de360a127f640de30e88',
+    vaultAddress: '0x220d7db9bea2d4ca68c1e3bc25a9f95ff337c022',
+    stratAddress: '0x31977abd9ee5d8bd87349ce1e98da5053e81d995',
     name: 'S • USDC | Shadow',
     tier: 'Premium' as const,
     apy: 24.1,
@@ -159,7 +159,7 @@ export default function Home() {
         {/* Footer Info */}
         <div className="mt-12 text-center text-gray-500 text-sm">
           <p>
-            Smart contracts are audited and secure. Always DYOR before investing.
+            Smart contracts are audited and secure. Always do your own research before investing.
           </p>
         </div>
       </main>

@@ -26,8 +26,12 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, { config }, 
   const shadowInterfacesGlob = path.join(config.paths.root, "contracts-shadow", "src", "interfaces", "*.sol");
   const shadowPaths = [...glob.sync(shadowStrategyPath), ...glob.sync(shadowInterfacesGlob)];
   
+  // Add test mock contracts
+  const testMocksGlob = path.join(config.paths.root, "test", "mocks", "*.sol");
+  const testMocksPaths = glob.sync(testMocksGlob);
+  
   // Combine all paths
-  return [...paths, ...metropolisPaths, ...shadowPaths];
+  return [...paths, ...metropolisPaths, ...shadowPaths, ...testMocksPaths];
 });
 
 const config: HardhatUserConfig = {
