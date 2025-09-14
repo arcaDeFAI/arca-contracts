@@ -360,6 +360,10 @@ async function main() {
     newImplementation = await shadowVaultImpl.getAddress();
     let successMessage = false
 
+    // Sleep a few seconds after deployment... to make sure it gets confirmed
+    console.log("Waiting for deployment to propagate...");
+    await new Promise(f => setTimeout(f, 6000));
+
     try {
           await run("verify:verify", {
                 address: newImplementation,
