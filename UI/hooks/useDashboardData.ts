@@ -2,6 +2,10 @@
 
 import { useReadContract, useWriteContract } from 'wagmi';
 import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
+import { SHADOW_STRAT_ABI } from '@/abi/ShadowStrat.abi';
+import { VOTER_CLAIM_ABI } from '@/abi/VoterClaim.abi';
+import { SHADOW_REWARDS_ABI } from '@/abi/ShadowRewards.abi';
+import { CONTRACTS } from '../lib/contracts';
 
 interface VaultConfig {
   vaultAddress: string;
@@ -11,6 +15,8 @@ interface VaultConfig {
 }
 
 export function useDashboardData(config: VaultConfig, userAddress?: string) {
+  const isShadowVault = config.name.includes('Shadow');
+  
   // Simple contract calls - exactly like VaultCard
   const { data: userShares } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
@@ -22,15 +28,80 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     },
   });
 
+  // Metro vault pending rewards
   const { data: pendingRewards } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
     abi: METRO_VAULT_ABI,
     functionName: 'getPendingRewards',
     args: userAddress ? [userAddress as `0x${string}`] : undefined,
     query: {
-      enabled: !!userAddress && !!config.vaultAddress,
+      enabled: !!userAddress && !!config.vaultAddress && !isShadowVault,
     },
   });
+
+  // For Shadow vaults, get position tokenID first
+  const { data: shadowPosition } = useReadContract({
+    address: config.stratAddress as `0x${string}`,
+    abi: SHADOW_STRAT_ABI,
+    functionName: 'getPosition',
+    query: {
+      enabled: !!config.stratAddress && isShadowVault,
+    },
+  });
+
+  const shadowTokenId = shadowPosition?.[0];
+
+  // Get earned rewards for xSHADOW token
+  const { data: xShadowEarned } = useReadContract({
+    address: CONTRACTS.SHADOW_REWARDS as `0x${string}`,
+    abi: SHADOW_REWARDS_ABI,
+    functionName: 'earned',
+    args: [CONTRACTS.xSHADOW as `0x${string}`, shadowTokenId || 0n],
+    query: {
+      enabled: !!shadowTokenId && isShadowVault,
+    },
+  });
+
+  // Get earned rewards for SHADOW token
+  const { data: shadowEarned } = useReadContract({
+    address: CONTRACTS.SHADOW_REWARDS as `0x${string}`,
+    abi: SHADOW_REWARDS_ABI,
+    functionName: 'earned',
+    args: [CONTRACTS.SHADOW as `0x${string}`, shadowTokenId || 0n],
+    query: {
+      enabled: !!shadowTokenId && isShadowVault,
+    },
+  });
+
+  // Get reward status for Shadow vaults (needed for gauge address and claim logic)
+  const { data: shadowRewardStatus } = useReadContract({
+    address: config.stratAddress as `0x${string}`,
+    abi: SHADOW_STRAT_ABI,
+    functionName: 'getRewardStatus',
+    query: {
+      enabled: !!config.stratAddress && isShadowVault,
+    },
+  });
+
+
+  // Debug Shadow reward status
+  if (isShadowVault) {
+    console.log('🔍 SHADOW REWARD STATUS (Hook):', {
+      vaultName: config.name,
+      stratAddress: config.stratAddress,
+      shadowPosition,
+      shadowTokenId: shadowTokenId?.toString(),
+      xShadowEarned: xShadowEarned?.toString(),
+      shadowEarned: shadowEarned?.toString(),
+      shadowRewardStatus: shadowRewardStatus ? {
+        tokens: shadowRewardStatus[0],
+        earned: shadowRewardStatus[1]?.map((e: bigint) => e.toString()),
+        gauge: shadowRewardStatus[2],
+        hasActivePosition: shadowRewardStatus[3]
+      } : 'no data',
+      hasActivePosition: !!shadowTokenId,
+    });
+  }
 
   // Get current round
   const { data: currentRound } = useReadContract({
@@ -42,64 +113,27 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     },
   });
 
-  // Check for queued withdrawals in rounds 0, 1, 2, 3
-  const { data: queuedWithdrawalRound0 } = useReadContract({
+  // Get queued withdrawal for current round (shows as "queued", not claimable)
+  const { data: queuedWithdrawal } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
     abi: METRO_VAULT_ABI,
     functionName: 'getQueuedWithdrawal',
-    args: userAddress ? [BigInt(0), userAddress as `0x${string}`] : undefined,
+    args: userAddress && currentRound !== undefined ? [currentRound, userAddress as `0x${string}`] : undefined,
     query: {
-      enabled: !!userAddress && !!config.vaultAddress,
+      enabled: !!userAddress && !!config.vaultAddress && currentRound !== undefined,
     },
   });
 
-  const { data: queuedWithdrawalRound1 } = useReadContract({
+  // Get claimable withdrawal from previous round (currentRound - 1)
+  const { data: claimableWithdrawal } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
     abi: METRO_VAULT_ABI,
     functionName: 'getQueuedWithdrawal',
-    args: userAddress ? [BigInt(1), userAddress as `0x${string}`] : undefined,
+    args: userAddress && currentRound !== undefined && currentRound > 0n ? [currentRound - 1n, userAddress as `0x${string}`] : undefined,
     query: {
-      enabled: !!userAddress && !!config.vaultAddress,
+      enabled: !!userAddress && !!config.vaultAddress && currentRound !== undefined && currentRound > 0n,
     },
   });
-
-  const { data: queuedWithdrawalRound2 } = useReadContract({
-    address: config.vaultAddress as `0x${string}`,
-    abi: METRO_VAULT_ABI,
-    functionName: 'getQueuedWithdrawal',
-    args: userAddress ? [BigInt(2), userAddress as `0x${string}`] : undefined,
-    query: {
-      enabled: !!userAddress && !!config.vaultAddress,
-    },
-  });
-
-  const { data: queuedWithdrawalRound3 } = useReadContract({
-    address: config.vaultAddress as `0x${string}`,
-    abi: METRO_VAULT_ABI,
-    functionName: 'getQueuedWithdrawal',
-    args: userAddress ? [BigInt(3), userAddress as `0x${string}`] : undefined,
-    query: {
-      enabled: !!userAddress && !!config.vaultAddress,
-    },
-  });
-
-  // Find the first round with a withdrawal
-  let queuedWithdrawal: bigint | undefined;
-  let withdrawalRound: bigint | undefined;
-
-  if (queuedWithdrawalRound0 && queuedWithdrawalRound0 > 0n) {
-    queuedWithdrawal = queuedWithdrawalRound0;
-    withdrawalRound = BigInt(0);
-  } else if (queuedWithdrawalRound1 && queuedWithdrawalRound1 > 0n) {
-    queuedWithdrawal = queuedWithdrawalRound1;
-    withdrawalRound = BigInt(1);
-  } else if (queuedWithdrawalRound2 && queuedWithdrawalRound2 > 0n) {
-    queuedWithdrawal = queuedWithdrawalRound2;
-    withdrawalRound = BigInt(2);
-  } else if (queuedWithdrawalRound3 && queuedWithdrawalRound3 > 0n) {
-    queuedWithdrawal = queuedWithdrawalRound3;
-    withdrawalRound = BigInt(3);
-  }
 
 
   console.log(`🔍 Dashboard ${config.name}:`, {
@@ -107,54 +141,67 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     userShares: userShares?.toString(),
     pendingRewards: pendingRewards?.length || 0,
     currentRound: currentRound?.toString(),
-    queuedWithdrawalRound0: queuedWithdrawalRound0?.toString(),
-    queuedWithdrawalRound1: queuedWithdrawalRound1?.toString(),
-    queuedWithdrawalRound2: queuedWithdrawalRound2?.toString(),
-    queuedWithdrawalRound3: queuedWithdrawalRound3?.toString(),
     queuedWithdrawal: queuedWithdrawal?.toString(),
-    withdrawalRound: withdrawalRound?.toString(),
+    claimableWithdrawal: claimableWithdrawal?.toString(),
   });
 
   // Write contract hooks for transactions
   const { writeContract: claimRewards, isPending: isClaimingRewards } = useWriteContract();
 
-  // Helper functions for contract interactions
+  // Claim rewards function - different logic for Shadow vs Metro
   const handleClaimRewards = () => {
     if (!userAddress) return;
     
-    claimRewards({
-      address: config.vaultAddress as `0x${string}`,
-      abi: METRO_VAULT_ABI,
-      functionName: 'claim',
-      args: [],
-    });
+    if (config.name.includes('Shadow')) {
+      // Shadow vault claiming - use harvestRewards function on Shadow Strat
+      if (!config.stratAddress) return;
+      
+      console.log('🚀 SHADOW CLAIM - Calling harvestRewards on Shadow Strat:', {
+        shadowStratAddress: config.stratAddress
+      });
+      
+      claimRewards({
+        address: config.stratAddress as `0x${string}`,
+        abi: SHADOW_STRAT_ABI,
+        functionName: 'harvestRewards',
+      });
+    } else {
+      // Metro vault claiming - use normal claim function
+      if (!config.vaultAddress || !pendingRewards || pendingRewards.length === 0) return;
+      
+      claimRewards({
+        address: config.vaultAddress as `0x${string}`,
+        abi: METRO_VAULT_ABI,
+        functionName: 'claim',
+      });
+    }
   };
 
-  // Write contract hook for redeem withdrawal
   const { writeContract: redeemWithdrawal, isPending: isRedeemingWithdrawal } = useWriteContract();
 
   const handleRedeemWithdrawal = () => {
-    if (!userAddress || !queuedWithdrawal || withdrawalRound === undefined) return;
+    if (!userAddress || currentRound === undefined || currentRound === 0n) return;
     
-    console.log(`🔄 Redeeming withdrawal for round ${withdrawalRound}:`, {
-      amount: queuedWithdrawal.toString(),
-      round: withdrawalRound.toString(),
-    });
-
+    // Claim from previous round (currentRound - 1)
     redeemWithdrawal({
       address: config.vaultAddress as `0x${string}`,
       abi: METRO_VAULT_ABI,
       functionName: 'redeemQueuedWithdrawal',
-      args: [BigInt(3), userAddress as `0x${string}`],
+      args: [currentRound - 1n, userAddress as `0x${string}`],
     });
   };
 
   return {
     userShares,
     pendingRewards,
+    shadowPosition,
+    shadowTokenId,
+    xShadowEarned,
+    shadowEarned,
+    shadowRewardStatus,
     currentRound,
     queuedWithdrawal,
-    withdrawalRound,
+    claimableWithdrawal,
     handleClaimRewards,
     isClaimingRewards,
     handleRedeemWithdrawal,

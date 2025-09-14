@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { formatUnits } from 'viem';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { useVaultData } from '@/hooks/useVaultData';
-import { formatUSD } from '@/lib/utils';
+import { useTokenPrices, useAPYCalculation } from '@/hooks/useAPYCalculation';
+import { formatUSD, formatPercentage } from '@/lib/utils';
 import { CONTRACTS } from '@/lib/contracts';
 
 interface DashboardVaultCardProps {
@@ -27,26 +28,107 @@ export function DashboardVaultCard({
   // Use only the connected wallet address - no test fallback
   const actualAddress = userAddress;
 
+  // Determine vault type for reward display
+  const isShadowVault = name.includes('Shadow');
+
   const vaultData = useVaultData(config, actualAddress);
   const dashboardData = useDashboardData(config, actualAddress);
-
-  // Simple check - show if user has shares, pending rewards, or queued withdrawal
-  const hasShares = vaultData.userShares && vaultData.userShares > 0n;
-  const hasPendingRewards = dashboardData.pendingRewards && dashboardData.pendingRewards.length > 0;
-  const hasQueuedWithdrawal = dashboardData.queuedWithdrawal && dashboardData.queuedWithdrawal > 0n;
   
-  // Don't render if user has no activity or no wallet connected
-  if (!actualAddress || (!hasShares && !hasPendingRewards && !hasQueuedWithdrawal)) {
-    return null;
+  // Fetch token prices for APY calculation
+  const { prices, isLoading: pricesLoading } = useTokenPrices();
+
+  const {
+    userShares,
+    pendingRewards,
+    shadowPosition,
+    shadowTokenId,
+    xShadowEarned,
+    shadowEarned,
+    currentRound,
+    queuedWithdrawal,
+    claimableWithdrawal,
+    handleClaimRewards,
+    isClaimingRewards,
+    handleRedeemWithdrawal,
+    isRedeemingWithdrawal,
+  } = dashboardData;
+
+  // Simple check - show if user has shares, pending rewards, queued withdrawal, or claimable withdrawal
+  const hasShares = vaultData.userShares && vaultData.userShares > 0n;
+  const hasPendingRewards = !isShadowVault && pendingRewards && pendingRewards.length > 0;
+  const hasQueuedWithdrawal = queuedWithdrawal && queuedWithdrawal > 0n;
+  const hasClaimableWithdrawal = claimableWithdrawal && claimableWithdrawal > 0n;
+
+  // Calculate deposited value in USD (simplified calculation)
+  const depositedValueUSD = vaultData.balances ? 
+    Number(vaultData.balances[1]) / (10 ** 6) + // USDC amount in USD (6 decimals, 1 USDC = $1)
+    (Number(vaultData.balances[0]) / (10 ** 18)) * 1 : 0; // S amount * $1 assumption
+
+  // Calculate APY using actual rewards data
+  // For Metro vaults: use pendingRewards structure (pendingRewards[0].pendingRewards)
+  // For Shadow vaults: use shadowEarned (Shadow tokens)
+  const actualRewardsToken = isShadowVault 
+    ? Number(shadowEarned || 0n) / (10 ** 18) // Shadow tokens have 18 decimals
+    : (pendingRewards && pendingRewards.length > 0 
+        ? Number(pendingRewards[0].pendingRewards) / (10 ** 18) // Metro tokens structure: pendingRewards[0].pendingRewards
+        : 0);
+  
+  const tokenPrice = isShadowVault ? (prices?.shadow || 0) : (prices?.metro || 0);
+  
+  const { apy: calculatedAPY, isLoading: apyLoading } = useAPYCalculation(
+    name,
+    depositedValueUSD,
+    actualRewardsToken,
+    tokenPrice
+  );
+
+  // Process Shadow vault rewards from earned() calls
+  let shadowRewards: {
+    xShadowEarned: bigint;
+    shadowEarned: bigint;
+    totalEarned: bigint;
+  } | null = null;
+  let shadowHasActivePosition = false;
+
+  if (isShadowVault && shadowTokenId) {
+    const xShadowAmount = xShadowEarned || 0n;
+    const shadowAmount = shadowEarned || 0n;
+    const totalEarned = xShadowAmount + shadowAmount;
+    
+    shadowRewards = {
+      xShadowEarned: xShadowAmount,
+      shadowEarned: shadowAmount,
+      totalEarned,
+    };
+    shadowHasActivePosition = !!shadowTokenId;
   }
 
-  console.log(`🔍 VAULT DEBUG - ${name}:`, {
-    userShares: vaultData.userShares?.toString(),
-    hasShares,
-    pendingRewards: dashboardData.pendingRewards,
-    hasPendingRewards,
-    currentRound: dashboardData.currentRound?.toString(),
-  });
+  // For Shadow vaults, check if there are any rewards from getRewardStatus
+  const hasShadowRewards = isShadowVault && shadowRewards && shadowRewards.totalEarned > 0n;
+
+  // Debug Shadow vault rendering logic
+  if (isShadowVault) {
+    console.log('🔍 SHADOW VAULT RENDERING:', {
+      actualAddress: !!actualAddress,
+      hasShares,
+      hasShadowRewards,
+      shadowHasActivePosition,
+      shadowTokenId: shadowTokenId?.toString(),
+      shadowRewards: shadowRewards ? {
+        xShadowEarned: shadowRewards.xShadowEarned.toString(),
+        shadowEarned: shadowRewards.shadowEarned.toString(),
+        totalEarned: shadowRewards.totalEarned.toString()
+      } : null,
+      buttonShouldBeEnabled: shadowHasActivePosition && hasShadowRewards,
+      buttonDisabled: !shadowHasActivePosition || !hasShadowRewards,
+      willRender: !!actualAddress && (hasShares || hasShadowRewards || hasQueuedWithdrawal || hasClaimableWithdrawal)
+    });
+  }
+
+  // Don't render if user has no activity or no wallet connected
+  if (!actualAddress || (!hasShares && !hasPendingRewards && !hasShadowRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal)) {
+    return null;
+  }
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -99,32 +181,78 @@ export function DashboardVaultCard({
               {vaultData.sharePercentage?.toFixed(4) || '0.0000'}%
             </span>
           </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-400">APY:</span>
+            <span className="text-arca-green font-semibold">
+              {apyLoading || pricesLoading ? '...' : formatPercentage(calculatedAPY || 0)}
+            </span>
+          </div>
         </div>
 
-        {/* Metro Rewards Section */}
-        {hasPendingRewards && (
+
+        {/* Rewards Section - Metro or xShadow */}
+        {(isShadowVault ? hasShadowRewards : hasPendingRewards) && (
           <div className="bg-arca-light-gray/30 rounded-lg p-4">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-gray-400">Metro Rewards:</span>
-              <span className="text-arca-green font-semibold">Available</span>
+              <span className="text-gray-400">{isShadowVault ? 'Shadow' : 'Metro'} Rewards:</span>
+              <span className={`font-semibold ${
+                isShadowVault 
+                  ? (shadowHasActivePosition ? 'text-arca-green' : 'text-red-400')
+                  : 'text-arca-green'
+              }`}>
+                {isShadowVault 
+                  ? (shadowHasActivePosition ? 'Available' : 'Not Available')
+                  : 'Available'
+                }
+              </span>
             </div>
             <div className="space-y-2 mb-3">
-              {dashboardData.pendingRewards?.map((reward, index) => (
-                <div key={index} className="flex justify-between text-sm">
-                  <span className="text-gray-400">
-                    {reward.token === CONTRACTS.METRO ? 'METRO' : 'Token'}:
-                  </span>
+              {isShadowVault ? (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">xShadow tokens:</span>
+                    <span className="text-white">
+                      {shadowRewards ? Number(formatUnits(shadowRewards.xShadowEarned, 18)).toFixed(8) : '0.00000000'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-400">Shadow tokens:</span>
+                    <span className="text-white">
+                      {shadowRewards ? Number(formatUnits(shadowRewards.shadowEarned, 18)).toFixed(8) : '0.00000000'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold border-t border-gray-600 pt-2">
+                    <span className="text-gray-300">Total:</span>
+                    <span className="text-arca-green">
+                      {shadowRewards ? Number(formatUnits(shadowRewards.totalEarned, 18)).toFixed(8) : '0.00000000'}
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">Metro tokens:</span>
                   <span className="text-white">
-                    {formatUnits(reward.pendingRewards, 18)}
+                    {dashboardData.pendingRewards && dashboardData.pendingRewards.length > 0
+                      ? Number(formatUnits(dashboardData.pendingRewards[0].pendingRewards, 18)).toFixed(8)
+                      : '0.00000000'
+                    }
                   </span>
                 </div>
-              ))}
+              )}
             </div>
             <button
-              onClick={dashboardData.handleClaimRewards}
-              disabled={!hasPendingRewards || dashboardData.isClaimingRewards}
+              onClick={() => {
+                console.log('🔥 CLAIM BUTTON CLICKED:', {
+                  isShadowVault,
+                  shadowHasActivePosition,
+                  hasShadowRewards,
+                  isClaimingRewards: dashboardData.isClaimingRewards
+                });
+                dashboardData.handleClaimRewards();
+              }}
+              disabled={isShadowVault ? (!shadowHasActivePosition || !hasShadowRewards) : (!hasPendingRewards || dashboardData.isClaimingRewards)}
               className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                hasPendingRewards && !dashboardData.isClaimingRewards
+                (isShadowVault ? (shadowHasActivePosition && hasShadowRewards) : (hasPendingRewards && !dashboardData.isClaimingRewards))
                   ? 'bg-arca-green text-black hover:bg-arca-green/90'
                   : 'bg-gray-600 text-gray-400 cursor-not-allowed'
               }`}
@@ -134,7 +262,7 @@ export function DashboardVaultCard({
           </div>
         )}
 
-        {/* Queued Withdrawal Section */}
+        {/* Queued Withdrawal Section - Shows withdrawal in current round (not claimable yet) */}
         {hasQueuedWithdrawal && (
           <div className="bg-arca-light-gray/30 rounded-lg p-4">
             <div className="flex justify-between items-center mb-3">
@@ -144,15 +272,33 @@ export function DashboardVaultCard({
               </span>
             </div>
             <div className="text-sm text-gray-400 mb-3">
-              Round: {dashboardData.withdrawalRound?.toString() || 'Loading...'}
+              Round: {dashboardData.currentRound !== undefined ? Number(dashboardData.currentRound) : 'Loading...'}
+            </div>
+            <div className="text-sm text-orange-400 text-center py-2">
+              Withdrawal will be claimable in the next round
+            </div>
+          </div>
+        )}
+
+        {/* Claimable Withdrawal Section - Shows withdrawal from previous round (can claim now) */}
+        {hasClaimableWithdrawal && (
+          <div className="bg-arca-light-gray/30 rounded-lg p-4">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-gray-400">Claimable Withdrawal:</span>
+              <span className="text-arca-green font-semibold">
+                {dashboardData.claimableWithdrawal?.toString() || '0'} shares
+              </span>
+            </div>
+            <div className="text-sm text-gray-400 mb-3">
+              From Round: {dashboardData.currentRound !== undefined ? Number(dashboardData.currentRound) - 1 : 'Loading...'}
             </div>
             <button
               onClick={dashboardData.handleRedeemWithdrawal}
-              disabled={!dashboardData.queuedWithdrawal || dashboardData.withdrawalRound === undefined || dashboardData.isRedeemingWithdrawal}
+              disabled={dashboardData.isRedeemingWithdrawal}
               className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                dashboardData.queuedWithdrawal && dashboardData.withdrawalRound !== undefined && !dashboardData.isRedeemingWithdrawal
-                  ? 'bg-arca-green text-black hover:bg-arca-green/90'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                dashboardData.isRedeemingWithdrawal
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-arca-green text-black hover:bg-arca-green/90'
               }`}
             >
               {dashboardData.isRedeemingWithdrawal ? 'Claiming...' : 'Claim Withdrawal'}
@@ -164,3 +310,5 @@ export function DashboardVaultCard({
     </div>
   );
 }
+
+export default DashboardVaultCard;
