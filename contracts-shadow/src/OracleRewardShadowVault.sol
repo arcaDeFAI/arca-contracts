@@ -800,19 +800,25 @@ contract OracleRewardShadowVault is
     {
         if (amountX == 0 && amountY == 0) return (0, 0, 0);
 
-        // Get the price of tokenX in terms of tokenY
-        uint256 priceXinY = _getOraclePrice(true);
+        uint256 amountXinY = _calculateAmountInOtherToken(amountX, true);
 
         uint256 totalShares = totalSupply();
 
-        uint256 valueInY = (priceXinY * amountX) + amountY;
+        uint256 valueInY = amountXinY + amountY;
 
         if (totalShares == 0) {
             return (valueInY * _SHARES_PRECISION, amountX, amountY);
         }
 
         (uint256 totalX, uint256 totalY) = _getBalances(strategy);
-        uint256 totalValueInY = (priceXinY * totalX) + totalY;
+
+        if (totalX == 0 && totalY == 0)
+        {
+            revert ShadowVault__ZeroAmount();
+        }
+
+        uint256 totalXinY = _calculateAmountInOtherToken(totalX, true);
+        uint256 totalValueInY = totalXinY + totalY;
         shares = valueInY.mulDivRoundDown(totalShares, totalValueInY);
 
         return (shares, amountX, amountY);
