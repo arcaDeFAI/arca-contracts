@@ -3,9 +3,9 @@
 import { useReadContract, useBalance } from 'wagmi';
 import { ERC20_ABI, CONTRACTS } from '@/lib/contracts';
 
-export function useTokenBalance(tokenAddress: string, userAddress?: string) {
-  // For native S token, use useBalance instead of ERC20 contract call
-  const isNativeS = tokenAddress === CONTRACTS.SONIC;
+export function useTokenBalance(tokenAddress: string | null, userAddress?: string) {
+  // For native S token (null address), use useBalance instead of ERC20 contract call
+  const isNativeS = tokenAddress === null;
   
   const nativeBalance = useBalance({
     address: userAddress as `0x${string}`,

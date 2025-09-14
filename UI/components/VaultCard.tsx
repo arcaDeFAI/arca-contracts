@@ -5,6 +5,8 @@ import { useAccount, useReadContract } from 'wagmi';
 import { useVaultData } from '@/hooks/useVaultData';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { useSonicPrice } from '@/hooks/useSonicPrice';
+import { useTokenPrices, useAPYCalculation } from '@/hooks/useAPYCalculation';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import { CONTRACTS } from '@/lib/contracts';
 import { formatTokenAmount, formatUSD, formatPercentage, formatShares } from '@/lib/utils';
 import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
@@ -32,9 +34,22 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
   // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const vaultConfig = { vaultAddress, stratAddress, name, tier };
   const { userShares, totalSupply, sharePercentage, balances, isLoading, isError } = useVaultData(vaultConfig, actualAddress);
-  const sonicBalance = useTokenBalance(CONTRACTS.SONIC, actualAddress);
+  
+  // Determine if this is a Shadow vault
+  const isShadowVault = name.includes('Shadow');
+  
+  // Fetch appropriate token balance based on vault type
+  // For Shadow vaults: fetch wS (ERC20), for Metro vaults: fetch S (native)
+  const sonicBalance = useTokenBalance(CONTRACTS.SONIC, isShadowVault ? undefined : actualAddress);
+  const wsBalance = useTokenBalance(CONTRACTS.WS, isShadowVault ? actualAddress : undefined);
   const usdcBalance = useTokenBalance(CONTRACTS.USDC, actualAddress);
   const { price: sonicPrice, isLoading: priceLoading } = useSonicPrice();
+  
+  // Fetch token prices for APY calculation
+  const { prices, isLoading: pricesLoading } = useTokenPrices();
+
+  // Get actual rewards data for APY calculation
+  const { pendingRewards, shadowEarned } = useDashboardData(vaultConfig, actualAddress);
 
   // Get preview amounts for user shares to show deposited S and USDC
   const { data: previewData } = useReadContract({
@@ -52,6 +67,24 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
   const depositedValueUSD = previewData ? 
     Number(depositedUsdc) / (10 ** 6) + // USDC amount in USD (6 decimals, 1 USDC = $1)
     (Number(depositedS) / (10 ** 18)) * sonicPrice : 0; // S amount * real market price
+
+  // Calculate APY using actual rewards data
+  // For Metro vaults: use pendingRewards structure like DashboardVaultCard
+  // For Shadow vaults: use shadowEarned (Shadow tokens)
+  const actualRewardsToken = isShadowVault 
+    ? Number(shadowEarned || 0n) / (10 ** 18) // Shadow tokens have 18 decimals
+    : (pendingRewards && pendingRewards.length > 0 
+        ? Number(pendingRewards[0].pendingRewards) / (10 ** 18) // Metro tokens structure: pendingRewards[0].pendingRewards
+        : 0);
+  
+  const tokenPrice = isShadowVault ? (prices?.shadow || 0) : (prices?.metro || 0);
+  
+  const { apy: calculatedAPY, isLoading: apyLoading } = useAPYCalculation(
+    name,
+    depositedValueUSD,
+    actualRewardsToken,
+    tokenPrice
+  );
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -132,7 +165,9 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
           
           <div className="flex justify-between">
             <span className="text-gray-400">APY :</span>
-            <span className="text-arca-green font-semibold">{formatPercentage(apy)}</span>
+            <span className="text-arca-green font-semibold">
+              {apyLoading || pricesLoading ? '...' : formatPercentage(calculatedAPY)}
+            </span>
           </div>
         </div>
 
@@ -160,6 +195,7 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
           stratAddress={stratAddress}
           vaultName={name}
           sonicBalance={(sonicBalance?.data as bigint) || 0n}
+          wsBalance={(wsBalance?.data as bigint) || 0n}
           usdcBalance={(usdcBalance?.data as bigint) || 0n}
           onClose={() => setShowDepositModal(false)}
         />

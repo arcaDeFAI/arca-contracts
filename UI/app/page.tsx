@@ -20,8 +20,8 @@ const VAULT_CONFIGS = [
     apy: 18.7,
   },
   {
-    vaultAddress: '0xe3cc55e29cfa3204b810ed38be11949a91022d6b',
-    stratAddress: '0x874af7e836edad19fc09a777cf2c8d7e676f1d2a',
+    vaultAddress: '0xaEb8Af83857a5991a3B4Dc8e32FE627424fAf3c8',
+    stratAddress: '0x52ba56f76a86cd345a47de360a127f640de30e88',
     name: 'S • USDC | Shadow',
     tier: 'Premium' as const,
     apy: 24.1,

@@ -136,7 +136,7 @@ export function WithdrawModal({
             <div className="bg-arca-dark rounded-lg p-4 space-y-2">
               <div className="text-sm text-gray-400 mb-2">You will receive approximately:</div>
               <div className="flex justify-between">
-                <span className="text-gray-400">SONIC:</span>
+                <span className="text-gray-400">S:</span>
                 <span className="text-white font-semibold">
                   {formatTokenAmount(estimatedS, 'SONIC')}
                 </span>
