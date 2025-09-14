@@ -796,33 +796,26 @@ contract OracleRewardShadowVault is
     )
         internal
         view
-        virtual
         returns (uint256 shares, uint256 effectiveX, uint256 effectiveY)
     {
-        if (address(strategy) == address(0)) return (0, 0, 0);
+        if (amountX == 0 && amountY == 0) return (0, 0, 0);
 
-        (uint256 totalX, uint256 totalY) = _getBalances(strategy);
+        // Get the price of tokenX in terms of tokenY
+        uint256 priceXinY = _getOraclePrice(true);
+
         uint256 totalShares = totalSupply();
-        uint256 valueInY = _getValueInY(amountX, amountY);
+
+        uint256 valueInY = (priceXinY * amountX) + amountY;
 
         if (totalShares == 0) {
-            // For initial deposit, use total value in Y (following Metropolis pattern)
-            // Shares = value * precision (just like Metropolis)
-            shares = valueInY * _SHARES_PRECISION;
-            return (shares, amountX, amountY);
-        } else {
-            uint256 totalXInY = 0;
-
-            if (totalX > 0) {
-                totalXInY = _calculateAmountInOtherToken(totalX, true);
-            }
-
-            uint256 totalValueInY = totalXInY + totalY;
-
-            shares = valueInY.mulDivRoundDown(totalShares, totalValueInY);
-
-            return (shares, amountX, amountY);
+            return (valueInY * _SHARES_PRECISION, amountX, amountY);
         }
+
+        (uint256 totalX, uint256 totalY) = _getBalances(strategy);
+        uint256 totalValueInY = (priceXinY * totalX) + totalY;
+        shares = valueInY.mulDivRoundDown(totalShares, totalValueInY);
+
+        return (shares, amountX, amountY);
     }
 
     function _previewAmounts(
