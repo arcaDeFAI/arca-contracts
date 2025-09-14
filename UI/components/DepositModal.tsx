@@ -14,6 +14,7 @@ interface DepositModalProps {
   stratAddress: string;
   vaultName: string;
   sonicBalance: bigint;
+  wsBalance: bigint;
   usdcBalance: bigint;
   onClose: () => void;
 }
@@ -22,14 +23,18 @@ export function DepositModal({
   vaultAddress, 
   stratAddress, 
   vaultName, 
-  sonicBalance, 
+  sonicBalance,
+  wsBalance,
   usdcBalance, 
   onClose 
 }: DepositModalProps) {
-  const [sonicAmount, setSonicAmount] = useState('');
+  const isShadowVault = vaultName.includes('Shadow');
+  
+  const [tokenAmount, setTokenAmount] = useState('');
   const [usdcAmount, setUsdcAmount] = useState('');
-  const [isApproved, setIsApproved] = useState(false);
-  const [currentTx, setCurrentTx] = useState<'none' | 'approve' | 'deposit'>('none');
+  const [tokenApproved, setTokenApproved] = useState(false);
+  const [usdcApproved, setUsdcApproved] = useState(false);
+  const [currentTx, setCurrentTx] = useState<'approve-token' | 'approve-usdc' | 'deposit' | null>(null);
 
   const { writeContract, data: txHash, isPending } = useWriteContract();
 
@@ -38,58 +43,85 @@ export function DepositModal({
     hash: txHash,
   });
 
-  const handleMaxSonic = () => {
-    // Use the raw balance converted to string for max precision
-    const maxAmount = formatUnits(sonicBalance, DECIMALS.SONIC);
-    setSonicAmount(maxAmount);
+  const currentTokenBalance = isShadowVault ? wsBalance : sonicBalance;
+  const currentTokenType = isShadowVault ? 'WS' : 'SONIC';
+
+  const handleMaxToken = () => {
+    const decimals = isShadowVault ? DECIMALS.WS : DECIMALS.SONIC;
+    const maxAmount = formatUnits(currentTokenBalance, decimals);
+    setTokenAmount(maxAmount);
   };
 
   const handleMaxUsdc = () => {
-    // Use the raw balance converted to string for max precision
     const maxAmount = formatUnits(usdcBalance, DECIMALS.USDC);
     setUsdcAmount(maxAmount);
   };
 
   // Handle transaction success
   if (txSuccess) {
-    if (currentTx === 'approve') {
-      setIsApproved(true);
-      setCurrentTx('none');
+    if (currentTx === 'approve-token') {
+      setTokenApproved(true);
+      setCurrentTx(null);
+    } else if (currentTx === 'approve-usdc') {
+      setUsdcApproved(true);
+      setCurrentTx(null);
     } else if (currentTx === 'deposit') {
       onClose();
     }
   }
 
-  const handleApprove = async () => {
-    setCurrentTx('approve');
-    
-    // Only approve USDC (S tokens don't need approval for depositNative)
-    if (usdcAmount && parseFloat(usdcAmount) > 0) {
-      writeContract({
-        address: CONTRACTS.USDC,
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [vaultAddress as `0x${string}`, parseTokenAmount(usdcAmount, 'USDC')],
-      });
-    }
+  const handleTokenApprove = () => {
+    setCurrentTx('approve-token');
+    writeContract({
+      address: CONTRACTS.WS as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [vaultAddress, parseTokenAmount(tokenAmount, 'WS')],
+    });
+  };
+
+  const handleUsdcApprove = () => {
+    setCurrentTx('approve-usdc');
+    writeContract({
+      address: CONTRACTS.USDC as `0x${string}`,
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [vaultAddress, parseTokenAmount(usdcAmount, 'USDC')],
+    });
   };
 
   const handleDeposit = () => {
     setCurrentTx('deposit');
-    writeContract({
-      address: vaultAddress as `0x${string}`,
-      abi: METRO_VAULT_ABI,
-      functionName: 'depositNative',
-      args: [
-        sonicAmount ? parseTokenAmount(sonicAmount, 'SONIC') : BigInt(0),
-        usdcAmount ? parseTokenAmount(usdcAmount, 'USDC') : BigInt(0),
-        BigInt(0),
-      ],
-      value: sonicAmount ? parseTokenAmount(sonicAmount, 'SONIC') : BigInt(0),
-    });
+    
+    if (isShadowVault) {
+      // Shadow vault uses deposit function with wS tokens
+      writeContract({
+        address: vaultAddress as `0x${string}`,
+        abi: METRO_VAULT_ABI,
+        functionName: 'deposit',
+        args: [
+          tokenAmount ? parseTokenAmount(tokenAmount, 'WS') : BigInt(0),
+          usdcAmount ? parseTokenAmount(usdcAmount, 'USDC') : BigInt(0),
+          BigInt(0),
+        ],
+      });
+    } else {
+      // Metro vault uses depositNative with S tokens
+      writeContract({
+        address: vaultAddress as `0x${string}`,
+        abi: METRO_VAULT_ABI,
+        functionName: 'depositNative',
+        args: [
+          tokenAmount ? parseTokenAmount(tokenAmount, 'SONIC') : BigInt(0),
+          usdcAmount ? parseTokenAmount(usdcAmount, 'USDC') : BigInt(0),
+          BigInt(0),
+        ],
+        value: tokenAmount ? parseTokenAmount(tokenAmount, 'SONIC') : BigInt(0),
+      });
+    }
   };
 
-  const isValidAmount = (amount: string, balance: bigint, token: 'SONIC' | 'USDC') => {
+  const isValidAmount = (amount: string, balance: bigint, token: 'SONIC' | 'WS' | 'USDC') => {
     if (!amount || parseFloat(amount) <= 0) return false;
     try {
       const parsed = parseTokenAmount(amount, token);
@@ -100,16 +132,20 @@ export function DepositModal({
   };
 
   const canProceed = 
-    (sonicAmount && isValidAmount(sonicAmount, sonicBalance, 'SONIC')) ||
+    (tokenAmount && isValidAmount(tokenAmount, currentTokenBalance, currentTokenType)) ||
     (usdcAmount && isValidAmount(usdcAmount, usdcBalance, 'USDC'));
 
-  // Check if USDC approval is needed
-  const needsUsdcApproval = usdcAmount && parseFloat(usdcAmount) > 0 && !isApproved;
+  // Check if approvals are needed
+  const needsTokenApproval = isShadowVault && tokenAmount && parseFloat(tokenAmount) > 0 && !tokenApproved;
+  const needsUsdcApproval = usdcAmount && parseFloat(usdcAmount) > 0 && !usdcApproved;
   
   // Determine button text and action
   const getButtonText = () => {
     if (isPending || txLoading) {
       return currentTx === 'deposit' ? 'Depositing...' : 'Approving...';
+    }
+    if (needsTokenApproval) {
+      return 'Approve wS';
     }
     if (needsUsdcApproval) {
       return 'Approve USDC';
@@ -118,8 +154,10 @@ export function DepositModal({
   };
 
   const handleButtonClick = () => {
-    if (needsUsdcApproval) {
-      handleApprove();
+    if (needsTokenApproval) {
+      handleTokenApprove();
+    } else if (needsUsdcApproval) {
+      handleUsdcApprove();
     } else {
       handleDeposit();
     }
@@ -139,24 +177,26 @@ export function DepositModal({
         </div>
 
         <div className="space-y-4">
-          {/* SONIC Input */}
+          {/* Token Input - wS for Shadow, S for Metro */}
           <div>
             <div className="flex justify-between mb-2">
-              <label className="text-sm text-gray-400">S Amount</label>
+              <label className="text-sm text-gray-400">
+                {isShadowVault ? 'wS Amount' : 'S Amount'}
+              </label>
               <span className="text-sm text-gray-400">
-                Balance: {formatTokenAmount(sonicBalance, 'SONIC')}
+                Balance: {formatTokenAmount(currentTokenBalance, currentTokenType)}
               </span>
             </div>
             <div className="relative">
               <input
                 type="number"
-                value={sonicAmount}
-                onChange={(e) => setSonicAmount(e.target.value)}
+                value={tokenAmount}
+                onChange={(e) => setTokenAmount(e.target.value)}
                 placeholder="0.0"
                 className="w-full bg-arca-dark border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-arca-green focus:outline-none"
               />
               <button
-                onClick={handleMaxSonic}
+                onClick={handleMaxToken}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-arca-green text-sm font-semibold hover:text-arca-green/80"
               >
                 MAX

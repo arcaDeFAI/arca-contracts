@@ -2,20 +2,30 @@ import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatUnits, parseUnits } from "viem"
 import { DECIMALS } from "./contracts"
-
+// COmment 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 // Format token amounts for display
-export function formatTokenAmount(amount: bigint, token: 'SONIC' | 'USDC'): string {
-  const decimals = DECIMALS[token]
+export function formatTokenAmount(amount: bigint, token: 'SONIC' | 'WS' | 'USDC'): string {
+  // Handle undefined/null amounts
+  if (amount === undefined || amount === null) {
+    return '0.00'
+  }
+  
+  const decimals = DECIMALS[token as keyof typeof DECIMALS] as number
   const formatted = formatUnits(amount, decimals)
   const num = parseFloat(formatted)
   
-  // For very small numbers (like vault shares), show more decimal places
+  // For very small numbers, show more decimal places
   if (num > 0 && num < 0.0001) {
-    return num.toFixed(8) // Show 8 decimal places for very small amounts
+    return num.toFixed(12) // Show 12 decimal places for very small amounts
+  }
+  
+  // For small numbers, show 6 decimal places
+  if (num > 0 && num < 1) {
+    return num.toFixed(6)
   }
   
   return num.toLocaleString(undefined, {
@@ -25,8 +35,8 @@ export function formatTokenAmount(amount: bigint, token: 'SONIC' | 'USDC'): stri
 }
 
 // Parse token amounts from user input
-export function parseTokenAmount(amount: string, token: 'SONIC' | 'USDC'): bigint {
-  const decimals = DECIMALS[token]
+export function parseTokenAmount(amount: string, token: 'SONIC' | 'WS' | 'USDC'): bigint {
+  const decimals = DECIMALS[token as keyof typeof DECIMALS] as number
   return parseUnits(amount, decimals)
 }
 
