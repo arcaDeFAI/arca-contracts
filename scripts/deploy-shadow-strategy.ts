@@ -312,6 +312,8 @@ async function main() {
         
         const tx = await factory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, newImplementation);
         await gasTracker.trackTransaction("Update factory strategy implementation", tx);
+        console.log("Waiting for change to propagate...");
+        await new Promise(f => setTimeout(f, 6000));
         
         const confirmationOfSetOperation = (await factory.getStrategyImplementation(STRATEGY_TYPE_SHADOW)) === newImplementation
 
@@ -380,6 +382,8 @@ async function main() {
           const tx = await factory.createAndLinkShadowStrategy(selectedVault.address, selectedVault.pool, tokenX, tokenY)
           await gasTracker.trackTransaction("Update factory strategy implementation", tx);
           const finalResult = await tx.wait();
+          console.log("Waiting for change to propagate...");
+          await new Promise(f => setTimeout(f, 6000));
 
           // if (finalResult) {
           //   console.log("\nEvents:\n")
