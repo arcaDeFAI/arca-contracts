@@ -271,6 +271,10 @@ async function main() {
       gasTracker
     );
 
+    // Sleep a few seconds after deployment... to make sure it gets confirmed
+    console.log("Waiting for deployment to propagate...");
+    await new Promise(f => setTimeout(f, 6000));
+
     // Verify the contract with Sonic Explorer
     newImplementation = await shadowStrategyImpl.getAddress();
     let successMessage = false
