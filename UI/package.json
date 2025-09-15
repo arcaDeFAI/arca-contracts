@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "lint:fix": "echo TODO"
+    "lint:fix": "echo TODO lint fix",
+    "test": "echo TODO test"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",

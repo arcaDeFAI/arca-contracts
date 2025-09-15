@@ -812,8 +812,7 @@ contract OracleRewardShadowVault is
 
         (uint256 totalX, uint256 totalY) = _getBalances(strategy);
 
-        if (totalX == 0 && totalY == 0)
-        {
+        if (totalX == 0 && totalY == 0) {
             revert ShadowVault__ZeroAmount();
         }
 
