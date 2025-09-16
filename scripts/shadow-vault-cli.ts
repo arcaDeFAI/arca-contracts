@@ -1254,7 +1254,7 @@ class ShadowVaultTester {
             const currentRound = await this.vault!.getCurrentRound();
             console.log(chalk.gray(`Current Round: ${currentRound}`));
             
-            for (let i = 0; i <= Number(currentRound) && i < 5; i++) {
+            for (let i = 0; i <= Number(currentRound); i++) {
                 const totalQueued = await this.vault!.getTotalQueuedWithdrawal(i);
                 const userQueued = await this.vault!.getQueuedWithdrawal(i, this.signer.address);
                 

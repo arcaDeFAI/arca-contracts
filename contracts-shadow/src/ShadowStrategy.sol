@@ -69,7 +69,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
     // Error events for monitoring
     event RewardDiscoveryFailed(address gauge);
-    event RewardClaimFailed(address[] tokens);
+    event NoRewardAvailableToClaim(address[] tokens);
     event XShadowConversionFailed(address token);
     event VaultAccountingUpdateFailed(address vault);
     // Detailed rebalance debugging events
@@ -117,6 +117,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         uint256 amount0,
         uint256 amount1
     );
+    event NpmSweepTokenSuccess(address token);
+    event NpmSweepTokenFailure(address token, string reason);
     event CollectFailed(uint256 indexed tokenId, string reason);
     event AdditionalTokensCollected(
         uint256 indexed tokenId,
@@ -840,19 +842,43 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             uint256 amount1
         ) {
             emit TokensCollected(_positionTokenId, amount0, amount1);
+
+            // Now send all the TokenX that npm collected back to the strategy
+            try npm.sweepToken(address(_tokenX()), 0, address(this)) {
+                emit NpmSweepTokenSuccess(address(_tokenX()));
+            } catch Error(string memory reason) {
+                emit NpmSweepTokenFailure(address(_tokenX()), reason);
+            } catch {
+                emit NpmSweepTokenFailure(address(_tokenX()), "Unknown");
+            }
+
+            // Same for TokenY
+            try npm.sweepToken(address(_tokenY()), 0, address(this)) {
+                emit NpmSweepTokenSuccess(address(_tokenY()));
+            } catch Error(string memory reason) {
+                emit NpmSweepTokenFailure(address(_tokenY()), reason);
+            } catch {
+                emit NpmSweepTokenFailure(address(_tokenY()), "Unknown");
+            }
+
         } catch Error(string memory reason) {
             emit CollectFailed(_positionTokenId, reason);
             return false; // Exit early if we can't collect
         } catch {
-            emit CollectFailed(_positionTokenId, "Unkown");
+            emit CollectFailed(_positionTokenId, "Unknown");
             return false; // Exit early if we can't collect
         }
-        // Step 3: Verify position is ready for burning
-        // Check that liquidity is 0 and no tokens are owed
+
+        // Step 3: Claim rewards if available (defensive, works for pools with/without gauges)
+        _harvestRewards();
+
+        // Step 4: Verify position is ready for burning
         (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm.positions(
             _positionTokenId
         );
 
+
+        // Check that liquidity is 0 and no tokens are owed
         if (liquidity > 0 || tokensOwed0 > 0 || tokensOwed1 > 0) {
             emit PositionNotReadyForBurn(
                 _positionTokenId,
@@ -861,42 +887,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 tokensOwed1
             );
 
-            // Try one more collection if there are still tokens owed
-            if (tokensOwed0 > 0 || tokensOwed1 > 0) {
-                try npm.collect(collectParams) returns (
-                    uint256 amount0,
-                    uint256 amount1
-                ) {
-                    emit AdditionalTokensCollected(
-                        _positionTokenId,
-                        amount0,
-                        amount1
-                    );
-
-                    // Re-check if position is now ready
-                    (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm
-                        .positions(_positionTokenId);
-                    if (liquidity > 0 || tokensOwed0 > 0 || tokensOwed1 > 0) {
-                        emit PositionNotReadyForBurn(
-                            _positionTokenId,
-                            liquidity,
-                            tokensOwed0,
-                            tokensOwed1
-                        );
-                        return false; // Still not ready, abort burn
-                    }
-                } catch {
-                    // If second collection fails, we can't proceed with burn
-                    return false;
-                }
-            } else {
-                // Only liquidity remains, cannot burn
-                return false;
-            }
+            return false;
         }
-
-        // Step 4: Claim rewards if available (defensive, works for pools with/without gauges)
-        _harvestRewards();
 
         // Step 5: Burn the NFT
         try npm.burn(_positionTokenId) {
@@ -905,6 +897,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             emit NftBurnFailure(_positionTokenId);
             // Don't return here - still reset state even if burn fails
         }
+
         // Step 6: Reset state
         _positionTokenId = 0;
         _currentTickLower = 0;
@@ -1172,8 +1165,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         address gaugeAddress = _getGaugeAddressSafely();
         if (gaugeAddress == address(0)) return;
         IMinimalGauge gauge = IMinimalGauge(gaugeAddress);
-        address voterAddress = _factory.getShadowVoter();
-        IMinimalVoter voter = IMinimalVoter(voterAddress);
 
         // Discover rewards defensively
         address[] memory rewardTokens;
@@ -1207,27 +1198,25 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
         bool claimSuccess = false;
 
-        address[] memory gaugeAddresses = new address[](1);
-        gaugeAddresses[0] = gaugeAddress;
-        address[][] memory rewardTokenArray = new address[][](1);
-        rewardTokenArray[0] = rewardTokens;
-        uint256[][] memory positionTokenIdArray2D = new uint256[][](1);
-        uint256[] memory positionTokenIdArray = new uint256[](1);
-        positionTokenIdArray[0] = _positionTokenId;
-        positionTokenIdArray2D[0] = positionTokenIdArray;
+        INonfungiblePositionManager npm = INonfungiblePositionManager(
+            _factory.getShadowNonfungiblePositionManager()
+        );
 
-        // Claim the rewards using the voter
-        try
-            voter.claimClGaugeRewardsAndExit(
-                gaugeAddresses,
-                rewardTokenArray,
-                positionTokenIdArray2D
-            )
-        {
-            claimSuccess = true;
-        } catch {
-            emit RewardClaimFailed(rewardTokens);
+        address[] memory rewardTokenTmpArray = new address[](1);
+
+        // Claim the rewards using npm (NonfungiblePositionManager)
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            // Try each reward token individually, so that even if one fails, we can claim the others
+            rewardTokenTmpArray[0] = rewardTokens[i];
+            
+            try npm.getReward(_positionTokenId, rewardTokenTmpArray)
+            {
+                claimSuccess = true; // Declare success even if only one reward was claimed well
+            } catch {
+                emit NoRewardAvailableToClaim(rewardTokenTmpArray);
+            }
         }
+        
         if (!claimSuccess) return;
 
         // Process claimed rewards

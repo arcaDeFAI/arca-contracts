@@ -1,6 +1,6 @@
 {
   "network": "sonic-mainnet",
-  "timestamp": "2025-09-12T04:08:25.389Z",
+  "timestamp": "2025-09-15T16:45:31.617Z",
   "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
-  "shadowStrategyImplementation": "0x347F44668600932088Bb1B3F89B41f245E825767"
+  "shadowStrategyImplementation": "0xe3Fa45280E709d84A09CB3ca2bed05ba613473e3"
 }
