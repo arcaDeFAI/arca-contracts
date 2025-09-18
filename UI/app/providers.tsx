@@ -19,14 +19,24 @@ const sonic = {
 } as const;
 
 // Configure Wagmi with RainbowKit
+const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '';
+
 const config = getDefaultConfig({
   appName: 'Arca DeFi',
-  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || 'demo-project-id',
+  projectId: projectId || 'arca-defi', // Fallback project ID
   chains: [sonic], // Only Sonic chain supported
   ssr: false,
 });
 
-const queryClient = new QueryClient();
+// Configure QueryClient with better error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

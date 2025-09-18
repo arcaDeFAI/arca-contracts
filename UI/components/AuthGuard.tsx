@@ -10,7 +10,7 @@ interface AuthGuardProps {
 
 function AccessDenied() {
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-red-400">Access Restricted</h1>
@@ -22,11 +22,13 @@ function AccessDenied() {
           </p>
         </div>
 
-        <div className="border border-gray-700 rounded-lg p-4 bg-gray-900">
-          <p className="text-gray-300 text-sm mb-3">
+        <div className="border border-gray-700 rounded-lg p-6 bg-gray-900">
+          <p className="text-gray-300 text-sm mb-4">
             Connected wallet:
           </p>
-          <ConnectButton />
+          <div className="flex justify-center">
+            <ConnectButton />
+          </div>
         </div>
 
         <div className="text-xs text-gray-500">
@@ -39,7 +41,7 @@ function AccessDenied() {
 
 function ConnectWallet() {
   return (
-    <div className="min-h-screen bg-gray-950 text-white flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center space-y-6">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold text-blue-400">Welcome to Arca DeFi</h1>
@@ -51,8 +53,10 @@ function ConnectWallet() {
           </p>
         </div>
 
-        <div className="border border-gray-700 rounded-lg p-4 bg-gray-900">
-          <ConnectButton />
+        <div className="border border-gray-700 rounded-lg p-6 bg-gray-900">
+          <div className="flex justify-center">
+            <ConnectButton />
+          </div>
         </div>
       </div>
     </div>
@@ -63,14 +67,14 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const { address, isConnected } = useAccount();
 
   // If wallet is not connected, show connect wallet screen
-  if (!isConnected) {
+  if (!isConnected || !address) {
     return <ConnectWallet />;
   }
 
   // Check if the connected address is in the whitelist
   const whitelistedAddresses = process.env.NEXT_PUBLIC_WHITELISTED_ADDRESSES?.split(',') || [];
   const isAuthorized = whitelistedAddresses.some(
-    whitelistedAddress => whitelistedAddress.toLowerCase().trim() === address?.toLowerCase()
+    whitelistedAddress => whitelistedAddress.toLowerCase().trim() === address.toLowerCase()
   );
 
   // If wallet is connected but not authorized, show access denied
