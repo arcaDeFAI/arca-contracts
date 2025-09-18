@@ -2,6 +2,7 @@ import './globals.css'
 import type { Metadata } from 'next'
 import { Providers } from './providers'
 import { BackgroundPattern } from '@/components/BackgroundPattern'
+import { AuthGuard } from '@/components/AuthGuard'
 
 export const metadata: Metadata = {
   title: 'Arca DeFi - Vault Management',
@@ -40,7 +41,9 @@ export default function RootLayout({
       <body>
         <BackgroundPattern />
         <Providers>
-          {children}
+          <AuthGuard>
+            {children}
+          </AuthGuard>
         </Providers>
       </body>
     </html>

@@ -4,21 +4,23 @@ frontend:
     preBuild:
       commands:
         # Change directory to your frontend project
-        - cd arca-coming-soon
+        - cd UI
         # Install dependencies for the frontend project
         - npm ci
     build:
       commands:
-        # Since we are already in arca-coming-soon from the preBuild phase,
-        # we can directly run the build command for the frontend.
+        # Since we are already in UI from the preBuild phase,
+        # we can directly run the build command for the Next.js project.
         - npm run build
   artifacts:
     # This path is relative to the root of your *cloned repository* (arca-contracts)
-    # The build output (e.g., 'dist' from Vite) will be inside arca-coming-soon
-    baseDirectory: arca-coming-soon/dist 
+    # The build output from Next.js static export will be in out directory inside UI
+    baseDirectory: UI/out
     files:
       - '**/*'
   cache:
     paths:
       # Cache the node_modules specific to the frontend project
-      - arca-coming-soon/node_modules/**/*
+      - UI/node_modules/**/*
+      # Cache Next.js build cache for faster builds
+      - UI/.next/cache/**/*
