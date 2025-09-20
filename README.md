@@ -95,6 +95,8 @@ npm run deploy:mainnet
 npm run deploy:verify:testnet  # or mainnet, local, fork
 ```
 
+To test the GitHub pipeline locally, you can use the `act` command (see [this repo](https://github.com/nektos/act)).
+
 ## Repository Structure
 
 ```
