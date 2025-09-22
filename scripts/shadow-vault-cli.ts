@@ -3,11 +3,12 @@ import readline from "readline";
 import chalk from "chalk";
 import fs from "fs";
 import path from "path";
-import type { 
+import type {
     OracleRewardShadowVault,
     ShadowStrategy,
     IRamsesV3Pool,
-    ShadowPriceHelperWrapper
+    ShadowPriceHelperWrapper,
+    IVaultFactory
 } from "../typechain-types";
 import type { IERC20MetadataUpgradeable } from "../typechain-types/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
@@ -44,6 +45,17 @@ import {
     displayEmergencyStatus,
     estimateEmergencyWithdrawal
 } from "./test-vault-utils";
+import {
+    discoverTokensInVault,
+    selectToken,
+    getRecoveryAmount,
+    getRecipientAddress,
+    displayRecoveryPreview,
+    validateRecovery,
+    executeRecovery,
+    checkVaultFactoryPermissions,
+    type TokenInfo
+} from "./vault-recovery-utils";
 import type { ContractTransactionResponse } from "ethers";
 
 class ShadowVaultTester {
@@ -1106,8 +1118,7 @@ class ShadowVaultTester {
                 await this.testSetEmergencyMode();
                 break;
             case '5':
-                // TODO: Recover ERC20
-                console.log(chalk.yellow("Not implemented yet"));
+                await this.testRecoverERC20();
                 break;
         }
     }
@@ -1214,6 +1225,228 @@ class ShadowVaultTester {
              } else {
                 console.error(chalk.red("\n❌ Error toggling deposits: UNKNOWN"))
              }
+        }
+    }
+
+    async testRecoverERC20() {
+        console.log(chalk.blue("\n💰 Recover ERC20 Tokens\n"));
+
+        // Get VaultFactory through the vault (Shadow vaults use the same factory pattern)
+        try {
+            const vaultFactoryAddress = await this.vault!.getFactory();
+
+            if (!vaultFactoryAddress || vaultFactoryAddress === ethers.ZeroAddress) {
+                console.log(chalk.red("❌ VaultFactory address not found. Cannot perform recovery."));
+                return;
+            }
+
+            const vaultFactory = await ethers.getContractAt("IVaultFactory", vaultFactoryAddress, this.signer);
+
+            // Show recovery options
+            console.log(chalk.blue("\n🔧 Recovery Options:\n"));
+            console.log(chalk.gray("1. Discover and recover tokens"));
+            console.log(chalk.gray("2. Recover specific token"));
+            console.log(chalk.gray("3. Back"));
+
+            const choice = await this.question("\nSelect option: ");
+
+            switch (choice) {
+                case '1':
+                    await this.discoverAndRecoverTokens(vaultFactory);
+                    break;
+                case '2':
+                    await this.recoverSpecificToken(vaultFactory);
+                    break;
+                case '3':
+                    return;
+                default:
+                    if (choice.trim() !== '') {
+                        console.log(chalk.red("Invalid option"));
+                    }
+            }
+        } catch (error) {
+            console.error(chalk.red("❌ Error initializing recovery:"), error);
+        }
+    }
+
+    async discoverAndRecoverTokens(vaultFactory: IVaultFactory) {
+        console.log(chalk.blue("\n🔍 Discover & Recover Tokens\n"));
+
+        try {
+            // Get vault and token addresses
+            const vaultAddress = await this.vault!.getAddress();
+            const tokenXAddress = await this.vault!.getTokenX();
+            const tokenYAddress = await this.vault!.getTokenY();
+
+            // Discover tokens
+            const tokens = await discoverTokensInVault(
+                vaultAddress,
+                tokenXAddress,
+                tokenYAddress,
+                this.signer
+            );
+
+            if (tokens.length === 0) {
+                console.log(chalk.yellow("📭 No tokens with balances found in vault"));
+                return;
+            }
+
+            // Show recovery loop
+            let recovering = true;
+            while (recovering) {
+                const selectedToken = await selectToken(tokens, (prompt) => this.question(prompt));
+
+                if (!selectedToken) {
+                    recovering = false;
+                    break;
+                }
+
+                const success = await this.performTokenRecovery(selectedToken, vaultFactory);
+
+                if (success) {
+                    // Remove recovered token from list if fully recovered
+                    const updatedBalance = await this.checkTokenBalance(selectedToken.address, await this.vault!.getAddress());
+                    if (updatedBalance === 0n) {
+                        const index = tokens.indexOf(selectedToken);
+                        tokens.splice(index, 1);
+                        console.log(chalk.green(`✅ Token ${selectedToken.symbol} fully recovered and removed from list`));
+                    } else {
+                        // Update balance
+                        selectedToken.balance = updatedBalance;
+                        selectedToken.formattedBalance = ethers.formatUnits(updatedBalance, selectedToken.decimals);
+                    }
+                }
+
+                if (tokens.length === 0) {
+                    console.log(chalk.green("🎉 All tokens recovered!"));
+                    recovering = false;
+                } else {
+                    const continueRecovery = await this.confirm("\nRecover more tokens?");
+                    recovering = continueRecovery;
+                }
+            }
+
+        } catch (error) {
+            console.error(chalk.red("❌ Error during token discovery:"), error);
+        }
+    }
+
+    async recoverSpecificToken(vaultFactory: IVaultFactory) {
+        console.log(chalk.blue("\n💰 Recover Specific Token\n"));
+
+        const tokenAddress = await this.question("Enter token address: ");
+
+        if (!ethers.isAddress(tokenAddress)) {
+            console.log(chalk.red("❌ Invalid token address"));
+            return;
+        }
+
+        try {
+            const vaultAddress = await this.vault!.getAddress();
+            const balance = await this.checkTokenBalance(tokenAddress, vaultAddress);
+
+            if (balance === 0n) {
+                console.log(chalk.yellow("📭 Token has no balance in vault"));
+                return;
+            }
+
+            // Get token info
+            const token = await ethers.getContractAt("IERC20MetadataUpgradeable", tokenAddress, this.signer);
+            const symbol = await token.symbol();
+            const decimals = await token.decimals();
+
+            const tokenInfo: TokenInfo = {
+                address: tokenAddress,
+                symbol,
+                decimals: Number(decimals),
+                balance,
+                formattedBalance: ethers.formatUnits(balance, decimals),
+                isVaultToken: false,
+                isRecoverable: true
+            };
+
+            // Check if it's a vault token
+            const tokenXAddress = await this.vault!.getTokenX();
+            const tokenYAddress = await this.vault!.getTokenY();
+
+            if (tokenAddress.toLowerCase() === tokenXAddress.toLowerCase()) {
+                tokenInfo.isVaultToken = true;
+                tokenInfo.warningMessage = "⚠️ This is vault's Token X - recovery may affect operations";
+            } else if (tokenAddress.toLowerCase() === tokenYAddress.toLowerCase()) {
+                tokenInfo.isVaultToken = true;
+                tokenInfo.warningMessage = "⚠️ This is vault's Token Y - recovery may affect operations";
+            } else if (tokenAddress.toLowerCase() === vaultAddress.toLowerCase()) {
+                tokenInfo.isVaultToken = true;
+                tokenInfo.warningMessage = "⚠️ These are vault shares - only recoverable if sent accidentally";
+                tokenInfo.symbol = `${symbol} (Vault Shares)`;
+            }
+
+            await this.performTokenRecovery(tokenInfo, vaultFactory);
+
+        } catch (error) {
+            console.error(chalk.red("❌ Error recovering specific token:"), error);
+        }
+    }
+
+    async performTokenRecovery(tokenInfo: TokenInfo, vaultFactory: IVaultFactory): Promise<boolean> {
+        try {
+            // Get recovery amount
+            const amount = await getRecoveryAmount(tokenInfo, (prompt) => this.question(prompt));
+            if (!amount) {
+                console.log(chalk.yellow("Recovery cancelled"));
+                return false;
+            }
+
+            // Validate recovery
+            const validation = await validateRecovery(tokenInfo, this.vault!, amount);
+            if (!validation.valid) {
+                console.log(chalk.red(`❌ ${validation.message}`));
+                return false;
+            }
+
+            // Get recipient
+            const recipient = await getRecipientAddress(this.signer.address, (prompt) => this.question(prompt));
+            if (!recipient) {
+                console.log(chalk.red("❌ Invalid recipient address"));
+                return false;
+            }
+
+            // Show preview
+            displayRecoveryPreview(tokenInfo, amount, recipient);
+
+            // Confirm recovery
+            const confirmed = await this.confirm("\nProceed with recovery?");
+            if (!confirmed) {
+                console.log(chalk.yellow("Recovery cancelled"));
+                return false;
+            }
+
+            // Execute recovery
+            const success = await executeRecovery(
+                vaultFactory,
+                await this.vault!.getAddress(),
+                tokenInfo.address,
+                recipient,
+                amount,
+                this.signer,
+                (name, fn) => this.executeAction(name, fn)
+            );
+
+            return success;
+
+        } catch (error) {
+            console.error(chalk.red("❌ Error during token recovery:"), error);
+            return false;
+        }
+    }
+
+    async checkTokenBalance(tokenAddress: string, vaultAddress: string): Promise<bigint> {
+        try {
+            const token = await ethers.getContractAt("IERC20MetadataUpgradeable", tokenAddress, this.signer);
+            return await token.balanceOf(vaultAddress);
+        } catch (error) {
+            console.error(chalk.red(`Error checking balance for ${tokenAddress}:`), error);
+            return 0n;
         }
     }
 
