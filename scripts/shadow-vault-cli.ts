@@ -53,7 +53,6 @@ import {
     displayRecoveryPreview,
     validateRecovery,
     executeRecovery,
-    checkVaultFactoryPermissions,
     type TokenInfo
 } from "./vault-recovery-utils";
 import type { ContractTransactionResponse } from "ethers";
@@ -230,6 +229,8 @@ class ShadowVaultTester {
             const [balanceX, balanceY] = await this.vault!.getBalances();
             const tick = (await this.pool!.slot0()).tick;
             const tickSpacing = await this.pool!.tickSpacing();
+            const rawBalanceX = await this.checkTokenBalance(await this.vault!.getTokenX(), await this.vault!.getAddress());
+            const rawBalanceY = await this.checkTokenBalance(await this.vault!.getTokenY(), await this.vault!.getAddress());
             
             console.log(chalk.white("\nState:"));
             console.log(chalk.gray(`  Deposits Paused: ${isPaused}`));
@@ -237,6 +238,8 @@ class ShadowVaultTester {
             console.log(chalk.gray(`  Total Supply: ${ethers.formatUnits(totalSupply, decimals)}`));
             console.log(chalk.gray(`  Balance X: ${await formatters.formatBalance(balanceX, this.tokenX!)}`));
             console.log(chalk.gray(`  Balance Y: ${await formatters.formatBalance(balanceY, this.tokenY!)}`));
+            console.log(chalk.gray(`  Raw Balance X: ${await formatters.formatBalance(rawBalanceX, this.tokenX!)}`));
+            console.log(chalk.gray(`  Raw Balance Y: ${await formatters.formatBalance(rawBalanceY, this.tokenY!)}`));
             console.log(chalk.gray(`  Current Pool Tick: ${tick.toString()}`));
             console.log(chalk.gray(`  Current Pool Tick Spacing: ${tickSpacing.toString()}`));
             

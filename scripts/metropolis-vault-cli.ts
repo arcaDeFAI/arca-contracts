@@ -51,7 +51,6 @@ import {
     displayRecoveryPreview,
     validateRecovery,
     executeRecovery,
-    checkVaultFactoryPermissions,
     type TokenInfo
 } from "./vault-recovery-utils";
 import type { ContractTransactionResponse } from "ethers";
@@ -248,6 +247,8 @@ class MetropolisVaultTester {
             const [balanceX, balanceY] = await this.vault!.getBalances();
             const activeId = await this.pair!.getActiveId();
             const binStep = await this.pair!.getBinStep();
+            const rawBalanceX = await this.checkTokenBalance(await this.vault!.getTokenX(), await this.vault!.getAddress());
+            const rawBalanceY = await this.checkTokenBalance(await this.vault!.getTokenY(), await this.vault!.getAddress());
             
             console.log(chalk.white("\nState:"));
             console.log(chalk.gray(`  Deposits Paused: ${isPaused}`));
@@ -255,6 +256,8 @@ class MetropolisVaultTester {
             console.log(chalk.gray(`  Total Supply: ${ethers.formatUnits(totalSupply, decimals)}`));
             console.log(chalk.gray(`  Balance X: ${await formatters.formatBalance(balanceX, this.tokenX!)}`));
             console.log(chalk.gray(`  Balance Y: ${await formatters.formatBalance(balanceY, this.tokenY!)}`));
+            console.log(chalk.gray(`  Raw Balance X: ${await formatters.formatBalance(rawBalanceX, this.tokenX!)}`));
+            console.log(chalk.gray(`  Raw Balance Y: ${await formatters.formatBalance(rawBalanceY, this.tokenY!)}`));
             console.log(chalk.gray(`  Active Bin ID: ${activeId.toString()}`));
             console.log(chalk.gray(`  Bin Step: ${binStep.toString()}`));
             
