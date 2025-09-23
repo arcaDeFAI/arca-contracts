@@ -68,6 +68,7 @@ class ShadowVaultTester {
     private tokenY?: IERC20MetadataUpgradeable;
     private signer: SignerWithAddress;
     private resultManager: TestResultManager;
+    private isEmergencyMode: boolean = false;
 
     constructor(config: TestConfig) {
         this.config = config;
@@ -110,8 +111,15 @@ class ShadowVaultTester {
             }
 
             console.log(chalk.gray("Loading strategy contract..."));
-            this.strategy = await ethers.getContractAt("ShadowStrategy", this.config.strategyAddress, this.signer);
-            console.log(chalk.gray(`✓ Strategy loaded at: ${await this.strategy.getAddress()}`));
+            if (this.config.strategyAddress && this.config.strategyAddress !== ethers.ZeroAddress) {
+                this.strategy = await ethers.getContractAt("ShadowStrategy", this.config.strategyAddress, this.signer);
+                console.log(chalk.gray(`✓ Strategy loaded at: ${await this.strategy.getAddress()}`));
+                this.isEmergencyMode = false;
+            } else {
+                console.log(chalk.yellow(`⚠️  Strategy is null address - vault is in emergency mode`));
+                this.strategy = undefined;
+                this.isEmergencyMode = true;
+            }
             
             // Get associated contracts
             console.log(chalk.gray("Getting pool address..."));
@@ -120,6 +128,10 @@ class ShadowVaultTester {
             
             console.log(chalk.gray("Loading pool contract..."));
             this.pool = await ethers.getContractAt("IRamsesV3Pool", poolAddress, this.signer);
+
+            console.log(chalk.gray("Getting Vault Factory contract..."));
+            const vaultFactoryAddress = await this.vault.getFactory();
+            console.log(chalk.gray(`✓ Vault Factory address: ${vaultFactoryAddress}`));
             
             console.log(chalk.gray("Getting token addresses..."));
             const tokenXAddress = await this.vault.getTokenX();
@@ -302,12 +314,17 @@ class ShadowVaultTester {
             if (strategyAddress !== ethers.ZeroAddress) {
                 const [defaultOp, operator] = await this.vault!.getOperators();
                 const aumFee = await this.vault!.getAumAnnualFee();
-                
+
                 console.log(chalk.white("\nStrategy:"));
                 console.log(chalk.gray(`  Address: ${strategyAddress}`));
                 console.log(chalk.gray(`  Default Operator: ${defaultOp}`));
                 console.log(chalk.gray(`  Operator: ${operator}`));
                 console.log(chalk.gray(`  AUM Annual Fee: ${aumFee.toString()} basis points`));
+            } else {
+                console.log(chalk.red("\n🚨 Emergency Mode:"));
+                console.log(chalk.red(`  Strategy: ${strategyAddress} (null)`));
+                console.log(chalk.red(`  Status: Vault is in emergency mode`));
+                console.log(chalk.red(`  Available: Emergency withdraw and token recovery only`));
             }
             
             // Queue info
@@ -664,23 +681,29 @@ class ShadowVaultTester {
 
     async testRebalance() {
         console.log(chalk.blue("\n🔄 Test Rebalance\n"));
-        
+
+        if (this.isEmergencyMode || !this.strategy) {
+            console.log(chalk.red("❌ Rebalance not available in emergency mode"));
+            console.log(chalk.yellow("💡 Strategy operations are disabled when vault is in emergency mode"));
+            return;
+        }
+
         // Show current pool state
         try {
             const slot0 = await this.pool!.slot0();
             const currentTick = slot0[1];
             const tickSpacing = await this.pool!.tickSpacing();
-            console.log(chalk.gray(`Current Pool Tick: ${currentTick}, tick spacing: ${tickSpacing}`)); 
-            
+            console.log(chalk.gray(`Current Pool Tick: ${currentTick}, tick spacing: ${tickSpacing}`));
+
             // Try to get current position if any
-            const [positionTokenId, tickLower, tickUpper] = await this.strategy!.getPosition();
+            const [positionTokenId, tickLower, tickUpper] = await this.strategy.getPosition();
             if (positionTokenId && positionTokenId !== 0n) {
                 console.log(chalk.gray(`Current Position Token ID: ${positionTokenId}`));
                 console.log(chalk.gray(`Current Position Range: [${tickLower}, ${tickUpper}]`));
             }
-            
+
             // Show current idle balances to help operator decide reserve amounts
-            const [idleX, idleY] = await this.strategy!.getIdleBalances();
+            const [idleX, idleY] = await this.strategy.getIdleBalances();
             console.log(chalk.cyan("\n💰 Current Idle Balances (available for deposit):"));
             console.log(chalk.gray(`  Token X: ${await formatters.formatBalance(idleX, this.tokenX!)}`));
             console.log(chalk.gray(`  Token Y: ${await formatters.formatBalance(idleY, this.tokenY!)}`));
@@ -696,10 +719,12 @@ class ShadowVaultTester {
         const slot0 = await this.pool!.slot0();
         const currentTick = Number(slot0[1]);
         const tickSpacing = Number(await this.pool!.tickSpacing());
-        const [balanceX, balanceY] = await this.strategy!.getBalances();
+
+        // Get current strategy balances for amount defaults
+        const [balanceX, balanceY] = await this.strategy.getBalances();
 
         // Default tick range: ±5% around current tick (considers tick spacing)
-        const defaultRange = calculateDefaultTickRange(currentTick, tickSpacing, 5); 
+        const defaultRange = calculateDefaultTickRange(currentTick, tickSpacing, 5);
 
         // Get user inputs with defaults (strings)
         const tickLowerStr = await this.questionWithDefault(
@@ -822,24 +847,35 @@ class ShadowVaultTester {
                 console.log(chalk.gray(`    Token Y: ${await formatters.formatBalance(reserveY, this.tokenY!)}`));
             }
         }
-        
-        await this.executeAction("Rebalance", async () => {
-            return this.strategy!.rebalance(
-                params.tickLower,
-                params.tickUpper,
-                params.desiredTick,
-                params.slippageTick,
-                params.amountX,
-                params.amountY,
-                {
-                   gasLimit: 10_000_000n
-                }
-            );
-        });
+        try {
+            await this.executeAction("Rebalance", async () => {
+                return this.strategy!.rebalance(
+                    params.tickLower,
+                    params.tickUpper,
+                    params.desiredTick,
+                    params.slippageTick,
+                    params.amountX,
+                    params.amountY,
+                    {
+                       gasLimit: 10_000_000n
+                    }
+                );
+            });
+        } catch (error) {
+            console.error(chalk.red("Error during rebalance:"), error);
+        }
     }
 
     async showTestScenarios() {
         console.log(chalk.blue("\n📋 Test Scenarios:\n"));
+
+        if (this.isEmergencyMode) {
+            console.log(chalk.red("❌ Test scenarios not available in emergency mode"));
+            console.log(chalk.yellow("💡 Most scenarios require strategy operations which are disabled"));
+            console.log(chalk.yellow("Available: Emergency withdrawal scenario"));
+            return;
+        }
+
         console.log(chalk.gray("1. Basic Deposit & Withdraw"));
         console.log(chalk.gray("2. Deposit with Rebalance"));
         console.log(chalk.gray("3. Emergency Withdrawal"));
@@ -847,9 +883,9 @@ class ShadowVaultTester {
         console.log(chalk.gray("5. Multi-User Simulation"));
         console.log(chalk.gray("6. Gas Optimization Test"));
         console.log(chalk.gray("7. Edge Case Testing"));
-        
+
         const choice = await this.question("\nSelect scenario (1-7): ");
-        
+
         switch (choice) {
             case '1':
                 await this.scenarioBasicFlow();
@@ -920,17 +956,23 @@ class ShadowVaultTester {
 
     async showMainMenu() {
         console.log(chalk.blue("\n=== Shadow Vault Interactive Tester ===\n"));
+
+        if (this.isEmergencyMode) {
+            console.log(chalk.red("🚨 EMERGENCY MODE ACTIVE 🚨"));
+            console.log(chalk.yellow("Strategy operations are disabled. Limited functionality available.\n"));
+        }
+
         console.log(chalk.gray("1. View Vault Information"));
         console.log(chalk.gray("2. View User Information"));
         console.log(chalk.gray("3. Deposit Operations"));
         console.log(chalk.gray("4. Withdrawal Operations"));
-        console.log(chalk.gray("5. Strategy Management"));
+        console.log(this.isEmergencyMode ? chalk.gray("5. Strategy Management (DISABLED)") : chalk.gray("5. Strategy Management"));
         console.log(chalk.gray("6. Reward Management"));
         console.log(chalk.gray("7. Admin Functions"));
-        console.log(chalk.gray("8. Test Scenarios"));
+        console.log(this.isEmergencyMode ? chalk.gray("8. Test Scenarios (DISABLED)") : chalk.gray("8. Test Scenarios"));
         console.log(chalk.gray("9. Export Results"));
         console.log(chalk.gray("0. Exit"));
-        
+
         return await this.question("\nSelect option: ");
     }
 
@@ -1055,14 +1097,22 @@ class ShadowVaultTester {
 
     async showStrategyMenu() {
         console.log(chalk.blue("\n🔧 Strategy Management\n"));
+
+        if (this.isEmergencyMode) {
+            console.log(chalk.red("🚨 Emergency Mode - Strategy operations disabled"));
+            console.log(chalk.gray("Strategy operations are not available when vault is in emergency mode."));
+            console.log(chalk.gray("Available operations: Emergency withdraw, token recovery\n"));
+            return;
+        }
+
         console.log(chalk.gray("1. View Strategy Info"));
         console.log(chalk.gray("2. Rebalance"));
         console.log(chalk.gray("3. Harvest Rewards"));
         console.log(chalk.gray("4. Set Operator"));
         console.log(chalk.gray("5. Back"));
-        
+
         const choice = await this.question("\nSelect option: ");
-        
+
         switch (choice) {
             case '1':
                 await this.showStrategyInfo();
@@ -1514,13 +1564,19 @@ class ShadowVaultTester {
 
     async showStrategyInfo() {
         console.log(chalk.blue("\n📊 Strategy Information\n"));
-        
+
+        if (this.isEmergencyMode || !this.strategy) {
+            console.log(chalk.red("❌ Strategy information not available in emergency mode"));
+            console.log(chalk.yellow("💡 Strategy is set to null address when vault is in emergency mode"));
+            return;
+        }
+
         try {
-            const [position, tickLower, tickUpper] = await this.strategy!.getPosition();
-            const operator = await this.strategy!.getOperator();
-            const lastRebalance = await this.strategy!.getLastRebalance();
-            //const [liquidity, tokenXOwed, tokenYOwed] = await this.strategy!.getNpmLiquidity();
-            
+            const [position, tickLower, tickUpper] = await this.strategy.getPosition();
+            const operator = await this.strategy.getOperator();
+            const lastRebalance = await this.strategy.getLastRebalance();
+            //const [liquidity, tokenXOwed, tokenYOwed] = await this.strategy.getNpmLiquidity();
+
             console.log(chalk.white("Position:"));
             console.log(chalk.gray(`  Token ID: ${position.toString()}`));
             console.log(chalk.gray(`  Tick Lower: ${tickLower}`));
@@ -1529,14 +1585,14 @@ class ShadowVaultTester {
             //console.log(chalk.gray(`  LB Pair Liquidity: ${liquidity}`));
             //console.log(chalk.gray(`  LB Pair TokenX Owed: ${tokenXOwed}`));
             //console.log(chalk.gray(`  LB Pair TokenY Owed: ${tokenYOwed}`));
-            
+
             console.log(chalk.white("\nManagement:"));
             console.log(chalk.gray(`  Operator: ${operator}`));
             console.log(chalk.gray(`  Last Rebalance: ${new Date(Number(lastRebalance) * 1000).toLocaleString()}`));
-            
+
             // Use shared display function
-            await displayStrategyAllocation(this.strategy!, this.tokenX!, this.tokenY!);
-            
+            await displayStrategyAllocation(this.strategy, this.tokenX!, this.tokenY!);
+
         } catch (error) {
             console.error(chalk.red("Error fetching strategy info:"), error);
         }
@@ -1544,7 +1600,13 @@ class ShadowVaultTester {
 
     async testHarvestRewards() {
         console.log(chalk.blue("\n🌾 Test Harvest Rewards\n"));
-        
+
+        if (this.isEmergencyMode || !this.strategy) {
+            console.log(chalk.red("❌ Harvest rewards not available in emergency mode"));
+            console.log(chalk.yellow("💡 Strategy operations are disabled when vault is in emergency mode"));
+            return;
+        }
+
         await this.executeAction("Harvest Rewards", async () => {
             return this.strategy!.harvestRewards();
         });
@@ -1647,11 +1709,12 @@ async function main() {
         strategyAddress = await vault.getStrategy();
         
         if (strategyAddress === ethers.ZeroAddress) {
-            console.error(chalk.red("\n❌ No strategy set on vault"));
-            process.exit(1);
+            console.log(chalk.yellow("\n⚠️  No strategy set on vault"));
+            console.log(chalk.yellow("This indicates the vault is in Emergency Mode. Continuing with limited functionality."));
+            console.log(chalk.cyan("Available operations: View info, emergency withdraw, token recovery"));
+        } else {
+            console.log(chalk.gray(`Strategy: ${strategyAddress} (derived from vault)`));
         }
-        
-        console.log(chalk.gray(`Strategy: ${strategyAddress} (derived from vault)\n`));
     } catch (error) {
         console.error(chalk.red("\n❌ Failed to get strategy from vault:"), error);
         process.exit(1);
