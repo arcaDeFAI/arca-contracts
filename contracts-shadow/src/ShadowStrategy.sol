@@ -69,7 +69,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
     // Error events for monitoring
     event RewardDiscoveryFailed(address gauge);
-    event NoRewardAvailableToClaim(address[] tokens);
+    event NoRewardAvailableToClaim(address token);
     event XShadowConversionFailed(address token);
     event VaultAccountingUpdateFailed(address vault);
     // Detailed rebalance debugging events
@@ -1182,9 +1182,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             try gauge.earned(rewardTokens[i], _positionTokenId) returns (
                 uint256 amount
             ) {
-                if (amount > 0) {
-                    emit RewardEarned(rewardTokens[i], amount);
-                }
+                emit RewardEarned(rewardTokens[i], amount);
             } catch {
                 // Continue with other tokens even if one fails
             }
@@ -1213,7 +1211,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             {
                 claimSuccess = true; // Declare success even if only one reward was claimed well
             } catch {
-                emit NoRewardAvailableToClaim(rewardTokenTmpArray);
+                emit NoRewardAvailableToClaim(rewardTokenTmpArray[0]);
             }
         }
         
