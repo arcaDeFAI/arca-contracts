@@ -1,0 +1,122 @@
+[
+  {
+    "timestamp": 1759003854814,
+    "action": "Approve Token X",
+    "stateBefore": {
+      "vault": {
+        "balanceX": "0",
+        "balanceY": "0",
+        "totalSupply": "0"
+      },
+      "user": {
+        "shares": "0",
+        "tokenXBalance": "3740319030518563865",
+        "tokenYBalance": "2008188"
+      }
+    },
+    "txHash": "0x6f5273833b3843294c58501267ce9b2fcc7eabf897b0b89cd1709736d29aeca3",
+    "gasUsed": "46678",
+    "stateAfter": {
+      "vault": {
+        "balanceX": "0",
+        "balanceY": "0",
+        "totalSupply": "0"
+      },
+      "user": {
+        "shares": "0",
+        "tokenXBalance": "3740319030518563865",
+        "tokenYBalance": "2008188"
+      }
+    }
+  },
+  {
+    "timestamp": 1759003857131,
+    "action": "Approve Token Y",
+    "stateBefore": {
+      "vault": {
+        "balanceX": "0",
+        "balanceY": "0",
+        "totalSupply": "0"
+      },
+      "user": {
+        "shares": "0",
+        "tokenXBalance": "3740319030518563865",
+        "tokenYBalance": "2008188"
+      }
+    },
+    "txHash": "0x4ce236468622625ec334d1f8fcce1879b03f7ed971c42176f46e5d05a8a5e3af",
+    "gasUsed": "55823",
+    "stateAfter": {
+      "vault": {
+        "balanceX": "0",
+        "balanceY": "0",
+        "totalSupply": "0"
+      },
+      "user": {
+        "shares": "0",
+        "tokenXBalance": "3740319030518563865",
+        "tokenYBalance": "2008188"
+      }
+    }
+  },
+  {
+    "timestamp": 1759003859937,
+    "action": "Deposit",
+    "stateBefore": {
+      "vault": {
+        "balanceX": "0",
+        "balanceY": "0",
+        "totalSupply": "0"
+      },
+      "user": {
+        "shares": "0",
+        "tokenXBalance": "3740319030518563865",
+        "tokenYBalance": "2008188"
+      }
+    },
+    "txHash": "0x72f18a05de951ae50b84a51bc80343c866f2420c9c908b0d35906285e6b0f9f2",
+    "gasUsed": "314073",
+    "stateAfter": {
+      "vault": {
+        "balanceX": "3000000000000000000",
+        "balanceY": "1100000",
+        "totalSupply": "1808282000000"
+      },
+      "user": {
+        "shares": "1808281000000",
+        "tokenXBalance": "740319030518563865",
+        "tokenYBalance": "908188"
+      }
+    }
+  },
+  {
+    "timestamp": 1759003953044,
+    "action": "Rebalance",
+    "stateBefore": {
+      "vault": {
+        "balanceX": "3000000000000000000",
+        "balanceY": "1100000",
+        "totalSupply": "1808282000000"
+      },
+      "user": {
+        "shares": "1808281000000",
+        "tokenXBalance": "740319030518563865",
+        "tokenYBalance": "908188"
+      }
+    },
+    "txHash": "0xef60602cc6f92df95d16775358260ad2351381dc45590d1c56cfa644ed8304e8",
+    "gasUsed": "1598541",
+    "stateAfter": {
+      "vault": {
+        "balanceX": "3000162342224489359",
+        "balanceY": "1099961",
+        "totalSupply": "1808282000000"
+      },
+      "user": {
+        "shares": "1808281000000",
+        "tokenXBalance": "740319030518563865",
+        "tokenYBalance": "908188"
+      }
+    }
+  }
+]
