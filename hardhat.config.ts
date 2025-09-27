@@ -116,11 +116,8 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    // Sonic requires network-specific API keys
-    apiKey: {
-      "sonic-mainnet": process.env.SONIC_SCAN_API_KEY || "placeholder",
-      "sonic-testnet": process.env.SONIC_TESTNET_SCAN_API_KEY || "placeholder",
-    },
+    // V2 API requires single apiKey (not network-specific)
+    apiKey: process.env.SONIC_SCAN_API_KEY || "placeholder",
     customChains: [
       {
         network: "sonic-mainnet",
@@ -134,8 +131,8 @@ const config: HardhatUserConfig = {
         network: "sonic-testnet",
         chainId: 57054,
         urls: {
-          apiURL: "https://api-testnet.sonicscan.org/api",
-          browserURL: "https://testnet.sonicscan.org",
+          apiURL: "https://api.etherscan.io/v2/api",
+          browserURL: "https://testnet.sonicscan.org"
         },
       },
     ],
