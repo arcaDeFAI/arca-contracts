@@ -26,19 +26,16 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",
-    "@nomicfoundation/hardhat-foundry": "^1.1.4",
-    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@openzeppelin/contracts": "^4.8.3",
     "@openzeppelin/contracts-upgradeable": "^4.8.3",
-    "@openzeppelin/hardhat-upgrades": "^3.9.1",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
     "csv-parse": "^6.1.0",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "eslint": "^9.29.0",
-    "hardhat": "^2.24.3",
-    "hardhat-contract-sizer": "^2.10.0",
-    "hardhat-interface-generator": "^0.0.6",
+    "fast-glob": "^3.3.3",
+    "fs-glob": "^1.1.23",
+    "hardhat": "^3.0.6",
     "prettier": "^3.5.3",
     "prettier-plugin-solidity": "^2.0.0",
     "solhint": "^5.1.0",
@@ -214,5 +211,6 @@
   "bugs": {
     "url": "https://github.com/arcaDeFAI/arca-contracts/issues"
   },
-  "homepage": "https://github.com/arcaDeFAI/arca-contracts#readme"
+  "homepage": "https://github.com/arcaDeFAI/arca-contracts#readme",
+  "type": "module"
 }
