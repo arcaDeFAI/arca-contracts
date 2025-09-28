@@ -102,6 +102,11 @@ interface IOracleRewardShadowVault is IMinimalVault, IERC20Upgradeable {
     event ShutdownSubmitted();
     event ShutdownCancelled();
     event PoolUpdated(uint256 timestamp, uint256 accRewardsPerShare);
+    event Harvested(
+        address indexed user,
+        address indexed token,
+        uint256 amount
+    );
 
     // Structs
     struct QueuedWithdrawal {
@@ -238,6 +243,7 @@ interface IOracleRewardShadowVault is IMinimalVault, IERC20Upgradeable {
     function getPendingRewards(
         address user
     ) external view returns (UserReward[] memory rewards);
+    function claim() external;
     function notifyRewardToken(IERC20 token) external;
     function updateAccRewardsPerShare() external;
 

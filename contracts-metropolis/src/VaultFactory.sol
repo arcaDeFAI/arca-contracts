@@ -333,7 +333,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
-     * Check if address is ingored for rewards (e.g strategy, or other addresses)
+     * Check if address is ignored for rewards (e.g strategy, or other addresses)
      * @param _address address
      */
     function isTransferIgnored(address _address) external view returns (bool) {
