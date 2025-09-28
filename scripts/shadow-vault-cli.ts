@@ -1129,16 +1129,20 @@ class ShadowVaultTester {
     async showRewardMenu() {
         console.log(chalk.blue("\n🎁 Reward Management\n"));
         console.log(chalk.gray("1. View Pending Rewards"));
-        console.log(chalk.gray("2. Update Rewards"));
-        console.log(chalk.gray("3. Back"));
-        
+        console.log(chalk.gray("2. Claim Rewards"));
+        console.log(chalk.gray("3. Update Rewards"));
+        console.log(chalk.gray("4. Back"));
+
         const choice = await this.question("\nSelect option: ");
-        
+
         switch (choice) {
             case '1':
                 await this.showPendingRewards();
                 break;
             case '2':
+                await this.claimRewards();
+                break;
+            case '3':
                 await this.updateRewards();
                 break;
         }
@@ -1631,9 +1635,17 @@ class ShadowVaultTester {
         }
     }
 
+    async claimRewards() {
+        console.log(chalk.blue("\n💸 Claim Rewards\n"));
+
+        await this.executeAction("Claim Rewards", async () => {
+            return this.vault!.claim();
+        });
+    }
+
     async updateRewards() {
         console.log(chalk.blue("\n🔄 Update Rewards\n"));
-        
+
         await this.executeAction("Update Rewards", async () => {
             return this.vault!.updateAccRewardsPerShare();
         });
