@@ -851,7 +851,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             } catch {
                 emit NpmSweepTokenFailure(address(_tokenX()), "Unknown");
             }
-
             // Same for TokenY
             try npm.sweepToken(address(_tokenY()), 0, address(this)) {
                 emit NpmSweepTokenSuccess(address(_tokenY()));
@@ -860,7 +859,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             } catch {
                 emit NpmSweepTokenFailure(address(_tokenY()), "Unknown");
             }
-
         } catch Error(string memory reason) {
             emit CollectFailed(_positionTokenId, reason);
             return false; // Exit early if we can't collect
@@ -868,7 +866,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             emit CollectFailed(_positionTokenId, "Unknown");
             return false; // Exit early if we can't collect
         }
-
         // Step 3: Claim rewards if available (defensive, works for pools with/without gauges)
         _harvestRewards();
 
@@ -876,7 +873,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm.positions(
             _positionTokenId
         );
-
 
         // Check that liquidity is 0 and no tokens are owed
         if (liquidity > 0 || tokensOwed0 > 0 || tokensOwed1 > 0) {
@@ -896,8 +892,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         } catch {
             emit NftBurnFailure(_positionTokenId);
             // Don't return here - still reset state even if burn fails
+            // Why? Because the burn can sometimes fail even if there is just a micro amount of money left (dust)
         }
-
         // Step 6: Reset state
         _positionTokenId = 0;
         _currentTickLower = 0;
@@ -1092,27 +1088,15 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 duration = duration > 1 days ? 1 days : duration;
 
                 // Calculate and transfer fees
-                uint256 feeX = (totalBalanceX *
-                    annualFee *
-                    duration +
-                    _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
-                uint256 feeY = (totalBalanceY *
-                    annualFee *
-                    duration +
-                    _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
+                uint256 feeX = (totalBalanceX * annualFee * duration + _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
+                uint256 feeY = (totalBalanceY * annualFee * duration + _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
 
                 if (feeX > 0) {
-                    queuedAmountX = queuedAmountX == 0
-                        ? 0
-                        : queuedAmountX -
-                            feeX.mulDivRoundUp(queuedAmountX, totalBalanceX);
+                    queuedAmountX = queuedAmountX == 0 ? 0 : queuedAmountX - feeX.mulDivRoundUp(queuedAmountX, totalBalanceX);
                     _tokenX().safeTransfer(feeRecipient, feeX);
                 }
                 if (feeY > 0) {
-                    queuedAmountY = queuedAmountY == 0
-                        ? 0
-                        : queuedAmountY -
-                            feeY.mulDivRoundUp(queuedAmountY, totalBalanceY);
+                    queuedAmountY = queuedAmountY == 0 ? 0 : queuedAmountY - feeY.mulDivRoundUp(queuedAmountY, totalBalanceY);
                     _tokenY().safeTransfer(feeRecipient, feeY);
                 }
 
@@ -1177,57 +1161,52 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         }
         if (rewardTokens.length == 0) return;
 
+        INonfungiblePositionManager npm = INonfungiblePositionManager(
+            _factory.getShadowNonfungiblePositionManager()
+        );
+        address[] memory rewardTokenTmpArray = new address[](1);
+
         // Check earned amounts before claiming
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             try gauge.earned(rewardTokens[i], _positionTokenId) returns (
                 uint256 amount
             ) {
                 emit RewardEarned(rewardTokens[i], amount);
+
+                if (amount > 0) {
+                    // Track balances before claiming
+                    uint256 balanceBefore = _getTokenBalanceSafely(rewardTokens[i]);
+
+                    // Try each reward token individually, so that even if one fails, we can claim the others
+                    rewardTokenTmpArray[0] = rewardTokens[i];
+
+                    // Claim the rewards using npm (NonfungiblePositionManager)
+                    try npm.getReward(_positionTokenId, rewardTokenTmpArray) {
+
+                        // The npm claimed the reward on our behalf. Now ask it to send it to us (sweep).
+                        try npm.sweepToken(rewardTokens[i], 0, address(this)) {
+                            emit NpmSweepTokenSuccess(rewardTokens[i]);
+                        } catch Error(string memory reason) {
+                            emit NpmSweepTokenFailure(address(rewardTokens[i]), reason);
+                        } catch {
+                            emit NpmSweepTokenFailure(rewardTokens[i], "Unknown reward sweep failure");
+                        }
+
+                        // Process claimed rewards
+                        uint256 balanceAfter = _getTokenBalanceSafely(rewardTokens[i]);
+                        uint256 received = balanceAfter > balanceBefore ? balanceAfter - balanceBefore : 0;
+                        if (received > 0) {
+                            emit RewardClaimed(rewardTokens[i], received);
+                            // Forward to vault with defensive programming
+                            _forwardRewardToVault(IERC20(rewardTokens[i]), received);
+                        }
+
+                    } catch {
+                        emit NoRewardAvailableToClaim(rewardTokens[i]);
+                    }
+                }
             } catch {
                 // Continue with other tokens even if one fails
-            }
-        }
-
-        // Track balances before claiming
-        uint256[] memory balancesBefore = new uint256[](rewardTokens.length);
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            balancesBefore[i] = _getTokenBalanceSafely(rewardTokens[i]);
-        }
-
-        bool claimSuccess = false;
-
-        INonfungiblePositionManager npm = INonfungiblePositionManager(
-            _factory.getShadowNonfungiblePositionManager()
-        );
-
-        address[] memory rewardTokenTmpArray = new address[](1);
-
-        // Claim the rewards using npm (NonfungiblePositionManager)
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            // Try each reward token individually, so that even if one fails, we can claim the others
-            rewardTokenTmpArray[0] = rewardTokens[i];
-            
-            try npm.getReward(_positionTokenId, rewardTokenTmpArray)
-            {
-                claimSuccess = true; // Declare success even if only one reward was claimed well
-            } catch {
-                emit NoRewardAvailableToClaim(rewardTokenTmpArray[0]);
-            }
-        }
-        
-        if (!claimSuccess) return;
-
-        // Process claimed rewards
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            uint256 balanceAfter = _getTokenBalanceSafely(rewardTokens[i]);
-            uint256 received = balanceAfter > balancesBefore[i]
-                ? balanceAfter - balancesBefore[i]
-                : 0;
-
-            if (received > 0) {
-                emit RewardClaimed(rewardTokens[i], received);
-                // Forward to vault with defensive programming
-                _forwardRewardToVault(IERC20(rewardTokens[i]), received);
             }
         }
     }
