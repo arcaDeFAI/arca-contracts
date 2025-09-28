@@ -1088,15 +1088,27 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 duration = duration > 1 days ? 1 days : duration;
 
                 // Calculate and transfer fees
-                uint256 feeX = (totalBalanceX * annualFee * duration + _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
-                uint256 feeY = (totalBalanceY * annualFee * duration + _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
+                uint256 feeX = (totalBalanceX *
+                    annualFee *
+                    duration +
+                    _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
+                uint256 feeY = (totalBalanceY *
+                    annualFee *
+                    duration +
+                    _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
 
                 if (feeX > 0) {
-                    queuedAmountX = queuedAmountX == 0 ? 0 : queuedAmountX - feeX.mulDivRoundUp(queuedAmountX, totalBalanceX);
+                    queuedAmountX = queuedAmountX == 0
+                        ? 0
+                        : queuedAmountX -
+                            feeX.mulDivRoundUp(queuedAmountX, totalBalanceX);
                     _tokenX().safeTransfer(feeRecipient, feeX);
                 }
                 if (feeY > 0) {
-                    queuedAmountY = queuedAmountY == 0 ? 0 : queuedAmountY - feeY.mulDivRoundUp(queuedAmountY, totalBalanceY);
+                    queuedAmountY = queuedAmountY == 0
+                        ? 0
+                        : queuedAmountY -
+                            feeY.mulDivRoundUp(queuedAmountY, totalBalanceY);
                     _tokenY().safeTransfer(feeRecipient, feeY);
                 }
 
@@ -1175,32 +1187,44 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
                 if (amount > 0) {
                     // Track balances before claiming
-                    uint256 balanceBefore = _getTokenBalanceSafely(rewardTokens[i]);
+                    uint256 balanceBefore = _getTokenBalanceSafely(
+                        rewardTokens[i]
+                    );
 
                     // Try each reward token individually, so that even if one fails, we can claim the others
                     rewardTokenTmpArray[0] = rewardTokens[i];
 
                     // Claim the rewards using npm (NonfungiblePositionManager)
                     try npm.getReward(_positionTokenId, rewardTokenTmpArray) {
-
                         // The npm claimed the reward on our behalf. Now ask it to send it to us (sweep).
                         try npm.sweepToken(rewardTokens[i], 0, address(this)) {
                             emit NpmSweepTokenSuccess(rewardTokens[i]);
                         } catch Error(string memory reason) {
-                            emit NpmSweepTokenFailure(address(rewardTokens[i]), reason);
+                            emit NpmSweepTokenFailure(
+                                address(rewardTokens[i]),
+                                reason
+                            );
                         } catch {
-                            emit NpmSweepTokenFailure(rewardTokens[i], "Unknown reward sweep failure");
+                            emit NpmSweepTokenFailure(
+                                rewardTokens[i],
+                                "Unknown reward sweep failure"
+                            );
                         }
-
                         // Process claimed rewards
-                        uint256 balanceAfter = _getTokenBalanceSafely(rewardTokens[i]);
-                        uint256 received = balanceAfter > balanceBefore ? balanceAfter - balanceBefore : 0;
+                        uint256 balanceAfter = _getTokenBalanceSafely(
+                            rewardTokens[i]
+                        );
+                        uint256 received = balanceAfter > balanceBefore
+                            ? balanceAfter - balanceBefore
+                            : 0;
                         if (received > 0) {
                             emit RewardClaimed(rewardTokens[i], received);
                             // Forward to vault with defensive programming
-                            _forwardRewardToVault(IERC20(rewardTokens[i]), received);
+                            _forwardRewardToVault(
+                                IERC20(rewardTokens[i]),
+                                received
+                            );
                         }
-
                     } catch {
                         emit NoRewardAvailableToClaim(rewardTokens[i]);
                     }

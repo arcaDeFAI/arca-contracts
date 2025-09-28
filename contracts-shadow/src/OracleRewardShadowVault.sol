@@ -633,7 +633,6 @@ contract OracleRewardShadowVault is
         if (amountY > 0) _tokenY().safeTransfer(recipient, amountY);
     }
 
-
     function redeemQueuedWithdrawalNative(
         uint256 round,
         address recipient
@@ -649,6 +648,14 @@ contract OracleRewardShadowVault is
 
         if (amountX > 0) _transferTokenOrNative(_tokenX(), recipient, amountX);
         if (amountY > 0) _transferTokenOrNative(_tokenY(), recipient, amountY);
+    }
+
+    /**
+     * @dev Claim rewards of the sender.
+     */
+    function claim() external nonReentrant {
+        _updatePool();
+        _modifyUser(msg.sender, 0);
     }
 
     /**
@@ -712,8 +719,12 @@ contract OracleRewardShadowVault is
         uint256 totalAmountY = _totalAmountY;
 
         // Get the amount of tokens received by the vault after executing the withdrawals.
-        uint256 receivedX = _tokenX().balanceOf(address(this)) - totalAmountX - _rewardX();
-        uint256 receivedY = _tokenY().balanceOf(address(this)) - totalAmountY - _rewardY();
+        uint256 receivedX = _tokenX().balanceOf(address(this)) -
+            totalAmountX -
+            _rewardX();
+        uint256 receivedY = _tokenY().balanceOf(address(this)) -
+            totalAmountY -
+            _rewardY();
 
         // Update the total amounts of tokens in the vault.
         _totalAmountX = totalAmountX + receivedX;
@@ -1197,8 +1208,11 @@ contract OracleRewardShadowVault is
     function _harvest(
         address user,
         Reward storage reward
-    ) internal view returns (uint256) {
-        return _calcPending(user, reward, reward.accRewardsPerShare);
+    ) internal returns (uint256 payoutAmount) {
+        payoutAmount = _calcPending(user, reward, reward.accRewardsPerShare);
+        reward.lastRewardBalance = reward.lastRewardBalance - payoutAmount;
+
+        emit Harvested(user, address(reward.token), payoutAmount);
     }
 
     function _updatePool() internal virtual {
@@ -1267,32 +1281,65 @@ contract OracleRewardShadowVault is
     }
 
     function _rewardX() internal view virtual returns (uint256) {
-        uint256 total = 0;
+        uint256 rewardX = 0;
         for (uint256 i = 0; i < cachedRewardTokens.length; i++) {
-            if (address(cachedRewardTokens[i].token) == address(_tokenX())) {
-                uint256 balance = _tokenX().balanceOf(address(this));
-                uint256 nonReward = _totalAmountX;
-                total = balance > nonReward ? balance - nonReward : 0;
-                break;
+            Reward storage reward = cachedRewardTokens[i];
+            if (address(reward.token) == address(_tokenX())) {
+                rewardX += reward.lastRewardBalance;
             }
         }
-        return total;
+        return rewardX;
     }
 
     function _rewardY() internal view virtual returns (uint256) {
-        uint256 total = 0;
+        uint256 rewardY = 0;
         for (uint256 i = 0; i < cachedRewardTokens.length; i++) {
-            if (address(cachedRewardTokens[i].token) == address(_tokenY())) {
-                uint256 balance = _tokenY().balanceOf(address(this));
-                uint256 nonReward = _totalAmountY;
-                total = balance > nonReward ? balance - nonReward : 0;
-                break;
+            Reward storage reward = cachedRewardTokens[i];
+            if (address(reward.token) == address(_tokenY())) {
+                rewardY += reward.lastRewardBalance;
             }
         }
-        return total;
+        return rewardY;
     }
 
     function _beforeEmergencyMode() internal virtual {
         // Can be overridden by inheriting contracts
+    }
+
+    /**
+     * @dev claim rewards of sender before transfering it to recipient
+     */
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal override {
+        if (!_isIgnored(recipient) || !_isIgnored(sender)) _updatePool();
+
+        // we dont want to modify if the transfer is between user and strategy and vice versa
+        // otherwise the accounting will be wrong as we modify the shares on redeem
+        if (
+            sender == address(getStrategy()) ||
+            recipient == address(getStrategy())
+        ) {
+            super._transfer(sender, recipient, amount);
+            return;
+        }
+
+        if (!_isIgnored(recipient)) _modifyUser(recipient, int256(amount));
+        if (!_isIgnored(sender)) _modifyUser(sender, -int256(amount));
+
+        super._transfer(sender, recipient, amount);
+    }
+
+    /**
+     * Check if address is ignored for rewards (e.g strategy, or other addresses)
+     * @param _address address
+     */
+    function _isIgnored(address _address) internal view returns (bool) {
+        if (_address == address(getStrategy())) {
+            return true;
+        }
+        return _factory.isTransferIgnored(_address);
     }
 }

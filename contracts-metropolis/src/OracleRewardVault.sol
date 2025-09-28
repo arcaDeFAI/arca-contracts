@@ -302,7 +302,7 @@ contract OracleRewardVault is OracleVault, IOracleRewardVault {
     }
 
     /**
-     * Check if address is ingored for rewards (e.g strategy, or other addresses)
+     * Check if address is ignored for rewards (e.g strategy, or other addresses)
      * @param _address address
      */
     function _isIgnored(address _address) internal view returns (bool) {
