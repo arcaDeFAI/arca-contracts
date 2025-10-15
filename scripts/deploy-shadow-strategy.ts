@@ -294,7 +294,8 @@ async function main() {
           errorMessage.includes("already been verified")) {
         console.log(`✅ Shadow Strategy Implementation is already verified`);
       } else {
-        throw error;
+        console.log(`An error occurred during contract verification`);
+        console.log(error);
       }
     }
     
