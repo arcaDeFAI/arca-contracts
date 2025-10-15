@@ -1,10 +1,7 @@
 'use client';
 
 import { useReadContract, useWriteContract } from 'wagmi';
-import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
-import { SHADOW_STRAT_ABI } from '@/abi/ShadowStrat.abi';
-import { VOTER_CLAIM_ABI } from '@/abi/VoterClaim.abi';
-import { SHADOW_REWARDS_ABI } from '@/abi/ShadowRewards.abi';
+import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, VOTER_CLAIM_ABI, SHADOW_REWARDS_ABI } from '@/lib/typechain';
 import { CONTRACTS } from '../lib/contracts';
 
 interface VaultConfig {
@@ -76,7 +73,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
   // Get reward status for Shadow vaults (needed for gauge address and claim logic)
   const { data: shadowRewardStatus } = useReadContract({
     address: config.stratAddress as `0x${string}`,
-    abi: SHADOW_STRAT_ABI,
+    abi: SHADOW_STRAT_ABI as any,
     functionName: 'getRewardStatus',
     query: {
       enabled: !!config.stratAddress && isShadowVault,
@@ -94,10 +91,10 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       xShadowEarned: xShadowEarned?.toString(),
       shadowEarned: shadowEarned?.toString(),
       shadowRewardStatus: shadowRewardStatus ? {
-        tokens: shadowRewardStatus[0],
-        earned: shadowRewardStatus[1]?.map((e: bigint) => e.toString()),
-        gauge: shadowRewardStatus[2],
-        hasActivePosition: shadowRewardStatus[3]
+        tokens: (shadowRewardStatus as any)[0],
+        earned: (shadowRewardStatus as any)[1]?.map((e: bigint) => e.toString()),
+        gauge: (shadowRewardStatus as any)[2],
+        hasActivePosition: (shadowRewardStatus as any)[3]
       } : 'no data',
       hasActivePosition: !!shadowTokenId,
     });
