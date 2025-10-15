@@ -1177,6 +1177,7 @@ contract OracleRewardShadowVault is
         uint256 lastRewardBalance = reward.lastRewardBalance;
         calcAccRewardsPerShare = reward.accRewardsPerShare;
 
+        // recompute accRewardsPerShare if not up to date
         if (
             reward.lastRewardBalance != rewardBalance && _phantomShareSupply > 0
         ) {
