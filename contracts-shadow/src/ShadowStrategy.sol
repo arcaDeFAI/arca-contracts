@@ -1172,10 +1172,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             return;
         }
         if (rewardTokens.length == 0) return;
-
-        INonfungiblePositionManager npm = INonfungiblePositionManager(
-            _factory.getShadowNonfungiblePositionManager()
-        );
+        
         address[] memory rewardTokenTmpArray = new address[](1);
 
         // Check earned amounts before claiming
@@ -1183,9 +1180,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             try gauge.earned(rewardTokens[i], _positionTokenId) returns (
                 uint256 amount
             ) {
-                emit RewardEarned(rewardTokens[i], amount);
-
                 if (amount > 0) {
+                    emit RewardEarned(rewardTokens[i], amount);
+
                     // Track balances before claiming
                     uint256 balanceBefore = _getTokenBalanceSafely(
                         rewardTokens[i]
@@ -1195,21 +1192,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                     rewardTokenTmpArray[0] = rewardTokens[i];
 
                     // Claim the rewards using npm (NonfungiblePositionManager)
-                    try npm.getReward(_positionTokenId, rewardTokenTmpArray) {
-                        // The npm claimed the reward on our behalf. Now ask it to send it to us (sweep).
-                        try npm.sweepToken(rewardTokens[i], 0, address(this)) {
-                            emit NpmSweepTokenSuccess(rewardTokens[i]);
-                        } catch Error(string memory reason) {
-                            emit NpmSweepTokenFailure(
-                                address(rewardTokens[i]),
-                                reason
-                            );
-                        } catch {
-                            emit NpmSweepTokenFailure(
-                                rewardTokens[i],
-                                "Unknown reward sweep failure"
-                            );
-                        }
+                    try gauge.getReward(_positionTokenId, rewardTokenTmpArray) {
                         // Process claimed rewards
                         uint256 balanceAfter = _getTokenBalanceSafely(
                             rewardTokens[i]
@@ -1275,12 +1258,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     function _forwardRewardToVault(IERC20 token, uint256 amount) internal {
         address vault = _vault();
 
-        // Notify vault about the reward token (defensive)
-        try IOracleRewardVault(vault).notifyRewardToken(token) {
-            // Success
-        } catch {
-            // Continue anyway - vault might already know about this token
-        }
+        // Notify vault about the reward token
+        IOracleRewardVault(vault).notifyRewardToken(token);
+
         // Transfer to vault (defensive)
         try token.transfer(vault, amount) returns (bool success) {
             if (success) {
