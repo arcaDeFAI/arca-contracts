@@ -50,3 +50,16 @@ export const CL_POOL_ABI = IRamsesV3Pool__factory.abi
 export const LB_BOOK_ABI = ILBPair__factory.abi
 export const SHADOW_REWARDS_ABI = IMinimalGauge__factory.abi
 export const VOTER_CLAIM_ABI = IMinimalVoter__factory.abi
+
+// Type definitions for better type safety
+export type ShadowRewardStatus = {
+  tokens: string[];
+  earned: bigint[];
+  gaugeAddress: string;
+  hasActivePosition: boolean;
+}
+
+export type UserRewardStructOutput = {
+  token: string;
+  pendingRewards: bigint;
+}

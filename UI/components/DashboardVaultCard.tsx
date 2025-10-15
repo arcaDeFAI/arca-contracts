@@ -7,6 +7,7 @@ import { useVaultData } from '@/hooks/useVaultData';
 import { useTokenPrices, useAPYCalculation } from '@/hooks/useAPYCalculation';
 import { formatUSD, formatPercentage } from '@/lib/utils';
 import { CONTRACTS } from '@/lib/contracts';
+import { type UserRewardStructOutput } from '@/lib/typechain';
 
 interface DashboardVaultCardProps {
   vaultAddress: string;
@@ -139,10 +140,10 @@ export function DashboardVaultCard({
     }
   };
 
-  const formatMetroAmount = (rewards: any) => {
+  const formatMetroAmount = (rewards: UserRewardStructOutput[] | undefined) => {
     if (!rewards || !Array.isArray(rewards) || rewards.length === 0) return '0';
     // Sum up all pending rewards from the array
-    const totalRewards = rewards.reduce((sum: bigint, reward: any) => {
+    const totalRewards = rewards.reduce((sum: bigint, reward: UserRewardStructOutput) => {
       return sum + (reward.pendingRewards || 0n);
     }, 0n);
     return parseFloat(formatUnits(totalRewards, 18)).toFixed(4);
