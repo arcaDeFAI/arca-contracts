@@ -44,9 +44,9 @@ node_modules
 /cache
 /artifacts
 
-# TypeChain files
-/typechain
-/typechain-types
+# TypeChain files: no longer ignored because it's used in amplify pipeline, and we don't want to re-compile everything there
+#/typechain
+#/typechain-types
 
 # solidity-coverage files
 /coverage
