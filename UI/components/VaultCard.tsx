@@ -9,7 +9,7 @@ import { useTokenPrices, useAPYCalculation } from '@/hooks/useAPYCalculation';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { CONTRACTS } from '@/lib/contracts';
 import { formatTokenAmount, formatUSD, formatPercentage, formatShares } from '@/lib/utils';
-import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
+import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
 

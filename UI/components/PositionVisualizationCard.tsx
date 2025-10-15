@@ -1,10 +1,7 @@
 'use client'
 
 import { useReadContract } from 'wagmi'
-import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi'
-import { SHADOW_STRAT_ABI } from '@/abi/ShadowStrat.abi'
-import { LB_BOOK_ABI } from '@/abi/LBBook.abi'
-import { CL_POOL_ABI } from '@/abi/CLPool.abi'
+import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain'
 
 interface PositionVisualizationCardProps {
   vaultAddress: string

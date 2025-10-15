@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from 'wagmi';
-import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
+import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { formatTokenAmount, parseTokenAmount, formatShares, parseShares } from '@/lib/utils';
 import { formatUnits } from 'viem';
 import { XMarkIcon } from '@heroicons/react/24/outline';

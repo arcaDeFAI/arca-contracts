@@ -7,8 +7,7 @@ import { VaultCard } from '@/components/VaultCard';
 import { formatUSD } from '@/lib/utils';
 import { useVaultData } from '@/hooks/useVaultData';
 import { useSonicPrice } from '@/hooks/useSonicPrice';
-import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
-import { METRO_STRAT_ABI } from '@/abi/MetroStrat.abi';
+import { METRO_VAULT_ABI, METRO_STRAT_ABI } from '@/lib/typechain';
 
 // Vault configurations with real contract addresses
 const VAULT_CONFIGS = [

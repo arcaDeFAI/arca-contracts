@@ -1,8 +1,7 @@
 'use client';
 
 import { useReadContract, useReadContracts } from 'wagmi';
-import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
-import { METRO_STRAT_ABI } from '@/abi/MetroStrat.abi';
+import { METRO_VAULT_ABI, METRO_STRAT_ABI } from '@/lib/typechain';
 
 interface VaultConfig {
   vaultAddress: string;
