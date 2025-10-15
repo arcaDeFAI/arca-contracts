@@ -1172,7 +1172,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             return;
         }
         if (rewardTokens.length == 0) return;
-        
+
         address[] memory rewardTokenTmpArray = new address[](1);
 
         // Check earned amounts before claiming
