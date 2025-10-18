@@ -37,13 +37,22 @@ import {
     parseTokenAmount,
     parseShareAmount,
     clearReadlineBuffer,
-    promptAndParseAmount,
     promptWithDefault,
     checkEmergencyMode,
     validateEmergencyWithdraw,
     displayEmergencyStatus,
     estimateEmergencyWithdrawal
 } from "./test-vault-utils";
+import {
+    discoverTokensInVault,
+    selectToken,
+    getRecoveryAmount,
+    getRecipientAddress,
+    displayRecoveryPreview,
+    validateRecovery,
+    executeRecovery,
+    type TokenInfo
+} from "./vault-recovery-utils";
 import type { ContractTransactionResponse } from "ethers";
 
 class MetropolisVaultTester {
@@ -59,6 +68,7 @@ class MetropolisVaultTester {
     private tokenY?: IERC20MetadataUpgradeable;
     private signer: SignerWithAddress;
     private resultManager: TestResultManager;
+    private isEmergencyMode: boolean = false;
 
     constructor(config: TestConfig) {
         this.config = config;
@@ -80,8 +90,15 @@ class MetropolisVaultTester {
             console.log(chalk.gray(`✓ Vault loaded at: ${await this.vault.getAddress()}`));
 
             console.log(chalk.gray("Loading strategy contract..."));
-            this.strategy = await ethers.getContractAt("MetropolisStrategy", this.config.strategyAddress, this.signer);
-            console.log(chalk.gray(`✓ Strategy loaded at: ${await this.strategy.getAddress()}`));
+            if (this.config.strategyAddress && this.config.strategyAddress !== ethers.ZeroAddress) {
+                this.strategy = await ethers.getContractAt("MetropolisStrategy", this.config.strategyAddress, this.signer);
+                console.log(chalk.gray(`✓ Strategy loaded at: ${await this.strategy.getAddress()}`));
+                this.isEmergencyMode = false;
+            } else {
+                console.log(chalk.yellow(`⚠️  Strategy is null address - vault is in emergency mode`));
+                this.strategy = undefined;
+                this.isEmergencyMode = true;
+            }
             
             // Get associated contracts
             console.log(chalk.gray("Getting pair address..."));
@@ -238,6 +255,8 @@ class MetropolisVaultTester {
             const [balanceX, balanceY] = await this.vault!.getBalances();
             const activeId = await this.pair!.getActiveId();
             const binStep = await this.pair!.getBinStep();
+            const rawBalanceX = await this.checkTokenBalance(await this.vault!.getTokenX(), await this.vault!.getAddress());
+            const rawBalanceY = await this.checkTokenBalance(await this.vault!.getTokenY(), await this.vault!.getAddress());
             
             console.log(chalk.white("\nState:"));
             console.log(chalk.gray(`  Deposits Paused: ${isPaused}`));
@@ -245,6 +264,8 @@ class MetropolisVaultTester {
             console.log(chalk.gray(`  Total Supply: ${ethers.formatUnits(totalSupply, decimals)}`));
             console.log(chalk.gray(`  Balance X: ${await formatters.formatBalance(balanceX, this.tokenX!)}`));
             console.log(chalk.gray(`  Balance Y: ${await formatters.formatBalance(balanceY, this.tokenY!)}`));
+            console.log(chalk.gray(`  Raw Balance X: ${await formatters.formatBalance(rawBalanceX, this.tokenX!)}`));
+            console.log(chalk.gray(`  Raw Balance Y: ${await formatters.formatBalance(rawBalanceY, this.tokenY!)}`));
             console.log(chalk.gray(`  Active Bin ID: ${activeId.toString()}`));
             console.log(chalk.gray(`  Bin Step: ${binStep.toString()}`));
             
@@ -342,22 +363,29 @@ class MetropolisVaultTester {
             if (strategyAddress !== ethers.ZeroAddress) {
                 const [defaultOp, operator] = await this.vault!.getOperators();
                 const aumFee = await this.vault!.getAumAnnualFee();
-                
+
                 console.log(chalk.white("\nStrategy:"));
                 console.log(chalk.gray(`  Address: ${strategyAddress}`));
                 console.log(chalk.gray(`  Default Operator: ${defaultOp}`));
                 console.log(chalk.gray(`  Operator: ${operator}`));
                 console.log(chalk.gray(`  AUM Annual Fee: ${aumFee.toString()} basis points`));
-                
+
                 // Get bin range from strategy
-                try {
-                    const [low, upper] = await this.strategy!.getRange();
-                    const maxRange = await this.strategy!.getMaxRange();
-                    console.log(chalk.gray(`  Current Bin Range: [${low}, ${upper}]`));
-                    console.log(chalk.gray(`  Max Range Width: ${maxRange}`));
-                } catch (e) {
-                    console.log(chalk.gray(`  Bin Range: Not set`));
+                if (this.strategy) {
+                    try {
+                        const [low, upper] = await this.strategy.getRange();
+                        const maxRange = await this.strategy.getMaxRange();
+                        console.log(chalk.gray(`  Current Bin Range: [${low}, ${upper}]`));
+                        console.log(chalk.gray(`  Max Range Width: ${maxRange}`));
+                    } catch (e) {
+                        console.log(chalk.gray(`  Bin Range: Not set`));
+                    }
                 }
+            } else {
+                console.log(chalk.red("\n🚨 Emergency Mode:"));
+                console.log(chalk.red(`  Strategy: ${strategyAddress} (null)`));
+                console.log(chalk.red(`  Status: Vault is in emergency mode`));
+                console.log(chalk.red(`  Available: Emergency withdraw and token recovery only`));
             }
             
             // Queue info
@@ -685,15 +713,21 @@ class MetropolisVaultTester {
 
     async testRebalance() {
         console.log(chalk.blue("\n🔄 Test Rebalance\n"));
-        
+
+        if (this.isEmergencyMode || !this.strategy) {
+            console.log(chalk.red("❌ Rebalance not available in emergency mode"));
+            console.log(chalk.yellow("💡 Strategy operations are disabled when vault is in emergency mode"));
+            return;
+        }
+
         // Show current state
         const activeId  = await this.pair!.getActiveId();
         console.log(chalk.gray(`Current Active Bin ID: ${activeId}`));
-        
+
         try {
-            const [currentLow, currentUpper] = await this.strategy!.getRange();
+            const [currentLow, currentUpper] = await this.strategy.getRange();
             console.log(chalk.gray(`Current Bin Range: [${currentLow}, ${currentUpper}]`));
-            
+
             // Show current range visualization
             displayVisualRange(Number(currentLow), Number(currentUpper), Number(activeId), "bin");
         } catch (e) {
@@ -705,7 +739,7 @@ class MetropolisVaultTester {
         const defaultRange = calculateDefaultBinRange(currentActiveBin, 51); // 51 bins total
         
         // Get current strategy balances for amount defaults
-        const [idleX, idleY] = await this.strategy!.getIdleBalances();
+        const [idleX, idleY] = await this.strategy.getIdleBalances();
         const defaultAmounts = calculateOptimalDepositAmounts(idleX, idleY, 10);
         
         // Get user inputs with defaults
@@ -791,19 +825,23 @@ class MetropolisVaultTester {
             distributions: distributions
         };
         
-        const tx = await this.strategy!.rebalance(
-            params.newLower,
-            params.newUpper,
-            params.desiredActiveId,
-            params.slippageActiveId,
-            amountX,
-            amountY,
-            distributions
-        );
+        try {
+            const tx = await this.strategy!.rebalance(
+                params.newLower,
+                params.newUpper,
+                params.desiredActiveId,
+                params.slippageActiveId,
+                amountX,
+                amountY,
+                distributions
+            );
 
-        const receipt = await tx.wait();
-        console.log(tx.hash);
-        console.log(receipt?.toJSON())
+            const receipt = await tx.wait();
+            console.log(tx.hash);
+            console.log(receipt?.toJSON())
+        } catch (error) {
+            console.error(chalk.red("Error during rebalance:"), error);
+        }
     }
 
     async exportResults() {
@@ -816,16 +854,22 @@ class MetropolisVaultTester {
 
     async showMainMenu() {
         console.log(chalk.blue("\n=== Metropolis Vault Interactive Tester ===\n"));
+
+        if (this.isEmergencyMode) {
+            console.log(chalk.red("🚨 EMERGENCY MODE ACTIVE 🚨"));
+            console.log(chalk.yellow("Strategy operations are disabled. Limited functionality available.\n"));
+        }
+
         console.log(chalk.gray("1. View Vault Information"));
         console.log(chalk.gray("2. View User Information"));
         console.log(chalk.gray("3. Deposit Operations"));
         console.log(chalk.gray("4. Withdrawal Operations"));
-        console.log(chalk.gray("5. Strategy Management"));
+        console.log(this.isEmergencyMode ? chalk.gray("5. Strategy Management (DISABLED)") : chalk.gray("5. Strategy Management"));
         console.log(chalk.gray("6. Reward Management"));
         console.log(chalk.gray("7. Admin Functions"));
         console.log(chalk.gray("8. Export Results"));
         console.log(chalk.gray("0. Exit"));
-        
+
         return await this.question("\nSelect option: ");
     }
 
@@ -939,14 +983,22 @@ class MetropolisVaultTester {
 
     async showStrategyMenu() {
         console.log(chalk.blue("\n🔧 Strategy Management\n"));
+
+        if (this.isEmergencyMode) {
+            console.log(chalk.red("🚨 Emergency Mode - Strategy operations disabled"));
+            console.log(chalk.gray("Strategy operations are not available when vault is in emergency mode."));
+            console.log(chalk.gray("Available operations: Emergency withdraw, token recovery\n"));
+            return;
+        }
+
         console.log(chalk.gray("1. View Strategy Info"));
         console.log(chalk.gray("2. Rebalance"));
         console.log(chalk.gray("3. Harvest Rewards"));
         console.log(chalk.gray("4. Set Operator"));
         console.log(chalk.gray("5. Back"));
-        
+
         const choice = await this.question("\nSelect option: ");
-        
+
         switch (choice) {
             case '1':
                 await this.showStrategyInfo();
@@ -1012,8 +1064,7 @@ class MetropolisVaultTester {
                 await this.testSetEmergencyMode();
                 break;
             case '5':
-                // TODO: Recover ERC20
-                console.log(chalk.yellow("Not implemented yet"));
+                await this.testRecoverERC20();
                 break;
         }
     }
@@ -1120,6 +1171,220 @@ class MetropolisVaultTester {
         }
     }
 
+    async testRecoverERC20() {
+        console.log(chalk.blue("\n💰 Recover ERC20 Tokens\n"));
+
+        // Check VaultFactory permissions first
+        if (!this.vaultFactory) {
+            console.log(chalk.red("❌ VaultFactory not loaded. Cannot perform recovery."));
+            return;
+        }
+
+        // Show recovery options
+        console.log(chalk.blue("\n🔧 Recovery Options:\n"));
+        console.log(chalk.gray("1. Discover and recover tokens"));
+        console.log(chalk.gray("2. Recover specific token"));
+        console.log(chalk.gray("3. Back"));
+
+        const choice = await this.question("\nSelect option: ");
+
+        switch (choice) {
+            case '1':
+                await this.discoverAndRecoverTokens();
+                break;
+            case '2':
+                await this.recoverSpecificToken();
+                break;
+            case '3':
+                return;
+            default:
+                if (choice.trim() !== '') {
+                    console.log(chalk.red("Invalid option"));
+                }
+        }
+    }
+
+    async discoverAndRecoverTokens() {
+        console.log(chalk.blue("\n🔍 Discover & Recover Tokens\n"));
+
+        try {
+            // Get vault and token addresses
+            const vaultAddress = await this.vault!.getAddress();
+            const tokenXAddress = await this.vault!.getTokenX();
+            const tokenYAddress = await this.vault!.getTokenY();
+
+            // Discover tokens
+            const tokens = await discoverTokensInVault(
+                vaultAddress,
+                tokenXAddress,
+                tokenYAddress,
+                this.signer
+            );
+
+            if (tokens.length === 0) {
+                console.log(chalk.yellow("📭 No tokens with balances found in vault"));
+                return;
+            }
+
+            // Show recovery loop
+            let recovering = true;
+            while (recovering) {
+                const selectedToken = await selectToken(tokens, (prompt) => this.question(prompt));
+
+                if (!selectedToken) {
+                    recovering = false;
+                    break;
+                }
+
+                const success = await this.performTokenRecovery(selectedToken);
+
+                if (success) {
+                    // Remove recovered token from list if fully recovered
+                    const updatedBalance = await this.checkTokenBalance(selectedToken.address, await this.vault!.getAddress());
+                    if (updatedBalance === 0n) {
+                        const index = tokens.indexOf(selectedToken);
+                        tokens.splice(index, 1);
+                        console.log(chalk.green(`✅ Token ${selectedToken.symbol} fully recovered and removed from list`));
+                    } else {
+                        // Update balance
+                        selectedToken.balance = updatedBalance;
+                        selectedToken.formattedBalance = ethers.formatUnits(updatedBalance, selectedToken.decimals);
+                    }
+                }
+
+                if (tokens.length === 0) {
+                    console.log(chalk.green("🎉 All tokens recovered!"));
+                    recovering = false;
+                } else {
+                    const continueRecovery = await this.confirm("\nRecover more tokens?");
+                    recovering = continueRecovery;
+                }
+            }
+
+        } catch (error) {
+            console.error(chalk.red("❌ Error during token discovery:"), error);
+        }
+    }
+
+    async recoverSpecificToken() {
+        console.log(chalk.blue("\n💰 Recover Specific Token\n"));
+
+        const tokenAddress = await this.question("Enter token address: ");
+
+        if (!ethers.isAddress(tokenAddress)) {
+            console.log(chalk.red("❌ Invalid token address"));
+            return;
+        }
+
+        try {
+            const vaultAddress = await this.vault!.getAddress();
+            const balance = await this.checkTokenBalance(tokenAddress, vaultAddress);
+
+            if (balance === 0n) {
+                console.log(chalk.yellow("📭 Token has no balance in vault"));
+                return;
+            }
+
+            // Get token info
+            const token = await ethers.getContractAt("IERC20MetadataUpgradeable", tokenAddress, this.signer);
+            const symbol = await token.symbol();
+            const decimals = await token.decimals();
+
+            const tokenInfo: TokenInfo = {
+                address: tokenAddress,
+                symbol,
+                decimals: Number(decimals),
+                balance,
+                formattedBalance: ethers.formatUnits(balance, decimals),
+                isVaultToken: false,
+                isRecoverable: true
+            };
+
+            // Check if it's a vault token
+            const tokenXAddress = await this.vault!.getTokenX();
+            const tokenYAddress = await this.vault!.getTokenY();
+
+            if (tokenAddress.toLowerCase() === tokenXAddress.toLowerCase()) {
+                tokenInfo.isVaultToken = true;
+                tokenInfo.warningMessage = "⚠️ This is vault's Token X - recovery may affect operations";
+            } else if (tokenAddress.toLowerCase() === tokenYAddress.toLowerCase()) {
+                tokenInfo.isVaultToken = true;
+                tokenInfo.warningMessage = "⚠️ This is vault's Token Y - recovery may affect operations";
+            } else if (tokenAddress.toLowerCase() === vaultAddress.toLowerCase()) {
+                tokenInfo.isVaultToken = true;
+                tokenInfo.warningMessage = "⚠️ These are vault shares - only recoverable if sent accidentally";
+                tokenInfo.symbol = `${symbol} (Vault Shares)`;
+            }
+
+            await this.performTokenRecovery(tokenInfo);
+
+        } catch (error) {
+            console.error(chalk.red("❌ Error recovering specific token:"), error);
+        }
+    }
+
+    async performTokenRecovery(tokenInfo: TokenInfo): Promise<boolean> {
+        try {
+            // Get recovery amount
+            const amount = await getRecoveryAmount(tokenInfo, (prompt) => this.question(prompt));
+            if (!amount) {
+                console.log(chalk.yellow("Recovery cancelled"));
+                return false;
+            }
+
+            // Validate recovery
+            const validation = await validateRecovery(tokenInfo, this.vault!, amount);
+            if (!validation.valid) {
+                console.log(chalk.red(`❌ ${validation.message}`));
+                return false;
+            }
+
+            // Get recipient
+            const recipient = await getRecipientAddress(this.signer.address, (prompt) => this.question(prompt));
+            if (!recipient) {
+                console.log(chalk.red("❌ Invalid recipient address"));
+                return false;
+            }
+
+            // Show preview
+            displayRecoveryPreview(tokenInfo, amount, recipient);
+
+            // Confirm recovery
+            const confirmed = await this.confirm("\nProceed with recovery?");
+            if (!confirmed) {
+                console.log(chalk.yellow("Recovery cancelled"));
+                return false;
+            }
+
+            // Execute recovery
+            const success = await executeRecovery(
+                this.vaultFactory!,
+                await this.vault!.getAddress(),
+                tokenInfo.address,
+                recipient,
+                amount,
+                this.signer,
+                (name, fn) => this.executeAction(name, fn)
+            );
+
+            return success;
+
+        } catch (error) {
+            console.error(chalk.red("❌ Error during token recovery:"), error);
+            return false;
+        }
+    }
+
+    async checkTokenBalance(tokenAddress: string, vaultAddress: string): Promise<bigint> {
+        try {
+            const token = await ethers.getContractAt("IERC20MetadataUpgradeable", tokenAddress, this.signer);
+            return await token.balanceOf(vaultAddress);
+        } catch (error) {
+            console.error(chalk.red(`Error checking balance for ${tokenAddress}:`), error);
+            return 0n;
+        }
+    }
+
     // Additional helper methods
     async previewShares() {
         console.log(chalk.blue("\n🔍 Preview Shares\n"));
@@ -1176,18 +1441,24 @@ class MetropolisVaultTester {
 
     async showStrategyInfo() {
         console.log(chalk.blue("\n📊 Strategy Information\n"));
-        
+
+        if (this.isEmergencyMode || !this.strategy) {
+            console.log(chalk.red("❌ Strategy information not available in emergency mode"));
+            console.log(chalk.yellow("💡 Strategy is set to null address when vault is in emergency mode"));
+            return;
+        }
+
         try {
-            const operator = await this.strategy!.getOperator();
-            const lastRebalance = await this.strategy!.getLastRebalance();
-            
+            const operator = await this.strategy.getOperator();
+            const lastRebalance = await this.strategy.getLastRebalance();
+
             console.log(chalk.white("Management:"));
             console.log(chalk.gray(`  Operator: ${operator}`));
             console.log(chalk.gray(`  Last Rebalance: ${new Date(Number(lastRebalance) * 1000).toLocaleString()}`));
-            
+
             // Try to get range
             try {
-                const [low, upper] = await this.strategy!.getRange();
+                const [low, upper] = await this.strategy.getRange();
                 console.log(chalk.white("\nBin Range:"));
                 console.log(chalk.gray(`  Lower: ${low}`));
                 console.log(chalk.gray(`  Upper: ${upper}`));
@@ -1195,10 +1466,10 @@ class MetropolisVaultTester {
             } catch (e) {
                 console.log(chalk.yellow("\nBin Range: Not set"));
             }
-            
+
             // Use shared display function for fund allocation
-            await displayStrategyAllocation(this.strategy!, this.tokenX!, this.tokenY!);
-            
+            await displayStrategyAllocation(this.strategy, this.tokenX!, this.tokenY!);
+
         } catch (error) {
             console.error(chalk.red("Error fetching strategy info:"), error);
         }
@@ -1206,7 +1477,13 @@ class MetropolisVaultTester {
 
     async testHarvestRewards() {
         console.log(chalk.blue("\n🌾 Test Harvest Rewards\n"));
-        
+
+        if (this.isEmergencyMode || !this.strategy) {
+            console.log(chalk.red("❌ Harvest rewards not available in emergency mode"));
+            console.log(chalk.yellow("💡 Strategy operations are disabled when vault is in emergency mode"));
+            return;
+        }
+
         await this.executeAction("Harvest Rewards", async () => {
             return this.strategy!.harvestRewards();
         });
@@ -1319,11 +1596,12 @@ async function main() {
         strategyAddress = await vault.getStrategy();
         
         if (strategyAddress === ethers.ZeroAddress) {
-            console.error(chalk.red("\n❌ No strategy set on vault"));
-            process.exit(1);
+            console.log(chalk.yellow("\n⚠️  No strategy set on vault"));
+            console.log(chalk.yellow("This indicates the vault is in Emergency Mode. Continuing with limited functionality."));
+            console.log(chalk.cyan("Available operations: View info, emergency withdraw, token recovery"));
+        } else {
+            console.log(chalk.gray(`Strategy: ${strategyAddress} (derived from vault)`));
         }
-        
-        console.log(chalk.gray(`Strategy: ${strategyAddress} (derived from vault)\n`));
     } catch (error) {
         console.error(chalk.red("\n❌ Failed to get strategy from vault:"), error);
         process.exit(1);

@@ -20,7 +20,9 @@
     "testnet:balances": "hardhat run scripts/testnet-utils/check-balances.ts --network sonic-testnet",
     "testnet:get-usdc": "hardhat run scripts/testnet-utils/swap-for-usdc.ts --network sonic-testnet",
     "shadow-vault:cli": "hardhat run scripts/shadow-vault-cli.ts --network sonic-mainnet",
+    "vault-factory:cli": "hardhat run scripts/vault-factory-cli.ts --network sonic-mainnet",
     "deploy:shadow-strat:mainnet": "hardhat compile && hardhat run scripts/deploy-shadow-strategy.ts --network sonic-mainnet",
+    "deploy:shadow-vault:mainnet": "hardhat compile && hardhat run scripts/deploy-shadow-vault-upgrade.ts --network sonic-mainnet",
     "metropolis-vault:cli": "hardhat run scripts/metropolis-vault-cli.ts --network sonic-mainnet"
   },
   "devDependencies": {

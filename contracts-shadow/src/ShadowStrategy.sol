@@ -69,8 +69,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
     // Error events for monitoring
     event RewardDiscoveryFailed(address gauge);
-    event RewardClaimFailed(address[] tokens);
-    event XShadowConversionFailed();
+    event NoRewardAvailableToClaim(address token);
+    event XShadowConversionFailed(address token);
     event VaultAccountingUpdateFailed(address vault);
     // Detailed rebalance debugging events
     event RebalanceStarted(
@@ -82,32 +82,25 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     );
 
     event RebalanceCheckFailed(string reason, uint256 timestamp);
-
     event RebalanceStepFailed(uint8 step, string reason);
-
     event RebalanceStepSuccess(uint8 step, bytes32 data);
-
     event TickValidationFailed(string reason, int24 value1, int24 value2);
-
     event SlippageCheckFailed(
         int24 currentTick,
         int24 desiredTick,
         int24 slippageTick
     );
-
     event InsufficientBalance(
         uint256 requestedX,
         uint256 requestedY,
         uint256 availableX,
         uint256 availableY
     );
-
     event RebalanceCompleted(
         uint256 newTokenId,
         uint256 depositedX,
         uint256 depositedY
     );
-
     event RebalanceAborted(string reason, uint8 step);
     event NftBurnFailure(uint256 tokenId);
 
@@ -124,6 +117,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         uint256 amount0,
         uint256 amount1
     );
+    event NpmSweepTokenSuccess(address token);
+    event NpmSweepTokenFailure(address token, string reason);
     event CollectFailed(uint256 indexed tokenId, string reason);
     event AdditionalTokensCollected(
         uint256 indexed tokenId,
@@ -439,7 +434,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         }
 
         // Get reward list defensively
-        try IMinimalGauge(gaugeAddress).rewardsList() returns (
+        try IMinimalGauge(gaugeAddress).getRewardTokens() returns (
             address[] memory tokens
         ) {
             return tokens;
@@ -847,19 +842,39 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             uint256 amount1
         ) {
             emit TokensCollected(_positionTokenId, amount0, amount1);
+
+            // Now send all the TokenX that npm collected back to the strategy
+            try npm.sweepToken(address(_tokenX()), 0, address(this)) {
+                emit NpmSweepTokenSuccess(address(_tokenX()));
+            } catch Error(string memory reason) {
+                emit NpmSweepTokenFailure(address(_tokenX()), reason);
+            } catch {
+                emit NpmSweepTokenFailure(address(_tokenX()), "Unknown");
+            }
+            // Same for TokenY
+            try npm.sweepToken(address(_tokenY()), 0, address(this)) {
+                emit NpmSweepTokenSuccess(address(_tokenY()));
+            } catch Error(string memory reason) {
+                emit NpmSweepTokenFailure(address(_tokenY()), reason);
+            } catch {
+                emit NpmSweepTokenFailure(address(_tokenY()), "Unknown");
+            }
         } catch Error(string memory reason) {
             emit CollectFailed(_positionTokenId, reason);
             return false; // Exit early if we can't collect
         } catch {
-            emit CollectFailed(_positionTokenId, "Unkown");
+            emit CollectFailed(_positionTokenId, "Unknown");
             return false; // Exit early if we can't collect
         }
-        // Step 3: Verify position is ready for burning
-        // Check that liquidity is 0 and no tokens are owed
+        // Step 3: Claim rewards if available (defensive, works for pools with/without gauges)
+        _harvestRewards();
+
+        // Step 4: Verify position is ready for burning
         (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm.positions(
             _positionTokenId
         );
 
+        // Check that liquidity is 0 and no tokens are owed
         if (liquidity > 0 || tokensOwed0 > 0 || tokensOwed1 > 0) {
             emit PositionNotReadyForBurn(
                 _positionTokenId,
@@ -868,42 +883,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 tokensOwed1
             );
 
-            // Try one more collection if there are still tokens owed
-            if (tokensOwed0 > 0 || tokensOwed1 > 0) {
-                try npm.collect(collectParams) returns (
-                    uint256 amount0,
-                    uint256 amount1
-                ) {
-                    emit AdditionalTokensCollected(
-                        _positionTokenId,
-                        amount0,
-                        amount1
-                    );
-
-                    // Re-check if position is now ready
-                    (, , , , , liquidity, , , tokensOwed0, tokensOwed1) = npm
-                        .positions(_positionTokenId);
-                    if (liquidity > 0 || tokensOwed0 > 0 || tokensOwed1 > 0) {
-                        emit PositionNotReadyForBurn(
-                            _positionTokenId,
-                            liquidity,
-                            tokensOwed0,
-                            tokensOwed1
-                        );
-                        return false; // Still not ready, abort burn
-                    }
-                } catch {
-                    // If second collection fails, we can't proceed with burn
-                    return false;
-                }
-            } else {
-                // Only liquidity remains, cannot burn
-                return false;
-            }
+            return false;
         }
-
-        // Step 4: Claim rewards if available (defensive, works for pools with/without gauges)
-        _claimRewards(_positionTokenId);
 
         // Step 5: Burn the NFT
         try npm.burn(_positionTokenId) {
@@ -911,6 +892,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         } catch {
             emit NftBurnFailure(_positionTokenId);
             // Don't return here - still reset state even if burn fails
+            // Why? Because the burn can sometimes fail even if there is just a micro amount of money left (dust)
         }
         // Step 6: Reset state
         _positionTokenId = 0;
@@ -918,38 +900,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         _currentTickUpper = 0;
 
         return true; // Successfully exited position
-    }
-
-    /**
-     * @notice Claims rewards for a position
-     * @param tokenId The NFT token ID to claim rewards for
-     */
-    function _claimRewards(uint256 tokenId) internal {
-        IMinimalVoter voter = IMinimalVoter(_factory.getShadowVoter());
-        if (address(voter) == address(0)) return;
-
-        // Get gauge address
-        address gauge = voter.gaugeForPool(address(_pool()));
-        if (gauge == address(0)) return;
-
-        // Try to get reward token address
-        address rewardToken;
-        try IMinimalGauge(gauge).rewardToken() returns (address token) {
-            rewardToken = token;
-        } catch {
-            return; // No reward token available
-        }
-        // Try to claim rewards
-        address[] memory tokens = new address[](1);
-        tokens[0] = rewardToken;
-
-        INonfungiblePositionManager npm = INonfungiblePositionManager(
-            _factory.getShadowNonfungiblePositionManager()
-        );
-
-        try npm.getReward(tokenId, tokens) {} catch {
-            return; // Claim failed
-        }
     }
 
     /**
@@ -1210,12 +1160,11 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         // Get gauge address with defensive programming
         address gaugeAddress = _getGaugeAddressSafely();
         if (gaugeAddress == address(0)) return;
-
         IMinimalGauge gauge = IMinimalGauge(gaugeAddress);
 
         // Discover rewards defensively
         address[] memory rewardTokens;
-        try gauge.rewardsList() returns (address[] memory tokens) {
+        try gauge.getRewardTokens() returns (address[] memory tokens) {
             rewardTokens = tokens;
             emit RewardTokensDiscovered(tokens);
         } catch {
@@ -1224,62 +1173,48 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         }
         if (rewardTokens.length == 0) return;
 
+        address[] memory rewardTokenTmpArray = new address[](1);
+
         // Check earned amounts before claiming
         for (uint256 i = 0; i < rewardTokens.length; i++) {
-            try gauge.earned(rewardTokens[i], address(this)) returns (
+            try gauge.earned(rewardTokens[i], _positionTokenId) returns (
                 uint256 amount
             ) {
                 if (amount > 0) {
                     emit RewardEarned(rewardTokens[i], amount);
+
+                    // Track balances before claiming
+                    uint256 balanceBefore = _getTokenBalanceSafely(
+                        rewardTokens[i]
+                    );
+
+                    // Try each reward token individually, so that even if one fails, we can claim the others
+                    rewardTokenTmpArray[0] = rewardTokens[i];
+
+                    // Claim the rewards using npm (NonfungiblePositionManager)
+                    try gauge.getReward(_positionTokenId, rewardTokenTmpArray) {
+                        // Process claimed rewards
+                        uint256 balanceAfter = _getTokenBalanceSafely(
+                            rewardTokens[i]
+                        );
+                        uint256 received = balanceAfter > balanceBefore
+                            ? balanceAfter - balanceBefore
+                            : 0;
+                        if (received > 0) {
+                            emit RewardClaimed(rewardTokens[i], received);
+                            // Forward to vault with defensive programming
+                            _forwardRewardToVault(
+                                IERC20(rewardTokens[i]),
+                                received
+                            );
+                        }
+                    } catch {
+                        emit NoRewardAvailableToClaim(rewardTokens[i]);
+                    }
                 }
             } catch {
                 // Continue with other tokens even if one fails
             }
-        }
-
-        // Track balances before claiming
-        uint256[] memory balancesBefore = new uint256[](rewardTokens.length);
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            balancesBefore[i] = _getTokenBalanceSafely(rewardTokens[i]);
-        }
-
-        // Try to claim with xSHADOW conversion first
-        bool claimSuccess = false;
-        try gauge.getRewardAndExit(address(this), rewardTokens) {
-            claimSuccess = true;
-        } catch {
-            emit XShadowConversionFailed();
-            // Fallback to regular claim
-            try gauge.getReward(address(this), rewardTokens) {
-                claimSuccess = true;
-            } catch {
-                emit RewardClaimFailed(rewardTokens);
-            }
-        }
-        if (!claimSuccess) return;
-
-        // Process claimed rewards
-        for (uint256 i = 0; i < rewardTokens.length; i++) {
-            uint256 balanceAfter = _getTokenBalanceSafely(rewardTokens[i]);
-            uint256 received = balanceAfter > balancesBefore[i]
-                ? balanceAfter - balancesBefore[i]
-                : 0;
-
-            if (received > 0) {
-                emit RewardClaimed(rewardTokens[i], received);
-
-                // Forward to vault with defensive programming
-                _forwardRewardToVault(IERC20(rewardTokens[i]), received);
-            }
-        }
-    }
-
-    /**
-     * @notice Notify vault of reward token if needed
-     */
-    function _notifyVault(IERC20 rewardToken) internal {
-        if (_factory.getVaultType(_vault()) != IVaultFactory.VaultType.Simple) {
-            IOracleRewardVault(_vault()).notifyRewardToken(rewardToken);
         }
     }
 
@@ -1323,12 +1258,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     function _forwardRewardToVault(IERC20 token, uint256 amount) internal {
         address vault = _vault();
 
-        // Notify vault about the reward token (defensive)
-        try IOracleRewardVault(vault).notifyRewardToken(token) {
-            // Success
-        } catch {
-            // Continue anyway - vault might already know about this token
-        }
+        // Notify vault about the reward token
+        IOracleRewardVault(vault).notifyRewardToken(token);
+
         // Transfer to vault (defensive)
         try token.transfer(vault, amount) returns (bool success) {
             if (success) {
@@ -1353,51 +1285,70 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
      * @notice Get comprehensive reward status for monitoring
      * @return tokens Array of reward token addresses
      * @return earned Array of earned amounts for each token
-     * @return gauge The gauge address
+     * @return gaugeAddress The gauge address
      * @return hasActivePosition Whether there's an active position
      */
     function getRewardStatus()
         external
-        view
         returns (
             address[] memory tokens,
             uint256[] memory earned,
-            address gauge,
+            address gaugeAddress,
             bool hasActivePosition
         )
     {
         hasActivePosition = _positionTokenId != 0;
-        gauge = _getGaugeAddressSafely();
+        gaugeAddress = _getGaugeAddressSafely();
 
-        if (!hasActivePosition || gauge == address(0)) {
+        if (!hasActivePosition || gaugeAddress == address(0)) {
             return (
                 new address[](0),
                 new uint256[](0),
-                gauge,
+                gaugeAddress,
                 hasActivePosition
             );
         }
 
-        // Get tokens defensively
-        try IMinimalGauge(gauge).rewardsList() returns (
-            address[] memory rewardTokens
+        // Discover rewards defensively
+        address[] memory rewardTokens;
+        try IMinimalGauge(gaugeAddress).getRewardTokens() returns (
+            address[] memory gaugeTokenList
         ) {
+            rewardTokens = gaugeTokenList;
+            emit RewardTokensDiscovered(rewardTokens);
+        } catch {
+            emit RewardDiscoveryFailed(gaugeAddress);
+            return (
+                new address[](0),
+                new uint256[](0),
+                gaugeAddress,
+                hasActivePosition
+            );
+        }
+        if (rewardTokens.length == 0) {
+            return (
+                new address[](0),
+                new uint256[](0),
+                gaugeAddress,
+                hasActivePosition
+            );
+        } else {
             tokens = rewardTokens;
             earned = new uint256[](tokens.length);
 
             // Get earned amounts defensively
             for (uint256 i = 0; i < tokens.length; i++) {
                 try
-                    IMinimalGauge(gauge).earned(tokens[i], address(this))
+                    IMinimalGauge(gaugeAddress).earned(
+                        tokens[i],
+                        _positionTokenId
+                    )
                 returns (uint256 amount) {
                     earned[i] = amount;
                 } catch {
                     earned[i] = 0;
                 }
             }
-        } catch {
-            tokens = new address[](0);
-            earned = new uint256[](0);
         }
     }
 }

@@ -26,8 +26,12 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, { config }, 
   const shadowInterfacesGlob = path.join(config.paths.root, "contracts-shadow", "src", "interfaces", "*.sol");
   const shadowPaths = [...glob.sync(shadowStrategyPath), ...glob.sync(shadowInterfacesGlob)];
   
+  // Add test mock contracts
+  const testMocksGlob = path.join(config.paths.root, "test", "mocks", "*.sol");
+  const testMocksPaths = glob.sync(testMocksGlob);
+  
   // Combine all paths
-  return [...paths, ...metropolisPaths, ...shadowPaths];
+  return [...paths, ...metropolisPaths, ...shadowPaths, ...testMocksPaths];
 });
 
 const config: HardhatUserConfig = {
@@ -112,26 +116,23 @@ const config: HardhatUserConfig = {
     },
   },
   etherscan: {
-    // Sonic requires network-specific API keys
-    apiKey: {
-      "sonic-mainnet": process.env.SONIC_SCAN_API_KEY || "placeholder",
-      "sonic-testnet": process.env.SONIC_TESTNET_SCAN_API_KEY || "placeholder",
-    },
+    // V2 API requires single apiKey (not network-specific)
+    apiKey: process.env.SONIC_SCAN_API_KEY || "placeholder",
     customChains: [
       {
         network: "sonic-mainnet",
         chainId: 146,
         urls: {
-          apiURL: "https://api.sonicscan.org/api",
-          browserURL: "https://sonicscan.org",
-        },
+          apiURL: "https://api.etherscan.io/v2/api",
+          browserURL: "https://sonicscan.org"
+        }
       },
       {
         network: "sonic-testnet",
         chainId: 57054,
         urls: {
-          apiURL: "https://api-testnet.sonicscan.org/api",
-          browserURL: "https://testnet.sonicscan.org",
+          apiURL: "https://api.etherscan.io/v2/api",
+          browserURL: "https://testnet.sonicscan.org"
         },
       },
     ],

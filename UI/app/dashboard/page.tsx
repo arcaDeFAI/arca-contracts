@@ -17,7 +17,7 @@ const VAULT_CONFIGS = [
   },
   {
     vaultAddress: '0x81897b30c38A14c8B28B9Ab30Daab6BF4D84b340',
-    stratAddress: '0x203a2caDff2C755E5eF7ffbE839e8EA35F25409F',
+    stratAddress: '0x93dDa562a6661460d56AF7A02578F3BDD699C7e7',
     clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
     name: 'S • USDC | Shadow',
     tier: 'Premium' as const,

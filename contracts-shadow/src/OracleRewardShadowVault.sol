@@ -146,11 +146,21 @@ contract OracleRewardShadowVault is
         _wnative = factory.getWNative();
     }
 
+    /**
+     * @dev Receive function. Mainly added to silence the compiler warning.
+     * Highly unlikely to be used as the base vault needs at least 62 bytes of immutable data added to the payload
+     * (3 addresses and 2 bytes for length), so this function should never be called.
+     */
     receive() external payable {
         if (msg.sender != _wnative && msg.sender != address(getStrategy()))
             revert ShadowVault__OnlyWNative();
     }
 
+    /**
+     * @notice Allows the contract to receive native tokens from the WNative contract.
+     * @dev We can't use the `receive` function because the immutable clone library adds calldata to the payload
+     * that are taken as a function signature and parameters.
+     */
     fallback() external payable {
         if (msg.sender != _wnative && msg.sender != address(getStrategy()))
             revert ShadowVault__OnlyWNative();
@@ -257,6 +267,10 @@ contract OracleRewardShadowVault is
         (amountX, amountY) = _getBalances(_strategy);
     }
 
+    /**
+     * @notice Returns if the deposits are paused.
+     * @return paused True if the deposits are paused.
+     */
     function isDepositsPaused() external view virtual returns (bool paused) {
         return _depositsPaused;
     }
@@ -265,10 +279,20 @@ contract OracleRewardShadowVault is
         return _flaggedForShutdown;
     }
 
+    /**
+     * @notice Returns the current round of queued withdrawals.
+     * @return round The current round of queued withdrawals.
+     */
     function getCurrentRound() external view virtual returns (uint256 round) {
         return _queuedWithdrawalsByRound.length - 1;
     }
 
+    /**
+     * @notice Returns the queued withdrawal of the round for an user.
+     * @param round The round.
+     * @param user The user.
+     * @return shares The amount of shares that are queued for withdrawal.
+     */
     function getQueuedWithdrawal(
         uint256 round,
         address user
@@ -276,6 +300,10 @@ contract OracleRewardShadowVault is
         return _queuedWithdrawalsByRound[round].userWithdrawals[user];
     }
 
+    /**
+     * @notice Returns the total shares that were queued for the current round.
+     * @return totalQueuedShares The total shares that were queued for the current round.
+     */
     function getTotalQueuedWithdrawal(
         uint256 round
     ) external view virtual returns (uint256 totalQueuedShares) {
@@ -293,6 +321,13 @@ contract OracleRewardShadowVault is
                 .totalQueuedShares;
     }
 
+    /**
+     * @notice Returns the amounts that can be redeemed for an user on the round.
+     * @param round The round.
+     * @param user The user.
+     * @return amountX The amount of token X that can be redeemed.
+     * @return amountY The amount of token Y that can be redeemed.
+     */
     function getRedeemableAmounts(
         uint256 round,
         address user
@@ -302,6 +337,7 @@ contract OracleRewardShadowVault is
         ];
         uint256 totalAmountX = queuedWithdrawal.totalAmountX;
         uint256 totalAmountY = queuedWithdrawal.totalAmountY;
+
         uint256 shares = queuedWithdrawal.userWithdrawals[user];
         uint256 totalShares = queuedWithdrawal.totalQueuedShares;
 
@@ -350,6 +386,14 @@ contract OracleRewardShadowVault is
     }
 
     // ============ Public Functions ============
+    /**
+     * @dev Preview the amount of shares to be minted.
+     * @param amountX The amount of token X to be deposited.
+     * @param amountY The amount of token Y to be deposited.
+     * @return shares The amount of shares to be minted.
+     * @return effectiveX The effective amount of token X to be deposited.
+     * @return effectiveY The effective amount of token Y to be deposited.
+     */
     function previewShares(
         uint256 amountX,
         uint256 amountY
@@ -362,12 +406,27 @@ contract OracleRewardShadowVault is
         return _previewShares(_strategy, amountX, amountY);
     }
 
+    /**
+     * @dev Preview the amount of tokens to be redeemed on withdrawal.
+     * @param shares The amount of shares to be redeemed.
+     * @return amountX The amount of token X to be redeemed.
+     * @return amountY The amount of token Y to be redeemed.
+     */
     function previewAmounts(
         uint256 shares
     ) public view virtual returns (uint256 amountX, uint256 amountY) {
         return _previewAmounts(_strategy, shares, totalSupply());
     }
 
+    /**
+     * @dev Deposits tokens to the strategy.
+     * @param amountX The amount of token X to be deposited.
+     * @param amountY The amount of token Y to be deposited.
+     * @param minShares The minimum amount of shares to be minted.
+     * @return shares The amount of shares to be minted.
+     * @return effectiveX The effective amount of token X to be deposited.
+     * @return effectiveY The effective amount of token Y to be deposited.
+     */
     function deposit(
         uint256 amountX,
         uint256 amountY,
@@ -471,6 +530,14 @@ contract OracleRewardShadowVault is
         }
     }
 
+    /**
+     * @notice Queues withdrawal for `recipient`. The withdrawal will be effective after the next
+     * rebalance. The user can withdraw the tokens after the rebalance, this allows users to withdraw
+     * from positions without having to pay the gas price.
+     * @param shares The shares to be queued for withdrawal.
+     * @param recipient The address that will receive the withdrawn tokens after the rebalance.
+     * @return round The round of the withdrawal.
+     */
     function queueWithdrawal(
         uint256 shares,
         address recipient
@@ -503,6 +570,13 @@ contract OracleRewardShadowVault is
         emit WithdrawalQueued(msg.sender, recipient, round, shares);
     }
 
+    /**
+     * @notice Cancels a queued withdrawal of `shares`. Cancelling a withdrawal is
+     * only possible before the next rebalance. The user can cancel the withdrawal if they want to
+     * stay in the vault. They will receive the vault shares back.
+     * @param shares The shares to be cancelled for withdrawal.
+     * @return round The round of the withdrawal that was cancelled.
+     */
     function cancelQueuedWithdrawal(
         uint256 shares
     )
@@ -535,6 +609,14 @@ contract OracleRewardShadowVault is
         emit WithdrawalCancelled(msg.sender, msg.sender, round, shares);
     }
 
+    /**
+     * @notice Redeems a queued withdrawal for `recipient`. The user can redeem the tokens after the
+     * rebalance. This can be easily check by comparing the current round with the round of the
+     * withdrawal, if they're equal, the withdrawal is still pending.
+     * @param recipient The address that will receive the withdrawn tokens after the rebalance.
+     * @return amountX The amount of token X to be withdrawn.
+     * @return amountY The amount of token Y to be withdrawn.
+     */
     function redeemQueuedWithdrawal(
         uint256 round,
         address recipient
@@ -568,6 +650,21 @@ contract OracleRewardShadowVault is
         if (amountY > 0) _transferTokenOrNative(_tokenY(), recipient, amountY);
     }
 
+    /**
+     * @dev Claim rewards of the sender.
+     */
+    function claim() external nonReentrant {
+        _updatePool();
+        _modifyUser(msg.sender, 0);
+    }
+
+    /**
+     * @notice Emergency withdraws from the vault and sends the tokens to the sender according to its share.
+     * If the user had queued withdrawals, they will be claimable using the `redeemQueuedWithdrawal` and
+     * `redeemQueuedWithdrawalNative` functions as usual. This function is only for users that didn't queue
+     * any withdrawals and still have shares in the vault. We skip reward payout as its emergency mode.
+     * @dev This will only work if the vault is in emergency mode or flagged for shutdown
+     */
     function emergencyWithdraw() public virtual nonReentrant {
         if (address(_strategy) != address(0))
             revert ShadowVault__NotInEmergencyMode();
@@ -591,24 +688,37 @@ contract OracleRewardShadowVault is
         emit EmergencyWithdrawal(msg.sender, shares, amountX, amountY);
     }
 
+    /**
+     * @notice Executes the queued withdrawals for the current round. The strategy should call this
+     * function after having sent the queued withdrawals to the vault.
+     * This function will burn the shares of the users that queued withdrawals and will update the
+     * total amount of tokens in the vault and increase the round.
+     * @dev Only the strategy can call this function.
+     */
     function executeQueuedWithdrawals() public virtual nonReentrant {
+        // Check that the caller is the strategy, it also checks that the strategy was set.
         address strategy = address(_strategy);
         if (strategy != msg.sender) revert ShadowVault__OnlyStrategy();
 
+        // Get the current round and the queued withdrawals for that round.
         uint256 round = _queuedWithdrawalsByRound.length - 1;
         QueuedWithdrawal storage queuedWithdrawals = _queuedWithdrawalsByRound[
             round
         ];
 
+        // Check that the round has queued withdrawals, if none, the function will stop.
         uint256 totalQueuedShares = queuedWithdrawals.totalQueuedShares;
         if (totalQueuedShares == 0) return;
 
+        // Burn the shares of the users that queued withdrawals and update the queued withdrawals.
         _burn(strategy, totalQueuedShares);
         _queuedWithdrawalsByRound.push();
 
+        // Cache the total amounts of tokens in the vault.
         uint256 totalAmountX = _totalAmountX;
         uint256 totalAmountY = _totalAmountY;
 
+        // Get the amount of tokens received by the vault after executing the withdrawals.
         uint256 receivedX = _tokenX().balanceOf(address(this)) -
             totalAmountX -
             _rewardX();
@@ -616,9 +726,11 @@ contract OracleRewardShadowVault is
             totalAmountY -
             _rewardY();
 
+        // Update the total amounts of tokens in the vault.
         _totalAmountX = totalAmountX + receivedX;
         _totalAmountY = totalAmountY + receivedY;
 
+        // Update the total amounts of tokens in the queued withdrawals.
         queuedWithdrawals.totalAmountX = uint128(receivedX);
         queuedWithdrawals.totalAmountY = uint128(receivedY);
 
@@ -796,33 +908,31 @@ contract OracleRewardShadowVault is
     )
         internal
         view
-        virtual
         returns (uint256 shares, uint256 effectiveX, uint256 effectiveY)
     {
-        if (address(strategy) == address(0)) return (0, 0, 0);
+        if (amountX == 0 && amountY == 0) return (0, 0, 0);
 
-        (uint256 totalX, uint256 totalY) = _getBalances(strategy);
+        uint256 amountXinY = _calculateAmountInOtherToken(amountX, true);
+
         uint256 totalShares = totalSupply();
-        uint256 valueInY = _getValueInY(amountX, amountY);
+
+        uint256 valueInY = amountXinY + amountY;
 
         if (totalShares == 0) {
-            // For initial deposit, use total value in Y (following Metropolis pattern)
-            // Shares = value * precision (just like Metropolis)
-            shares = valueInY * _SHARES_PRECISION;
-            return (shares, amountX, amountY);
-        } else {
-            uint256 totalXInY = 0;
-
-            if (totalX > 0) {
-                totalXInY = _calculateAmountInOtherToken(totalX, true);
-            }
-
-            uint256 totalValueInY = totalXInY + totalY;
-
-            shares = valueInY.mulDivRoundDown(totalShares, totalValueInY);
-
-            return (shares, amountX, amountY);
+            return (valueInY * _SHARES_PRECISION, amountX, amountY);
         }
+
+        (uint256 totalX, uint256 totalY) = _getBalances(strategy);
+
+        if (totalX == 0 && totalY == 0) {
+            revert ShadowVault__ZeroAmount();
+        }
+
+        uint256 totalXinY = _calculateAmountInOtherToken(totalX, true);
+        uint256 totalValueInY = totalXinY + totalY;
+        shares = valueInY.mulDivRoundDown(totalShares, totalValueInY);
+
+        return (shares, amountX, amountY);
     }
 
     function _previewAmounts(
@@ -951,10 +1061,18 @@ contract OracleRewardShadowVault is
         emit Deposited(msg.sender, effectiveX, effectiveY, shares);
     }
 
+    /**
+     * @dev Redeems the queued withdrawal for a given round and a given user.
+     * Does not transfer the tokens to the user.
+     * @param user The address of the user.
+     * @return amountX The amount of token X to be withdrawn.
+     * @return amountY The amount of token Y to be withdrawn.
+     */
     function _redeemWithdrawal(
         uint256 round,
         address user
     ) internal returns (uint256 amountX, uint256 amountY) {
+        // Prevent redeeming withdrawals for the current round that have not been executed yet
         uint256 currentRound = _queuedWithdrawalsByRound.length - 1;
         if (round >= currentRound) revert ShadowVault__InvalidRound();
 
@@ -962,15 +1080,18 @@ contract OracleRewardShadowVault is
             round
         ];
 
+        // Get the amount of shares to redeem, will revert if the user has no queued withdrawal
         uint256 shares = queuedWithdrawals.userWithdrawals[user];
         if (shares == 0) revert ShadowVault__NoQueuedWithdrawal();
 
+        // Only the user can redeem their withdrawal. The factory is also allowed as it batches withdrawals for users
         if (user != msg.sender && msg.sender != address(_factory))
             revert ShadowVault__Unauthorized();
 
         _updatePool();
         _modifyUser(msg.sender, -int256(shares));
 
+        // Calculate the amount of tokens to be withdrawn, pro rata to the amount of shares
         uint256 totalQueuedShares = queuedWithdrawals.totalQueuedShares;
         queuedWithdrawals.userWithdrawals[user] = 0;
 
@@ -985,6 +1106,7 @@ contract OracleRewardShadowVault is
 
         if (amountX == 0 && amountY == 0) revert ShadowVault__ZeroAmount();
 
+        // Update the total amount of shares queued for withdrawal
         if (amountX != 0) _totalAmountX -= amountX;
         if (amountY != 0) _totalAmountY -= amountY;
 
@@ -1055,6 +1177,7 @@ contract OracleRewardShadowVault is
         uint256 lastRewardBalance = reward.lastRewardBalance;
         calcAccRewardsPerShare = reward.accRewardsPerShare;
 
+        // recompute accRewardsPerShare if not up to date
         if (
             reward.lastRewardBalance != rewardBalance && _phantomShareSupply > 0
         ) {
@@ -1086,8 +1209,11 @@ contract OracleRewardShadowVault is
     function _harvest(
         address user,
         Reward storage reward
-    ) internal view returns (uint256) {
-        return _calcPending(user, reward, reward.accRewardsPerShare);
+    ) internal returns (uint256 payoutAmount) {
+        payoutAmount = _calcPending(user, reward, reward.accRewardsPerShare);
+        reward.lastRewardBalance = reward.lastRewardBalance - payoutAmount;
+
+        emit Harvested(user, address(reward.token), payoutAmount);
     }
 
     function _updatePool() internal virtual {
@@ -1156,32 +1282,65 @@ contract OracleRewardShadowVault is
     }
 
     function _rewardX() internal view virtual returns (uint256) {
-        uint256 total = 0;
+        uint256 rewardX = 0;
         for (uint256 i = 0; i < cachedRewardTokens.length; i++) {
-            if (address(cachedRewardTokens[i].token) == address(_tokenX())) {
-                uint256 balance = _tokenX().balanceOf(address(this));
-                uint256 nonReward = _totalAmountX;
-                total = balance > nonReward ? balance - nonReward : 0;
-                break;
+            Reward storage reward = cachedRewardTokens[i];
+            if (address(reward.token) == address(_tokenX())) {
+                rewardX += reward.lastRewardBalance;
             }
         }
-        return total;
+        return rewardX;
     }
 
     function _rewardY() internal view virtual returns (uint256) {
-        uint256 total = 0;
+        uint256 rewardY = 0;
         for (uint256 i = 0; i < cachedRewardTokens.length; i++) {
-            if (address(cachedRewardTokens[i].token) == address(_tokenY())) {
-                uint256 balance = _tokenY().balanceOf(address(this));
-                uint256 nonReward = _totalAmountY;
-                total = balance > nonReward ? balance - nonReward : 0;
-                break;
+            Reward storage reward = cachedRewardTokens[i];
+            if (address(reward.token) == address(_tokenY())) {
+                rewardY += reward.lastRewardBalance;
             }
         }
-        return total;
+        return rewardY;
     }
 
     function _beforeEmergencyMode() internal virtual {
         // Can be overridden by inheriting contracts
+    }
+
+    /**
+     * @dev claim rewards of sender before transfering it to recipient
+     */
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal override {
+        if (!_isIgnored(recipient) || !_isIgnored(sender)) _updatePool();
+
+        // we dont want to modify if the transfer is between user and strategy and vice versa
+        // otherwise the accounting will be wrong as we modify the shares on redeem
+        if (
+            sender == address(getStrategy()) ||
+            recipient == address(getStrategy())
+        ) {
+            super._transfer(sender, recipient, amount);
+            return;
+        }
+
+        if (!_isIgnored(recipient)) _modifyUser(recipient, int256(amount));
+        if (!_isIgnored(sender)) _modifyUser(sender, -int256(amount));
+
+        super._transfer(sender, recipient, amount);
+    }
+
+    /**
+     * Check if address is ignored for rewards (e.g strategy, or other addresses)
+     * @param _address address
+     */
+    function _isIgnored(address _address) internal view returns (bool) {
+        if (_address == address(getStrategy())) {
+            return true;
+        }
+        return _factory.isTransferIgnored(_address);
     }
 }

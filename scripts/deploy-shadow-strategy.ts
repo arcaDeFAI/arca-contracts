@@ -271,6 +271,10 @@ async function main() {
       gasTracker
     );
 
+    // Sleep a few seconds after deployment... to make sure it gets confirmed
+    console.log("Waiting for deployment to propagate...");
+    await new Promise(f => setTimeout(f, 6000));
+
     // Verify the contract with Sonic Explorer
     newImplementation = await shadowStrategyImpl.getAddress();
     let successMessage = false
@@ -290,7 +294,8 @@ async function main() {
           errorMessage.includes("already been verified")) {
         console.log(`✅ Shadow Strategy Implementation is already verified`);
       } else {
-        throw error;
+        console.log(`An error occurred during contract verification`);
+        console.log(error);
       }
     }
     
@@ -308,6 +313,8 @@ async function main() {
         
         const tx = await factory.setStrategyImplementation(STRATEGY_TYPE_SHADOW, newImplementation);
         await gasTracker.trackTransaction("Update factory strategy implementation", tx);
+        console.log("Waiting for change to propagate...");
+        await new Promise(f => setTimeout(f, 6000));
         
         const confirmationOfSetOperation = (await factory.getStrategyImplementation(STRATEGY_TYPE_SHADOW)) === newImplementation
 
@@ -376,6 +383,8 @@ async function main() {
           const tx = await factory.createAndLinkShadowStrategy(selectedVault.address, selectedVault.pool, tokenX, tokenY)
           await gasTracker.trackTransaction("Update factory strategy implementation", tx);
           const finalResult = await tx.wait();
+          console.log("Waiting for change to propagate...");
+          await new Promise(f => setTimeout(f, 6000));
 
           // if (finalResult) {
           //   console.log("\nEvents:\n")

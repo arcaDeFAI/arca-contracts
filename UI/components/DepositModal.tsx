@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
+import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { ERC20_ABI, CONTRACTS } from '@/lib/contracts';
 import { formatTokenAmount, parseTokenAmount } from '@/lib/utils';
 import { formatUnits } from 'viem';

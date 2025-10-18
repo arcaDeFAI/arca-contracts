@@ -45,7 +45,9 @@
       "Bash(npx eslint:*)",
       "mcp__playwright__browser_take_screenshot",
       "mcp__playwright__browser_press_key",
-      "Bash(DEPLOY_RESUME=true npm run deploy:local)"
+      "Bash(DEPLOY_RESUME=true npm run deploy:local)",
+      "Bash(forge test:*)",
+      "WebFetch(domain:docs.etherscan.io)"
     ],
     "deny": []
   }

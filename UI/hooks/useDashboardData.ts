@@ -1,10 +1,14 @@
 'use client';
 
 import { useReadContract, useWriteContract } from 'wagmi';
-import { METRO_VAULT_ABI } from '@/abi/MetroVault.abi';
-import { SHADOW_STRAT_ABI } from '@/abi/ShadowStrat.abi';
-import { VOTER_CLAIM_ABI } from '@/abi/VoterClaim.abi';
-import { SHADOW_REWARDS_ABI } from '@/abi/ShadowRewards.abi';
+import {
+  METRO_VAULT_ABI,
+  SHADOW_STRAT_ABI,
+  VOTER_CLAIM_ABI,
+  SHADOW_REWARDS_ABI,
+  type ShadowRewardStatus,
+  SHADOW_VAULT_ABI
+} from '@/lib/typechain';
 import { CONTRACTS } from '../lib/contracts';
 
 interface VaultConfig {
@@ -74,14 +78,26 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
   });
 
   // Get reward status for Shadow vaults (needed for gauge address and claim logic)
-  const { data: shadowRewardStatus } = useReadContract({
+  // Note: We use a type assertion here because wagmi's type inference doesn't recognize
+  // all functions from TypeChain-generated ABIs. The function definitely exists in the ABI.
+  const { data: shadowRewardStatusRaw } = useReadContract({
     address: config.stratAddress as `0x${string}`,
     abi: SHADOW_STRAT_ABI,
-    functionName: 'getRewardStatus',
+    functionName: 'getRewardStatus' as any, // Type assertion only for function name
     query: {
       enabled: !!config.stratAddress && isShadowVault,
     },
   });
+
+  // Type the result properly based on the contract interface
+  const shadowRewardStatus: ShadowRewardStatus | undefined = shadowRewardStatusRaw
+    ? {
+        tokens: (shadowRewardStatusRaw as readonly [string[], bigint[], string, boolean])[0],
+        earned: (shadowRewardStatusRaw as readonly [string[], bigint[], string, boolean])[1],
+        gaugeAddress: (shadowRewardStatusRaw as readonly [string[], bigint[], string, boolean])[2],
+        hasActivePosition: (shadowRewardStatusRaw as readonly [string[], bigint[], string, boolean])[3],
+      }
+    : undefined;
 
 
   // Debug Shadow reward status
@@ -94,10 +110,10 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       xShadowEarned: xShadowEarned?.toString(),
       shadowEarned: shadowEarned?.toString(),
       shadowRewardStatus: shadowRewardStatus ? {
-        tokens: shadowRewardStatus[0],
-        earned: shadowRewardStatus[1]?.map((e: bigint) => e.toString()),
-        gauge: shadowRewardStatus[2],
-        hasActivePosition: shadowRewardStatus[3]
+        tokens: shadowRewardStatus.tokens,
+        earned: shadowRewardStatus.earned.map((e: bigint) => e.toString()),
+        gauge: shadowRewardStatus.gaugeAddress,
+        hasActivePosition: shadowRewardStatus.hasActivePosition
       } : 'no data',
       hasActivePosition: !!shadowTokenId,
     });
@@ -156,14 +172,14 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       // Shadow vault claiming - use harvestRewards function on Shadow Strat
       if (!config.stratAddress) return;
       
-      console.log('🚀 SHADOW CLAIM - Calling harvestRewards on Shadow Strat:', {
-        shadowStratAddress: config.stratAddress
+      console.log('🚀 SHADOW CLAIM - Calling claim() on Shadow Vault:', {
+        shadowVaultAddress: config.vaultAddress
       });
       
       claimRewards({
-        address: config.stratAddress as `0x${string}`,
-        abi: SHADOW_STRAT_ABI,
-        functionName: 'harvestRewards',
+        address: config.vaultAddress as `0x${string}`,
+        abi: SHADOW_VAULT_ABI,
+        functionName: 'claim',
       });
     } else {
       // Metro vault claiming - use normal claim function
