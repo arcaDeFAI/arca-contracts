@@ -23,8 +23,8 @@ export function Header() {
                 Vaults
               </a>
               <a 
-                href="/dashboard" 
-                className={pathname === '/dashboard' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}
+                href="/dashboard/" 
+                className={pathname === '/dashboard/' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}
               >
                 Dashboard
               </a>

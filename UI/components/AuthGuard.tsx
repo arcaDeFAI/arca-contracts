@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
@@ -64,7 +64,27 @@ function ConnectWallet() {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
+  // TODO: Re-enable auth when ready
+  // Temporarily skip authentication
+  return <>{children}</>;
+
+  /* Original auth logic - commented out for now
   const { address, isConnected } = useAccount();
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Show loading state during SSR and initial mount
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center">
+        <div className="text-gray-400">Loading...</div>
+      </div>
+    );
+  }
 
   // If wallet is not connected, show connect wallet screen
   if (!isConnected || !address) {
@@ -84,4 +104,5 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // If wallet is connected and authorized, show the protected content
   return <>{children}</>;
+  */
 }
