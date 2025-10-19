@@ -1,15 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useReadContract } from 'wagmi';
-import { useVaultData } from '@/hooks/useVaultData';
+import { useAccount } from 'wagmi';
+import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
-import { useSonicPrice } from '@/hooks/useSonicPrice';
-import { useTokenPrices, useAPYCalculation } from '@/hooks/useAPYCalculation';
-import { useDashboardData } from '@/hooks/useDashboardData';
 import { CONTRACTS } from '@/lib/contracts';
-import { formatTokenAmount, formatUSD, formatPercentage, formatShares } from '@/lib/utils';
-import { METRO_VAULT_ABI } from '@/lib/typechain';
+import { formatUSD, formatPercentage } from '@/lib/utils';
 import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
 
@@ -31,60 +27,36 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
   const testAddress = '0x10dF75c83571b5dAA9638a84BB7490177A8E5816' as `0x${string}`;
   const actualAddress = address || testAddress;
 
-  // ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
+  // Use unified metrics hook - eliminates duplication
   const vaultConfig = { vaultAddress, stratAddress, name, tier };
-  const { userShares, totalSupply, sharePercentage, balances, isLoading, isError } = useVaultData(vaultConfig, actualAddress);
-  
-  // Determine if this is a Shadow vault
-  const isShadowVault = name.includes('Shadow');
-  
-  // Fetch appropriate token balance based on vault type
-  // For Shadow vaults: fetch wS (ERC20), for Metro vaults: fetch S (native)
+  const metrics = useVaultMetrics(vaultConfig, actualAddress);
+
+  const {
+    userShares,
+    totalSupply,
+    sharePercentage,
+    balances,
+    depositedValueUSD,
+    vaultTVL,
+    apr: calculatedAPR,
+    dailyApr: calculatedDailyAPR,
+    aprLoading,
+    pendingRewards,
+    isLoading,
+    isError,
+    prices,
+    sonicPrice,
+    isShadowVault,
+  } = metrics;
+
+  // Fetch token balances for deposit/withdraw
   const sonicBalance = useTokenBalance(CONTRACTS.SONIC, isShadowVault ? undefined : actualAddress);
   const wsBalance = useTokenBalance(CONTRACTS.WS, isShadowVault ? actualAddress : undefined);
   const usdcBalance = useTokenBalance(CONTRACTS.USDC, actualAddress);
-  const { price: sonicPrice, isLoading: priceLoading } = useSonicPrice();
-  
-  // Fetch token prices for APY calculation
-  const { prices, isLoading: pricesLoading } = useTokenPrices();
 
-  // Get actual rewards data for APY calculation
-  const { pendingRewards, shadowEarned } = useDashboardData(vaultConfig, actualAddress);
-
-  // Get preview amounts for user shares to show deposited S and USDC
-  const { data: previewData } = useReadContract({
-    address: vaultAddress as `0x${string}`,
-    abi: METRO_VAULT_ABI,
-    functionName: 'previewAmounts',
-    args: [userShares || 0n],
-    query: { enabled: !!userShares && userShares > 0n }
-  });
-
-  const depositedS = previewData ? previewData[0] : 0n;
-  const depositedUsdc = previewData ? previewData[1] : 0n;
-
-  // Calculate total deposited value in USD
-  const depositedValueUSD = previewData ? 
-    Number(depositedUsdc) / (10 ** 6) + // USDC amount in USD (6 decimals, 1 USDC = $1)
-    (Number(depositedS) / (10 ** 18)) * sonicPrice : 0; // S amount * real market price
-
-  // Calculate APY using actual rewards data
-  // For Metro vaults: use pendingRewards structure like DashboardVaultCard
-  // For Shadow vaults: use shadowEarned (Shadow tokens)
-  const actualRewardsToken = isShadowVault 
-    ? Number(shadowEarned || 0n) / (10 ** 18) // Shadow tokens have 18 decimals
-    : (pendingRewards && pendingRewards.length > 0 
-        ? Number(pendingRewards[0].pendingRewards) / (10 ** 18) // Metro tokens structure: pendingRewards[0].pendingRewards
-        : 0);
-  
-  const tokenPrice = isShadowVault ? (prices?.shadow || 0) : (prices?.metro || 0);
-  
-  const { apy: calculatedAPY, isLoading: apyLoading } = useAPYCalculation(
-    name,
-    depositedValueUSD,
-    actualRewardsToken,
-    tokenPrice
-  );
+  // Calculate deposited amounts for display
+  const depositedS = balances ? balances[0] : 0n;
+  const depositedUsdc = balances ? balances[1] : 0n;
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -123,11 +95,6 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
     }
   };
 
-  // Calculate TVL from strategy balances (S + USDC in USD)
-  const calculatedTVL = balances ? 
-    Number(balances[1]) / (10 ** 6) + // USDC amount in USD (6 decimals, 1 USDC = $1)
-    (Number(balances[0]) / (10 ** 18)) * sonicPrice : 0; // S amount * real market price
-
   return (
     <>
       <div className="bg-arca-gray rounded-lg p-6 border border-arca-light-gray hover:border-arca-green/30 transition-colors">
@@ -141,33 +108,51 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
           </div>
         </div>
 
-        <div className="space-y-3 mb-6">
-          <div className="flex justify-between">
-            <span className="text-gray-400">TVL :</span>
-            <span className="text-white font-semibold">
-              {isLoading ? '...' : formatUSD(calculatedTVL)}
-            </span>
+        <div className="space-y-4 mb-6">
+          {/* Vault Stats */}
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-gray-400">TVL :</span>
+              <span className="text-white font-semibold">
+                {isLoading ? '...' : formatUSD(vaultTVL)}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-400">Deposited :</span>
+              <span className="text-white">
+                {isLoading ? '...' : formatUSD(depositedValueUSD)}
+              </span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-400">Shares (%) :</span>
+              <span className="text-arca-green font-semibold">
+                {isLoading ? '...' : `${sharePercentage.toFixed(4)}%`}
+              </span>
+            </div>
           </div>
-          
-          <div className="flex justify-between">
-            <span className="text-gray-400">Deposited :</span>
-            <span className="text-white">
-              {isLoading ? '...' : formatUSD(depositedValueUSD)}
-            </span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-gray-400">Shares (%) :</span>
-            <span className="text-arca-green font-semibold">
-              {isLoading ? '...' : `${sharePercentage.toFixed(4)}%`}
-            </span>
-          </div>
-          
-          <div className="flex justify-between">
-            <span className="text-gray-400">APY :</span>
-            <span className="text-arca-green font-semibold">
-              {apyLoading || pricesLoading ? '...' : formatPercentage(calculatedAPY)}
-            </span>
+
+          {/* APY Display */}
+          <div className="bg-arca-light-gray/20 rounded-lg p-4 border border-gray-700/50">
+            <div className="text-gray-400 text-xs uppercase tracking-wider mb-3 text-center">APY</div>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Instant APY */}
+              <div className="text-center">
+                <div className="text-gray-500 text-xs mb-1">Instant</div>
+                <div className="text-arca-green text-xl font-semibold">
+                  {aprLoading || isLoading ? '...' : formatPercentage(calculatedAPR)}
+                </div>
+              </div>
+
+              {/* 24h Average APY */}
+              <div className="text-center">
+                <div className="text-gray-500 text-xs mb-1">24h Avg</div>
+                <div className="text-blue-400 text-xl font-semibold">
+                  {aprLoading || isLoading ? '...' : formatPercentage(calculatedDailyAPR)}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
