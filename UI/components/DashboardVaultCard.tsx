@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import { formatUnits } from 'viem';
-import { useDashboardData } from '@/hooks/useDashboardData';
-import { useVaultData } from '@/hooks/useVaultData';
-import { useTokenPrices, useAPYCalculation } from '@/hooks/useAPYCalculation';
+import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { formatUSD, formatPercentage } from '@/lib/utils';
 import { CONTRACTS } from '@/lib/contracts';
 import { type UserRewardStructOutput } from '@/lib/typechain';
@@ -29,22 +27,20 @@ export function DashboardVaultCard({
   // Use only the connected wallet address - no test fallback
   const actualAddress = userAddress;
 
-  // Determine vault type for reward display
-  const isShadowVault = name.includes('Shadow');
-
-  const vaultData = useVaultData(config, actualAddress);
-  const dashboardData = useDashboardData(config, actualAddress);
-  
-  // Fetch token prices for APY calculation
-  const { prices, isLoading: pricesLoading } = useTokenPrices();
+  // Use unified metrics hook
+  const metrics = useVaultMetrics(config, actualAddress);
 
   const {
     userShares,
+    sharePercentage,
+    depositedValueUSD,
+    apr: calculatedAPR,
+    dailyApr: calculatedDailyAPR,
+    aprLoading,
     pendingRewards,
-    shadowPosition,
-    shadowTokenId,
-    xShadowEarned,
     shadowEarned,
+    xShadowEarned,
+    shadowTokenId,
     currentRound,
     queuedWithdrawal,
     claimableWithdrawal,
@@ -52,36 +48,15 @@ export function DashboardVaultCard({
     isClaimingRewards,
     handleRedeemWithdrawal,
     isRedeemingWithdrawal,
-  } = dashboardData;
+    prices,
+    isShadowVault,
+  } = metrics;
 
   // Simple check - show if user has shares, pending rewards, queued withdrawal, or claimable withdrawal
-  const hasShares = vaultData.userShares && vaultData.userShares > 0n;
+  const hasShares = userShares && userShares > 0n;
   const hasPendingRewards = !isShadowVault && pendingRewards && pendingRewards.length > 0;
   const hasQueuedWithdrawal = queuedWithdrawal && queuedWithdrawal > 0n;
   const hasClaimableWithdrawal = claimableWithdrawal && claimableWithdrawal > 0n;
-
-  // Calculate deposited value in USD (simplified calculation)
-  const depositedValueUSD = vaultData.balances ? 
-    Number(vaultData.balances[1]) / (10 ** 6) + // USDC amount in USD (6 decimals, 1 USDC = $1)
-    (Number(vaultData.balances[0]) / (10 ** 18)) * 1 : 0; // S amount * $1 assumption
-
-  // Calculate APY using actual rewards data
-  // For Metro vaults: use pendingRewards structure (pendingRewards[0].pendingRewards)
-  // For Shadow vaults: use shadowEarned (Shadow tokens)
-  const actualRewardsToken = isShadowVault 
-    ? Number(shadowEarned || 0n) / (10 ** 18) // Shadow tokens have 18 decimals
-    : (pendingRewards && pendingRewards.length > 0 
-        ? Number(pendingRewards[0].pendingRewards) / (10 ** 18) // Metro tokens structure: pendingRewards[0].pendingRewards
-        : 0);
-  
-  const tokenPrice = isShadowVault ? (prices?.shadow || 0) : (prices?.metro || 0);
-  
-  const { apy: calculatedAPY, isLoading: apyLoading } = useAPYCalculation(
-    name,
-    depositedValueUSD,
-    actualRewardsToken,
-    tokenPrice
-  );
 
   // Process Shadow vault rewards from earned() calls
   let shadowRewards: {
@@ -126,6 +101,20 @@ export function DashboardVaultCard({
     });
   }
 
+  // Filter non-zero rewards for Metro vaults
+  const nonZeroRewards = !isShadowVault && pendingRewards 
+    ? pendingRewards.filter((reward: UserRewardStructOutput) => reward.pendingRewards > 0n)
+    : [];
+
+  // Helper function to get token name from address
+  const getTokenName = (tokenAddress: string): string => {
+    const addr = tokenAddress.toLowerCase();
+    if (addr === CONTRACTS.METRO.toLowerCase()) return 'Metro';
+    if (addr === CONTRACTS.SHADOW.toLowerCase()) return 'Shadow';
+    if (addr === CONTRACTS.xSHADOW.toLowerCase()) return 'xShadow';
+    return 'Unknown';
+  };
+
   // Don't render if user has no activity or no wallet connected
   if (!actualAddress || (!hasShares && !hasPendingRewards && !hasShadowRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal)) {
     return null;
@@ -168,97 +157,100 @@ export function DashboardVaultCard({
       </div>
 
       <div className="space-y-4">
-        {/* User Shares */}
+        {/* User Shares & APY */}
         <div className="bg-arca-light-gray/30 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-gray-400">Your Shares:</span>
-            <span className="text-white font-semibold">
-              {vaultData.userShares?.toString() || '0'}
-            </span>
+          {/* APY Display - Dual metrics */}
+          <div className="mb-4 pb-4 border-b border-gray-700/30">
+            <div className="text-gray-400 text-xs uppercase tracking-wider mb-3 text-center">APY</div>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Instant APY - Based on 5-minute intervals */}
+              <div className="text-center">
+                <div className="text-gray-500 text-sm mb-1">Instant</div>
+                <div className="text-arca-green text-lg font-semibold">
+                  {aprLoading ? '...' : formatPercentage(calculatedAPR || 0)}
+                </div>
+              </div>
+
+              {/* 24h Average APY - Based on harvests over last 24 hours */}
+              <div className="text-center">
+                <div className="text-gray-500 text-sm mb-1">24h Avg</div>
+                <div className="text-blue-400 text-lg font-semibold">
+                  {aprLoading ? '...' : formatPercentage(calculatedDailyAPR || 0)}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">Share %:</span>
-            <span className="text-arca-green">
-              {vaultData.sharePercentage?.toFixed(4) || '0.0000'}%
-            </span>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400">APY:</span>
-            <span className="text-arca-green font-semibold">
-              {apyLoading || pricesLoading ? '...' : formatPercentage(calculatedAPY || 0)}
-            </span>
+
+          {/* Share Info - Compact */}
+          <div className="mt-3 pt-3 border-t border-gray-700/30">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400">Share %:</span>
+              <span className="text-arca-green font-semibold">
+                {sharePercentage?.toFixed(4) || '0.0000'}%
+              </span>
+            </div>
           </div>
         </div>
 
 
-        {/* Rewards Section - Metro or xShadow */}
-        {(isShadowVault ? hasShadowRewards : hasPendingRewards) && (
+        {/* Rewards Section - Shows only non-zero rewards */}
+        {hasPendingRewards && (
           <div className="bg-arca-light-gray/30 rounded-lg p-4">
-            <div className="flex justify-between items-center mb-3">
-              <span className="text-gray-400">{isShadowVault ? 'Shadow' : 'Metro'} Rewards:</span>
-              <span className={`font-semibold ${
-                isShadowVault 
-                  ? (shadowHasActivePosition ? 'text-arca-green' : 'text-red-400')
-                  : 'text-arca-green'
-              }`}>
-                {isShadowVault 
-                  ? (shadowHasActivePosition ? 'Available' : 'Not Available')
-                  : 'Available'
-                }
-              </span>
-            </div>
             <div className="space-y-2 mb-3">
-              {isShadowVault ? (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">xShadow tokens:</span>
-                    <span className="text-white">
-                      {shadowRewards ? Number(formatUnits(shadowRewards.xShadowEarned, 18)).toFixed(8) : '0.00000000'}
+              {nonZeroRewards.map((reward: UserRewardStructOutput, index: number) => {
+                const tokenName = getTokenName(reward.token);
+                const tokenAmount = Number(formatUnits(reward.pendingRewards, 18));
+
+                // Get token price based on token name
+                let tokenPrice = 0;
+                if (tokenName === 'Metro' && prices?.metro) {
+                  tokenPrice = prices.metro;
+                } else if (tokenName === 'Shadow' && prices?.shadow) {
+                  tokenPrice = prices.shadow;
+                } else if (tokenName === 'xShadow' && prices?.xShadow) {
+                  tokenPrice = prices.xShadow;
+                }
+
+                const usdValue = tokenAmount * tokenPrice;
+
+                // Format USD with appropriate precision for small values
+                let usdDisplay = '';
+                if (tokenPrice > 0) {
+                  if (usdValue < 0.01) {
+                    // For very small values, show more decimals
+                    usdDisplay = `($${usdValue.toFixed(4)})`;
+                  } else {
+                    usdDisplay = `(${formatUSD(usdValue)})`;
+                  }
+                }
+
+                console.log(`💰 Rewards Display - ${tokenName}:`, {
+                  tokenAmount,
+                  tokenPrice,
+                  usdValue,
+                  usdDisplay
+                });
+
+                return (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-gray-400">Rewards:</span>
+                    <span className="text-arca-green font-semibold">
+                      {tokenAmount.toFixed(4)} {tokenName} {usdDisplay}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Shadow tokens:</span>
-                    <span className="text-white">
-                      {shadowRewards ? Number(formatUnits(shadowRewards.shadowEarned, 18)).toFixed(8) : '0.00000000'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm font-semibold border-t border-gray-600 pt-2">
-                    <span className="text-gray-300">Total:</span>
-                    <span className="text-arca-green">
-                      {shadowRewards ? Number(formatUnits(shadowRewards.totalEarned, 18)).toFixed(8) : '0.00000000'}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Metro tokens:</span>
-                  <span className="text-white">
-                    {dashboardData.pendingRewards && dashboardData.pendingRewards.length > 0
-                      ? Number(formatUnits(dashboardData.pendingRewards[0].pendingRewards, 18)).toFixed(8)
-                      : '0.00000000'
-                    }
-                  </span>
-                </div>
-              )}
+                );
+              })}
             </div>
             <button
-              onClick={() => {
-                console.log('🔥 CLAIM BUTTON CLICKED:', {
-                  isShadowVault,
-                  shadowHasActivePosition,
-                  hasShadowRewards,
-                  isClaimingRewards: dashboardData.isClaimingRewards
-                });
-                dashboardData.handleClaimRewards();
-              }}
-              disabled={isShadowVault ? (!shadowHasActivePosition || !hasShadowRewards) : (!hasPendingRewards || dashboardData.isClaimingRewards)}
+              onClick={handleClaimRewards}
+              disabled={isClaimingRewards}
               className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                (isShadowVault ? (shadowHasActivePosition && hasShadowRewards) : (hasPendingRewards && !dashboardData.isClaimingRewards))
-                  ? 'bg-arca-green text-black hover:bg-arca-green/90'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                isClaimingRewards
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-arca-green text-black hover:bg-arca-green/90'
               }`}
             >
-              {dashboardData.isClaimingRewards ? 'Claiming...' : 'Claim Rewards'}
+              {isClaimingRewards ? 'Claiming...' : 'Claim Rewards'}
             </button>
           </div>
         )}
@@ -269,11 +261,11 @@ export function DashboardVaultCard({
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Queued Withdrawal:</span>
               <span className="text-yellow-400 font-semibold">
-                {dashboardData.queuedWithdrawal?.toString() || '0'} shares
+                {queuedWithdrawal?.toString() || '0'} shares
               </span>
             </div>
             <div className="text-sm text-gray-400 mb-3">
-              Round: {dashboardData.currentRound !== undefined ? Number(dashboardData.currentRound) : 'Loading...'}
+              Round: {currentRound !== undefined ? Number(currentRound) : 'Loading...'}
             </div>
             <div className="text-sm text-orange-400 text-center py-2">
               Withdrawal will be claimable in the next round
@@ -287,22 +279,22 @@ export function DashboardVaultCard({
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal:</span>
               <span className="text-arca-green font-semibold">
-                {dashboardData.claimableWithdrawal?.toString() || '0'} shares
+                {claimableWithdrawal?.toString() || '0'} shares
               </span>
             </div>
             <div className="text-sm text-gray-400 mb-3">
-              From Round: {dashboardData.currentRound !== undefined ? Number(dashboardData.currentRound) - 1 : 'Loading...'}
+              From Round: {currentRound !== undefined ? Number(currentRound) - 1 : 'Loading...'}
             </div>
             <button
-              onClick={dashboardData.handleRedeemWithdrawal}
-              disabled={dashboardData.isRedeemingWithdrawal}
+              onClick={handleRedeemWithdrawal}
+              disabled={isRedeemingWithdrawal}
               className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                dashboardData.isRedeemingWithdrawal
+                isRedeemingWithdrawal
                   ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   : 'bg-arca-green text-black hover:bg-arca-green/90'
               }`}
             >
-              {dashboardData.isRedeemingWithdrawal ? 'Claiming...' : 'Claim Withdrawal'}
+              {isRedeemingWithdrawal ? 'Claiming...' : 'Claim Withdrawal'}
             </button>
           </div>
         )}
