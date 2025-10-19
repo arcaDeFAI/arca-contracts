@@ -14,10 +14,9 @@ interface VaultCardProps {
   stratAddress: string;
   name: string;
   tier: 'Active' | 'Premium' | 'Elite';
-  apy: number;
 }
 
-export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: VaultCardProps) {
+export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardProps) {
   const { address, isConnected } = useAccount();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -38,8 +37,7 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
     balances,
     depositedValueUSD,
     vaultTVL,
-    apr: calculatedAPR,
-    dailyApr: calculatedDailyAPR,
+    apy,
     aprLoading,
     pendingRewards,
     isLoading,
@@ -134,23 +132,11 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, apy }: Vault
           </div>
 
           {/* APY Display */}
-          <div className="bg-arca-light-gray/20 rounded-lg p-4 border border-gray-700/50">
-            <div className="text-gray-400 text-xs uppercase tracking-wider mb-3 text-center">APY</div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Instant APY */}
-              <div className="text-center">
-                <div className="text-gray-500 text-xs mb-1">Instant</div>
-                <div className="text-arca-green text-xl font-semibold">
-                  {aprLoading || isLoading ? '...' : formatPercentage(calculatedAPR)}
-                </div>
-              </div>
-
-              {/* 24h Average APY */}
-              <div className="text-center">
-                <div className="text-gray-500 text-xs mb-1">24h Avg</div>
-                <div className="text-blue-400 text-xl font-semibold">
-                  {aprLoading || isLoading ? '...' : formatPercentage(calculatedDailyAPR)}
-                </div>
+          <div className="bg-arca-light-gray/20 rounded-lg p-3 border border-gray-700/50">
+            <div className="text-gray-400 text-xs uppercase tracking-wider mb-1 text-center">APY</div>
+            <div className="text-center">
+              <div className="text-arca-green text-xl font-semibold">
+                {aprLoading || isLoading ? '...' : formatPercentage(apy)}
               </div>
             </div>
           </div>

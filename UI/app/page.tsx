@@ -150,7 +150,6 @@ export default function Home() {
               stratAddress={vault.stratAddress}
               name={vault.name}
               tier={vault.tier}
-              apy={vault.apy}
             />
           ))}
         </div>
