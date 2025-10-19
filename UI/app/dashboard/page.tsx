@@ -67,38 +67,31 @@ export default function Dashboard() {
         )}
 
         {/* Vault Cards - Only show vaults where user has funds */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {VAULT_CONFIGS.map((vault, index) => (
-            <div key={index} className="space-y-4">
-              {/* Position Visualization Card */}
-              <PositionVisualizationCard
-                vaultAddress={vault.vaultAddress}
-                stratAddress={vault.stratAddress}
-                lbBookAddress={vault.lbBookAddress}
-                clpoolAddress={vault.clpoolAddress}
-                name={vault.name}
-                tier={vault.tier}
-                userAddress={actualAddress}
-              />
-              
-              {/* Dashboard Vault Card */}
-              <DashboardVaultCard
-                vaultAddress={vault.vaultAddress}
-                stratAddress={vault.stratAddress}
-                name={vault.name}
-                tier={vault.tier}
-                userAddress={actualAddress}
-              />
-            </div>
-          ))}
-        </div>
-
-        {/* Empty State */}
         {mounted && (
-          <div className="text-center py-12">
-            <div className="text-gray-500 text-sm">
-              Vault cards will appear here when you have active positions
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {VAULT_CONFIGS.map((vault, index) => (
+              <div key={index} className="space-y-4">
+                {/* Position Visualization Card */}
+                <PositionVisualizationCard
+                  vaultAddress={vault.vaultAddress}
+                  stratAddress={vault.stratAddress}
+                  lbBookAddress={vault.lbBookAddress}
+                  clpoolAddress={vault.clpoolAddress}
+                  name={vault.name}
+                  tier={vault.tier}
+                  userAddress={actualAddress}
+                />
+                
+                {/* Dashboard Vault Card */}
+                <DashboardVaultCard
+                  vaultAddress={vault.vaultAddress}
+                  stratAddress={vault.stratAddress}
+                  name={vault.name}
+                  tier={vault.tier}
+                  userAddress={actualAddress}
+                />
+              </div>
+            ))}
           </div>
         )}
       </main>
