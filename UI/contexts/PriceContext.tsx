@@ -23,8 +23,8 @@ const PriceContext = createContext<PriceContextType | undefined>(undefined);
 // Token address to CoinGecko ID mapping
 const TOKEN_COINGECKO_IDS: { [key: string]: string } = {
   // Sonic (S token)
-  's': 'sonic',
-  'sonic': 'sonic',
+  's': 'sonic-3',
+  'sonic': 'sonic-3',
 
   // Metro token: 0x71e99522ead5e21cf57f1f542dc4ad2e841f7321
   'metro': 'metropolis',
@@ -55,7 +55,7 @@ export function PriceProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
 
         // Fetch all token prices in one API call
-        const coingeckoIds = 'sonic,metropolis,shadow-2,usd-coin';
+        const coingeckoIds = 'sonic-3,metropolis,shadow-2,usd-coin';
         const response = await fetch(
           `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds}&vs_currencies=usd`
         );
@@ -67,7 +67,7 @@ export function PriceProvider({ children }: { children: ReactNode }) {
         const data = await response.json();
 
         const newPrices: TokenPrices = {
-          sonic: data.sonic?.usd || 0,
+          sonic: data['sonic-3']?.usd || 0.17,
           metro: data.metropolis?.usd || 0,
           shadow: data['shadow-2']?.usd || 0,
           xShadow: data['shadow-2']?.usd || 0, // xShadow uses same price as Shadow
@@ -132,7 +132,7 @@ export function useTokenPrice(tokenIdentifier: string): number {
   const coingeckoId = TOKEN_COINGECKO_IDS[normalizedId];
   if (coingeckoId) {
     // Map CoinGecko ID back to our price keys
-    if (coingeckoId === 'sonic') return prices.sonic;
+    if (coingeckoId === 'sonic-3') return prices.sonic;
     if (coingeckoId === 'metropolis') return prices.metro;
     if (coingeckoId === 'shadow-2') return prices.shadow;
     if (coingeckoId === 'usd-coin') return prices.usdc;

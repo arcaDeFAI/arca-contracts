@@ -3,40 +3,52 @@
 import { usePathname } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ArcaLogo } from './ArcaLogo';
+import { usePrices } from '@/contexts/PriceContext';
+import { formatUSD } from '@/lib/utils';
 
 export function Header() {
   const pathname = usePathname();
+  const { prices, isLoading } = usePrices();
+  
   return (
     <header className="bg-arca-dark border-b border-arca-light-gray">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
-              <ArcaLogo size={32} />
-              <div className="text-2xl font-bold text-arca-green">ARCA</div>
+              <ArcaLogo size={40} />
+              <div className="text-3xl font-bold text-arca-green">ARCA</div>
             </div>
+            
             <nav className="hidden md:flex items-center gap-6">
               <a 
                 href="/" 
-                className={pathname === '/' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}
+                className={`text-lg ${pathname === '/' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}`}
               >
                 Vaults
               </a>
               <a 
                 href="/dashboard" 
-                className={pathname === '/dashboard' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}
+                className={`text-lg ${pathname === '/dashboard' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}`}
               >
                 Dashboard
               </a>
               <a 
                 href="/staking" 
-                className={pathname === '/staking' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}
+                className={`text-lg ${pathname === '/staking' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}`}
               >
                 Staking
               </a>
             </nav>
           </div>
           <div className="flex items-center gap-4">
+            {/* Sonic Price */}
+            {!isLoading && prices && (
+              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-arca-green/10 rounded-lg border border-arca-green/20">
+                <span className="text-base text-gray-300">S :</span>
+                <span className="text-xl font-bold text-arca-green">{formatUSD(prices.sonic)}</span>
+              </div>
+            )}
             <ConnectButton.Custom>
               {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
                 const ready = mounted;

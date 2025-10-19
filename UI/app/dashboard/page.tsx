@@ -3,8 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { Header } from '@/components/Header';
-import DashboardVaultCard from '@/components/DashboardVaultCard'
-import PositionVisualizationCard from '@/components/PositionVisualizationCard';
+import DashboardVaultCard from '@/components/DashboardVaultCard';
 
 // Vault configurations from main page
 const VAULT_CONFIGS = [
@@ -40,25 +39,25 @@ export default function Dashboard() {
     <div className="min-h-screen bg-arca-dark">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Hero Section */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-3">
             Dashboard
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-400 text-base">
             Manage your vault positions, claim rewards, and handle withdrawals
           </p>
         </div>
 
         {/* Connection Prompt */}
         {mounted && !isConnected && (
-          <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-6 mb-8">
+          <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="text-yellow-400 text-xl">⚠️</div>
+              <div className="text-yellow-400 text-lg">⚠️</div>
               <div>
-                <h3 className="text-yellow-400 font-semibold mb-1">Connect Your Wallet</h3>
-                <p className="text-yellow-300/80 text-sm">
+                <h3 className="text-yellow-400 font-semibold mb-1 text-sm">Connect Your Wallet</h3>
+                <p className="text-yellow-300/80 text-xs">
                   Connect your Web3 wallet to view your dashboard and manage your positions.
                 </p>
               </div>
@@ -68,29 +67,18 @@ export default function Dashboard() {
 
         {/* Vault Cards - Only show vaults where user has funds */}
         {mounted && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             {VAULT_CONFIGS.map((vault, index) => (
-              <div key={index} className="space-y-4">
-                {/* Position Visualization Card */}
-                <PositionVisualizationCard
-                  vaultAddress={vault.vaultAddress}
-                  stratAddress={vault.stratAddress}
-                  lbBookAddress={vault.lbBookAddress}
-                  clpoolAddress={vault.clpoolAddress}
-                  name={vault.name}
-                  tier={vault.tier}
-                  userAddress={actualAddress}
-                />
-                
-                {/* Dashboard Vault Card */}
-                <DashboardVaultCard
-                  vaultAddress={vault.vaultAddress}
-                  stratAddress={vault.stratAddress}
-                  name={vault.name}
-                  tier={vault.tier}
-                  userAddress={actualAddress}
-                />
-              </div>
+              <DashboardVaultCard
+                key={index}
+                vaultAddress={vault.vaultAddress}
+                stratAddress={vault.stratAddress}
+                lbBookAddress={vault.lbBookAddress}
+                clpoolAddress={vault.clpoolAddress}
+                name={vault.name}
+                tier={vault.tier}
+                userAddress={actualAddress}
+              />
             ))}
           </div>
         )}
