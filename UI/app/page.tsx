@@ -88,29 +88,29 @@ export default function Home() {
     <div className="min-h-screen bg-arca-dark">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Hero Section */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-3">
             Yield Vault Strategies
           </h1>
-          <p className="text-gray-400 text-lg">
+          <p className="text-gray-400 text-base">
             Deposit and earn yield on your crypto assets across our strategic vaults
           </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-arca-gray rounded-lg p-6 border border-arca-light-gray">
-            <div className="text-sm text-gray-400 mb-1">Total TVL</div>
-            <div className="text-2xl font-bold text-arca-green">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-arca-gray rounded-lg p-4 border border-arca-light-gray">
+            <div className="text-xs text-gray-400 mb-1">Total TVL</div>
+            <div className="text-xl font-bold text-arca-green">
               {vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(totalTVL)}
             </div>
           </div>
           
-          <div className="bg-arca-gray rounded-lg p-6 border border-arca-light-gray">
-            <div className="text-sm text-gray-400 mb-1">Your Total Balance</div>
-            <div className="text-2xl font-bold text-white">
+          <div className="bg-arca-gray rounded-lg p-4 border border-arca-light-gray">
+            <div className="text-xs text-gray-400 mb-1">Your Total Balance</div>
+            <div className="text-xl font-bold text-white">
               {!mounted ? '--' : 
                (!isConnected ? '--' : 
                 (vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(userTotalBalance))
@@ -118,9 +118,9 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="bg-arca-gray rounded-lg p-6 border border-arca-light-gray">
-            <div className="text-sm text-gray-400 mb-1">Active Vaults</div>
-            <div className="text-2xl font-bold text-white">
+          <div className="bg-arca-gray rounded-lg p-4 border border-arca-light-gray">
+            <div className="text-xs text-gray-400 mb-1">Active Vaults</div>
+            <div className="text-xl font-bold text-white">
               {VAULT_CONFIGS.length}
             </div>
           </div>
@@ -128,12 +128,12 @@ export default function Home() {
 
         {/* Connection Prompt */}
         {mounted && !isConnected && (
-          <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-6 mb-8">
+          <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-3">
-              <div className="text-yellow-400 text-xl">⚠️</div>
+              <div className="text-yellow-400 text-lg">⚠️</div>
               <div>
-                <h3 className="text-yellow-400 font-semibold mb-1">Connect Your Wallet</h3>
-                <p className="text-yellow-300/80 text-sm">
+                <h3 className="text-yellow-400 font-semibold mb-1 text-sm">Connect Your Wallet</h3>
+                <p className="text-yellow-300/80 text-xs">
                   Connect your Web3 wallet to view your balances and interact with the vaults.
                 </p>
               </div>
@@ -142,7 +142,7 @@ export default function Home() {
         )}
 
         {/* Vault Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {VAULT_CONFIGS.map((vault, index) => (
             <VaultCard
               key={index}
