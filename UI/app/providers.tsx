@@ -7,6 +7,7 @@ import {
 } from '@rainbow-me/rainbowkit';
 import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { PriceProvider } from '@/contexts/PriceContext';
 
 // Define the Sonic blockchain network
 const sonic = {
@@ -43,7 +44,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider initialChain={sonic}>
-          {children}
+          <PriceProvider>
+            {children}
+          </PriceProvider>
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

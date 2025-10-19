@@ -1,10 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-interface TokenPrice {
-  usd: number;
-}
+import { usePrices } from '@/contexts/PriceContext';
 
 interface APYData {
   apy: number;
@@ -12,49 +9,24 @@ interface APYData {
   error: string | null;
 }
 
-// CoinGecko API hook for token prices
+// Re-export the centralized price hook for backward compatibility
 export function useTokenPrices() {
-  const [prices, setPrices] = useState<{ metro: number; shadow: number } | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { prices, isLoading, error } = usePrices();
 
-  useEffect(() => {
-    const fetchPrices = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch(
-          'https://api.coingecko.com/api/v3/simple/price?ids=metropolis,shadow-2&vs_currencies=usd'
-        );
-        
-        if (!response.ok) {
-          throw new Error('Failed to fetch token prices');
-        }
-        
-        const data = await response.json();
-        setPrices({
-          metro: data.metropolis?.usd || 0,
-          shadow: data['shadow-2']?.usd || 0
-        });
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        setPrices(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPrices();
-    // Refresh prices every 5 minutes
-    const interval = setInterval(fetchPrices, 5 * 60 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
-
-  return { prices, isLoading, error };
+  return {
+    prices: prices ? {
+      metro: prices.metro,
+      shadow: prices.shadow,
+      sonic: prices.sonic,
+      usdc: prices.usdc,
+      xShadow: prices.xShadow,
+    } : null,
+    isLoading,
+    error
+  };
 }
 
-// Simple APY calculation hook using daily deltas
+// APR calculation using 5-minute deltas extrapolated to annual rate
 export function useAPYCalculation(
   vaultName: string,
   userBalanceUSD: number,
@@ -68,88 +40,107 @@ export function useAPYCalculation(
   const [lastUpdateTime, setLastUpdateTime] = useState<number | null>(null);
 
   useEffect(() => {
-    try {
-      setIsLoading(true);
-      
-      console.log(`🔢 SIMPLE APY DEBUG - ${vaultName}:`, {
-        userBalanceUSD,
-        currentRewardsToken,
-        tokenPrice,
-        previousRewards,
-        lastUpdateTime
-      });
-      
-      if (!userBalanceUSD || !tokenPrice) {
-        console.log(`⚠️ APY SKIPPED - ${vaultName}: Missing balance or price`);
-        setApy(0);
-        setError(null);
-        setIsLoading(false);
-        return;
-      }
+    const calculateAPR = () => {
+      try {
+        setIsLoading(true);
 
-      const currentTime = Date.now();
-      const currentRewardsUSD = currentRewardsToken * tokenPrice;
-      
-      // First time or no previous data - just store current values
-      if (previousRewards === null || lastUpdateTime === null) {
-        console.log(`📅 FIRST DAY - ${vaultName}: Storing initial data, waiting for next day`);
+        console.log(`🔢 APR CALCULATION - ${vaultName}:`, {
+          userBalanceUSD,
+          currentRewardsToken,
+          tokenPrice,
+          previousRewards,
+          lastUpdateTime
+        });
+
+        if (!userBalanceUSD || !tokenPrice) {
+          console.log(`⚠️ APR SKIPPED - ${vaultName}: Missing balance or price`);
+          setApy(0);
+          setError(null);
+          setIsLoading(false);
+          return;
+        }
+
+        const currentTime = Date.now();
+        const currentRewardsUSD = currentRewardsToken * tokenPrice;
+
+        // First time - store initial values
+        if (previousRewards === null || lastUpdateTime === null) {
+          console.log(`📅 INITIAL SNAPSHOT - ${vaultName}: Storing baseline, APR will calculate in 5 minutes`);
+          setPreviousRewards(currentRewardsUSD);
+          setLastUpdateTime(currentTime);
+          setApy(0);
+          setError(null);
+          setIsLoading(false);
+          return;
+        }
+
+        // Calculate time elapsed in minutes
+        const minutesElapsed = (currentTime - lastUpdateTime) / (1000 * 60);
+
+        // Only calculate if at least 5 minutes have passed
+        if (minutesElapsed < 5) {
+          console.log(`⏳ WAITING - ${vaultName}: Only ${minutesElapsed.toFixed(1)} minutes elapsed, need 5 min`);
+          setIsLoading(false);
+          return;
+        }
+
+        // Calculate rewards delta over the elapsed period
+        const rewardsDeltaUSD = currentRewardsUSD - previousRewards;
+
+        console.log(`📊 REWARDS DELTA - ${vaultName}:`, {
+          previousRewards,
+          currentRewardsUSD,
+          rewardsDeltaUSD,
+          minutesElapsed: minutesElapsed.toFixed(2)
+        });
+
+        if (rewardsDeltaUSD <= 0) {
+          console.log(`⚠️ NO REWARDS GROWTH - ${vaultName}: Delta is ${rewardsDeltaUSD}`);
+          setApy(0);
+        } else {
+          // Calculate rate per minute, then extrapolate to annual
+          const rewardsPerMinute = rewardsDeltaUSD / minutesElapsed;
+          const minutesPerYear = 365 * 24 * 60; // 525,600 minutes per year
+          const annualRewardsUSD = rewardsPerMinute * minutesPerYear;
+
+          // APR = (Annual Rewards / Balance) * 100
+          const calculatedAPR = (annualRewardsUSD / userBalanceUSD) * 100;
+
+          console.log(`✅ APR CALCULATED - ${vaultName}:`, {
+            rewardsDeltaUSD,
+            minutesElapsed: minutesElapsed.toFixed(2),
+            rewardsPerMinute,
+            annualRewardsUSD,
+            userBalanceUSD,
+            calculatedAPR,
+            percentage: `${calculatedAPR.toFixed(2)}%`
+          });
+
+          setApy(Math.max(0, calculatedAPR));
+        }
+
+        // Update stored values for next calculation
         setPreviousRewards(currentRewardsUSD);
         setLastUpdateTime(currentTime);
-        setApy(0); // No APY on first day
         setError(null);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Check if at least 24 hours have passed
-      const hoursElapsed = (currentTime - lastUpdateTime) / (1000 * 60 * 60);
-      
-      if (hoursElapsed < 24) {
-        console.log(`⏳ WAITING - ${vaultName}: Only ${hoursElapsed.toFixed(1)} hours elapsed, need 24h`);
-        setIsLoading(false);
-        return; // Keep previous APY, don't update yet
-      }
-      
-      // Calculate daily delta
-      const dailyDeltaUSD = currentRewardsUSD - previousRewards;
-      
-      console.log(`📊 DAILY DELTA - ${vaultName}:`, {
-        previousRewards,
-        currentRewardsUSD,
-        dailyDeltaUSD,
-        hoursElapsed
-      });
-      
-      if (dailyDeltaUSD <= 0) {
-        console.log(`⚠️ NO REWARDS GROWTH - ${vaultName}: Delta is ${dailyDeltaUSD}`);
+
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'APR calculation error';
+        console.error(`❌ APR ERROR - ${vaultName}:`, errorMessage);
+        setError(errorMessage);
         setApy(0);
-      } else {
-        // Simple APY: (Daily Delta / Balance) * 365 * 100
-        const calculatedAPY = (dailyDeltaUSD / userBalanceUSD) * 365 * 100;
-        
-        console.log(`✅ APY CALCULATED - ${vaultName}:`, {
-          dailyDeltaUSD,
-          userBalanceUSD,
-          calculatedAPY,
-          percentage: `${calculatedAPY.toFixed(2)}%`
-        });
-        
-        setApy(Math.max(0, calculatedAPY));
+      } finally {
+        setIsLoading(false);
       }
-      
-      // Update stored values for next calculation
-      setPreviousRewards(currentRewardsUSD);
-      setLastUpdateTime(currentTime);
-      setError(null);
-      
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'APY calculation error';
-      console.error(`❌ APY ERROR - ${vaultName}:`, errorMessage);
-      setError(errorMessage);
-      setApy(0);
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    // Calculate immediately
+    calculateAPR();
+
+    // Recalculate every 5 minutes
+    const interval = setInterval(calculateAPR, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, [userBalanceUSD, currentRewardsToken, tokenPrice, vaultName, previousRewards, lastUpdateTime]);
 
   return { apy, isLoading, error };
