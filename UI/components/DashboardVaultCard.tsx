@@ -34,13 +34,13 @@ export function DashboardVaultCard({
     userShares,
     sharePercentage,
     depositedValueUSD,
-    apr: calculatedAPR,
-    dailyApr: calculatedDailyAPR,
+    apy,
     aprLoading,
     pendingRewards,
     shadowEarned,
     xShadowEarned,
     shadowTokenId,
+    shadowRewardStatus,
     currentRound,
     queuedWithdrawal,
     claimableWithdrawal,
@@ -52,35 +52,50 @@ export function DashboardVaultCard({
     isShadowVault,
   } = metrics;
 
+  // Helper function to get token name from address
+  const getTokenName = (tokenAddress: string): string => {
+    const addr = tokenAddress.toLowerCase();
+    if (addr === CONTRACTS.METRO.toLowerCase()) return 'Metro';
+    if (addr === CONTRACTS.SHADOW.toLowerCase()) return 'Shadow';
+    if (addr === CONTRACTS.xSHADOW.toLowerCase()) return 'xShadow';
+    return 'Unknown';
+  };
+
   // Simple check - show if user has shares, pending rewards, queued withdrawal, or claimable withdrawal
   const hasShares = userShares && userShares > 0n;
   const hasPendingRewards = !isShadowVault && pendingRewards && pendingRewards.length > 0;
   const hasQueuedWithdrawal = queuedWithdrawal && queuedWithdrawal > 0n;
   const hasClaimableWithdrawal = claimableWithdrawal && claimableWithdrawal > 0n;
 
-  // Process Shadow vault rewards from earned() calls
-  let shadowRewards: {
-    xShadowEarned: bigint;
-    shadowEarned: bigint;
-    totalEarned: bigint;
-  } | null = null;
+  // Process Shadow vault rewards from getRewardStatus (6 tokens array)
+  let shadowRewards: Array<{
+    token: string;
+    tokenName: string;
+    amount: bigint;
+    amountFormatted: string;
+  }> = [];
   let shadowHasActivePosition = false;
+  let shadowTotalRewards = 0n;
 
-  if (isShadowVault && shadowTokenId) {
-    const xShadowAmount = xShadowEarned || 0n;
-    const shadowAmount = shadowEarned || 0n;
-    const totalEarned = xShadowAmount + shadowAmount;
+  if (isShadowVault && shadowRewardStatus) {
+    shadowHasActivePosition = shadowRewardStatus.hasActivePosition;
     
-    shadowRewards = {
-      xShadowEarned: xShadowAmount,
-      shadowEarned: shadowAmount,
-      totalEarned,
-    };
-    shadowHasActivePosition = !!shadowTokenId;
+    // Process all 6 tokens from the rewards array
+    shadowRewards = shadowRewardStatus.tokens.map((tokenAddress: string, index: number) => {
+      const amount = shadowRewardStatus.earned[index] || 0n;
+      shadowTotalRewards += amount;
+      
+      return {
+        token: tokenAddress,
+        tokenName: getTokenName(tokenAddress),
+        amount,
+        amountFormatted: (Number(amount) / (10 ** 18)).toFixed(4),
+      };
+    }).filter((reward: { token: string; tokenName: string; amount: bigint; amountFormatted: string }) => reward.amount > 0n);
   }
 
-  // For Shadow vaults, check if there are any rewards from getRewardStatus
-  const hasShadowRewards = isShadowVault && shadowRewards && shadowRewards.totalEarned > 0n;
+  // For Shadow vaults, check if there are any rewards
+  const hasShadowRewards = isShadowVault && shadowRewards.length > 0 && shadowTotalRewards > 0n;
 
   // Debug Shadow vault rendering logic
   if (isShadowVault) {
@@ -90,11 +105,11 @@ export function DashboardVaultCard({
       hasShadowRewards,
       shadowHasActivePosition,
       shadowTokenId: shadowTokenId?.toString(),
-      shadowRewards: shadowRewards ? {
-        xShadowEarned: shadowRewards.xShadowEarned.toString(),
-        shadowEarned: shadowRewards.shadowEarned.toString(),
-        totalEarned: shadowRewards.totalEarned.toString()
-      } : null,
+      shadowRewards: shadowRewards.map(r => ({
+        token: r.tokenName,
+        amount: r.amountFormatted
+      })),
+      shadowTotalRewards: shadowTotalRewards.toString(),
       buttonShouldBeEnabled: shadowHasActivePosition && hasShadowRewards,
       buttonDisabled: !shadowHasActivePosition || !hasShadowRewards,
       willRender: !!actualAddress && (hasShares || hasShadowRewards || hasQueuedWithdrawal || hasClaimableWithdrawal)
@@ -105,15 +120,6 @@ export function DashboardVaultCard({
   const nonZeroRewards = !isShadowVault && pendingRewards 
     ? pendingRewards.filter((reward: UserRewardStructOutput) => reward.pendingRewards > 0n)
     : [];
-
-  // Helper function to get token name from address
-  const getTokenName = (tokenAddress: string): string => {
-    const addr = tokenAddress.toLowerCase();
-    if (addr === CONTRACTS.METRO.toLowerCase()) return 'Metro';
-    if (addr === CONTRACTS.SHADOW.toLowerCase()) return 'Shadow';
-    if (addr === CONTRACTS.xSHADOW.toLowerCase()) return 'xShadow';
-    return 'Unknown';
-  };
 
   // Don't render if user has no activity or no wallet connected
   if (!actualAddress || (!hasShares && !hasPendingRewards && !hasShadowRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal)) {
@@ -127,20 +133,6 @@ export function DashboardVaultCard({
       case 'Active': return 'text-blue-400 border-blue-400/20 bg-blue-400/5';
       default: return 'text-gray-400 border-gray-400/20 bg-gray-400/5';
     }
-  };
-
-  const formatMetroAmount = (rewards: UserRewardStructOutput[] | undefined) => {
-    if (!rewards || !Array.isArray(rewards) || rewards.length === 0) return '0';
-    // Sum up all pending rewards from the array
-    const totalRewards = rewards.reduce((sum: bigint, reward: UserRewardStructOutput) => {
-      return sum + (reward.pendingRewards || 0n);
-    }, 0n);
-    return parseFloat(formatUnits(totalRewards, 18)).toFixed(4);
-  };
-
-  const formatTokenAmount = (amount: bigint | undefined, decimals: number) => {
-    if (!amount) return '0';
-    return parseFloat(formatUnits(amount, decimals)).toFixed(4);
   };
 
   return (
@@ -159,25 +151,14 @@ export function DashboardVaultCard({
       <div className="space-y-4">
         {/* User Shares & APY */}
         <div className="bg-arca-light-gray/30 rounded-lg p-4">
-          {/* APY Display - Dual metrics */}
+          {/* APY Display - Vault-wide 24h */}
           <div className="mb-4 pb-4 border-b border-gray-700/30">
-            <div className="text-gray-400 text-xs uppercase tracking-wider mb-3 text-center">APY</div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Instant APY - Based on 5-minute intervals */}
-              <div className="text-center">
-                <div className="text-gray-500 text-sm mb-1">Instant</div>
-                <div className="text-arca-green text-lg font-semibold">
-                  {aprLoading ? '...' : formatPercentage(calculatedAPR || 0)}
-                </div>
+            <div className="text-gray-400 text-xs uppercase tracking-wider mb-2 text-center">APY</div>
+            <div className="text-center">
+              <div className="text-arca-green text-2xl font-bold">
+                {aprLoading ? '...' : formatPercentage(apy || 0)}
               </div>
-
-              {/* 24h Average APY - Based on harvests over last 24 hours */}
-              <div className="text-center">
-                <div className="text-gray-500 text-sm mb-1">24h Avg</div>
-                <div className="text-blue-400 text-lg font-semibold">
-                  {aprLoading ? '...' : formatPercentage(calculatedDailyAPR || 0)}
-                </div>
-              </div>
+              
             </div>
           </div>
 
@@ -243,9 +224,62 @@ export function DashboardVaultCard({
             </div>
             <button
               onClick={handleClaimRewards}
-              disabled={isClaimingRewards}
+              disabled={isClaimingRewards || nonZeroRewards.length === 0}
               className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                isClaimingRewards
+                isClaimingRewards || nonZeroRewards.length === 0
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-arca-green text-black hover:bg-arca-green/90'
+              }`}
+            >
+              {isClaimingRewards ? 'Claiming...' : 'Claim Rewards'}
+            </button>
+          </div>
+        )}
+
+        {/* Shadow Rewards Section - Shows rewards from 6-token array */}
+        {hasShadowRewards && (
+          <div className="bg-arca-light-gray/30 rounded-lg p-4">
+            <div className="space-y-2 mb-3">
+              {shadowRewards.map((reward, index: number) => {
+                const tokenAmount = Number(reward.amount) / (10 ** 18);
+
+                // Get token price based on token name
+                let tokenPrice = 0;
+                if (reward.tokenName === 'Metro' && prices?.metro) {
+                  tokenPrice = prices.metro;
+                } else if (reward.tokenName === 'Shadow' && prices?.shadow) {
+                  tokenPrice = prices.shadow;
+                } else if (reward.tokenName === 'xShadow' && prices?.xShadow) {
+                  tokenPrice = prices.xShadow;
+                }
+
+                const usdValue = tokenAmount * tokenPrice;
+
+                // Format USD with appropriate precision for small values
+                let usdDisplay = '';
+                if (tokenPrice > 0) {
+                  if (usdValue < 0.01) {
+                    usdDisplay = `($${usdValue.toFixed(4)})`;
+                  } else {
+                    usdDisplay = `(${formatUSD(usdValue)})`;
+                  }
+                }
+
+                return (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-gray-400">Rewards:</span>
+                    <span className="text-arca-green font-semibold">
+                      {reward.amountFormatted} {reward.tokenName} {usdDisplay}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              onClick={handleClaimRewards}
+              disabled={isClaimingRewards || !shadowHasActivePosition || shadowRewards.length === 0}
+              className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
+                isClaimingRewards || !shadowHasActivePosition || shadowRewards.length === 0
                   ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   : 'bg-arca-green text-black hover:bg-arca-green/90'
               }`}

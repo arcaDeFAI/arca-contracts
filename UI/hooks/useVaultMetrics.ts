@@ -2,8 +2,11 @@
 
 import { useVaultData } from './useVaultData';
 import { useDashboardData } from './useDashboardData';
-import { useTokenPrices, useAPYCalculation } from './useAPYCalculation';
+import { useTokenPrices } from './useAPYCalculation';
 import { useSonicPrice } from './useSonicPrice';
+import { useMetroAPY } from './useMetroAPY';
+import { useShadowAPY } from './useShadowAPY';
+import { CONTRACTS } from '@/lib/contracts';
 
 interface VaultConfig {
   vaultAddress: string;
@@ -17,7 +20,7 @@ interface VaultConfig {
  * Eliminates duplication between VaultCard and DashboardVaultCard
  */
 export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
-  const { name, vaultAddress } = config;
+  const { name, vaultAddress, stratAddress } = config;
   const isShadowVault = name.includes('Shadow');
 
   // Fetch all data
@@ -35,26 +38,24 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   const depositedValueUSD = (vaultData.userShares && vaultData.totalSupply && vaultData.totalSupply > 0n) ?
     vaultTVL * (Number(vaultData.userShares) / Number(vaultData.totalSupply)) : 0;
 
-  // Get actual rewards for APY calculation
-  const actualRewardsToken = isShadowVault 
-    ? Number(dashboardData.shadowEarned || 0n) / (10 ** 18)
-    : (dashboardData.pendingRewards && dashboardData.pendingRewards.length > 0 
-        ? Number(dashboardData.pendingRewards[0].pendingRewards) / (10 ** 18)
-        : 0);
-
-  const tokenPrice = isShadowVault ? (prices?.shadow || 0) : (prices?.metro || 0);
-
-  // Calculate instant APR (5-minute intervals)
-  const { apy: apr, isLoading: aprLoading, error: aprError } = useAPYCalculation(
-    name,
-    depositedValueUSD,
-    actualRewardsToken,
-    tokenPrice
+  // Calculate APY based on vault type
+  const metroAPY = useMetroAPY(
+    stratAddress,
+    CONTRACTS.METRO,
+    vaultTVL,
+    prices?.metro || 0
   );
 
-  // For now, use the same APR for daily average
-  // In the full implementation, this would track 24h harvest data
-  const dailyApr = apr;
+  const shadowAPY = useShadowAPY(
+    stratAddress,
+    CONTRACTS.SHADOW_REWARDS,
+    CONTRACTS.SHADOW,
+    vaultTVL,
+    prices?.shadow || 0
+  );
+
+  const apy = isShadowVault ? shadowAPY.apy : metroAPY.apy;
+  const aprLoading = isShadowVault ? shadowAPY.isLoading : metroAPY.isLoading;
 
   return {
     // Vault data
@@ -68,16 +69,15 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     vaultTVL,
 
     // APY metrics
-    apr,
-    dailyApr,
+    apy,
     aprLoading,
-    aprError,
 
     // Dashboard data
     pendingRewards: dashboardData.pendingRewards,
     shadowEarned: dashboardData.shadowEarned,
     xShadowEarned: dashboardData.xShadowEarned,
     shadowTokenId: dashboardData.shadowTokenId,
+    shadowRewardStatus: dashboardData.shadowRewardStatus,
     currentRound: dashboardData.currentRound,
     queuedWithdrawal: dashboardData.queuedWithdrawal,
     claimableWithdrawal: dashboardData.claimableWithdrawal,
