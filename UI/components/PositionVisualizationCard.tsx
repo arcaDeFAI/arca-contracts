@@ -152,18 +152,18 @@ export default function PositionVisualizationCard({
   // Enhanced view for Shadow vaults
   if (isShadow) {
     return (
-      <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-6 mb-4">
+      <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-4">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-white">Shadow Position Range</h3>
-            <p className="text-sm text-gray-400">{name}</p>
+            <h3 className="text-base font-semibold text-white">Shadow Position Range</h3>
+            <p className="text-xs text-gray-400">{name}</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className={`px-2 py-1 rounded text-xs font-medium border ${getTierColor(tier)}`}>
               {tier}
             </span>
-            <div className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap ${
+            <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
               isInRange 
                 ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
                 : 'bg-red-500/20 text-red-400 border border-red-500/30'
@@ -174,28 +174,20 @@ export default function PositionVisualizationCard({
         </div>
 
         {/* Price Information Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-blue-400 text-sm font-medium">Current Tick</span>
-              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-            </div>
-            <div className="text-2xl font-bold text-white">{activeIdNum}</div>
-            <div className="text-xs text-gray-400 mt-1">Live Price Position</div>
+        <div className="flex gap-2 mb-3">
+          <div className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded p-2 min-w-0">
+            <div className="text-xs text-blue-400 mb-1 truncate">Current Tick</div>
+            <div className="text-base font-bold text-white truncate">{activeIdNum}</div>
           </div>
           
-          <div className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded-lg p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-purple-400 text-sm font-medium">Range Width</span>
-              <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
-            </div>
-            <div className="text-2xl font-bold text-white">{upperRangeNum - lowRangeNum}</div>
-            <div className="text-xs text-gray-400 mt-1">Tick Spread</div>
+          <div className="flex-1 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded p-2 min-w-0">
+            <div className="text-xs text-purple-400 mb-1 truncate">Range Width</div>
+            <div className="text-base font-bold text-white truncate">{upperRangeNum - lowRangeNum}</div>
           </div>
         </div>
 
         {/* Active Range Display */}
-        <div className="bg-arca-light-gray/5 rounded-lg p-4 mb-6">
+        <div className="bg-arca-light-gray/5 rounded-lg p-3 mb-4">
           <div className="flex justify-between items-center mb-3">
             <span className="text-sm font-medium text-gray-300">Liquidity Distribution</span>
             <span className={`text-xs px-3 py-1 rounded whitespace-nowrap ${
@@ -246,18 +238,18 @@ export default function PositionVisualizationCard({
 
   // Enhanced view for Metro vaults
   return (
-    <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-6 mb-4">
+    <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-4">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-white">Metro Position Range</h3>
-          <p className="text-sm text-gray-400">{name}</p>
+          <h3 className="text-base font-semibold text-white">Metro Position Range</h3>
+          <p className="text-xs text-gray-400">{name}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <span className={`px-2 py-1 rounded text-xs font-medium border ${getTierColor(tier)}`}>
             {tier}
           </span>
-          <div className={`px-3 py-1 rounded text-xs font-medium whitespace-nowrap ${
+          <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
             isInRange 
               ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
               : 'bg-red-500/20 text-red-400 border border-red-500/30'
@@ -268,28 +260,20 @@ export default function PositionVisualizationCard({
       </div>
 
       {/* Price Information Grid */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-blue-400 text-sm font-medium">Active ID</span>
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-          </div>
-          <div className="text-2xl font-bold text-white">{activeIdNum.toLocaleString()}</div>
-          <div className="text-xs text-gray-400 mt-1">Current Bin Position</div>
+      <div className="flex gap-2 mb-3">
+        <div className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded p-2 min-w-0">
+          <div className="text-xs text-blue-400 mb-1 truncate">Active ID</div>
+          <div className="text-base font-bold text-white truncate">{activeIdNum.toLocaleString()}</div>
         </div>
         
-        <div className="bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-cyan-400 text-sm font-medium">Bin Range</span>
-            <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
-          </div>
-          <div className="text-2xl font-bold text-white">{(upperRangeNum - lowRangeNum).toLocaleString()}</div>
-          <div className="text-xs text-gray-400 mt-1">Total Bins</div>
+        <div className="flex-1 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20 rounded p-2 min-w-0">
+          <div className="text-xs text-cyan-400 mb-1 truncate">Bin Range</div>
+          <div className="text-base font-bold text-white truncate">{(upperRangeNum - lowRangeNum).toLocaleString()}</div>
         </div>
       </div>
 
       {/* Active Range Display */}
-      <div className="bg-arca-light-gray/5 rounded-lg p-4 mb-6">
+      <div className="bg-arca-light-gray/5 rounded-lg p-3 mb-4">
         <div className="flex justify-between items-center mb-3">
           <span className="text-sm font-medium text-gray-300">Liquidity Distribution</span>
           <span className={`text-xs px-2 py-1 rounded ${

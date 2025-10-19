@@ -177,8 +177,6 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardP
           vaultAddress={vaultAddress}
           vaultName={name}
           userShares={userShares || 0n}
-          userSBalance={0n}
-          userUsdcBalance={0n}
           onClose={() => setShowWithdrawModal(false)}
         />
       )}

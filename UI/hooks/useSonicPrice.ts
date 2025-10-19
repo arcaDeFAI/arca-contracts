@@ -9,7 +9,7 @@ interface CoinGeckoResponse {
 }
 
 export function useSonicPrice() {
-  const [price, setPrice] = useState<number>(1); // Default to $1 as fallback
+  const [price, setPrice] = useState<number>(0.17); // Default to $0.17 as fallback
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +42,7 @@ export function useSonicPrice() {
       } catch (err) {
         console.error('Failed to fetch Sonic price:', err);
         setError(err instanceof Error ? err.message : 'Unknown error');
-        // Keep fallback price of $1
+        // Keep fallback price of $0.17
       } finally {
         setIsLoading(false);
       }

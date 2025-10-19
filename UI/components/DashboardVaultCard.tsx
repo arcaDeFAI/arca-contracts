@@ -2,14 +2,19 @@
 
 import { useState } from 'react';
 import { formatUnits } from 'viem';
+import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { formatUSD, formatPercentage } from '@/lib/utils';
 import { CONTRACTS } from '@/lib/contracts';
 import { type UserRewardStructOutput } from '@/lib/typechain';
+import { METRO_VAULT_ABI } from '@/lib/typechain';
+import PositionVisualizationCard from './PositionVisualizationCard';
 
 interface DashboardVaultCardProps {
   vaultAddress: string;
   stratAddress: string;
+  lbBookAddress?: string;
+  clpoolAddress?: string;
   name: string;
   tier: 'Active' | 'Premium' | 'Elite';
   userAddress?: string;
@@ -17,7 +22,9 @@ interface DashboardVaultCardProps {
 
 export function DashboardVaultCard({ 
   vaultAddress, 
-  stratAddress, 
+  stratAddress,
+  lbBookAddress,
+  clpoolAddress,
   name, 
   tier, 
   userAddress 
@@ -52,6 +59,18 @@ export function DashboardVaultCard({
     isShadowVault,
   } = metrics;
 
+  // Get preview amounts for queued withdrawal
+  const { data: queuedPreviewAmounts } = useReadContract({
+    address: vaultAddress as `0x${string}`,
+    abi: METRO_VAULT_ABI,
+    functionName: 'previewAmounts',
+    args: queuedWithdrawal ? [queuedWithdrawal] : undefined,
+    query: {
+      enabled: !!queuedWithdrawal && queuedWithdrawal > 0n,
+    },
+  });
+
+
   // Helper function to get token name from address
   const getTokenName = (tokenAddress: string): string => {
     const addr = tokenAddress.toLowerCase();
@@ -62,10 +81,10 @@ export function DashboardVaultCard({
   };
 
   // Simple check - show if user has shares, pending rewards, queued withdrawal, or claimable withdrawal
-  const hasShares = userShares && userShares > 0n;
-  const hasPendingRewards = !isShadowVault && pendingRewards && pendingRewards.length > 0;
-  const hasQueuedWithdrawal = queuedWithdrawal && queuedWithdrawal > 0n;
-  const hasClaimableWithdrawal = claimableWithdrawal && claimableWithdrawal > 0n;
+  const hasShares = !!(userShares && userShares > 0n);
+const hasPendingRewards = !!((!isShadowVault && pendingRewards && pendingRewards.length > 0));
+const hasQueuedWithdrawal = !!(queuedWithdrawal && queuedWithdrawal > 0n);
+const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0n);
 
   // Process Shadow vault rewards from getRewardStatus (6 tokens array)
   let shadowRewards: Array<{
@@ -136,26 +155,28 @@ export function DashboardVaultCard({
   };
 
   return (
-    <div className="bg-arca-gray rounded-lg p-6 border border-arca-light-gray">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div>
-            <h3 className="text-white font-semibold">{name}</h3>
-            <span className={`text-sm px-2 py-1 rounded-full border ${getTierColor(tier)}`}>
-              {tier}
-            </span>
-          </div>
-        </div>
-      </div>
+    <div className="bg-arca-gray rounded-lg border border-arca-light-gray overflow-hidden">
+      {/* Position Visualization */}
+      <PositionVisualizationCard
+        vaultAddress={vaultAddress}
+        stratAddress={stratAddress}
+        lbBookAddress={lbBookAddress}
+        clpoolAddress={clpoolAddress}
+        name={name}
+        tier={tier}
+        userAddress={actualAddress}
+      />
 
-      <div className="space-y-4">
+      {/* Dashboard Card */}
+      <div className="p-4 border-t border-arca-light-gray/30">
+        <div className="space-y-3">
         {/* User Shares & APY */}
-        <div className="bg-arca-light-gray/30 rounded-lg p-4">
+        <div className="bg-arca-light-gray/30 rounded-lg p-3">
           {/* APY Display - Vault-wide 24h */}
-          <div className="mb-4 pb-4 border-b border-gray-700/30">
-            <div className="text-gray-400 text-xs uppercase tracking-wider mb-2 text-center">APY</div>
+          <div className="mb-3 pb-3 border-b border-gray-700/30">
+            <div className="text-gray-400 text-xs uppercase tracking-wider mb-1 text-center">APY</div>
             <div className="text-center">
-              <div className="text-arca-green text-2xl font-bold">
+              <div className="text-arca-green text-xl font-bold">
                 {aprLoading ? '...' : formatPercentage(apy || 0)}
               </div>
               
@@ -163,8 +184,8 @@ export function DashboardVaultCard({
           </div>
 
           {/* Share Info - Compact */}
-          <div className="mt-3 pt-3 border-t border-gray-700/30">
-            <div className="flex justify-between items-center">
+          <div className="mt-2 pt-2 border-t border-gray-700/30">
+            <div className="flex justify-between items-center text-sm">
               <span className="text-gray-400">Share %:</span>
               <span className="text-arca-green font-semibold">
                 {sharePercentage?.toFixed(4) || '0.0000'}%
@@ -176,8 +197,8 @@ export function DashboardVaultCard({
 
         {/* Rewards Section - Shows only non-zero rewards */}
         {hasPendingRewards && (
-          <div className="bg-arca-light-gray/30 rounded-lg p-4">
-            <div className="space-y-2 mb-3">
+          <div className="bg-arca-light-gray/30 rounded-lg p-3">
+            <div className="space-y-2 mb-2">
               {nonZeroRewards.map((reward: UserRewardStructOutput, index: number) => {
                 const tokenName = getTokenName(reward.token);
                 const tokenAmount = Number(formatUnits(reward.pendingRewards, 18));
@@ -213,7 +234,7 @@ export function DashboardVaultCard({
                 });
 
                 return (
-                  <div key={index} className="flex justify-between items-center">
+                  <div key={index} className="flex justify-between items-center text-sm">
                     <span className="text-gray-400">Rewards:</span>
                     <span className="text-arca-green font-semibold">
                       {tokenAmount.toFixed(4)} {tokenName} {usdDisplay}
@@ -225,7 +246,7 @@ export function DashboardVaultCard({
             <button
               onClick={handleClaimRewards}
               disabled={isClaimingRewards || nonZeroRewards.length === 0}
-              className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
+              className={`w-full py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
                 isClaimingRewards || nonZeroRewards.length === 0
                   ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   : 'bg-arca-green text-black hover:bg-arca-green/90'
@@ -238,8 +259,8 @@ export function DashboardVaultCard({
 
         {/* Shadow Rewards Section - Shows rewards from 6-token array */}
         {hasShadowRewards && (
-          <div className="bg-arca-light-gray/30 rounded-lg p-4">
-            <div className="space-y-2 mb-3">
+          <div className="bg-arca-light-gray/30 rounded-lg p-3">
+            <div className="space-y-2 mb-2">
               {shadowRewards.map((reward, index: number) => {
                 const tokenAmount = Number(reward.amount) / (10 ** 18);
 
@@ -266,7 +287,7 @@ export function DashboardVaultCard({
                 }
 
                 return (
-                  <div key={index} className="flex justify-between items-center">
+                  <div key={index} className="flex justify-between items-center text-sm">
                     <span className="text-gray-400">Rewards:</span>
                     <span className="text-arca-green font-semibold">
                       {reward.amountFormatted} {reward.tokenName} {usdDisplay}
@@ -278,7 +299,7 @@ export function DashboardVaultCard({
             <button
               onClick={handleClaimRewards}
               disabled={isClaimingRewards || !shadowHasActivePosition || shadowRewards.length === 0}
-              className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
+              className={`w-full py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
                 isClaimingRewards || !shadowHasActivePosition || shadowRewards.length === 0
                   ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
                   : 'bg-arca-green text-black hover:bg-arca-green/90'
@@ -291,14 +312,34 @@ export function DashboardVaultCard({
 
         {/* Queued Withdrawal Section - Shows withdrawal in current round (not claimable yet) */}
         {hasQueuedWithdrawal && (
-          <div className="bg-arca-light-gray/30 rounded-lg p-4">
-            <div className="flex justify-between items-center mb-3">
+          <div className="bg-arca-light-gray/30 rounded-lg p-3">
+            <div className="flex justify-between items-center mb-2 text-sm">
               <span className="text-gray-400">Queued Withdrawal:</span>
               <span className="text-yellow-400 font-semibold">
-                {queuedWithdrawal?.toString() || '0'} shares
+                {queuedWithdrawal ? (Number(queuedWithdrawal) / 1e10).toFixed(2) : '0.00'} shares
               </span>
             </div>
-            <div className="text-sm text-gray-400 mb-3">
+            
+            {/* Preview amounts */}
+            {queuedPreviewAmounts && (
+              <div className="bg-arca-dark/50 rounded-lg p-2 mb-2 space-y-1">
+                <div className="text-xs text-gray-400 mb-2">Estimated withdrawal:</div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">{isShadowVault ? 'WS' : 'S'}:</span>
+                  <span className="text-white font-medium">
+                    {Number(formatUnits(queuedPreviewAmounts[0], 18)).toFixed(4)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-400">USDC:</span>
+                  <span className="text-white font-medium">
+                    {Number(formatUnits(queuedPreviewAmounts[1], 6)).toFixed(4)}
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            <div className="text-sm text-gray-400 mb-2">
               Round: {currentRound !== undefined ? Number(currentRound) : 'Loading...'}
             </div>
             <div className="text-sm text-orange-400 text-center py-2">
@@ -313,7 +354,7 @@ export function DashboardVaultCard({
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal:</span>
               <span className="text-arca-green font-semibold">
-                {claimableWithdrawal?.toString() || '0'} shares
+                {claimableWithdrawal ? (Number(claimableWithdrawal) / 1e10).toFixed(2) : '0.00'} shares
               </span>
             </div>
             <div className="text-sm text-gray-400 mb-3">
@@ -333,6 +374,7 @@ export function DashboardVaultCard({
           </div>
         )}
 
+        </div>
       </div>
     </div>
   );

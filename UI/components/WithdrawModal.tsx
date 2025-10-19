@@ -11,8 +11,6 @@ interface WithdrawModalProps {
   vaultAddress: string;
   vaultName: string;
   userShares: bigint;
-  userSBalance: bigint;
-  userUsdcBalance: bigint;
   onClose: () => void;
 }
 
@@ -20,8 +18,6 @@ export function WithdrawModal({
   vaultAddress, 
   vaultName, 
   userShares,
-  userSBalance,
-  userUsdcBalance,
   onClose 
 }: WithdrawModalProps) {
   const [withdrawAmount, setWithdrawAmount] = useState('');
