@@ -3,10 +3,12 @@ frontend:
   phases:
     preBuild:
       commands:
-        # Change directory to your frontend project
+        # Install root dependencies
+        - npm ci
+        # Change directory to the frontend project
         - cd UI
         # Install dependencies for the frontend project
-        - npm ci
+        - npm i
     build:
       commands:
         # Since we are already in UI from the preBuild phase,
