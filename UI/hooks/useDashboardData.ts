@@ -3,13 +3,8 @@
 import { useReadContract, useWriteContract } from 'wagmi';
 import {
   METRO_VAULT_ABI,
-  SHADOW_STRAT_ABI,
-  VOTER_CLAIM_ABI,
-  SHADOW_REWARDS_ABI,
-  type ShadowRewardStatus,
   SHADOW_VAULT_ABI
 } from '@/lib/typechain';
-import { CONTRACTS } from '../lib/contracts';
 
 interface VaultConfig {
   vaultAddress: string;
@@ -32,92 +27,17 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     },
   });
 
-  // Metro vault pending rewards
+  // Pending rewards - works for both Metro and Shadow vaults
   const { data: pendingRewards } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
-    abi: METRO_VAULT_ABI,
+    abi: isShadowVault ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
     functionName: 'getPendingRewards',
     args: userAddress ? [userAddress as `0x${string}`] : undefined,
     query: {
-      enabled: !!userAddress && !!config.vaultAddress && !isShadowVault,
+      enabled: !!userAddress && !!config.vaultAddress,
     },
   });
 
-  // For Shadow vaults, get position tokenID first
-  const { data: shadowPosition } = useReadContract({
-    address: config.stratAddress as `0x${string}`,
-    abi: SHADOW_STRAT_ABI,
-    functionName: 'getPosition',
-    query: {
-      enabled: !!config.stratAddress && isShadowVault,
-    },
-  });
-
-  const shadowTokenId = shadowPosition?.[0];
-
-  // Get earned rewards for xSHADOW token
-  const { data: xShadowEarned } = useReadContract({
-    address: CONTRACTS.SHADOW_REWARDS as `0x${string}`,
-    abi: SHADOW_REWARDS_ABI,
-    functionName: 'earned',
-    args: [CONTRACTS.xSHADOW as `0x${string}`, shadowTokenId || 0n],
-    query: {
-      enabled: !!shadowTokenId && isShadowVault,
-    },
-  });
-
-  // Get earned rewards for SHADOW token
-  const { data: shadowEarned } = useReadContract({
-    address: CONTRACTS.SHADOW_REWARDS as `0x${string}`,
-    abi: SHADOW_REWARDS_ABI,
-    functionName: 'earned',
-    args: [CONTRACTS.SHADOW as `0x${string}`, shadowTokenId || 0n],
-    query: {
-      enabled: !!shadowTokenId && isShadowVault,
-    },
-  });
-
-  // Get reward status for Shadow vaults (needed for gauge address and claim logic)
-  // Note: We use a type assertion here because wagmi's type inference doesn't recognize
-  // all functions from TypeChain-generated ABIs. The function definitely exists in the ABI.
-  const { data: shadowRewardStatusRaw } = useReadContract({
-    address: config.stratAddress as `0x${string}`,
-    abi: SHADOW_STRAT_ABI,
-    functionName: 'getRewardStatus' as any, // Type assertion only for function name
-    query: {
-      enabled: !!config.stratAddress && isShadowVault,
-    },
-  });
-
-  // Type the result properly based on the contract interface
-  const shadowRewardStatus: ShadowRewardStatus | undefined = shadowRewardStatusRaw
-    ? {
-        tokens: (shadowRewardStatusRaw as readonly [string[], bigint[], string, boolean])[0],
-        earned: (shadowRewardStatusRaw as readonly [string[], bigint[], string, boolean])[1],
-        gaugeAddress: (shadowRewardStatusRaw as readonly [string[], bigint[], string, boolean])[2],
-        hasActivePosition: (shadowRewardStatusRaw as readonly [string[], bigint[], string, boolean])[3],
-      }
-    : undefined;
-
-
-  // Debug Shadow reward status
-  if (isShadowVault) {
-    console.log('🔍 SHADOW REWARD STATUS (Hook):', {
-      vaultName: config.name,
-      stratAddress: config.stratAddress,
-      shadowPosition,
-      shadowTokenId: shadowTokenId?.toString(),
-      xShadowEarned: xShadowEarned?.toString(),
-      shadowEarned: shadowEarned?.toString(),
-      shadowRewardStatus: shadowRewardStatus ? {
-        tokens: shadowRewardStatus.tokens,
-        earned: shadowRewardStatus.earned.map((e: bigint) => e.toString()),
-        gauge: shadowRewardStatus.gaugeAddress,
-        hasActivePosition: shadowRewardStatus.hasActivePosition
-      } : 'no data',
-      hasActivePosition: !!shadowTokenId,
-    });
-  }
 
   // Get current round
   const { data: currentRound } = useReadContract({
@@ -151,46 +71,18 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     },
   });
 
-
-  console.log(`🔍 Dashboard ${config.name}:`, {
-    userAddress,
-    userShares: userShares?.toString(),
-    pendingRewards: pendingRewards?.length || 0,
-    currentRound: currentRound?.toString(),
-    queuedWithdrawal: queuedWithdrawal?.toString(),
-    claimableWithdrawal: claimableWithdrawal?.toString(),
-  });
-
   // Write contract hooks for transactions
   const { writeContract: claimRewards, isPending: isClaimingRewards } = useWriteContract();
 
-  // Claim rewards function - different logic for Shadow vs Metro
+  // Claim rewards function - unified for both Metro and Shadow vaults
   const handleClaimRewards = () => {
-    if (!userAddress) return;
+    if (!userAddress || !config.vaultAddress || !pendingRewards || pendingRewards.length === 0) return;
     
-    if (config.name.includes('Shadow')) {
-      // Shadow vault claiming - use harvestRewards function on Shadow Strat
-      if (!config.stratAddress) return;
-      
-      console.log('🚀 SHADOW CLAIM - Calling claim() on Shadow Vault:', {
-        shadowVaultAddress: config.vaultAddress
-      });
-      
-      claimRewards({
-        address: config.vaultAddress as `0x${string}`,
-        abi: SHADOW_VAULT_ABI,
-        functionName: 'claim',
-      });
-    } else {
-      // Metro vault claiming - use normal claim function
-      if (!config.vaultAddress || !pendingRewards || pendingRewards.length === 0) return;
-      
-      claimRewards({
-        address: config.vaultAddress as `0x${string}`,
-        abi: METRO_VAULT_ABI,
-        functionName: 'claim',
-      });
-    }
+    claimRewards({
+      address: config.vaultAddress as `0x${string}`,
+      abi: isShadowVault ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
+      functionName: 'claim',
+    });
   };
 
   const { writeContract: redeemWithdrawal, isPending: isRedeemingWithdrawal } = useWriteContract();
@@ -210,11 +102,6 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
   return {
     userShares,
     pendingRewards,
-    shadowPosition,
-    shadowTokenId,
-    xShadowEarned,
-    shadowEarned,
-    shadowRewardStatus,
     currentRound,
     queuedWithdrawal,
     claimableWithdrawal,

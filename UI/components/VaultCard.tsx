@@ -8,6 +8,7 @@ import { CONTRACTS } from '@/lib/contracts';
 import { formatUSD, formatPercentage } from '@/lib/utils';
 import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
+import { TokenPairLogos } from './TokenPairLogos';
 
 interface VaultCardProps {
   vaultAddress: string;
@@ -95,65 +96,70 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardP
 
   return (
     <>
-      <div className="bg-arca-gray rounded-lg p-6 border border-arca-light-gray hover:border-arca-green/30 transition-colors">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">{getTierIcon(tier)}</div>
-            <div>
-              <h3 className="text-white font-semibold">{name}</h3>
-              <span className={`text-sm ${getTierColor(tier)}`}>{tier}</span>
-            </div>
+      <div className="bg-black rounded-lg p-5 border border-arca-green/20 hover:border-arca-green/50 transition-all shadow-[0_0_15px_rgba(0,255,163,0.15)] hover:shadow-[0_0_30px_rgba(0,255,163,0.3)] w-full flex flex-col">
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-1">
+            <TokenPairLogos 
+              token0Logo="/SonicLogoRound.png" 
+              token1Logo="/USDCLogo.png" 
+              size={42}
+            />
+            <h3 className="text-white font-semibold text-sm">{name}</h3>
           </div>
+          <span className={`text-xs ${getTierColor(tier)}`}>{tier}</span>
         </div>
 
-        <div className="space-y-4 mb-6">
-          {/* Vault Stats */}
+        <div className="flex-1">
           <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-400">TVL :</span>
-              <span className="text-white font-semibold">
-                {isLoading ? '...' : formatUSD(vaultTVL)}
-              </span>
+            {/* Vault Stats */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">TVL:</span>
+                <span className="text-white font-semibold">
+                  {isLoading ? '...' : formatUSD(vaultTVL)}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Deposited:</span>
+                <span className="text-white">
+                  {isLoading ? '...' : formatUSD(depositedValueUSD)}
+                </span>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-400">Shares (%):</span>
+                <span className="text-arca-green font-semibold">
+                  {isLoading ? '...' : `${sharePercentage.toFixed(4)}%`}
+                </span>
+              </div>
             </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-400">Deposited :</span>
-              <span className="text-white">
-                {isLoading ? '...' : formatUSD(depositedValueUSD)}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-gray-400">Shares (%) :</span>
-              <span className="text-arca-green font-semibold">
-                {isLoading ? '...' : `${sharePercentage.toFixed(4)}%`}
-              </span>
-            </div>
-          </div>
-
-          {/* APY Display */}
-          <div className="bg-arca-light-gray/20 rounded-lg p-3 border border-gray-700/50">
-            <div className="text-gray-400 text-xs uppercase tracking-wider mb-1 text-center">APY</div>
-            <div className="text-center">
-              <div className="text-arca-green text-xl font-semibold">
-                {aprLoading || isLoading ? '...' : formatPercentage(apy)}
+            {/* APY Display */}
+            <div className="bg-black/50 rounded-lg p-2.5 border border-gray-700/50">
+              <div className="text-gray-400 text-xs uppercase tracking-wider mb-0.5 text-center">APY</div>
+              <div className="text-center">
+                <div className="text-arca-green text-lg font-semibold">
+                  {aprLoading || isLoading ? '...' : formatPercentage(apy)}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex gap-3">
+        {/* Buttons inside the same card */}
+        <div className="flex gap-2 mt-4">
           <button
             onClick={() => setShowDepositModal(true)}
             disabled={!address}
-            className="flex-1 bg-arca-green text-black font-semibold py-3 px-4 rounded-lg hover:bg-arca-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-arca-green text-black font-semibold py-2.5 px-4 rounded-lg hover:bg-arca-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Deposit
           </button>
           <button
             onClick={() => setShowWithdrawModal(true)}
             disabled={!address || !userShares || userShares === 0n}
-            className="flex-1 bg-transparent border border-gray-600 text-white font-semibold py-3 px-4 rounded-lg hover:border-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 bg-transparent border border-gray-600 text-white font-semibold py-2.5 px-4 rounded-lg hover:border-gray-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Withdraw
           </button>

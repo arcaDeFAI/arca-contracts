@@ -22,6 +22,8 @@ interface ClaimEvent {
 
 /**
  * Calculates Shadow vault APY based on ClaimRewards events
+ * Uses continuous accumulation: stores ALL historical events and calculates
+ * average daily rewards over the entire period, then extrapolates to annual
  */
 export function useShadowAPY(
   stratAddress: string,
@@ -50,16 +52,18 @@ export function useShadowAPY(
         setIsLoading(true);
 
         const now = Date.now();
-        const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+        const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
 
-        // Load cached events
+        // Load ALL cached events (up to 1 year)
         let cachedEvents: ClaimEvent[] = [];
+        let firstEventTimestamp: number | null = null;
         try {
           const cached = localStorage.getItem(storageKey);
           if (cached) {
             const parsed = JSON.parse(cached);
+            firstEventTimestamp = parsed.firstEventTimestamp || null;
             cachedEvents = parsed.events
-              .filter((e: any) => e.timestamp >= twentyFourHoursAgo)
+              .filter((e: any) => e.timestamp >= oneYearAgo) // Keep up to 1 year
               .map((e: any) => ({
                 period: BigInt(e.period),
                 positionHash: e.positionHash,
@@ -87,15 +91,6 @@ export function useShadowAPY(
         // Fetch ClaimRewards events where receiver is the strat address
         let newEvents: ClaimEvent[] = [];
         if (fromBlock <= currentBlock) {
-          console.log(`🔍 Fetching Shadow ClaimRewards events:`, {
-            shadowRewardsAddress,
-            stratAddress,
-            shadowTokenAddress,
-            fromBlock: fromBlock.toString(),
-            toBlock: currentBlock.toString(),
-            blocksToScan: (currentBlock - fromBlock).toString()
-          });
-
           const logs = await publicClient.getLogs({
             address: shadowRewardsAddress as `0x${string}`,
             event: CLAIM_REWARDS_ABI[0],
@@ -103,15 +98,11 @@ export function useShadowAPY(
             toBlock: currentBlock,
           });
 
-          console.log(`📥 Shadow ClaimRewards events fetched: ${logs.length} total events`);
-
           // Filter for events where receiver is the strat address and reward is Shadow token
           const filteredLogs = logs.filter(log => 
             (log.args.receiver as string).toLowerCase() === stratAddress.toLowerCase() &&
             (log.args.reward as string).toLowerCase() === shadowTokenAddress.toLowerCase()
           );
-
-          console.log(`🎯 Filtered Shadow events: ${filteredLogs.length} events (receiver=${stratAddress}, reward=Shadow)`);
 
           newEvents = await Promise.all(
             filteredLogs.map(async (log) => {
@@ -132,12 +123,16 @@ export function useShadowAPY(
         if (!isMounted) return;
 
         const allEvents = [...cachedEvents, ...newEvents];
-        const recentEvents = allEvents.filter(e => e.timestamp >= twentyFourHoursAgo);
+        
+        // Track first event timestamp
+        if (!firstEventTimestamp && allEvents.length > 0) {
+          firstEventTimestamp = Math.min(...allEvents.map(e => e.timestamp));
+        }
 
-        // Save to localStorage
+        // Save ALL events to localStorage (up to 1 year)
         try {
           localStorage.setItem(storageKey, JSON.stringify({
-            events: recentEvents.map(e => ({
+            events: allEvents.map(e => ({
               period: e.period.toString(),
               positionHash: e.positionHash,
               receiver: e.receiver,
@@ -146,62 +141,44 @@ export function useShadowAPY(
               blockNumber: e.blockNumber.toString(),
               timestamp: e.timestamp,
             })),
+            firstEventTimestamp,
             lastFetch: now,
           }));
         } catch (err) {
           console.warn('Failed to cache Shadow claims:', err);
         }
 
-        // Calculate total Shadow claimed
-        const totalShadowToken = recentEvents.reduce(
+        // Calculate total Shadow claimed across ALL accumulated events
+        const totalShadowToken = allEvents.reduce(
           (sum, event) => sum + Number(event.amount) / (10 ** 18),
           0
         );
 
         const totalShadowUSD = totalShadowToken * shadowPrice;
 
-        // Extrapolate if less than 24h
-        const oldestEventTime = recentEvents.length > 0 
-          ? Math.min(...recentEvents.map(e => e.timestamp))
-          : twentyFourHoursAgo;
+        // Calculate time range from first event to now
+        const oldestEventTime = allEvents.length > 0 
+          ? Math.min(...allEvents.map(e => e.timestamp))
+          : now;
         
-        const timeRangeHours = (now - oldestEventTime) / (1000 * 60 * 60);
+        const timeRangeDays = (now - oldestEventTime) / (1000 * 60 * 60 * 24);
 
-        let extrapolatedRewardsUSD = totalShadowUSD;
-        if (timeRangeHours > 0 && timeRangeHours < 24) {
-          extrapolatedRewardsUSD = (totalShadowUSD / timeRangeHours) * 24;
+        // Calculate average daily rewards from accumulated data
+        let averageDailyRewardsUSD = 0;
+        if (timeRangeDays > 0) {
+          averageDailyRewardsUSD = totalShadowUSD / timeRangeDays;
         }
 
-        // Calculate APY
-        if (extrapolatedRewardsUSD > 0 && vaultTVL > 0) {
-          const dailyReturn = extrapolatedRewardsUSD / vaultTVL;
+        // Calculate APY based on average daily rewards
+        if (averageDailyRewardsUSD > 0 && vaultTVL > 0) {
+          const dailyReturn = averageDailyRewardsUSD / vaultTVL;
           const annualReturn = dailyReturn * 365;
           const calculatedAPY = annualReturn * 100;
-
-          console.log(`✅ Shadow APY Calculated:`, {
-            stratAddress,
-            eventsFound: recentEvents.length,
-            newEventsFetched: newEvents.length,
-            timeRangeHours: timeRangeHours.toFixed(1),
-            totalShadowToken: totalShadowToken.toFixed(4),
-            totalShadowUSD: totalShadowUSD.toFixed(2),
-            extrapolatedRewardsUSD: extrapolatedRewardsUSD.toFixed(2),
-            vaultTVL: vaultTVL.toFixed(2),
-            dailyReturn: (dailyReturn * 100).toFixed(4) + '%',
-            apy: calculatedAPY.toFixed(2) + '%'
-          });
 
           if (isMounted) {
             setApy(Math.max(0, calculatedAPY));
           }
         } else {
-          console.log(`⚠️ Shadow APY = 0:`, {
-            stratAddress,
-            eventsFound: recentEvents.length,
-            extrapolatedRewardsUSD: extrapolatedRewardsUSD.toFixed(2),
-            vaultTVL: vaultTVL.toFixed(2),
-            reason: extrapolatedRewardsUSD === 0 ? 'No rewards' : 'No TVL'
-          });
           if (isMounted) {
             setApy(0);
           }
