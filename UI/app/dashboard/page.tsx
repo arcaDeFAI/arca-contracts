@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { Header } from '@/components/Header';
 import DashboardVaultCard from '@/components/DashboardVaultCard';
+import { DashboardOverview } from '@/components/DashboardOverview';
 
 // Vault configurations from main page
 const VAULT_CONFIGS = [
@@ -67,21 +68,74 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Vault Cards - Only show vaults where user has funds */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
-          {VAULT_CONFIGS.map((vault, index) => (
-            <DashboardVaultCard
-              key={index}
-              vaultAddress={vault.vaultAddress}
-              stratAddress={vault.stratAddress}
-              lbBookAddress={vault.lbBookAddress}
-              clpoolAddress={vault.clpoolAddress}
-              name={vault.name}
-              tier={vault.tier}
-              userAddress={address}
-            />
-          ))}
-        </div>
+        {/* Dashboard Overview - Portfolio, Balance, Rewards */}
+        {isConnected && (
+          <DashboardOverview 
+            vaultConfigs={VAULT_CONFIGS}
+            userAddress={address}
+          />
+        )}
+
+        {/* Active Vaults Section */}
+        {isConnected && (
+          <>
+            {/* Section Header */}
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-1 h-8 bg-arca-green rounded-full"></div>
+                <h2 className="text-2xl font-bold text-white">Active Vaults</h2>
+              </div>
+              <p className="text-gray-400 text-sm ml-7">Monitor and manage your vault positions</p>
+            </div>
+
+            {/* Split Screen Layout - Metropolis and Shadow */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Metropolis Vaults Container */}
+            <div className="bg-black/40 rounded-xl p-6 border border-gray-800/50">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <h2 className="text-3xl font-bold text-white">Metropolis Vaults</h2>
+                <img src="/MetropolisLogo.png" alt="Metropolis" className="w-12 h-12" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {VAULT_CONFIGS.filter(v => v.name.includes('Metropolis')).map((vault, index) => (
+                  <DashboardVaultCard
+                    key={index}
+                    vaultAddress={vault.vaultAddress}
+                    stratAddress={vault.stratAddress}
+                    lbBookAddress={vault.lbBookAddress}
+                    clpoolAddress={vault.clpoolAddress}
+                    name={vault.name}
+                    tier={vault.tier}
+                    userAddress={address}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Shadow Vaults Container */}
+            <div className="bg-black/40 rounded-xl p-6 border border-gray-800/50">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <h2 className="text-3xl font-bold text-white">Shadow Vaults</h2>
+                <img src="/SHadowLogo.jpg" alt="Shadow" className="w-12 h-12 rounded-full" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {VAULT_CONFIGS.filter(v => v.name.includes('Shadow')).map((vault, index) => (
+                  <DashboardVaultCard
+                    key={index}
+                    vaultAddress={vault.vaultAddress}
+                    stratAddress={vault.stratAddress}
+                    lbBookAddress={vault.lbBookAddress}
+                    clpoolAddress={vault.clpoolAddress}
+                    name={vault.name}
+                    tier={vault.tier}
+                    userAddress={address}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          </>
+        )}
       </main>
       </div>
     </div>
