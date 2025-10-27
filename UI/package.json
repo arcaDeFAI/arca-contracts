@@ -17,6 +17,7 @@
     "clsx": "^2.0.0",
     "react": "^18",
     "react-dom": "^18",
+    "recharts": "^2.10.0",
     "tailwind-merge": "^1.14.0",
     "viem": "^2.0.0",
     "wagmi": "^2.0.0"

@@ -100,17 +100,17 @@ export default function Home() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-black rounded-lg p-4 border border-gray-800/50">
-            <div className="text-xs text-gray-400 mb-1">Total TVL</div>
-            <div className="text-xl font-bold text-arca-green">
+        <div className="flex flex-wrap gap-4 mb-6">
+          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
+            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Total TVL</div>
+            <div className="text-xl font-bold text-arca-green whitespace-nowrap">
               {vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(totalTVL)}
             </div>
           </div>
           
-          <div className="bg-black rounded-lg p-4 border border-gray-800/50">
-            <div className="text-xs text-gray-400 mb-1">Your Total Balance</div>
-            <div className="text-xl font-bold text-white">
+          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
+            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Your Total Balance</div>
+            <div className="text-xl font-bold text-white whitespace-nowrap">
               {!mounted ? '--' : 
                (!isConnected ? '--' : 
                 (vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(userTotalBalance))
@@ -118,9 +118,9 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="bg-black rounded-lg p-4 border border-gray-800/50">
-            <div className="text-xs text-gray-400 mb-1">Active Vaults</div>
-            <div className="text-xl font-bold text-white">
+          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
+            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Active Vaults</div>
+            <div className="text-xl font-bold text-white whitespace-nowrap">
               {VAULT_CONFIGS.length}
             </div>
           </div>
