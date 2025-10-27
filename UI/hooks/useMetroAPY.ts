@@ -20,6 +20,8 @@ interface TransferEvent {
 
 /**
  * Calculates Metro vault APY based on Transfer events to the strat address
+ * Uses continuous accumulation: stores ALL historical events and calculates
+ * average daily rewards over the entire period, then extrapolates to annual
  */
 export function useMetroAPY(
   stratAddress: string,
@@ -47,16 +49,18 @@ export function useMetroAPY(
         setIsLoading(true);
 
         const now = Date.now();
-        const twentyFourHoursAgo = now - (24 * 60 * 60 * 1000);
+        const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
 
-        // Load cached events
+        // Load ALL cached events (up to 1 year)
         let cachedEvents: TransferEvent[] = [];
+        let firstEventTimestamp: number | null = null;
         try {
           const cached = localStorage.getItem(storageKey);
           if (cached) {
             const parsed = JSON.parse(cached);
+            firstEventTimestamp = parsed.firstEventTimestamp || null;
             cachedEvents = parsed.events
-              .filter((e: any) => e.timestamp >= twentyFourHoursAgo)
+              .filter((e: any) => e.timestamp >= oneYearAgo) // Keep up to 1 year
               .map((e: any) => ({
                 from: e.from,
                 to: e.to,
@@ -82,14 +86,6 @@ export function useMetroAPY(
         // Fetch Transfer events TO the strat address
         let newEvents: TransferEvent[] = [];
         if (fromBlock <= currentBlock) {
-          console.log(`🔍 Fetching Metro Transfer events:`, {
-            metroTokenAddress,
-            stratAddress,
-            fromBlock: fromBlock.toString(),
-            toBlock: currentBlock.toString(),
-            blocksToScan: (currentBlock - fromBlock).toString()
-          });
-
           const logs = await publicClient.getLogs({
             address: metroTokenAddress as `0x${string}`,
             event: TRANSFER_ABI[0],
@@ -99,8 +95,6 @@ export function useMetroAPY(
             fromBlock,
             toBlock: currentBlock,
           });
-
-          console.log(`📥 Metro Transfer events fetched: ${logs.length} events`);
 
           newEvents = await Promise.all(
             logs.map(async (log) => {
@@ -119,74 +113,60 @@ export function useMetroAPY(
         if (!isMounted) return;
 
         const allEvents = [...cachedEvents, ...newEvents];
-        const recentEvents = allEvents.filter(e => e.timestamp >= twentyFourHoursAgo);
+        
+        // Track first event timestamp
+        if (!firstEventTimestamp && allEvents.length > 0) {
+          firstEventTimestamp = Math.min(...allEvents.map(e => e.timestamp));
+        }
 
-        // Save to localStorage
+        // Save ALL events to localStorage (up to 1 year)
         try {
           localStorage.setItem(storageKey, JSON.stringify({
-            events: recentEvents.map(e => ({
+            events: allEvents.map(e => ({
               from: e.from,
               to: e.to,
               value: e.value.toString(),
               blockNumber: e.blockNumber.toString(),
               timestamp: e.timestamp,
             })),
+            firstEventTimestamp,
             lastFetch: now,
           }));
         } catch (err) {
           console.warn('Failed to cache Metro transfers:', err);
         }
 
-        // Calculate total Metro transferred
-        const totalMetroToken = recentEvents.reduce(
+        // Calculate total Metro transferred across ALL accumulated events
+        const totalMetroToken = allEvents.reduce(
           (sum, event) => sum + Number(event.value) / (10 ** 18),
           0
         );
 
         const totalMetroUSD = totalMetroToken * metroPrice;
 
-        // Extrapolate if less than 24h
-        const oldestEventTime = recentEvents.length > 0 
-          ? Math.min(...recentEvents.map(e => e.timestamp))
-          : twentyFourHoursAgo;
+        // Calculate time range from first event to now
+        const oldestEventTime = allEvents.length > 0 
+          ? Math.min(...allEvents.map(e => e.timestamp))
+          : now;
         
-        const timeRangeHours = (now - oldestEventTime) / (1000 * 60 * 60);
+        const timeRangeDays = (now - oldestEventTime) / (1000 * 60 * 60 * 24);
 
-        let extrapolatedRewardsUSD = totalMetroUSD;
-        if (timeRangeHours > 0 && timeRangeHours < 24) {
-          extrapolatedRewardsUSD = (totalMetroUSD / timeRangeHours) * 24;
+        // Calculate average daily rewards from accumulated data
+        let averageDailyRewardsUSD = 0;
+        if (timeRangeDays > 0) {
+          averageDailyRewardsUSD = totalMetroUSD / timeRangeDays;
         }
 
-        // Calculate APY
-        if (extrapolatedRewardsUSD > 0 && vaultTVL > 0) {
-          const dailyReturn = extrapolatedRewardsUSD / vaultTVL;
+        // Calculate APY based on average daily rewards
+        if (averageDailyRewardsUSD > 0 && vaultTVL > 0) {
+          const dailyReturn = averageDailyRewardsUSD / vaultTVL;
           const annualReturn = dailyReturn * 365;
           const calculatedAPY = annualReturn * 100;
-
-          console.log(`✅ Metro APY Calculated:`, {
-            stratAddress,
-            eventsFound: recentEvents.length,
-            newEventsFetched: newEvents.length,
-            timeRangeHours: timeRangeHours.toFixed(1),
-            totalMetroToken: totalMetroToken.toFixed(4),
-            totalMetroUSD: totalMetroUSD.toFixed(2),
-            extrapolatedRewardsUSD: extrapolatedRewardsUSD.toFixed(2),
-            vaultTVL: vaultTVL.toFixed(2),
-            dailyReturn: (dailyReturn * 100).toFixed(4) + '%',
-            apy: calculatedAPY.toFixed(2) + '%'
-          });
 
           if (isMounted) {
             setApy(Math.max(0, calculatedAPY));
           }
         } else {
-          console.log(`⚠️ Metro APY = 0:`, {
-            stratAddress,
-            eventsFound: recentEvents.length,
-            extrapolatedRewardsUSD: extrapolatedRewardsUSD.toFixed(2),
-            vaultTVL: vaultTVL.toFixed(2),
-            reason: extrapolatedRewardsUSD === 0 ? 'No rewards' : 'No TVL'
-          });
           if (isMounted) {
             setApy(0);
           }

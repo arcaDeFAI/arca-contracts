@@ -27,19 +27,21 @@ export default function Dashboard() {
   const { address, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
 
-  // Use test address for debugging Shadow vault issues
-  const testAddress = '0x10dF75c83571b5dAA9638a84BB7490177A8E5816' as `0x${string}`;
-  const actualAddress = address || testAddress;
-
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <div className="min-h-screen bg-arca-dark">
+    <div className="min-h-screen bg-gradient-to-br from-black via-arca-dark to-black" style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.03) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 100%)'}}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
+      <div className="relative z-10">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6" style={{maxWidth: '100%'}}>
         {/* Hero Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-3">
@@ -51,7 +53,7 @@ export default function Dashboard() {
         </div>
 
         {/* Connection Prompt */}
-        {mounted && !isConnected && (
+        {!isConnected && (
           <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-3">
               <div className="text-yellow-400 text-lg">⚠️</div>
@@ -66,23 +68,22 @@ export default function Dashboard() {
         )}
 
         {/* Vault Cards - Only show vaults where user has funds */}
-        {mounted && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            {VAULT_CONFIGS.map((vault, index) => (
-              <DashboardVaultCard
-                key={index}
-                vaultAddress={vault.vaultAddress}
-                stratAddress={vault.stratAddress}
-                lbBookAddress={vault.lbBookAddress}
-                clpoolAddress={vault.clpoolAddress}
-                name={vault.name}
-                tier={vault.tier}
-                userAddress={actualAddress}
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 items-start">
+          {VAULT_CONFIGS.map((vault, index) => (
+            <DashboardVaultCard
+              key={index}
+              vaultAddress={vault.vaultAddress}
+              stratAddress={vault.stratAddress}
+              lbBookAddress={vault.lbBookAddress}
+              clpoolAddress={vault.clpoolAddress}
+              name={vault.name}
+              tier={vault.tier}
+              userAddress={address}
+            />
+          ))}
+        </div>
       </main>
+      </div>
     </div>
   );
 }

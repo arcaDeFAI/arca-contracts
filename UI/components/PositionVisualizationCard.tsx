@@ -2,6 +2,7 @@
 
 import { useReadContract } from 'wagmi'
 import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain'
+import { TokenPairLogos } from './TokenPairLogos'
 
 interface PositionVisualizationCardProps {
   vaultAddress: string
@@ -156,13 +157,20 @@ export default function PositionVisualizationCard({
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h3 className="text-base font-semibold text-white">Shadow Position Range</h3>
-            <p className="text-xs text-gray-400">{name}</p>
+            <div className="flex items-center gap-2">
+              <img src="/SHadowLogo.jpg" alt="Shadow" className="w-7 h-7 rounded-full" />
+              <h3 className="text-base font-semibold text-white">Position Range</h3>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <TokenPairLogos 
+                token0Logo="/SonicLogoRound.png" 
+                token1Logo="/USDCLogo.png" 
+                size={22}
+              />
+              <p className="text-xs text-gray-400">{name}</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`px-2 py-1 rounded text-xs font-medium border ${getTierColor(tier)}`}>
-              {tier}
-            </span>
             <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
               isInRange 
                 ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
@@ -187,47 +195,48 @@ export default function PositionVisualizationCard({
         </div>
 
         {/* Active Range Display */}
-        <div className="bg-arca-light-gray/5 rounded-lg p-3 mb-4">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-medium text-gray-300">Liquidity Distribution</span>
-            <span className={`text-xs px-3 py-1 rounded whitespace-nowrap ${
-              isInRange ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'
+        <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm font-semibold text-white">Liquidity Distribution</span>
+            <span className={`text-xs px-3 py-1.5 rounded font-medium whitespace-nowrap ${
+              isInRange ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
             }`}>
               {isInRange ? 'Earning' : 'Position Inactive'}
             </span>
           </div>
           
-          <div className="flex items-center justify-between">
-            <div className="text-center">
-              <div className="text-xs text-gray-400 mb-1">Lower Bound</div>
-              <div className="text-lg font-semibold text-white">{lowRangeNum}</div>
+          <div className="space-y-3">
+            {/* Range Bar */}
+            <div className="relative h-2 bg-gray-800/50 rounded-full overflow-hidden">
+              {/* Active range background */}
+              <div 
+                className="absolute top-0 h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60"
+                style={{
+                  left: `${lowRangePosition}%`,
+                  width: `${rangeWidth}%`
+                }}
+              />
+              {/* Current price indicator */}
+              <div 
+                className="absolute top-0 w-0.5 h-full bg-red-400"
+                style={{
+                  left: `${activeIdPosition}%`,
+                  boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)'
+                }}
+              />
             </div>
-            
-            <div className="flex-1 mx-4">
-              <div className="relative h-3 bg-gray-700 rounded-full overflow-hidden">
-                {/* Active range background */}
-                <div 
-                  className="absolute top-0 h-full bg-gradient-to-r from-green-500/40 to-green-400/40"
-                  style={{
-                    left: `${lowRangePosition}%`,
-                    width: `${rangeWidth}%`
-                  }}
-                />
-                {/* Current price indicator */}
-                <div 
-                  className="absolute top-0 w-1 h-full bg-red-400 shadow-lg"
-                  style={{
-                    left: `${activeIdPosition}%`,
-                    boxShadow: '0 0 8px rgba(248, 113, 113, 0.6)'
-                  }}
-                />
-              </div>
 
-            </div>
-            
-            <div className="text-center">
-              <div className="text-xs text-gray-400 mb-1">Upper Bound</div>
-              <div className="text-lg font-semibold text-white">{upperRangeNum}</div>
+            {/* Range Labels */}
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex flex-col items-start">
+                <span className="text-gray-500 mb-0.5">Lower Bound</span>
+                <span className="text-white font-semibold">{lowRangeNum}</span>
+              </div>
+              
+              <div className="flex flex-col items-end">
+                <span className="text-gray-500 mb-0.5">Upper Bound</span>
+                <span className="text-white font-semibold">{upperRangeNum}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -242,13 +251,20 @@ export default function PositionVisualizationCard({
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h3 className="text-base font-semibold text-white">Metro Position Range</h3>
-          <p className="text-xs text-gray-400">{name}</p>
+          <div className="flex items-center gap-2">
+            <img src="/MetropolisLogo.png" alt="Metropolis" className="w-7 h-7" />
+            <h3 className="text-base font-semibold text-white">Position Range</h3>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <TokenPairLogos 
+              token0Logo="/SonicLogoRound.png" 
+              token1Logo="/USDCLogo.png" 
+              size={22}
+            />
+            <p className="text-xs text-gray-400">{name}</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-1 rounded text-xs font-medium border ${getTierColor(tier)}`}>
-            {tier}
-          </span>
           <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
             isInRange 
               ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
@@ -273,47 +289,48 @@ export default function PositionVisualizationCard({
       </div>
 
       {/* Active Range Display */}
-      <div className="bg-arca-light-gray/5 rounded-lg p-3 mb-4">
-        <div className="flex justify-between items-center mb-3">
-          <span className="text-sm font-medium text-gray-300">Liquidity Distribution</span>
-          <span className={`text-xs px-2 py-1 rounded ${
-            isInRange ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'
+      <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-sm font-semibold text-white">Liquidity Distribution</span>
+          <span className={`text-xs px-3 py-1.5 rounded font-medium whitespace-nowrap ${
+            isInRange ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
           }`}>
             {isInRange ? 'Earning' : 'Position Inactive'}
           </span>
         </div>
         
-        <div className="flex items-center justify-between">
-          <div className="text-center">
-            <div className="text-xs text-gray-400 mb-1">Lower Bin</div>
-            <div className="text-lg font-semibold text-white">{lowRangeNum.toLocaleString()}</div>
+        <div className="space-y-3">
+          {/* Range Bar */}
+          <div className="relative h-2 bg-gray-800/50 rounded-full overflow-hidden">
+            {/* Active range background */}
+            <div 
+              className="absolute top-0 h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60"
+              style={{
+                left: `${lowRangePosition}%`,
+                width: `${rangeWidth}%`
+              }}
+            />
+            {/* Current price indicator */}
+            <div 
+              className="absolute top-0 w-0.5 h-full bg-red-400"
+              style={{
+                left: `${activeIdPosition}%`,
+                boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)'
+              }}
+            />
           </div>
-          
-          <div className="flex-1 mx-4">
-            <div className="relative h-4 bg-gray-700 rounded-full overflow-hidden">
-              {/* Active range background with gradient */}
-              <div 
-                className="absolute top-0 h-full bg-gradient-to-r from-green-500/40 to-green-400/40"
-                style={{
-                  left: `${lowRangePosition}%`,
-                  width: `${rangeWidth}%`
-                }}
-              />
-              {/* Current price indicator */}
-              <div 
-                className="absolute top-0 w-1 h-full bg-red-400 shadow-lg z-10"
-                style={{
-                  left: `${activeIdPosition}%`,
-                  boxShadow: '0 0 8px rgba(248, 113, 113, 0.6)'
-                }}
-              />
-            </div>
 
-          </div>
-          
-          <div className="text-center">
-            <div className="text-xs text-gray-400 mb-1">Upper Bin</div>
-            <div className="text-lg font-semibold text-white">{upperRangeNum.toLocaleString()}</div>
+          {/* Range Labels */}
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex flex-col items-start">
+              <span className="text-gray-500 mb-0.5">Lower Bin</span>
+              <span className="text-white font-semibold">{lowRangeNum.toLocaleString()}</span>
+            </div>
+            
+            <div className="flex flex-col items-end">
+              <span className="text-gray-500 mb-0.5">Upper Bin</span>
+              <span className="text-white font-semibold">{upperRangeNum.toLocaleString()}</span>
+            </div>
           </div>
         </div>
       </div>
