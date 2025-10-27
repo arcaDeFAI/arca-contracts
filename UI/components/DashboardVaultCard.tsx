@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { formatUnits } from 'viem';
 import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
@@ -31,7 +30,7 @@ export function DashboardVaultCard({
 }: DashboardVaultCardProps) {
   const config = { vaultAddress, stratAddress, name, tier };
   
-  // Use only the connected wallet address - no test fallback
+  // Use the connected wallet address
   const actualAddress = userAddress;
 
   // Use unified metrics hook
@@ -40,14 +39,11 @@ export function DashboardVaultCard({
   const {
     userShares,
     sharePercentage,
-    depositedValueUSD,
+    balances,
+    totalSupply,
     apy,
     aprLoading,
     pendingRewards,
-    shadowEarned,
-    xShadowEarned,
-    shadowTokenId,
-    shadowRewardStatus,
     currentRound,
     queuedWithdrawal,
     claimableWithdrawal,
@@ -56,8 +52,31 @@ export function DashboardVaultCard({
     handleRedeemWithdrawal,
     isRedeemingWithdrawal,
     prices,
+    sonicPrice,
     isShadowVault,
   } = metrics;
+
+  // Calculate deposited amounts based on user's share percentage
+  const depositedAmounts = (() => {
+    if (!balances || !userShares || !totalSupply || totalSupply === 0n) {
+      return null;
+    }
+    
+    const shareRatio = Number(userShares) / Number(totalSupply);
+    
+    // Token 0 (S or WS)
+    const token0Amount = Number(formatUnits(balances[0], 18)) * shareRatio;
+    const token0Value = token0Amount * (sonicPrice || 0);
+    
+    // Token 1 (USDC)
+    const token1Amount = Number(formatUnits(balances[1], 6)) * shareRatio;
+    const token1Value = token1Amount; // USDC is 1:1 with USD
+    
+    return {
+      token0: { name: isShadowVault ? 'WS' : 'S', amount: token0Amount, usdValue: token0Value },
+      token1: { name: 'USDC', amount: token1Amount, usdValue: token1Value }
+    };
+  })();
 
   // Get preview amounts for queued withdrawal
   const { data: queuedPreviewAmounts } = useReadContract({
@@ -82,66 +101,22 @@ export function DashboardVaultCard({
 
   // Simple check - show if user has shares, pending rewards, queued withdrawal, or claimable withdrawal
   const hasShares = !!(userShares && userShares > 0n);
-const hasPendingRewards = !!((!isShadowVault && pendingRewards && pendingRewards.length > 0));
+const hasPendingRewards = !!(pendingRewards && pendingRewards.some((r: UserRewardStructOutput) => r.pendingRewards > 0n));
 const hasQueuedWithdrawal = !!(queuedWithdrawal && queuedWithdrawal > 0n);
 const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0n);
 
-  // Process Shadow vault rewards from getRewardStatus (6 tokens array)
-  let shadowRewards: Array<{
-    token: string;
-    tokenName: string;
-    amount: bigint;
-    amountFormatted: string;
-  }> = [];
-  let shadowHasActivePosition = false;
-  let shadowTotalRewards = 0n;
-
-  if (isShadowVault && shadowRewardStatus) {
-    shadowHasActivePosition = shadowRewardStatus.hasActivePosition;
-    
-    // Process all 6 tokens from the rewards array
-    shadowRewards = shadowRewardStatus.tokens.map((tokenAddress: string, index: number) => {
-      const amount = shadowRewardStatus.earned[index] || 0n;
-      shadowTotalRewards += amount;
-      
-      return {
-        token: tokenAddress,
-        tokenName: getTokenName(tokenAddress),
-        amount,
-        amountFormatted: (Number(amount) / (10 ** 18)).toFixed(4),
-      };
-    }).filter((reward: { token: string; tokenName: string; amount: bigint; amountFormatted: string }) => reward.amount > 0n);
-  }
-
-  // For Shadow vaults, check if there are any rewards
-  const hasShadowRewards = isShadowVault && shadowRewards.length > 0 && shadowTotalRewards > 0n;
-
-  // Debug Shadow vault rendering logic
-  if (isShadowVault) {
-    console.log('🔍 SHADOW VAULT RENDERING:', {
-      actualAddress: !!actualAddress,
-      hasShares,
-      hasShadowRewards,
-      shadowHasActivePosition,
-      shadowTokenId: shadowTokenId?.toString(),
-      shadowRewards: shadowRewards.map(r => ({
-        token: r.tokenName,
-        amount: r.amountFormatted
-      })),
-      shadowTotalRewards: shadowTotalRewards.toString(),
-      buttonShouldBeEnabled: shadowHasActivePosition && hasShadowRewards,
-      buttonDisabled: !shadowHasActivePosition || !hasShadowRewards,
-      willRender: !!actualAddress && (hasShares || hasShadowRewards || hasQueuedWithdrawal || hasClaimableWithdrawal)
-    });
-  }
-
-  // Filter non-zero rewards for Metro vaults
-  const nonZeroRewards = !isShadowVault && pendingRewards 
+  // Filter non-zero rewards for both Metro and Shadow vaults
+  const nonZeroRewards = pendingRewards 
     ? pendingRewards.filter((reward: UserRewardStructOutput) => reward.pendingRewards > 0n)
     : [];
 
-  // Don't render if user has no activity or no wallet connected
-  if (!actualAddress || (!hasShares && !hasPendingRewards && !hasShadowRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal)) {
+  // Don't render if user has no wallet connected or no activity
+  if (!actualAddress) {
+    return null;
+  }
+  
+  // Show card only if user has shares, pending rewards, or withdrawals
+  if (!hasShares && !hasPendingRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal) {
     return null;
   }
 
@@ -155,7 +130,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
   };
 
   return (
-    <div className="bg-arca-gray rounded-lg border border-arca-light-gray overflow-hidden">
+    <div className="bg-black rounded-lg border border-arca-green/20 hover:border-arca-green/50 transition-all shadow-[0_0_15px_rgba(0,255,163,0.15)] hover:shadow-[0_0_30px_rgba(0,255,163,0.3)] overflow-hidden">
       {/* Position Visualization */}
       <PositionVisualizationCard
         vaultAddress={vaultAddress}
@@ -168,10 +143,10 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
       />
 
       {/* Dashboard Card */}
-      <div className="p-4 border-t border-arca-light-gray/30">
+      <div className="p-4 border-t border-arca-green/20">
         <div className="space-y-3">
         {/* User Shares & APY */}
-        <div className="bg-arca-light-gray/30 rounded-lg p-3">
+        <div className="bg-black/50 rounded-lg p-3 border border-gray-700/50">
           {/* APY Display - Vault-wide 24h */}
           <div className="mb-3 pb-3 border-b border-gray-700/30">
             <div className="text-gray-400 text-xs uppercase tracking-wider mb-1 text-center">APY</div>
@@ -192,12 +167,57 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
               </span>
             </div>
           </div>
+
+          {/* Deposited Amounts */}
+          {depositedAmounts && (
+            <div className="mt-2 pt-2 border-t border-gray-700/30">
+              <div className="text-gray-400 text-sm mb-2">Deposited:</div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src="/SonicLogoRound.png" 
+                      alt={depositedAmounts.token0.name} 
+                      className="w-4 h-4 rounded-full"
+                    />
+                    <span className="text-gray-400 text-sm">{depositedAmounts.token0.name}:</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-semibold text-sm">
+                      {depositedAmounts.token0.amount.toFixed(4)}
+                    </div>
+                    <div className="text-gray-400 text-xs">
+                      ${depositedAmounts.token0.usdValue.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src="/USDCLogo.png" 
+                      alt="USDC" 
+                      className="w-4 h-4 rounded-full"
+                    />
+                    <span className="text-gray-400 text-sm">{depositedAmounts.token1.name}:</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-semibold text-sm">
+                      {depositedAmounts.token1.amount.toFixed(4)}
+                    </div>
+                    <div className="text-gray-400 text-xs">
+                      ${depositedAmounts.token1.usdValue.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
 
-        {/* Rewards Section - Shows only non-zero rewards */}
+        {/* Rewards Section - Shows only non-zero rewards (works for both Metro and Shadow) */}
         {hasPendingRewards && (
-          <div className="bg-arca-light-gray/30 rounded-lg p-3">
+          <div className="bg-black/50 rounded-lg p-3 border border-gray-700/50">
             <div className="space-y-2 mb-2">
               {nonZeroRewards.map((reward: UserRewardStructOutput, index: number) => {
                 const tokenName = getTokenName(reward.token);
@@ -226,13 +246,6 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
                   }
                 }
 
-                console.log(`💰 Rewards Display - ${tokenName}:`, {
-                  tokenAmount,
-                  tokenPrice,
-                  usdValue,
-                  usdDisplay
-                });
-
                 return (
                   <div key={index} className="flex justify-between items-center text-sm">
                     <span className="text-gray-400">Rewards:</span>
@@ -257,62 +270,9 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
           </div>
         )}
 
-        {/* Shadow Rewards Section - Shows rewards from 6-token array */}
-        {hasShadowRewards && (
-          <div className="bg-arca-light-gray/30 rounded-lg p-3">
-            <div className="space-y-2 mb-2">
-              {shadowRewards.map((reward, index: number) => {
-                const tokenAmount = Number(reward.amount) / (10 ** 18);
-
-                // Get token price based on token name
-                let tokenPrice = 0;
-                if (reward.tokenName === 'Metro' && prices?.metro) {
-                  tokenPrice = prices.metro;
-                } else if (reward.tokenName === 'Shadow' && prices?.shadow) {
-                  tokenPrice = prices.shadow;
-                } else if (reward.tokenName === 'xShadow' && prices?.xShadow) {
-                  tokenPrice = prices.xShadow;
-                }
-
-                const usdValue = tokenAmount * tokenPrice;
-
-                // Format USD with appropriate precision for small values
-                let usdDisplay = '';
-                if (tokenPrice > 0) {
-                  if (usdValue < 0.01) {
-                    usdDisplay = `($${usdValue.toFixed(4)})`;
-                  } else {
-                    usdDisplay = `(${formatUSD(usdValue)})`;
-                  }
-                }
-
-                return (
-                  <div key={index} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400">Rewards:</span>
-                    <span className="text-arca-green font-semibold">
-                      {reward.amountFormatted} {reward.tokenName} {usdDisplay}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-            <button
-              onClick={handleClaimRewards}
-              disabled={isClaimingRewards || !shadowHasActivePosition || shadowRewards.length === 0}
-              className={`w-full py-2 px-3 rounded-lg text-sm font-semibold transition-colors ${
-                isClaimingRewards || !shadowHasActivePosition || shadowRewards.length === 0
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-arca-green text-black hover:bg-arca-green/90'
-              }`}
-            >
-              {isClaimingRewards ? 'Claiming...' : 'Claim Rewards'}
-            </button>
-          </div>
-        )}
-
         {/* Queued Withdrawal Section - Shows withdrawal in current round (not claimable yet) */}
         {hasQueuedWithdrawal && (
-          <div className="bg-arca-light-gray/30 rounded-lg p-3">
+          <div className="bg-black/50 rounded-lg p-3 border border-gray-700/50">
             <div className="flex justify-between items-center mb-2 text-sm">
               <span className="text-gray-400">Queued Withdrawal:</span>
               <span className="text-yellow-400 font-semibold">
@@ -350,7 +310,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
 
         {/* Claimable Withdrawal Section - Shows withdrawal from previous round (can claim now) */}
         {hasClaimableWithdrawal && (
-          <div className="bg-arca-light-gray/30 rounded-lg p-4">
+          <div className="bg-black/50 rounded-lg p-4 border border-gray-700/50">
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal:</span>
               <span className="text-arca-green font-semibold">

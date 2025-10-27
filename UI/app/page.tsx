@@ -45,6 +45,11 @@ export default function Home() {
     setMounted(true);
   }, []);
 
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
+
   // Calculate total TVL from all vaults
   const totalTVL = (() => {
     let total = 0;
@@ -85,10 +90,12 @@ export default function Home() {
   })();
 
   return (
-    <div className="min-h-screen bg-arca-dark">
+    <div className="min-h-screen bg-gradient-to-br from-black via-arca-dark to-black" style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.03) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 100%)'}}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
+      <div className="relative z-10">
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6" style={{maxWidth: '100%'}}>
         {/* Hero Section */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-3">
@@ -100,17 +107,17 @@ export default function Home() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-arca-gray rounded-lg p-4 border border-arca-light-gray">
-            <div className="text-xs text-gray-400 mb-1">Total TVL</div>
-            <div className="text-xl font-bold text-arca-green">
+        <div className="flex flex-wrap gap-4 mb-6">
+          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
+            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Total TVL</div>
+            <div className="text-xl font-bold text-arca-green whitespace-nowrap">
               {vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(totalTVL)}
             </div>
           </div>
           
-          <div className="bg-arca-gray rounded-lg p-4 border border-arca-light-gray">
-            <div className="text-xs text-gray-400 mb-1">Your Total Balance</div>
-            <div className="text-xl font-bold text-white">
+          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
+            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Your Total Balance</div>
+            <div className="text-xl font-bold text-white whitespace-nowrap">
               {!mounted ? '--' : 
                (!isConnected ? '--' : 
                 (vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(userTotalBalance))
@@ -118,9 +125,9 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="bg-arca-gray rounded-lg p-4 border border-arca-light-gray">
-            <div className="text-xs text-gray-400 mb-1">Active Vaults</div>
-            <div className="text-xl font-bold text-white">
+          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
+            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Active Vaults</div>
+            <div className="text-xl font-bold text-white whitespace-nowrap">
               {VAULT_CONFIGS.length}
             </div>
           </div>
@@ -141,17 +148,45 @@ export default function Home() {
           </div>
         )}
 
-        {/* Vault Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {VAULT_CONFIGS.map((vault, index) => (
-            <VaultCard
-              key={index}
-              vaultAddress={vault.vaultAddress}
-              stratAddress={vault.stratAddress}
-              name={vault.name}
-              tier={vault.tier}
-            />
-          ))}
+        {/* Split Screen Layout - Metropolis and Shadow */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Metropolis Vaults Container */}
+          <div className="bg-black/40 rounded-xl p-6 border border-gray-800/50">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <h2 className="text-3xl font-bold text-white">Metropolis Vaults</h2>
+              <img src="/MetropolisLogo.png" alt="Metropolis" className="w-12 h-12" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {VAULT_CONFIGS.filter(v => v.name.includes('Metropolis')).map((vault, index) => (
+                <VaultCard
+                  key={index}
+                  vaultAddress={vault.vaultAddress}
+                  stratAddress={vault.stratAddress}
+                  name={vault.name}
+                  tier={vault.tier}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Shadow Vaults Container */}
+          <div className="bg-black/40 rounded-xl p-6 border border-gray-800/50">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <h2 className="text-3xl font-bold text-white">Shadow Vaults</h2>
+              <img src="/SHadowLogo.jpg" alt="Shadow" className="w-12 h-12 rounded-full" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {VAULT_CONFIGS.filter(v => v.name.includes('Shadow')).map((vault, index) => (
+                <VaultCard
+                  key={index}
+                  vaultAddress={vault.vaultAddress}
+                  stratAddress={vault.stratAddress}
+                  name={vault.name}
+                  tier={vault.tier}
+                />
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Footer Info */}
@@ -161,6 +196,7 @@ export default function Home() {
           </p>
         </div>
       </main>
+      </div>
     </div>
   );
 }

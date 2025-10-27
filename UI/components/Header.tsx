@@ -12,7 +12,7 @@ export function Header() {
   
   return (
     <header className="bg-arca-dark border-b border-arca-light-gray">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8" style={{maxWidth: '100%'}}>
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <div className="flex items-center gap-3">
@@ -23,19 +23,31 @@ export function Header() {
             <nav className="hidden md:flex items-center gap-6">
               <a 
                 href="/" 
-                className={`text-lg ${pathname === '/' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}`}
+                className={`text-lg italic transition-colors ${
+                  pathname === '/' 
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1' 
+                    : 'text-white hover:text-arca-green'
+                }`}
               >
                 Vaults
               </a>
               <a 
                 href="/dashboard" 
-                className={`text-lg ${pathname === '/dashboard' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}`}
+                className={`text-lg italic transition-colors ${
+                  pathname.startsWith('/dashboard') 
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1' 
+                    : 'text-white hover:text-arca-green'
+                }`}
               >
                 Dashboard
               </a>
               <a 
                 href="/staking" 
-                className={`text-lg ${pathname === '/staking' ? 'text-arca-green font-medium' : 'text-gray-400 hover:text-white transition-colors'}`}
+                className={`text-lg italic transition-colors ${
+                  pathname.startsWith('/staking') 
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1' 
+                    : 'text-white hover:text-arca-green'
+                }`}
               >
                 Staking
               </a>
@@ -46,7 +58,7 @@ export function Header() {
             {!isLoading && prices && (
               <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-arca-green/10 rounded-lg border border-arca-green/20">
                 <span className="text-base text-gray-300">S :</span>
-                <span className="text-xl font-bold text-arca-green">{formatUSD(prices.sonic)}</span>
+                <span className="text-xl font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             <ConnectButton.Custom>
@@ -101,24 +113,29 @@ export function Header() {
                             className="bg-arca-light-gray text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
                             type="button"
                           >
-                            {chain.hasIcon && (
+                            {/* Show chain icon from RainbowKit or fallback to Sonic logo */}
+                            {chain.hasIcon && chain.iconUrl ? (
                               <div
                                 style={{
                                   background: chain.iconBackground,
-                                  width: 16,
-                                  height: 16,
+                                  width: 20,
+                                  height: 20,
                                   borderRadius: 999,
                                   overflow: 'hidden',
                                 }}
                               >
-                                {chain.iconUrl && (
-                                  <img
-                                    alt={chain.name ?? 'Chain icon'}
-                                    src={chain.iconUrl}
-                                    style={{ width: 16, height: 16 }}
-                                  />
-                                )}
+                                <img
+                                  alt={chain.name ?? 'Chain icon'}
+                                  src={chain.iconUrl}
+                                  style={{ width: 20, height: 20 }}
+                                />
                               </div>
+                            ) : (
+                              <img
+                                src="/SonicLogoRound.png"
+                                alt="Sonic"
+                                className="w-5 h-5 rounded-full"
+                              />
                             )}
                             {chain.name}
                           </button>

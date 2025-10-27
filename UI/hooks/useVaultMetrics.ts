@@ -74,10 +74,6 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
 
     // Dashboard data
     pendingRewards: dashboardData.pendingRewards,
-    shadowEarned: dashboardData.shadowEarned,
-    xShadowEarned: dashboardData.xShadowEarned,
-    shadowTokenId: dashboardData.shadowTokenId,
-    shadowRewardStatus: dashboardData.shadowRewardStatus,
     currentRound: dashboardData.currentRound,
     queuedWithdrawal: dashboardData.queuedWithdrawal,
     claimableWithdrawal: dashboardData.claimableWithdrawal,

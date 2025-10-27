@@ -9,30 +9,29 @@ const HARVEST_ABI = parseAbi([
 ]);
 
 /**
- * Fetches Harvest events and calculates 24h APY
- * Non-blocking - returns 0 if there are any errors
+ * Fetches harvested rewards from the last 24 hours for calculating % change
+ * Returns total USD value of rewards harvested in last 24h
  */
-export function useHarvestAPY(
+export function use24hHarvestedRewards(
   vaultAddress: string,
-  userBalanceUSD: number,
-  tokenPrice: number
+  userAddress?: string,
+  tokenPrice?: number
 ) {
-  const [apy, setApy] = useState(0);
+  const [harvested24hUSD, setHarvested24hUSD] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   
   const publicClient = usePublicClient();
 
   useEffect(() => {
-    // Skip if no data or client
-    if (!publicClient || !vaultAddress || !userBalanceUSD || !tokenPrice) {
-      setApy(0);
+    if (!publicClient || !vaultAddress || !userAddress || !tokenPrice) {
+      setHarvested24hUSD(0);
       setIsLoading(false);
       return;
     }
 
     let isMounted = true;
 
-    const fetchHarvestAPY = async () => {
+    const fetch24hHarvests = async () => {
       try {
         setIsLoading(true);
 
@@ -43,17 +42,20 @@ export function useHarvestAPY(
         const blocksPerDay = 86400n;
         const fromBlock = currentBlock > blocksPerDay ? currentBlock - blocksPerDay : 0n;
 
-        // Fetch Harvest events
+        // Fetch Harvest events for this user in last 24h
         const logs = await publicClient.getLogs({
           address: vaultAddress as `0x${string}`,
           event: HARVEST_ABI[0],
+          args: {
+            user: userAddress as `0x${string}`
+          },
           fromBlock,
           toBlock: currentBlock,
         });
 
         if (!isMounted) return;
 
-        // Calculate total rewards in last 24h
+        // Calculate total rewards harvested in last 24h
         const totalRewardsToken = logs.reduce(
           (sum, log) => sum + Number(log.args.amount || 0n) / (10 ** 18),
           0
@@ -61,25 +63,13 @@ export function useHarvestAPY(
 
         const totalRewardsUSD = totalRewardsToken * tokenPrice;
 
-        // Calculate APY: (24h rewards / balance) * 365 * 100
-        if (totalRewardsUSD > 0 && userBalanceUSD > 0) {
-          const dailyReturn = totalRewardsUSD / userBalanceUSD;
-          const annualReturn = dailyReturn * 365;
-          const calculatedAPY = annualReturn * 100;
-
-          if (isMounted) {
-            setApy(Math.max(0, calculatedAPY));
-          }
-        } else {
-          if (isMounted) {
-            setApy(0);
-          }
+        if (isMounted) {
+          setHarvested24hUSD(totalRewardsUSD);
         }
       } catch (err) {
-        // Silently fail - just return 0 APY
-        console.warn('Harvest APY calculation failed:', err);
+        console.warn('Failed to fetch 24h harvested rewards:', err);
         if (isMounted) {
-          setApy(0);
+          setHarvested24hUSD(0);
         }
       } finally {
         if (isMounted) {
@@ -88,16 +78,16 @@ export function useHarvestAPY(
       }
     };
 
-    fetchHarvestAPY();
+    fetch24hHarvests();
 
     // Refresh every 5 minutes
-    const interval = setInterval(fetchHarvestAPY, 5 * 60 * 1000);
+    const interval = setInterval(fetch24hHarvests, 5 * 60 * 1000);
 
     return () => {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [publicClient, vaultAddress, userBalanceUSD, tokenPrice]);
+  }, [publicClient, vaultAddress, userAddress, tokenPrice]);
 
-  return { apy, isLoading };
+  return { harvested24hUSD, isLoading };
 }
