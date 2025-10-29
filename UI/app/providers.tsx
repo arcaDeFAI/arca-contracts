@@ -16,6 +16,8 @@ const sonic = {
   nativeCurrency: { decimals: 18, name: 'S', symbol: 'S' },
   rpcUrls: { default: { http: ['https://rpc.soniclabs.com'] } },
   blockExplorers: { default: { name: 'Sonic Explorer', url: 'https://sonicscan.org' } },
+  iconUrl: '/SonicLogoRound.png',
+  iconBackground: '#0066FF',
   testnet: false,
 } as const;
 

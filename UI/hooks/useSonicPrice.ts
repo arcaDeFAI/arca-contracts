@@ -40,9 +40,9 @@ export function useSonicPrice() {
           throw new Error('Invalid response format');
         }
       } catch (err) {
-        console.error('Failed to fetch Sonic price:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-        // Keep fallback price of $0.17
+        // Silently use fallback price - API failures are expected
+        console.warn('Using fallback Sonic price ($0.17) due to API error');
+        setError(null); // Don't show error to user, fallback price works fine
       } finally {
         setIsLoading(false);
       }

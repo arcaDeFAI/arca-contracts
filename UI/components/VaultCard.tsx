@@ -136,7 +136,7 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardP
             </div>
 
             {/* APY Display */}
-            <div className="bg-black/50 rounded-lg p-2.5 border border-gray-700/50">
+            <div className="bg-black/50 rounded-lg p-2.5 border border-gray-800/60">
               <div className="text-gray-400 text-xs uppercase tracking-wider mb-0.5 text-center">APY</div>
               <div className="text-center">
                 <div className="text-arca-green text-lg font-semibold">

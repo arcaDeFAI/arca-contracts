@@ -37,30 +37,30 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-arca-dark to-black" style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.03) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 100%)'}}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
+    <div className="min-h-screen bg-gradient-to-br from-black via-arca-dark to-black" style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.08) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 100%)'}}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.12),transparent_50%)] pointer-events-none"></div>
       <div className="relative z-10">
       <Header />
       
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6" style={{maxWidth: '100%'}}>
+      <main className="container mx-auto px-3 sm:px-5 lg:px-6 py-5" style={{maxWidth: '100%'}}>
         {/* Hero Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-3">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-white mb-2">
             Dashboard
           </h1>
-          <p className="text-gray-400 text-base">
+          <p className="text-gray-400 text-sm">
             Manage your vault positions, claim rewards, and handle withdrawals
           </p>
         </div>
 
         {/* Connection Prompt */}
         {!isConnected && (
-          <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="text-yellow-400 text-lg">⚠️</div>
+          <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3 mb-5">
+            <div className="flex items-center gap-2">
+              <div className="text-yellow-400 text-base">⚠️</div>
               <div>
-                <h3 className="text-yellow-400 font-semibold mb-1 text-sm">Connect Your Wallet</h3>
-                <p className="text-yellow-300/80 text-xs">
+                <h3 className="text-yellow-400 font-semibold mb-1 text-xs">Connect Your Wallet</h3>
+                <p className="text-yellow-300/80 text-[11px]">
                   Connect your Web3 wallet to view your dashboard and manage your positions.
                 </p>
               </div>
@@ -80,23 +80,23 @@ export default function Dashboard() {
         {isConnected && (
           <>
             {/* Section Header */}
-            <div className="mb-6">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-1 h-8 bg-arca-green rounded-full"></div>
-                <h2 className="text-2xl font-bold text-white">Active Vaults</h2>
+            <div className="mb-5">
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className="w-1 h-6 bg-arca-green rounded-full"></div>
+                <h2 className="text-xl font-bold text-white">Active Vaults</h2>
               </div>
-              <p className="text-gray-400 text-sm ml-7">Monitor and manage your vault positions</p>
+              <p className="text-gray-400 text-xs ml-5">Monitor and manage your vault positions</p>
             </div>
 
             {/* Split Screen Layout - Metropolis and Shadow */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Metropolis Vaults Container */}
-            <div className="bg-black/40 rounded-xl p-6 border border-gray-800/50">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <h2 className="text-3xl font-bold text-white">Metropolis Vaults</h2>
-                <img src="/MetropolisLogo.png" alt="Metropolis" className="w-12 h-12" />
+            <div className="bg-black/40 rounded-xl p-5 border border-gray-800/50">
+              <div className="flex items-center justify-center gap-2 mb-5">
+                <h2 className="text-2xl font-bold text-white">Metropolis Vaults</h2>
+                <img src="/MetropolisLogo.png" alt="Metropolis" className="w-10 h-10" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {VAULT_CONFIGS.filter(v => v.name.includes('Metropolis')).map((vault, index) => (
                   <DashboardVaultCard
                     key={index}
@@ -113,12 +113,12 @@ export default function Dashboard() {
             </div>
 
             {/* Shadow Vaults Container */}
-            <div className="bg-black/40 rounded-xl p-6 border border-gray-800/50">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <h2 className="text-3xl font-bold text-white">Shadow Vaults</h2>
-                <img src="/SHadowLogo.jpg" alt="Shadow" className="w-12 h-12 rounded-full" />
+            <div className="bg-black/40 rounded-xl p-5 border border-gray-800/50">
+              <div className="flex items-center justify-center gap-2 mb-5">
+                <h2 className="text-2xl font-bold text-white">Shadow Vaults</h2>
+                <img src="/SHadowLogo.jpg" alt="Shadow" className="w-10 h-10 rounded-full" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {VAULT_CONFIGS.filter(v => v.name.includes('Shadow')).map((vault, index) => (
                   <DashboardVaultCard
                     key={index}

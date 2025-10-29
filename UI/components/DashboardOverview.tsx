@@ -1,17 +1,17 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
 import { useVaultMetrics } from '@/hooks/useVaultMetrics'
-import { useHarvestedRewards } from '@/hooks/useHarvestedRewards'
 import { useBalanceHistory } from '@/hooks/useBalanceHistory'
 import { use24hHarvestedRewards } from '@/hooks/use24hHarvestedRewards'
+import { useDailyHarvestedRewards } from '@/hooks/useDailyHarvestedRewards'
+import { useTotalEarnedFromCache } from '@/hooks/useTotalEarnedFromCache'
 import { type UserRewardStructOutput } from '@/lib/typechain'
 import { CONTRACTS } from '@/lib/contracts'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
 import { BalanceHistoryCard } from './BalanceHistoryCard'
 import { RewardsHistoryCard } from './RewardsHistoryCard'
-import { ClaimableRewardsSummary } from './ClaimableRewardsSummary'
 
 interface VaultConfig {
   vaultAddress: string
@@ -33,10 +33,16 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     useVaultMetrics(config, userAddress)
   )
 
-  // Fetch harvested rewards for all vaults (cumulative, doesn't reset on claim)
-  const harvestedRewardsData = vaultConfigs.map(config =>
-    useHarvestedRewards(config.vaultAddress, userAddress)
-  )
+  // Fetch total earned rewards from APY caches (all time)
+  const totalEarnedData = vaultConfigs.map((config, index) => {
+    const metrics = vaultMetrics[index]
+    const isShadowVault = config.name.includes('Shadow')
+    const tokenPrice = isShadowVault 
+      ? (metrics.prices?.shadow || 0) 
+      : (metrics.prices?.metro || 0)
+    
+    return useTotalEarnedFromCache(config.stratAddress, isShadowVault, tokenPrice)
+  })
 
   // Fetch 24h harvested rewards for calculating % change
   const harvested24hData = vaultConfigs.map((config, index) => {
@@ -50,6 +56,26 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     return use24hHarvestedRewards(config.vaultAddress, userAddress, tokenPrice)
   })
 
+  // Fetch daily harvested rewards (8am ET to 8am ET) - reads from APY caches
+  const dailyHarvestedData = vaultConfigs.map((config, index) => {
+    const metrics = vaultMetrics[index]
+    const isShadowVault = config.name.includes('Shadow')
+    const tokenPrice = isShadowVault 
+      ? (metrics.prices?.shadow || 0) 
+      : (metrics.prices?.metro || 0)
+    
+    return useDailyHarvestedRewards(config.stratAddress, isShadowVault, tokenPrice)
+  })
+
+  // Get earliest first earning date across all vaults
+  const firstEarningDate = useMemo(() => {
+    const dates = totalEarnedData
+      .map(data => data.firstEventTimestamp)
+      .filter((date): date is number => date !== null)
+    
+    return dates.length > 0 ? Math.min(...dates) : null
+  }, [totalEarnedData])
+
   // Aggregate data from all vaults
   const aggregatedData = useMemo(() => {
     let totalBalanceUSD = 0
@@ -60,6 +86,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     let totalHarvestedShadowUSD = 0
     
     const tokenAllocations = new Map<string, { amount: number; usdValue: number }>()
+    const depositedAmounts = new Map<string, { amount: number; usdValue: number }>()
     const metroRewards: Array<{ token: string; amount: number; usdValue: number; logo?: string }> = []
     const shadowRewards: Array<{ token: string; amount: number; usdValue: number; logo?: string }> = []
 
@@ -89,6 +116,13 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           usdValue: existing0.usdValue + token0Value
         })
 
+        // Track deposited amounts separately (same calculation for now)
+        const existingDeposit0 = depositedAmounts.get(token0Name) || { amount: 0, usdValue: 0 }
+        depositedAmounts.set(token0Name, {
+          amount: existingDeposit0.amount + token0Amount,
+          usdValue: existingDeposit0.usdValue + token0Value
+        })
+
         // Token 1 (USDC) - Complete strategy balance × share %
         const token1Amount = Number(formatUnits(metrics.balances[1], 6)) * shareRatio
         const token1Value = token1Amount // USDC is 1:1 with USD
@@ -97,6 +131,13 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         tokenAllocations.set('USDC', {
           amount: existing1.amount + token1Amount,
           usdValue: existing1.usdValue + token1Value
+        })
+
+        // Track deposited USDC
+        const existingDeposit1 = depositedAmounts.get('USDC') || { amount: 0, usdValue: 0 }
+        depositedAmounts.set('USDC', {
+          amount: existingDeposit1.amount + token1Amount,
+          usdValue: existingDeposit1.usdValue + token1Value
         })
       }
 
@@ -142,35 +183,15 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       }
     })
 
-    // Process harvested rewards (cumulative, doesn't reset on claim)
-    harvestedRewardsData.forEach((harvestData, index) => {
+    // Process total earned rewards from APY caches
+    totalEarnedData.forEach((earnedData, index) => {
       const config = vaultConfigs[index]
       const isShadowVault = config.name.includes('Shadow')
-      const metrics = vaultMetrics[index]
 
-      if (harvestData.harvestedRewards) {
-        harvestData.harvestedRewards.forEach((reward) => {
-          const tokenAddress = reward.token.toLowerCase()
-          const amount = reward.totalAmount
-          
-          let tokenPrice = 0
-
-          if (tokenAddress === CONTRACTS.METRO.toLowerCase()) {
-            tokenPrice = metrics.prices?.metro || 0
-          } else if (tokenAddress === CONTRACTS.SHADOW.toLowerCase()) {
-            tokenPrice = metrics.prices?.shadow || 0
-          } else if (tokenAddress === CONTRACTS.xSHADOW.toLowerCase()) {
-            tokenPrice = metrics.prices?.xShadow || 0
-          }
-
-          const usdValue = amount * tokenPrice
-
-          if (isShadowVault) {
-            totalHarvestedShadowUSD += usdValue
-          } else {
-            totalHarvestedMetroUSD += usdValue
-          }
-        })
+      if (isShadowVault) {
+        totalHarvestedShadowUSD += earnedData.totalEarnedUSD
+      } else {
+        totalHarvestedMetroUSD += earnedData.totalEarnedUSD
       }
     })
 
@@ -178,11 +199,11 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     const allocations = Array.from(tokenAllocations.entries()).map(([token, data]) => {
       const percentage = totalBalanceUSD > 0 ? (data.usdValue / totalBalanceUSD) * 100 : 0
       
-      // Assign colors based on token
-      let color = '#6B7280' // gray
-      if (token === 'S') color = '#1E40AF' // dark royal blue
-      else if (token === 'WS') color = '#60A5FA' // lighter blue
-      else if (token === 'USDC') color = '#FBBF24' // yellow/gold
+      // Assign colors based on token - military/tactical theme
+      let color = '#6B7280' // gray fallback
+      if (token === 'S') color = '#00FFA3' // Forest Green (military inspired)
+      else if (token === 'WS') color = '#059669' // Deep Red (danger/alert accent)
+      else if (token === 'USDC') color = '#15803D' // Gunmetal Gray
       
       return {
         token,
@@ -192,6 +213,13 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         color
       }
     }).sort((a, b) => b.percentage - a.percentage)
+
+    // Convert deposited amounts to array
+    const deposited = Array.from(depositedAmounts.entries()).map(([token, data]) => ({
+      token,
+      amount: data.amount,
+      usdValue: data.usdValue
+    }))
 
     return {
       totalBalanceUSD,
@@ -203,10 +231,11 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       totalHarvestedMetroUSD,
       totalHarvestedShadowUSD,
       allocations,
+      deposited,
       metroRewards,
       shadowRewards
     }
-  }, [vaultMetrics, vaultConfigs, harvestedRewardsData])
+  }, [vaultMetrics, vaultConfigs, totalEarnedData])
 
   // Track balance history and calculate real 24h changes
   const { calculate24hChange } = useBalanceHistory(
@@ -227,29 +256,201 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     ? (total24hHarvestedUSD / (aggregatedData.totalHarvestedUSD - total24hHarvestedUSD)) * 100 
     : 0
 
+  // Calculate daily harvested rewards (8am to 8am)
+  const totalDailyHarvestedUSD = dailyHarvestedData.reduce((sum, data) => sum + data.dailyHarvestedUSD, 0)
+
+  // Advanced mode toggle state
+  const [advancedMode, setAdvancedMode] = useState(false)
+
+  // Calculate average APY across all vaults
+  const avgAPY = useMemo(() => {
+    const apys = vaultMetrics.map(m => m.apy).filter(apy => apy > 0)
+    return apys.length > 0 ? apys.reduce((sum, apy) => sum + apy, 0) / apys.length : 0
+  }, [vaultMetrics])
+
+  // Calculate 30-day APR (APY / 12)
+  const avgAPR30d = avgAPY / 12
+
+  // Count active LP positions (vaults with deposits)
+  const activeLPs = useMemo(() => {
+    return vaultMetrics.filter(metrics => 
+      metrics.depositedValueUSD && metrics.depositedValueUSD > 0
+    ).length
+  }, [vaultMetrics])
+
+  // Format time duration since first earning
+  const formatTimeSince = (timestamp: number | null): string => {
+    if (!timestamp) return ''
+    
+    const now = Date.now()
+    const diff = now - timestamp
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const weeks = Math.floor(days / 7)
+    const months = Math.floor(days / 30)
+    const years = Math.floor(days / 365)
+    
+    if (years > 0) return `${years} year${years > 1 ? 's' : ''}`
+    if (months > 0) return `${months} month${months > 1 ? 's' : ''}`
+    if (weeks > 0) return `${weeks} week${weeks > 1 ? 's' : ''}`
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''}`
+    return 'today'
+  }
+
   if (!userAddress) {
     return null
   }
 
   return (
-    <div className="space-y-6 border border-gray-800/50 rounded-xl p-6 mb-8">
-      {/* Main Row: Portfolio + Claimable (left) + History Charts (right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:items-stretch">
-        {/* Left Column: Portfolio Allocation + Claimable Rewards */}
-        <div className="lg:col-span-1 flex flex-col gap-6">
+    <div className="space-y-5 mb-6">
+      {/* Top Stats Cards - 6 Equal Width Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 md:gap-4">
+        {/* Balance Card */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
+          <div className="text-gray-400 text-sm mb-2">Balance</div>
+          <div className="text-arca-green text-2xl font-bold">
+            ${aggregatedData.totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        {/* Daily Reward Card */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
+          <div className="text-gray-400 text-sm mb-2">Daily Reward</div>
+          <div className="text-arca-green text-2xl font-bold">
+            ${totalDailyHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        {/* Earned Card */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
+          <div className="text-gray-400 text-sm mb-2">
+            Earned {firstEarningDate && (
+              <span className="text-gray-500 text-xs ml-1">
+                (since {formatTimeSince(firstEarningDate)})
+              </span>
+            )}
+          </div>
+          <div className="text-arca-green text-2xl font-bold">
+            ${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        {/* AVG APR (30D) Card */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
+          <div className="text-gray-400 text-sm mb-2">APR (30D)</div>
+          <div className="text-arca-green text-2xl font-bold">
+            {avgAPR30d.toFixed(0)}%
+          </div>
+        </div>
+
+        {/* APY Card */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
+          <div className="text-gray-400 text-sm mb-2">AVG APY</div>
+          <div className="text-arca-green text-2xl font-bold">
+            {avgAPY.toFixed(0)}%
+          </div>
+        </div>
+
+        {/* Active LPs Card */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
+          <div className="text-gray-400 text-sm mb-2">Active Positions</div>
+          <div className="text-arca-green text-2xl font-bold">
+            {activeLPs}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* Left Column: Claimable Rewards */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-white text-lg font-semibold">Claimable Rewards</h3>
+                <div className="text-arca-green text-xl font-bold mt-1">
+                  ${aggregatedData.totalClaimableUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  // Claim all rewards logic here
+                  vaultMetrics.forEach(metrics => {
+                    if (metrics.handleClaimRewards) {
+                      metrics.handleClaimRewards()
+                    }
+                  })
+                }}
+                disabled={aggregatedData.totalClaimableUSD === 0}
+                className="bg-arca-green text-black font-semibold px-6 py-2 rounded-lg hover:bg-arca-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Claim Rewards
+              </button>
+            </div>
+            <div className="border-t border-gray-800/50 pt-4 mt-2"></div>
+
+            {/* Metropolis Rewards */}
+            <div className="mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <img src="/MetropolisLogo.png" alt="Metropolis" className="w-5 h-5" />
+                <span className="text-white font-semibold">Metropolis Rewards</span>
+              </div>
+              {aggregatedData.metroRewards.map((reward, idx) => (
+                <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-800/30 last:border-0">
+                  <div className="flex items-center gap-2">
+                    <img src="/MetropolisLogo.png" alt="Metro" className="w-4 h-4" />
+                    <span className="text-gray-300 text-sm">Metro</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-semibold">{reward.amount.toFixed(4)}</div>
+                    <div className="text-gray-400 text-xs">${reward.usdValue.toFixed(2)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Shadow Rewards */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <img src="/SHadowLogo.jpg" alt="Shadow" className="w-5 h-5 rounded-full" />
+                <span className="text-white font-semibold">Shadow Rewards</span>
+              </div>
+              {aggregatedData.shadowRewards.map((reward, idx) => (
+                <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-800/30 last:border-0">
+                  <div className="flex items-center gap-2">
+                    <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full" />
+                    <span className="text-gray-300 text-sm">Shadow</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-semibold">{reward.amount.toFixed(4)}</div>
+                    <div className="text-gray-400 text-xs">${reward.usdValue.toFixed(2)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+        </div>
+
+        {/* Right Column: Capital Allocation */}
+        <div>
           <PortfolioAllocationCard
             allocations={aggregatedData.allocations}
             totalValueUSD={aggregatedData.totalBalanceUSD}
-          />
-          <ClaimableRewardsSummary
-            totalClaimableUSD={aggregatedData.totalClaimableUSD}
-            metroRewards={aggregatedData.metroRewards}
-            shadowRewards={aggregatedData.shadowRewards}
+            deposited={aggregatedData.deposited}
           />
         </div>
+      </div>
 
-        {/* Right Column: History Charts - Takes 2 columns */}
-        <div className="lg:col-span-2 flex flex-col gap-6">
+      {/* Advanced Mode Toggle */}
+      <div className="flex justify-center">
+        <button
+          onClick={() => setAdvancedMode(!advancedMode)}
+          className="text-gray-400 hover:text-arca-green transition-colors text-sm flex items-center gap-2"
+        >
+          {advancedMode ? '▼' : '▶'} Advanced Mode
+        </button>
+      </div>
+
+      {/* Advanced Mode: Charts */}
+      {advancedMode && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-5 border-t border-gray-800/50">
           <BalanceHistoryCard
             currentBalance={aggregatedData.totalBalanceUSD}
             change24h={balanceChange24h}
@@ -263,7 +464,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             changePercentage={rewardsChangePercentage}
           />
         </div>
-      </div>
+      )}
     </div>
   )
 }

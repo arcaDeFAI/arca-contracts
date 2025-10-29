@@ -15,12 +15,14 @@ const VAULT_CONFIGS = [
     vaultAddress: '0xa2C50bba88d533f42FcA8efB068AD65c9D6c0551',
     stratAddress: '0x544dc3e2DF9c42437615e32773bd7B5B8337fa68',
     name: 'S • USDC | Metropolis',
+    tier: 'Premium' as const,
     apy: 18.7,
   },
   {
     vaultAddress: '0x81897b30c38A14c8B28B9Ab30Daab6BF4D84b340',
     stratAddress: '0x93dDa562a6661460d56AF7A02578F3BDD699C7e7',
     name: 'S • USDC | Shadow',
+    tier: 'Premium' as const,
     apy: 24.1,
   },
 ];
@@ -42,6 +44,11 @@ export default function Home() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   // Calculate total TVL from all vaults
   const totalTVL = (() => {
@@ -149,7 +156,7 @@ export default function Home() {
               <h2 className="text-3xl font-bold text-white">Metropolis Vaults</h2>
               <img src="/MetropolisLogo.png" alt="Metropolis" className="w-12 h-12" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {VAULT_CONFIGS.filter(v => v.name.includes('Metropolis')).map((vault, index) => (
                 <VaultCard
                   key={index}
@@ -168,7 +175,7 @@ export default function Home() {
               <h2 className="text-3xl font-bold text-white">Shadow Vaults</h2>
               <img src="/SHadowLogo.jpg" alt="Shadow" className="w-12 h-12 rounded-full" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {VAULT_CONFIGS.filter(v => v.name.includes('Shadow')).map((vault, index) => (
                 <VaultCard
                   key={index}
