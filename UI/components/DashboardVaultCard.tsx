@@ -39,6 +39,8 @@ export function DashboardVaultCard({
   const {
     userShares,
     sharePercentage,
+    balances,
+    totalSupply,
     apy,
     aprLoading,
     pendingRewards,
@@ -50,8 +52,31 @@ export function DashboardVaultCard({
     handleRedeemWithdrawal,
     isRedeemingWithdrawal,
     prices,
+    sonicPrice,
     isShadowVault,
   } = metrics;
+
+  // Calculate deposited amounts based on user's share percentage
+  const depositedAmounts = (() => {
+    if (!balances || !userShares || !totalSupply || totalSupply === 0n) {
+      return null;
+    }
+    
+    const shareRatio = Number(userShares) / Number(totalSupply);
+    
+    // Token 0 (S or WS)
+    const token0Amount = Number(formatUnits(balances[0], 18)) * shareRatio;
+    const token0Value = token0Amount * (sonicPrice || 0);
+    
+    // Token 1 (USDC)
+    const token1Amount = Number(formatUnits(balances[1], 6)) * shareRatio;
+    const token1Value = token1Amount; // USDC is 1:1 with USD
+    
+    return {
+      token0: { name: isShadowVault ? 'WS' : 'S', amount: token0Amount, usdValue: token0Value },
+      token1: { name: 'USDC', amount: token1Amount, usdValue: token1Value }
+    };
+  })();
 
   // Get preview amounts for queued withdrawal
   const { data: queuedPreviewAmounts } = useReadContract({
@@ -142,6 +167,51 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
               </span>
             </div>
           </div>
+
+          {/* Deposited Amounts */}
+          {depositedAmounts && (
+            <div className="mt-2 pt-2 border-t border-gray-700/30">
+              <div className="text-gray-400 text-sm mb-2">Deposited:</div>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src="/SonicLogoRound.png" 
+                      alt={depositedAmounts.token0.name} 
+                      className="w-4 h-4 rounded-full"
+                    />
+                    <span className="text-gray-400 text-sm">{depositedAmounts.token0.name}:</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-semibold text-sm">
+                      {depositedAmounts.token0.amount.toFixed(4)}
+                    </div>
+                    <div className="text-gray-400 text-xs">
+                      ${depositedAmounts.token0.usdValue.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-2">
+                    <img 
+                      src="/USDCLogo.png" 
+                      alt="USDC" 
+                      className="w-4 h-4 rounded-full"
+                    />
+                    <span className="text-gray-400 text-sm">{depositedAmounts.token1.name}:</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-white font-semibold text-sm">
+                      {depositedAmounts.token1.amount.toFixed(4)}
+                    </div>
+                    <div className="text-gray-400 text-xs">
+                      ${depositedAmounts.token1.usdValue.toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
 

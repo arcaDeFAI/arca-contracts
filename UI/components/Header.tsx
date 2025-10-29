@@ -113,24 +113,29 @@ export function Header() {
                             className="bg-arca-light-gray text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600 transition-colors flex items-center gap-2"
                             type="button"
                           >
-                            {chain.hasIcon && (
+                            {/* Show chain icon from RainbowKit or fallback to Sonic logo */}
+                            {chain.hasIcon && chain.iconUrl ? (
                               <div
                                 style={{
                                   background: chain.iconBackground,
-                                  width: 16,
-                                  height: 16,
+                                  width: 20,
+                                  height: 20,
                                   borderRadius: 999,
                                   overflow: 'hidden',
                                 }}
                               >
-                                {chain.iconUrl && (
-                                  <img
-                                    alt={chain.name ?? 'Chain icon'}
-                                    src={chain.iconUrl}
-                                    style={{ width: 16, height: 16 }}
-                                  />
-                                )}
+                                <img
+                                  alt={chain.name ?? 'Chain icon'}
+                                  src={chain.iconUrl}
+                                  style={{ width: 20, height: 20 }}
+                                />
                               </div>
+                            ) : (
+                              <img
+                                src="/SonicLogoRound.png"
+                                alt="Sonic"
+                                className="w-5 h-5 rounded-full"
+                              />
                             )}
                             {chain.name}
                           </button>

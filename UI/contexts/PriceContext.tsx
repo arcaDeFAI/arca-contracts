@@ -57,11 +57,19 @@ export function PriceProvider({ children }: { children: ReactNode }) {
         // Fetch all token prices in one API call
         const coingeckoIds = 'sonic-3,metropolis,shadow-2,usd-coin';
         const response = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds}&vs_currencies=usd`
+          `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds}&vs_currencies=usd`,
+          {
+            headers: {
+              'Accept': 'application/json',
+            },
+            cache: 'no-cache',
+          }
         );
 
         if (!response.ok) {
-          throw new Error('Failed to fetch token prices');
+          // Silently fail and use fallback prices
+          console.warn('CoinGecko API unavailable, using fallback prices');
+          return;
         }
 
         const data = await response.json();
@@ -83,8 +91,9 @@ export function PriceProvider({ children }: { children: ReactNode }) {
           timestamp: new Date().toLocaleTimeString()
         });
       } catch (err) {
-        console.error('❌ Price fetch error:', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
+        // Silently use fallback prices - API failures are expected
+        console.warn('Using fallback token prices due to API error');
+        setError(null); // Don't show error to user, fallback prices work fine
       } finally {
         setIsLoading(false);
       }
