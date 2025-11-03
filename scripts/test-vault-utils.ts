@@ -545,26 +545,32 @@ export function displayVisualRange(
     current: number,
     type: "tick" | "bin" = "tick"
 ): void {
-    const width = 50;
-    const range = upper - lower;
-    const currentPos = Math.round(((current - lower) / range) * width);
-    
-    console.log(chalk.cyan(`\n${type === "tick" ? "Tick" : "Bin"} Range Visualization:`));
-    console.log(chalk.gray(`[${lower}]` + "─".repeat(width) + `[${upper}]`));
-    
-    let visual = "";
-    for (let i = 0; i <= width; i++) {
-        if (i === currentPos) {
-            visual += chalk.yellow("█");
-        } else if (i === 0 || i === width) {
-            visual += "|";
-        } else {
-            visual += "─";
+    try {
+        const width = 50;
+        const range = upper - lower;
+        const currentPos = Math.round(((current - lower) / range) * width);
+        
+        console.log(chalk.cyan(`\n${type === "tick" ? "Tick" : "Bin"} Range Visualization:`));
+        console.log(chalk.gray(`[${lower}]` + "─".repeat(width) + `[${upper}]`));
+        
+        let visual = "";
+        for (let i = 0; i <= width; i++) {
+            if (i === currentPos) {
+                visual += chalk.yellow("█");
+            } else if (i === 0 || i === width) {
+                visual += "|";
+            } else {
+                visual += "─";
+            }
         }
+        console.log(visual);
+        console.log(chalk.gray(" ".repeat(currentPos) + `↑ Current: ${current}`));
+        console.log("");
+    } catch (error) {
+        console.log("Error showing visualization")
+        console.log(error)
     }
-    console.log(visual);
-    console.log(chalk.gray(" ".repeat(currentPos) + `↑ Current: ${current}`));
-    console.log("");
+    
 }
 
 // Common UI helpers
