@@ -13,7 +13,7 @@ import type {
 } from "../typechain-types";
 import type { IERC20MetadataUpgradeable } from "../typechain-types/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
-import type { ContractTransactionResponse, TransactionResponse, TransactionReceipt } from "ethers";
+import type { Contract, ContractTransactionResponse, TransactionResponse, TransactionReceipt } from "ethers";
 
 // ================================
 // Types and Interfaces
@@ -218,6 +218,31 @@ class VaultFactoryCLI {
         } catch (error) {
             console.error(chalk.red(`❌ ${actionName} failed:`), error);
             throw error;
+        }
+    }
+
+    async registerContract(displayName: string, contract: Contract): Promise<void> {
+        // Only register on sonic-mainnet
+        if (network.name !== "sonic-mainnet") {
+            console.log(chalk.gray(`⏭️  Skipping registerMe for ${displayName} (not on mainnet)`));
+            return;
+        }
+
+        if (this.config.dryRun) {
+            console.log(chalk.yellow(`\n🔍 DRY RUN: Would register ${displayName} on Sonic FeeM`));
+            return;
+        }
+
+        try {
+            console.log(chalk.blue(`\n📝 Registering ${displayName} on Sonic FeeM...`));
+            const tx = await contract.registerMe();
+            console.log(chalk.gray(`  Transaction hash: ${tx.hash}`));
+
+            await this.gasTracker.trackTransaction(`Register ${displayName}`, tx, "configuration");
+            console.log(chalk.green(`✅ ${displayName} registered successfully`));
+        } catch (error) {
+            console.warn(chalk.yellow(`⚠️  Failed to register ${displayName}:`), error);
+            // Don't throw - registration failure shouldn't halt deployment
         }
     }
 
@@ -601,6 +626,13 @@ class VaultFactoryCLI {
                 console.log(chalk.gray(`  Vault Address: ${vaultAddress}`));
                 console.log(chalk.gray(`  Strategy Address: ${strategyAddress}`));
 
+                // Register vault and strategy on Sonic FeeM
+                const vault = await ethers.getContractAt("OracleRewardShadowVault", vaultAddress, this.config.signer);
+                const strategy = await ethers.getContractAt("ShadowStrategy", strategyAddress, this.config.signer);
+
+                await this.registerContract("Shadow Vault", vault);
+                await this.registerContract("Shadow Strategy", strategy);
+
                 // Save to cache for easy access
                 const cacheDir = path.join(__dirname, "../cache");
                 if (!fs.existsSync(cacheDir)) {
@@ -755,6 +787,13 @@ class VaultFactoryCLI {
                 console.log(chalk.cyan("📊 Deployment Results:"));
                 console.log(chalk.gray(`  Vault Address: ${vaultAddress}`));
                 console.log(chalk.gray(`  Strategy Address: ${strategyAddress}`));
+
+                // Register vault and strategy on Sonic FeeM
+                const vault = await ethers.getContractAt("OracleRewardVault", vaultAddress, this.config.signer);
+                const strategy = await ethers.getContractAt("MetropolisStrategy", strategyAddress, this.config.signer);
+
+                await this.registerContract("Metropolis Vault", vault);
+                await this.registerContract("Metropolis Strategy", strategy);
 
                 // Save to cache for easy access
                 const cacheDir = path.join(__dirname, "../cache");
