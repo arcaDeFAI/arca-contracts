@@ -1,3 +1,4 @@
+import type { Contract } from "ethers";
 import { ethers, network } from "hardhat";
 
 // Oracle types enum matching contract
@@ -25,6 +26,28 @@ interface NetworkConfig {
   wnative: string;
   tokens: { [key: string]: TokenConfig };
   referenceTokens: string[];
+}
+
+// Helper function to register contract on Sonic FeeM
+async function registerContract(
+  displayName: string,
+  contract: Contract
+): Promise<void> {
+  // Only register on sonic-mainnet
+  if (network.name !== "sonic-mainnet") {
+    console.log(`⏭️  Skipping registerMe for ${displayName} (not on mainnet)`);
+    return;
+  }
+
+  try {
+    console.log(`\nRegistering ${displayName} on Sonic FeeM...`);
+    const tx = await contract.registerMe();
+    await tx.wait();
+    console.log(`✓ ${displayName} registered successfully (tx: ${tx.hash})`);
+  } catch (error) {
+    console.warn(`⚠️  Failed to register ${displayName}:`, error);
+    // Don't throw - registration failure shouldn't halt deployment
+  }
 }
 
 async function main() {
@@ -165,6 +188,9 @@ async function main() {
   await priceLens.waitForDeployment();
   const priceLensAddress = await priceLens.getAddress();
   console.log("HybridPriceLens deployed at:", priceLensAddress);
+
+  // Register HybridPriceLens on Sonic FeeM
+  await registerContract("HybridPriceLens", priceLens);
 
   // Set reference tokens
   console.log("\nConfiguring reference tokens...");
