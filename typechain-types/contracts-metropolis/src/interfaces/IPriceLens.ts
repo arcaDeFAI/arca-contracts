@@ -21,17 +21,24 @@ import type {
 } from "../../../common";
 
 export interface IPriceLensInterface extends Interface {
-  getFunction(nameOrSignature: "getTokenPriceNative"): FunctionFragment;
+  getFunction(
+    nameOrSignature: "getTokenPriceNative" | "registerMe"
+  ): FunctionFragment;
 
   encodeFunctionData(
     functionFragment: "getTokenPriceNative",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
   ): string;
 
   decodeFunctionResult(
     functionFragment: "getTokenPriceNative",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
 }
 
 export interface IPriceLens extends BaseContract {
@@ -83,6 +90,8 @@ export interface IPriceLens extends BaseContract {
     "view"
   >;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
@@ -90,6 +99,9 @@ export interface IPriceLens extends BaseContract {
   getFunction(
     nameOrSignature: "getTokenPriceNative"
   ): TypedContractMethod<[_token: AddressLike], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "registerMe"
+  ): TypedContractMethod<[], [void], "nonpayable">;
 
   filters: {};
 }

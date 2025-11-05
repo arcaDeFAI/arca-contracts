@@ -103,6 +103,7 @@ export interface OracleRewardShadowVaultInterface extends Interface {
       | "recoverERC20"
       | "redeemQueuedWithdrawal"
       | "redeemQueuedWithdrawalNative"
+      | "registerMe"
       | "resumeDeposits"
       | "setEmergencyMode"
       | "setStrategy"
@@ -289,6 +290,10 @@ export interface OracleRewardShadowVaultInterface extends Interface {
     values: [BigNumberish, AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "resumeDeposits",
     values?: undefined
   ): string;
@@ -459,6 +464,7 @@ export interface OracleRewardShadowVaultInterface extends Interface {
     functionFragment: "redeemQueuedWithdrawalNative",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "resumeDeposits",
     data: BytesLike
@@ -1047,6 +1053,8 @@ export interface OracleRewardShadowVault extends BaseContract {
     "nonpayable"
   >;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   resumeDeposits: TypedContractMethod<[], [void], "nonpayable">;
 
   setEmergencyMode: TypedContractMethod<[], [void], "nonpayable">;
@@ -1305,6 +1313,9 @@ export interface OracleRewardShadowVault extends BaseContract {
     [[bigint, bigint] & { amountX: bigint; amountY: bigint }],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "registerMe"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "resumeDeposits"
   ): TypedContractMethod<[], [void], "nonpayable">;
