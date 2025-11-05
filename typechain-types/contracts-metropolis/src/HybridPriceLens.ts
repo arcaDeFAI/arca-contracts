@@ -62,6 +62,7 @@ export interface HybridPriceLensInterface extends Interface {
       | "isReferenceToken"
       | "owner"
       | "priceFeeds"
+      | "registerMe"
       | "removePriceFeed"
       | "renounceOwnership"
       | "setDefaultMaxStaleness"
@@ -100,6 +101,10 @@ export interface HybridPriceLensInterface extends Interface {
   encodeFunctionData(
     functionFragment: "priceFeeds",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "removePriceFeed",
@@ -149,6 +154,7 @@ export interface HybridPriceLensInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "owner", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "priceFeeds", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "removePriceFeed",
     data: BytesLike
@@ -313,6 +319,8 @@ export interface HybridPriceLens extends BaseContract {
     "view"
   >;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   removePriceFeed: TypedContractMethod<
     [token: AddressLike],
     [void],
@@ -403,6 +411,9 @@ export interface HybridPriceLens extends BaseContract {
     ],
     "view"
   >;
+  getFunction(
+    nameOrSignature: "registerMe"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "removePriceFeed"
   ): TypedContractMethod<[token: AddressLike], [void], "nonpayable">;
