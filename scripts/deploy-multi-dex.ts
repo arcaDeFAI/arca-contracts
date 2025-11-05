@@ -215,6 +215,29 @@ async function sendTransaction(
   return receipt;
 }
 
+// Helper function to register contract on Sonic FeeM
+async function registerContract(
+  displayName: string,
+  contract: Contract,
+  gasTracker: GasTracker
+): Promise<void> {
+  // Only register on sonic-mainnet
+  if (network.name !== "sonic-mainnet") {
+    console.log(`⏭️  Skipping registerMe for ${displayName} (not on mainnet)`);
+    return;
+  }
+
+  try {
+    console.log(`\nRegistering ${displayName} on Sonic FeeM...`);
+    const tx = await contract.registerMe();
+    await gasTracker.trackTransaction(`Register ${displayName}`, tx);
+    console.log(`✓ ${displayName} registered successfully`);
+  } catch (error) {
+    console.warn(`⚠️  Failed to register ${displayName}:`, error);
+    // Don't throw - registration failure shouldn't halt deployment
+  }
+}
+
 async function main() {
   // Parse command line arguments for verbose flag
   // Note: Hardhat doesn't pass custom args through process.argv when using `hardhat run`
@@ -251,7 +274,10 @@ async function main() {
         "0x324963c267C354c7660Ce8CA3F5f167E05649970", // Shadow pool wS/USDC
         "0x97325a7854c604261002126267dAEd219E34b06b", // Shadow pool wS/USDT
         "0x64B93267B73CE6bb431b5799ED8674f9160CE214", // Shadow pool SHADOW/USDT
-        "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC"  // Metropolis LB Pair wS/USDC
+        "0x6fb30f3fcb864d49cdff15061ed5c6adfee40b40", // Shadow pool WETH/USDC
+        "0xb6d9b069f6b96a507243d501d1a23b3fccfc85d3", // Shadow pool wS/WETH
+        "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC", // Metropolis LB Pair wS/USDC
+        "0x51910f84cc4df86f721f5a1d3bdbd1058af62297"  // Metropolis LB Pair WETH/USDC
       ], // Whitelist pools/LB Pairs that you want to use
       // Set a price lens here if you want to re-use a deployed price lens contract
       priceLens: "0x19Aca8B621413830c4D3c7500B54e87225808a6F", 
@@ -367,6 +393,9 @@ async function main() {
     throw new Error("Factory proxy is not working correctly");
   }
 
+  // Register VaultFactory on Sonic FeeM
+  await registerContract("VaultFactory", vaultFactory, gasTracker);
+
   // Deploy implementation contracts
   console.log("\n=== Deploying Implementation Contracts ===");
   
@@ -389,7 +418,10 @@ async function main() {
     const implAddress = await oracleRewardVaultImpl.getAddress();
     const code = await ethers.provider.getCode(implAddress);
     console.log("✓ Contract code size:", code.length, "bytes");
-    
+
+    // Register on Sonic FeeM
+    await registerContract("OracleRewardVault", oracleRewardVaultImpl, gasTracker);
+
   } catch (error) {
     console.error("❌ OracleRewardVault deployment failed:", error);
     
@@ -421,7 +453,10 @@ async function main() {
     const implAddress = await oracleRewardShadowVaultImpl.getAddress();
     const code = await ethers.provider.getCode(implAddress);
     console.log("✓ Contract code size:", code.length, "bytes");
-    
+
+    // Register on Sonic FeeM
+    await registerContract("OracleRewardShadowVault", oracleRewardShadowVaultImpl, gasTracker);
+
   } catch (error) {
     console.error("❌ OracleRewardShadowVault deployment failed:", error);
     throw error;
@@ -438,6 +473,9 @@ async function main() {
   );
   const strategyImplAddress = await strategyImpl.getAddress();
 
+  // Register MetropolisStrategy on Sonic FeeM
+  await registerContract("MetropolisStrategy", strategyImpl, gasTracker);
+
   // Deploy Shadow Strategy implementation
   const maxRangeShadow = 887272; // Max tick range for Shadow (from SHADOW_INTEGRATION_PLAN.md)
   const ShadowStrategy = await ethers.getContractFactory("ShadowStrategy");
@@ -449,6 +487,9 @@ async function main() {
     { gasLimit: 10000000 }
   );
   const shadowStrategyImplAddress = await shadowStrategyImpl.getAddress();
+
+  // Register ShadowStrategy on Sonic FeeM
+  await registerContract("ShadowStrategy", shadowStrategyImpl, gasTracker);
 
   // Set vault and strategy implementations
   console.log("\n=== Setting Factory Implementations ===");
