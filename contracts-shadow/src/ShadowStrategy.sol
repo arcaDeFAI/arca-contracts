@@ -84,8 +84,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         uint256 depositedX,
         uint256 depositedY
     );
-    event RebalanceStepSuccess(uint8 step, bytes32 data);
-    event RebalanceAborted(string reason, uint8 step);
+    event RebalanceAborted(string reason);
 
     // Rewards
     event RewardEarned(address indexed token, uint256 amount);
@@ -97,8 +96,6 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     );
 
     // Error/Warning Events
-    event RebalanceCheckFailed(string reason, uint256 timestamp);
-    event RebalanceStepFailed(uint8 step, string reason);
     event TickValidationFailed(string reason, int24 value1, int24 value2);
     event SlippageCheckFailed(
         int24 currentTick,
@@ -526,44 +523,34 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             params.amountY
         );
 
-        // Step 0: Check cooldown defensively
+        // Check cooldown
         if (!_checkCooldown()) {
-            emit RebalanceAborted("Cooldown not met", 0);
-            return; // Early return
+            emit RebalanceAborted("Cooldown not met");
+            return;
         }
-        emit RebalanceStepCount(0);
 
-        // Step 1: Exit current position (includes reward harvesting)
+        // Exit current position (includes reward harvesting)
         if (_positionTokenId != 0) {
             bool success = this.exitPositionExternal();
             if (!success) {
-                emit RebalanceStepFailed(1, "Exit position failed");
                 emit PositionExitFailed(
                     _positionTokenId,
                     "Failed to exit position"
                 );
-                emit RebalanceAborted("Exit position failed", 1);
+                emit RebalanceAborted("Exit position failed");
                 return;
             }
-            emit RebalanceStepSuccess(1, bytes32(uint256(1)));
         }
-        emit RebalanceStepCount(1);
 
-        // Step 2: Process withdrawals and fees
+        // Process withdrawals and fees
         bool withdrawalSuccess = this.processWithdrawalsExternal();
         if (!withdrawalSuccess) {
-            emit RebalanceStepFailed(2, "Withdrawal processing failed");
             emit WithdrawalProcessingFailed(0, "Failed to process withdrawals");
-            emit RebalanceAborted("Withdrawal processing failed", 2);
+            emit RebalanceAborted("Withdrawal processing failed");
             return;
         }
-        emit RebalanceStepSuccess(2, bytes32(uint256(2)));
-        emit RebalanceStepCount(2);
 
-        // Step 3: Rewards already harvested in exit position
-        emit RebalanceStepCount(3); // TODO cleanup events
-
-        // Steps 4-6: Enter new position
+        // Enter new position
         _attemptNewPosition(params);
     }
 
@@ -583,26 +570,24 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     function _attemptNewPosition(RebalanceParams memory params) internal {
         // Validate ticks
         if (!_validateTickRange(params.tickLower, params.tickUpper)) {
-            emit RebalanceAborted("Tick validation failed", 4);
+            emit RebalanceAborted("Tick validation failed");
             return;
         }
-        emit RebalanceStepCount(4);
 
         // Check slippage if needed
         if (
             (params.desiredTick != 0 || params.slippageTick != 0) &&
             !_checkSlippage(params.desiredTick, params.slippageTick)
         ) {
-            emit RebalanceAborted("Slippage check failed", 5);
+            emit RebalanceAborted("Slippage check failed");
             return;
         }
 
         // Check amounts
         if (params.amountX == 0 && params.amountY == 0) {
-            emit RebalanceAborted("Both amounts are zero", 5);
+            emit RebalanceAborted("Both amounts are zero");
             return;
         }
-        emit RebalanceStepCount(5);
 
         // Enter position
         _enterNewPositionSafe(params);
@@ -610,7 +595,7 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
     // Enter new position safely
     function _enterNewPositionSafe(RebalanceParams memory params) internal {
-        // Get balances and cap amounts
+        // Get balances and verify we have enough
         uint256 availableX = _tokenX().balanceOf(address(this));
         uint256 availableY = _tokenY().balanceOf(address(this));
 
@@ -638,14 +623,13 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 depositY
             )
         returns (uint256 tokenId) {
-            emit RebalanceStepCount(6);
-            emit RebalanceCompleted(tokenId, depositX, depositY);
+            emit RebalanceCompleted(tokenId, params.amountX, params.amountY);
         } catch Error(string memory reason) {
-            emit RebalanceStepFailed(6, reason);
-            emit RebalanceAborted("Position entry failed", 6);
+            emit RebalanceAborted(
+                string(abi.encodePacked("Position entry failed: ", reason))
+            );
         } catch {
-            emit RebalanceStepFailed(6, "Unknown error");
-            emit RebalanceAborted("Position entry failed", 6);
+            emit RebalanceAborted("Position entry failed: Unknown");
         }
     }
 

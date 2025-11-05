@@ -83,13 +83,10 @@ export interface ShadowStrategyInterface extends Interface {
       | "PositionMinted"
       | "PositionNotReadyForBurn"
       | "RebalanceAborted"
-      | "RebalanceCheckFailed"
       | "RebalanceCompleted"
       | "RebalanceCoolDownSet"
       | "RebalanceStarted"
       | "RebalanceStepCount"
-      | "RebalanceStepFailed"
-      | "RebalanceStepSuccess"
       | "RewardClaimed"
       | "RewardDiscoveryFailed"
       | "RewardEarned"
@@ -619,24 +616,10 @@ export namespace PositionNotReadyForBurnEvent {
 }
 
 export namespace RebalanceAbortedEvent {
-  export type InputTuple = [reason: string, step: BigNumberish];
-  export type OutputTuple = [reason: string, step: bigint];
+  export type InputTuple = [reason: string];
+  export type OutputTuple = [reason: string];
   export interface OutputObject {
     reason: string;
-    step: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace RebalanceCheckFailedEvent {
-  export type InputTuple = [reason: string, timestamp: BigNumberish];
-  export type OutputTuple = [reason: string, timestamp: bigint];
-  export interface OutputObject {
-    reason: string;
-    timestamp: bigint;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -711,32 +694,6 @@ export namespace RebalanceStepCountEvent {
   export type OutputTuple = [stepCount: bigint];
   export interface OutputObject {
     stepCount: bigint;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace RebalanceStepFailedEvent {
-  export type InputTuple = [step: BigNumberish, reason: string];
-  export type OutputTuple = [step: bigint, reason: string];
-  export interface OutputObject {
-    step: bigint;
-    reason: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace RebalanceStepSuccessEvent {
-  export type InputTuple = [step: BigNumberish, data: BytesLike];
-  export type OutputTuple = [step: bigint, data: string];
-  export interface OutputObject {
-    step: bigint;
-    data: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -1389,13 +1346,6 @@ export interface ShadowStrategy extends BaseContract {
     RebalanceAbortedEvent.OutputObject
   >;
   getEvent(
-    key: "RebalanceCheckFailed"
-  ): TypedContractEvent<
-    RebalanceCheckFailedEvent.InputTuple,
-    RebalanceCheckFailedEvent.OutputTuple,
-    RebalanceCheckFailedEvent.OutputObject
-  >;
-  getEvent(
     key: "RebalanceCompleted"
   ): TypedContractEvent<
     RebalanceCompletedEvent.InputTuple,
@@ -1422,20 +1372,6 @@ export interface ShadowStrategy extends BaseContract {
     RebalanceStepCountEvent.InputTuple,
     RebalanceStepCountEvent.OutputTuple,
     RebalanceStepCountEvent.OutputObject
-  >;
-  getEvent(
-    key: "RebalanceStepFailed"
-  ): TypedContractEvent<
-    RebalanceStepFailedEvent.InputTuple,
-    RebalanceStepFailedEvent.OutputTuple,
-    RebalanceStepFailedEvent.OutputObject
-  >;
-  getEvent(
-    key: "RebalanceStepSuccess"
-  ): TypedContractEvent<
-    RebalanceStepSuccessEvent.InputTuple,
-    RebalanceStepSuccessEvent.OutputTuple,
-    RebalanceStepSuccessEvent.OutputObject
   >;
   getEvent(
     key: "RewardClaimed"
@@ -1700,7 +1636,7 @@ export interface ShadowStrategy extends BaseContract {
       PositionNotReadyForBurnEvent.OutputObject
     >;
 
-    "RebalanceAborted(string,uint8)": TypedContractEvent<
+    "RebalanceAborted(string)": TypedContractEvent<
       RebalanceAbortedEvent.InputTuple,
       RebalanceAbortedEvent.OutputTuple,
       RebalanceAbortedEvent.OutputObject
@@ -1709,17 +1645,6 @@ export interface ShadowStrategy extends BaseContract {
       RebalanceAbortedEvent.InputTuple,
       RebalanceAbortedEvent.OutputTuple,
       RebalanceAbortedEvent.OutputObject
-    >;
-
-    "RebalanceCheckFailed(string,uint256)": TypedContractEvent<
-      RebalanceCheckFailedEvent.InputTuple,
-      RebalanceCheckFailedEvent.OutputTuple,
-      RebalanceCheckFailedEvent.OutputObject
-    >;
-    RebalanceCheckFailed: TypedContractEvent<
-      RebalanceCheckFailedEvent.InputTuple,
-      RebalanceCheckFailedEvent.OutputTuple,
-      RebalanceCheckFailedEvent.OutputObject
     >;
 
     "RebalanceCompleted(uint256,uint256,uint256)": TypedContractEvent<
@@ -1764,28 +1689,6 @@ export interface ShadowStrategy extends BaseContract {
       RebalanceStepCountEvent.InputTuple,
       RebalanceStepCountEvent.OutputTuple,
       RebalanceStepCountEvent.OutputObject
-    >;
-
-    "RebalanceStepFailed(uint8,string)": TypedContractEvent<
-      RebalanceStepFailedEvent.InputTuple,
-      RebalanceStepFailedEvent.OutputTuple,
-      RebalanceStepFailedEvent.OutputObject
-    >;
-    RebalanceStepFailed: TypedContractEvent<
-      RebalanceStepFailedEvent.InputTuple,
-      RebalanceStepFailedEvent.OutputTuple,
-      RebalanceStepFailedEvent.OutputObject
-    >;
-
-    "RebalanceStepSuccess(uint8,bytes32)": TypedContractEvent<
-      RebalanceStepSuccessEvent.InputTuple,
-      RebalanceStepSuccessEvent.OutputTuple,
-      RebalanceStepSuccessEvent.OutputObject
-    >;
-    RebalanceStepSuccess: TypedContractEvent<
-      RebalanceStepSuccessEvent.InputTuple,
-      RebalanceStepSuccessEvent.OutputTuple,
-      RebalanceStepSuccessEvent.OutputObject
     >;
 
     "RewardClaimed(address,uint256)": TypedContractEvent<
