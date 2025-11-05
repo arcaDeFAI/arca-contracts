@@ -220,4 +220,7 @@ interface IBaseVault is IMinimalVault, IERC20Upgradeable {
     function submitShutdown() external;
 
     function cancelShutdown() external;
+
+    /// @dev Register my contract on Sonic FeeM
+    function registerMe() external;
 }

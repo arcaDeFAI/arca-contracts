@@ -247,6 +247,9 @@ interface IOracleRewardShadowVault is IMinimalVault, IERC20Upgradeable {
     function notifyRewardToken(IERC20 token) external;
     function updateAccRewardsPerShare() external;
 
+    /// @dev Register my contract on Sonic FeeM
+    function registerMe() external;
+
     // Admin functions
     function setStrategy(IStrategyCommon newStrategy) external;
     function pauseDeposits() external;

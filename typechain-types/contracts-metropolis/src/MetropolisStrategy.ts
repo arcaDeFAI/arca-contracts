@@ -49,6 +49,7 @@ export interface MetropolisStrategyInterface extends Interface {
       | "hasRewards"
       | "initialize"
       | "rebalance"
+      | "registerMe"
       | "resetPendingAumAnnualFee"
       | "setOperator"
       | "setPendingAumAnnualFee"
@@ -158,6 +159,10 @@ export interface MetropolisStrategyInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "resetPendingAumAnnualFee",
     values?: undefined
   ): string;
@@ -243,6 +248,7 @@ export interface MetropolisStrategyInterface extends Interface {
   decodeFunctionResult(functionFragment: "hasRewards", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "rebalance", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "resetPendingAumAnnualFee",
     data: BytesLike
@@ -587,6 +593,8 @@ export interface MetropolisStrategy extends BaseContract {
     "nonpayable"
   >;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   resetPendingAumAnnualFee: TypedContractMethod<[], [void], "nonpayable">;
 
   setOperator: TypedContractMethod<
@@ -714,6 +722,9 @@ export interface MetropolisStrategy extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "registerMe"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "resetPendingAumAnnualFee"
   ): TypedContractMethod<[], [void], "nonpayable">;

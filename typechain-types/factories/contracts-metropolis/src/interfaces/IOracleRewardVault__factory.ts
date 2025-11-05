@@ -1378,6 +1378,13 @@ const _abi = [
   },
   {
     inputs: [],
+    name: "registerMe",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "resumeDeposits",
     outputs: [],
     stateMutability: "nonpayable",

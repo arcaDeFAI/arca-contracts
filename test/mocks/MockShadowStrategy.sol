@@ -41,6 +41,9 @@ contract MockShadowStrategy is IStrategyCommon {
         _vault = msg.sender;
     }
 
+    /// @dev Register my contract on Sonic FeeM
+    function registerMe() external {}
+
     function getFactory() external view override returns (IVaultFactory) {
         return _factory;
     }
