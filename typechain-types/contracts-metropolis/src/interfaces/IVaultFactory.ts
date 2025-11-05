@@ -79,6 +79,7 @@ export interface IVaultFactoryInterface extends Interface {
       | "isTransferIgnored"
       | "linkVaultToStrategy"
       | "recoverERC20"
+      | "registerMe"
       | "resetPendingAumAnnualFee"
       | "setDefaultOperator"
       | "setDefaultSequencerUptimeFeed"
@@ -206,6 +207,10 @@ export interface IVaultFactoryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "recoverERC20",
     values: [AddressLike, AddressLike, AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "resetPendingAumAnnualFee",
@@ -358,6 +363,7 @@ export interface IVaultFactoryInterface extends Interface {
     functionFragment: "recoverERC20",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "resetPendingAumAnnualFee",
     data: BytesLike
@@ -811,6 +817,8 @@ export interface IVaultFactory extends BaseContract {
     "nonpayable"
   >;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   resetPendingAumAnnualFee: TypedContractMethod<
     [vault: AddressLike],
     [void],
@@ -1012,6 +1020,9 @@ export interface IVaultFactory extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "registerMe"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "resetPendingAumAnnualFee"
   ): TypedContractMethod<[vault: AddressLike], [void], "nonpayable">;

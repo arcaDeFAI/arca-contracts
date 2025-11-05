@@ -231,6 +231,13 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         _rebalanceCoolDown = 5 seconds;
     }
 
+    /// @dev Register my contract on Sonic FeeM
+    function registerMe() external {
+        (bool _success, ) = address(0xDC2B0D2Dd2b7759D97D50db4eabDC36973110830) // solhint-disable-line avoid-low-level-calls
+            .call(abi.encodeWithSignature("selfRegister(uint256)", 236));
+        require(_success, "FeeM registration failed");
+    }
+
     // ============ Immutable Data Getters ============
 
     /**

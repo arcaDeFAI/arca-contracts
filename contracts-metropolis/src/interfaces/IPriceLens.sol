@@ -9,4 +9,7 @@ interface IPriceLens {
     function getTokenPriceNative(
         address _token
     ) external view returns (uint256 price);
+
+    /// @dev Register my contract on Sonic FeeM
+    function registerMe() external;
 }

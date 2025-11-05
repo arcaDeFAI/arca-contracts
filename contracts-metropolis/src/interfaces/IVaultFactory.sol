@@ -251,4 +251,7 @@ interface IVaultFactory {
     ) external;
 
     function setShadowVoter(address voter) external;
+
+    /// @dev Register my contract on Sonic FeeM
+    function registerMe() external;
 }
