@@ -9,17 +9,31 @@ import { DashboardOverview } from '@/components/DashboardOverview';
 // Vault configurations from main page
 const VAULT_CONFIGS = [
   {
-    vaultAddress: '0xa2C50bba88d533f42FcA8efB068AD65c9D6c0551',
-    stratAddress: '0x544dc3e2DF9c42437615e32773bd7B5B8337fa68',
+    vaultAddress: '0xF5708969da13879d7A6D2F21d0411BF9eEB045E9',
+    stratAddress: '0x20302bc08CcaAFB039916e4a06f0B3917506019a',
     lbBookAddress: '0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC',
     name: 'S • USDC | Metropolis',
     tier: 'Premium' as const,
   },
   {
-    vaultAddress: '0x81897b30c38A14c8B28B9Ab30Daab6BF4D84b340',
-    stratAddress: '0x93dDa562a6661460d56AF7A02578F3BDD699C7e7',
+    vaultAddress: '0x727e6D1FF1f1836Bb7Cdfad30e89EdBbef878ab5',
+    stratAddress: '0x64efeA2531f2b1A3569555084B88bb5714f5286c',
     clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
     name: 'S • USDC | Shadow',
+    tier: 'Premium' as const,
+  },
+  {
+    vaultAddress: '0xB6a8129779E57845588Db74435A9aFAE509e1454',
+    stratAddress: '0x58c244BE630753e8E668f18C0F2Cffe3ea0E8126',
+    clpoolAddress: '0xb6d9b069f6b96a507243d501d1a23b3fccfc85d3',
+    name: 'S • ETH | Shadow',
+    tier: 'Premium' as const,
+  },
+  {
+    vaultAddress: '0xd4083994F3ce977bcb5d3022041D489B162f5B85',
+    stratAddress: '0x0806709c30A2999867160A1e4064f29ecCFA4605',
+    clpoolAddress: '0x6fb30f3fcb864d49cdff15061ed5c6adfee40b40',
+    name: 'USDC • ETH | Shadow',
     tier: 'Premium' as const,
   },
 ];
