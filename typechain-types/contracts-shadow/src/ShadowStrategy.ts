@@ -75,7 +75,6 @@ export interface ShadowStrategyInterface extends Interface {
       | "NftBurnFailure"
       | "NoRewardAvailableToClaim"
       | "NpmSweepTokenFailure"
-      | "NpmSweepTokenSuccess"
       | "OperatorSet"
       | "PendingAumAnnualFeeReset"
       | "PendingAumAnnualFeeSet"
@@ -95,14 +94,11 @@ export interface ShadowStrategyInterface extends Interface {
       | "RewardDiscoveryFailed"
       | "RewardEarned"
       | "RewardForwarded"
-      | "RewardHarvestFailed"
-      | "RewardTokensDiscovered"
       | "SlippageCheckFailed"
       | "TickValidationFailed"
       | "TokensCollected"
       | "VaultAccountingUpdateFailed"
       | "WithdrawalProcessingFailed"
-      | "XShadowConversionFailed"
   ): EventFragment;
 
   encodeFunctionData(
@@ -513,18 +509,6 @@ export namespace NpmSweepTokenFailureEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace NpmSweepTokenSuccessEvent {
-  export type InputTuple = [token: AddressLike];
-  export type OutputTuple = [token: string];
-  export interface OutputObject {
-    token: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
 export namespace OperatorSetEvent {
   export type InputTuple = [operator: AddressLike];
   export type OutputTuple = [operator: string];
@@ -816,31 +800,6 @@ export namespace RewardForwardedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
-export namespace RewardHarvestFailedEvent {
-  export type InputTuple = [gauge: AddressLike, reason: string];
-  export type OutputTuple = [gauge: string, reason: string];
-  export interface OutputObject {
-    gauge: string;
-    reason: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace RewardTokensDiscoveredEvent {
-  export type InputTuple = [tokens: AddressLike[]];
-  export type OutputTuple = [tokens: string[]];
-  export interface OutputObject {
-    tokens: string[];
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
 export namespace SlippageCheckFailedEvent {
   export type InputTuple = [
     currentTick: BigNumberish,
@@ -917,18 +876,6 @@ export namespace WithdrawalProcessingFailedEvent {
   export interface OutputObject {
     queuedShares: bigint;
     reason: string;
-  }
-  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
-  export type Filter = TypedDeferredTopicFilter<Event>;
-  export type Log = TypedEventLog<Event>;
-  export type LogDescription = TypedLogDescription<Event>;
-}
-
-export namespace XShadowConversionFailedEvent {
-  export type InputTuple = [token: AddressLike];
-  export type OutputTuple = [token: string];
-  export interface OutputObject {
-    token: string;
   }
   export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
   export type Filter = TypedDeferredTopicFilter<Event>;
@@ -1064,7 +1011,7 @@ export interface ShadowStrategy extends BaseContract {
         hasActivePosition: boolean;
       }
     ],
-    "nonpayable"
+    "view"
   >;
 
   getRewardTokens: TypedContractMethod<[], [string[]], "view">;
@@ -1236,7 +1183,7 @@ export interface ShadowStrategy extends BaseContract {
         hasActivePosition: boolean;
       }
     ],
-    "nonpayable"
+    "view"
   >;
   getFunction(
     nameOrSignature: "getRewardTokens"
@@ -1386,13 +1333,6 @@ export interface ShadowStrategy extends BaseContract {
     NpmSweepTokenFailureEvent.OutputObject
   >;
   getEvent(
-    key: "NpmSweepTokenSuccess"
-  ): TypedContractEvent<
-    NpmSweepTokenSuccessEvent.InputTuple,
-    NpmSweepTokenSuccessEvent.OutputTuple,
-    NpmSweepTokenSuccessEvent.OutputObject
-  >;
-  getEvent(
     key: "OperatorSet"
   ): TypedContractEvent<
     OperatorSetEvent.InputTuple,
@@ -1526,20 +1466,6 @@ export interface ShadowStrategy extends BaseContract {
     RewardForwardedEvent.OutputObject
   >;
   getEvent(
-    key: "RewardHarvestFailed"
-  ): TypedContractEvent<
-    RewardHarvestFailedEvent.InputTuple,
-    RewardHarvestFailedEvent.OutputTuple,
-    RewardHarvestFailedEvent.OutputObject
-  >;
-  getEvent(
-    key: "RewardTokensDiscovered"
-  ): TypedContractEvent<
-    RewardTokensDiscoveredEvent.InputTuple,
-    RewardTokensDiscoveredEvent.OutputTuple,
-    RewardTokensDiscoveredEvent.OutputObject
-  >;
-  getEvent(
     key: "SlippageCheckFailed"
   ): TypedContractEvent<
     SlippageCheckFailedEvent.InputTuple,
@@ -1573,13 +1499,6 @@ export interface ShadowStrategy extends BaseContract {
     WithdrawalProcessingFailedEvent.InputTuple,
     WithdrawalProcessingFailedEvent.OutputTuple,
     WithdrawalProcessingFailedEvent.OutputObject
-  >;
-  getEvent(
-    key: "XShadowConversionFailed"
-  ): TypedContractEvent<
-    XShadowConversionFailedEvent.InputTuple,
-    XShadowConversionFailedEvent.OutputTuple,
-    XShadowConversionFailedEvent.OutputObject
   >;
 
   filters: {
@@ -1702,17 +1621,6 @@ export interface ShadowStrategy extends BaseContract {
       NpmSweepTokenFailureEvent.InputTuple,
       NpmSweepTokenFailureEvent.OutputTuple,
       NpmSweepTokenFailureEvent.OutputObject
-    >;
-
-    "NpmSweepTokenSuccess(address)": TypedContractEvent<
-      NpmSweepTokenSuccessEvent.InputTuple,
-      NpmSweepTokenSuccessEvent.OutputTuple,
-      NpmSweepTokenSuccessEvent.OutputObject
-    >;
-    NpmSweepTokenSuccess: TypedContractEvent<
-      NpmSweepTokenSuccessEvent.InputTuple,
-      NpmSweepTokenSuccessEvent.OutputTuple,
-      NpmSweepTokenSuccessEvent.OutputObject
     >;
 
     "OperatorSet(address)": TypedContractEvent<
@@ -1924,28 +1832,6 @@ export interface ShadowStrategy extends BaseContract {
       RewardForwardedEvent.OutputObject
     >;
 
-    "RewardHarvestFailed(address,string)": TypedContractEvent<
-      RewardHarvestFailedEvent.InputTuple,
-      RewardHarvestFailedEvent.OutputTuple,
-      RewardHarvestFailedEvent.OutputObject
-    >;
-    RewardHarvestFailed: TypedContractEvent<
-      RewardHarvestFailedEvent.InputTuple,
-      RewardHarvestFailedEvent.OutputTuple,
-      RewardHarvestFailedEvent.OutputObject
-    >;
-
-    "RewardTokensDiscovered(address[])": TypedContractEvent<
-      RewardTokensDiscoveredEvent.InputTuple,
-      RewardTokensDiscoveredEvent.OutputTuple,
-      RewardTokensDiscoveredEvent.OutputObject
-    >;
-    RewardTokensDiscovered: TypedContractEvent<
-      RewardTokensDiscoveredEvent.InputTuple,
-      RewardTokensDiscoveredEvent.OutputTuple,
-      RewardTokensDiscoveredEvent.OutputObject
-    >;
-
     "SlippageCheckFailed(int24,int24,int24)": TypedContractEvent<
       SlippageCheckFailedEvent.InputTuple,
       SlippageCheckFailedEvent.OutputTuple,
@@ -1999,17 +1885,6 @@ export interface ShadowStrategy extends BaseContract {
       WithdrawalProcessingFailedEvent.InputTuple,
       WithdrawalProcessingFailedEvent.OutputTuple,
       WithdrawalProcessingFailedEvent.OutputObject
-    >;
-
-    "XShadowConversionFailed(address)": TypedContractEvent<
-      XShadowConversionFailedEvent.InputTuple,
-      XShadowConversionFailedEvent.OutputTuple,
-      XShadowConversionFailedEvent.OutputObject
-    >;
-    XShadowConversionFailed: TypedContractEvent<
-      XShadowConversionFailedEvent.InputTuple,
-      XShadowConversionFailedEvent.OutputTuple,
-      XShadowConversionFailedEvent.OutputObject
     >;
   };
 }
