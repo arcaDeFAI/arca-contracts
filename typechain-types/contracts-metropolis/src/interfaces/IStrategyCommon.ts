@@ -42,6 +42,7 @@ export interface IStrategyCommonInterface extends Interface {
       | "hasExtraRewards"
       | "hasRewards"
       | "initialize"
+      | "registerMe"
       | "resetPendingAumAnnualFee"
       | "setOperator"
       | "setPendingAumAnnualFee"
@@ -116,6 +117,10 @@ export interface IStrategyCommonInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "resetPendingAumAnnualFee",
     values?: undefined
   ): string;
@@ -182,6 +187,7 @@ export interface IStrategyCommonInterface extends Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "hasRewards", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "resetPendingAumAnnualFee",
     data: BytesLike
@@ -389,6 +395,8 @@ export interface IStrategyCommon extends BaseContract {
 
   initialize: TypedContractMethod<[], [void], "nonpayable">;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   resetPendingAumAnnualFee: TypedContractMethod<[], [void], "nonpayable">;
 
   setOperator: TypedContractMethod<
@@ -474,6 +482,9 @@ export interface IStrategyCommon extends BaseContract {
   ): TypedContractMethod<[], [boolean], "view">;
   getFunction(
     nameOrSignature: "initialize"
+  ): TypedContractMethod<[], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "registerMe"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "resetPendingAumAnnualFee"

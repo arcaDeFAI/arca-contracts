@@ -827,6 +827,13 @@ const _abi = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "registerMe",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [
       {
         internalType: "contract IMinimalVault",

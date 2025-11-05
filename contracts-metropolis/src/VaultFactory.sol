@@ -287,6 +287,13 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         return _vaultImplementation[vType];
     }
 
+    /// @dev Register my contract on Sonic FeeM
+    function registerMe() external {
+        (bool _success, ) = address(0xDC2B0D2Dd2b7759D97D50db4eabDC36973110830) // solhint-disable-line avoid-low-level-calls
+            .call(abi.encodeWithSignature("selfRegister(uint256)", 236));
+        require(_success, "FeeM registration failed");
+    }
+
     /**
      * @notice Returns the address of the strategy implementation of the given type.
      * @param sType The type of the strategy. (0: DefaultStrategy)

@@ -90,5 +90,8 @@ interface IStrategyCommon {
     function withdrawAll() external;
     function setOperator(address operator) external;
 
+    /// @dev Register my contract on Sonic FeeM
+    function registerMe() external;
+
     // Note: rebalance() is NOT included here as it has protocol-specific parameters
 }

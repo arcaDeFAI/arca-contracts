@@ -90,6 +90,7 @@ export interface VaultFactoryInterface extends Interface {
       | "owner"
       | "pendingOwner"
       | "recoverERC20"
+      | "registerMe"
       | "renounceOwnership"
       | "resetPendingAumAnnualFee"
       | "setCreationFee"
@@ -267,6 +268,10 @@ export interface VaultFactoryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "recoverERC20",
     values: [AddressLike, AddressLike, AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "renounceOwnership",
@@ -484,6 +489,7 @@ export interface VaultFactoryInterface extends Interface {
     functionFragment: "recoverERC20",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "renounceOwnership",
     data: BytesLike
@@ -1047,6 +1053,8 @@ export interface VaultFactory extends BaseContract {
     "nonpayable"
   >;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   renounceOwnership: TypedContractMethod<[], [void], "nonpayable">;
 
   resetPendingAumAnnualFee: TypedContractMethod<
@@ -1331,6 +1339,9 @@ export interface VaultFactory extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "registerMe"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "renounceOwnership"
   ): TypedContractMethod<[], [void], "nonpayable">;

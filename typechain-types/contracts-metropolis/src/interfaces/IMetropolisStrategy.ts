@@ -46,6 +46,7 @@ export interface IMetropolisStrategyInterface extends Interface {
       | "hasRewards"
       | "initialize"
       | "rebalance"
+      | "registerMe"
       | "resetPendingAumAnnualFee"
       | "setOperator"
       | "setPendingAumAnnualFee"
@@ -142,6 +143,10 @@ export interface IMetropolisStrategyInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "resetPendingAumAnnualFee",
     values?: undefined
   ): string;
@@ -215,6 +220,7 @@ export interface IMetropolisStrategyInterface extends Interface {
   decodeFunctionResult(functionFragment: "hasRewards", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "rebalance", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "resetPendingAumAnnualFee",
     data: BytesLike
@@ -537,6 +543,8 @@ export interface IMetropolisStrategy extends BaseContract {
     "nonpayable"
   >;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   resetPendingAumAnnualFee: TypedContractMethod<[], [void], "nonpayable">;
 
   setOperator: TypedContractMethod<
@@ -651,6 +659,9 @@ export interface IMetropolisStrategy extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "registerMe"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "resetPendingAumAnnualFee"
   ): TypedContractMethod<[], [void], "nonpayable">;

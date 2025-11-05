@@ -54,6 +54,7 @@ export interface ShadowStrategyInterface extends Interface {
       | "initialize"
       | "processWithdrawalsExternal"
       | "rebalance"
+      | "registerMe"
       | "resetPendingAumAnnualFee"
       | "setOperator"
       | "setPendingAumAnnualFee"
@@ -209,6 +210,10 @@ export interface ShadowStrategyInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "registerMe",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "resetPendingAumAnnualFee",
     values?: undefined
   ): string;
@@ -314,6 +319,7 @@ export interface ShadowStrategyInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "rebalance", data: BytesLike): Result;
+  decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "resetPendingAumAnnualFee",
     data: BytesLike
@@ -1100,6 +1106,8 @@ export interface ShadowStrategy extends BaseContract {
     "nonpayable"
   >;
 
+  registerMe: TypedContractMethod<[], [void], "nonpayable">;
+
   resetPendingAumAnnualFee: TypedContractMethod<[], [void], "nonpayable">;
 
   setOperator: TypedContractMethod<
@@ -1277,6 +1285,9 @@ export interface ShadowStrategy extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "registerMe"
+  ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "resetPendingAumAnnualFee"
   ): TypedContractMethod<[], [void], "nonpayable">;
