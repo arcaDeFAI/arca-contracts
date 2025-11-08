@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 
-// Storage keys from APY hooks
 const METRO_STORAGE_KEY_PREFIX = 'metro_transfers_';
 const SHADOW_STORAGE_KEY_PREFIX = 'shadow_claims_';
 
@@ -25,76 +24,75 @@ interface ClaimEvent {
 }
 
 /**
- * Calculates total earned rewards (all time)
- * Reads from the existing localStorage caches populated by APY hooks
- * No blockchain calls - just reads cached data
+ * Returns latest reward value and timestamp from accumulated cache
  */
 export function useTotalEarnedFromCache(
   stratAddress: string,
   isShadowVault: boolean,
   tokenPrice: number
 ) {
-  const [totalEarnedUSD, setTotalEarnedUSD] = useState(0);
-  const [firstEventTimestamp, setFirstEventTimestamp] = useState<number | null>(null);
+  const [latestRewardUSD, setLatestRewardUSD] = useState(0);
+  const [latestEventTimestamp, setLatestEventTimestamp] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!stratAddress || !tokenPrice) {
-      setTotalEarnedUSD(0);
-      setFirstEventTimestamp(null);
+    if (!stratAddress) {
+      return;
+    }
+    
+    if (!tokenPrice) {
       return;
     }
 
-    const calculateTotal = () => {
+    const calculateLatest = () => {
       try {
-        // Read from the appropriate cache (Metro or Shadow)
         const storageKeyPrefix = isShadowVault ? SHADOW_STORAGE_KEY_PREFIX : METRO_STORAGE_KEY_PREFIX;
         const storageKey = `${storageKeyPrefix}${stratAddress.toLowerCase()}`;
         
         const cached = localStorage.getItem(storageKey);
         if (!cached) {
-          setTotalEarnedUSD(0);
-          setFirstEventTimestamp(null);
+          setLatestRewardUSD(0);
+          setLatestEventTimestamp(null);
           return;
         }
 
         const parsed = JSON.parse(cached);
         const events = parsed.events || [];
-        const firstTimestamp = parsed.firstEventTimestamp || null;
 
-        // Calculate total tokens across ALL events
-        let totalTokens = 0;
-        if (isShadowVault) {
-          // Shadow uses ClaimRewards events with 'amount' field
-          totalTokens = events.reduce((sum: number, event: ClaimEvent) => {
-            return sum + (Number(event.amount) / (10 ** 18));
-          }, 0);
-        } else {
-          // Metro uses Transfer events with 'value' field
-          totalTokens = events.reduce((sum: number, event: TransferEvent) => {
-            return sum + (Number(event.value) / (10 ** 18));
-          }, 0);
+        if (events.length === 0) {
+          setLatestRewardUSD(0);
+          setLatestEventTimestamp(null);
+          return;
         }
 
-        const totalUSD = totalTokens * tokenPrice;
+        const sortedEvents = [...events].sort((a, b) => b.timestamp - a.timestamp);
+        const latestEvent = sortedEvents[0];
 
-        setTotalEarnedUSD(totalUSD);
-        setFirstEventTimestamp(firstTimestamp);
+        let rewardUSD = 0;
+        if (isShadowVault) {
+          const amount = Number(latestEvent.amount) / (10 ** 18);
+          rewardUSD = amount * tokenPrice;
+        } else {
+          const amount = Number(latestEvent.value) / (10 ** 18);
+          rewardUSD = amount * tokenPrice;
+        }
+
+        setLatestRewardUSD(rewardUSD);
+        setLatestEventTimestamp(latestEvent.timestamp);
       } catch (err) {
-        console.warn('Failed to calculate total earned:', err);
-        setTotalEarnedUSD(0);
-        setFirstEventTimestamp(null);
+        console.warn('Failed to get latest reward:', err);
+        setLatestRewardUSD(0);
+        setLatestEventTimestamp(null);
       }
     };
 
-    calculateTotal();
+    calculateLatest();
 
-    // Refresh every minute to stay current
-    const interval = setInterval(calculateTotal, 60 * 1000);
+    const interval = setInterval(calculateLatest, 60 * 1000);
 
     return () => {
       clearInterval(interval);
     };
   }, [stratAddress, isShadowVault, tokenPrice]);
 
-  return { totalEarnedUSD, firstEventTimestamp };
+  return { latestRewardUSD, latestEventTimestamp };
 }

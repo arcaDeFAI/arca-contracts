@@ -3,6 +3,7 @@ export const CONTRACTS = {
   SONIC: null, // Native token - no contract address
   WS: '0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38', // wS ERC20 token contract
   USDC: '0x29219dd400f2Bf60E5a23d13Be72B486D4038894',
+  WETH: '0x50c42dEAcD8Fc9773493ED674b675bE577f2634b', // WETH ERC20 token contract
   METRO: '0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321',
   xSHADOW: '0x5050bc082FF4A74Fb6B0B04385dEfdDB114b2424',
   SHADOW: '0x3333b97138D4b086720b5aE8A7844b1345a33333',
@@ -15,6 +16,7 @@ export const DECIMALS = {
   SONIC: 18,
   WS: 18,
   USDC: 6,
+  WETH: 18,
 } as const;
 
 // ERC20 ABI for token operations

@@ -8,11 +8,12 @@ interface TokenPrices {
   shadow: number;
   xShadow: number;
   usdc: number;
+  weth: number;
   [key: string]: number;
 }
 
 interface PriceContextType {
-  prices: TokenPrices | null;
+  prices: TokenPrices;
   isLoading: boolean;
   error: string | null;
   lastUpdated: number | null;
@@ -41,10 +42,22 @@ const TOKEN_COINGECKO_IDS: { [key: string]: string } = {
   // USDC: 0x29219dd400f2Bf60E5a23d13Be72B486D4038894
   'usdc': 'usd-coin',
   '0x29219dd400f2bf60e5a23d13be72b486d4038894': 'usd-coin',
+
+  // WETH: 0x50c42dEAcD8Fc9773493ED674b675bE577f2634b
+  'weth': 'ethereum',
+  '0x50c42deacd8fc9773493ed674b675be577f2634b': 'ethereum',
 };
 
 export function PriceProvider({ children }: { children: ReactNode }) {
-  const [prices, setPrices] = useState<TokenPrices | null>(null);
+  // Initialize with fallback prices to prevent race conditions
+  const [prices, setPrices] = useState<TokenPrices>({
+    sonic: 0.17,
+    metro: 0,
+    shadow: 0,
+    xShadow: 0,
+    usdc: 1,
+    weth: 3400, // Approximate ETH price as fallback
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<number | null>(null);
@@ -54,58 +67,125 @@ export function PriceProvider({ children }: { children: ReactNode }) {
       try {
         setIsLoading(true);
 
-        // Fetch all token prices in one API call
-        const coingeckoIds = 'sonic-3,metropolis,shadow-2,usd-coin';
-        const response = await fetch(
-          `https://api.coingecko.com/api/v3/simple/price?ids=${coingeckoIds}&vs_currencies=usd`,
-          {
-            headers: {
-              'Accept': 'application/json',
-            },
-            cache: 'no-cache',
+        // Fetch S and WS from DIA API
+        let sonicPrice = 0.17;
+        try {
+          const diaResponse = await fetch(
+            'https://api.diadata.org/v1/assetQuotation/Sonic/0x0000000000000000000000000000000000000000'
+          );
+          if (diaResponse.ok) {
+            const diaData = await diaResponse.json();
+            sonicPrice = diaData.Price || 0.17;
           }
-        );
-
-        if (!response.ok) {
-          // Silently fail and use fallback prices
-          console.warn('CoinGecko API unavailable, using fallback prices');
-          return;
+        } catch {
+          // Fallback to CoinGecko for S
+          try {
+            const cgResponse = await fetch(
+              'https://api.coingecko.com/api/v3/simple/price?ids=sonic-3&vs_currencies=usd'
+            );
+            if (cgResponse.ok) {
+              const cgData = await cgResponse.json();
+              sonicPrice = cgData['sonic-3']?.usd || 0.17;
+            }
+          } catch {
+            console.warn('Using fallback S price');
+          }
         }
 
-        const data = await response.json();
+        // Fetch WETH/ETH from DIA API
+        let wethPrice = 3400;
+        try {
+          const diaEthResponse = await fetch(
+            'https://api.diadata.org/v1/assetQuotation/Ethereum/0x0000000000000000000000000000000000000000'
+          );
+          if (diaEthResponse.ok) {
+            const diaEthData = await diaEthResponse.json();
+            wethPrice = diaEthData.Price || 3400;
+          }
+        } catch {
+          // Fallback to CoinGecko for WETH
+          try {
+            const cgResponse = await fetch(
+              'https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd'
+            );
+            if (cgResponse.ok) {
+              const cgData = await cgResponse.json();
+              wethPrice = cgData.ethereum?.usd || 3400;
+            }
+          } catch {
+            console.warn('Using fallback WETH price');
+          }
+        }
 
-        const newPrices: TokenPrices = {
-          sonic: data['sonic-3']?.usd || 0.17,
-          metro: data.metropolis?.usd || 0,
-          shadow: data['shadow-2']?.usd || 0,
-          xShadow: data['shadow-2']?.usd || 0, // xShadow uses same price as Shadow
-          usdc: data['usd-coin']?.usd || 1, // USDC should always be ~$1
-        };
+        // Fetch Metro and Shadow from CoinGecko only every 120 seconds
+        setPrices(prev => {
+          let metroPrice = prev.metro;
+          let shadowPrice = prev.shadow;
+          
+          return {
+            sonic: sonicPrice,
+            metro: metroPrice,
+            shadow: shadowPrice,
+            xShadow: shadowPrice,
+            usdc: 1,
+            weth: wethPrice,
+          };
+        });
 
-        setPrices(newPrices);
-        setLastUpdated(Date.now());
         setError(null);
+        setIsLoading(false);
 
-        console.log('💰 Prices Updated:', {
-          ...newPrices,
+        console.log('💰 Prices Updated (S/WETH):', {
+          sonic: sonicPrice,
+          weth: wethPrice,
           timestamp: new Date().toLocaleTimeString()
         });
       } catch (err) {
-        // Silently use fallback prices - API failures are expected
         console.warn('Using fallback token prices due to API error');
-        setError(null); // Don't show error to user, fallback prices work fine
-      } finally {
+        setError(null);
         setIsLoading(false);
+      }
+    };
+
+    const fetchMetroShadow = async () => {
+      try {
+        const response = await fetch(
+          'https://api.coingecko.com/api/v3/simple/price?ids=metropolis,shadow-2&vs_currencies=usd'
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setPrices(prev => ({
+            ...prev,
+            metro: data.metropolis?.usd || prev.metro,
+            shadow: data['shadow-2']?.usd || prev.shadow,
+            xShadow: data['shadow-2']?.usd || prev.shadow,
+          }));
+          setLastUpdated(Date.now());
+          console.log('💰 Metro/Shadow Prices Updated:', {
+            metro: data.metropolis?.usd,
+            shadow: data['shadow-2']?.usd,
+            timestamp: new Date().toLocaleTimeString()
+          });
+        }
+      } catch {
+        console.warn('Failed to fetch Metro/Shadow prices');
       }
     };
 
     // Fetch immediately on mount
     fetchPrices();
+    fetchMetroShadow();
 
-    // Fetch every 60 seconds (1 minute)
-    const interval = setInterval(fetchPrices, 60 * 1000);
+    // Fetch S/WETH every 60 seconds
+    const priceInterval = setInterval(fetchPrices, 120 * 1000);
+    
+    // Fetch Metro/Shadow every 120 seconds
+    const metroShadowInterval = setInterval(fetchMetroShadow, 120 * 1000);
 
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(priceInterval);
+      clearInterval(metroShadowInterval);
+    };
   }, []);
 
   return (
@@ -145,6 +225,7 @@ export function useTokenPrice(tokenIdentifier: string): number {
     if (coingeckoId === 'metropolis') return prices.metro;
     if (coingeckoId === 'shadow-2') return prices.shadow;
     if (coingeckoId === 'usd-coin') return prices.usdc;
+    if (coingeckoId === 'ethereum') return prices.weth;
   }
 
   return 0;

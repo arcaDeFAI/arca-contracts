@@ -16,6 +16,7 @@ export function useTokenPrices() {
       sonic: prices.sonic,
       usdc: prices.usdc,
       xShadow: prices.xShadow,
+      weth: prices.weth,
     } : null,
     isLoading,
     error

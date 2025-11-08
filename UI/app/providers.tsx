@@ -31,12 +31,19 @@ const config = getDefaultConfig({
   ssr: false,
 });
 
-// Configure QueryClient with better error handling
+// Configure QueryClient - Optimized for reliable data fetching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: false,
-      refetchOnWindowFocus: false,
+      retry: 3, // Retry failed queries 3 times
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+      refetchOnWindowFocus: true, // Refetch when user returns to tab
+      refetchOnMount: true, // Always refetch when component mounts
+      refetchOnReconnect: true, // Refetch when network reconnects
+      staleTime: 20000, // Data is fresh for 20 seconds
+      gcTime: 5 * 60 * 1000, // Keep unused data in cache for 5 minutes
+      refetchInterval: 30000, // Auto-refetch every 30 seconds for live data
+      networkMode: 'online', // Only fetch when online
     },
   },
 });

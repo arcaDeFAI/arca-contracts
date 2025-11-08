@@ -6,6 +6,7 @@ import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { CONTRACTS } from '@/lib/contracts';
 import { formatUSD, formatPercentage } from '@/lib/utils';
+import { getTokenLogo } from '@/lib/tokenUtils';
 import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
 import { TokenPairLogos } from './TokenPairLogos';
@@ -15,9 +16,11 @@ interface VaultCardProps {
   stratAddress: string;
   name: string;
   tier: 'Active' | 'Premium' | 'Elite';
+  tokenX?: string;
+  tokenY?: string;
 }
 
-export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardProps) {
+export function VaultCard({ vaultAddress, stratAddress, name, tier, tokenX = 'S', tokenY = 'USDC' }: VaultCardProps) {
   const { address, isConnected } = useAccount();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -28,7 +31,7 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardP
   const actualAddress = address || testAddress;
 
   // Use unified metrics hook - eliminates duplication
-  const vaultConfig = { vaultAddress, stratAddress, name, tier };
+  const vaultConfig = { vaultAddress, stratAddress, name, tier, tokenX, tokenY };
   const metrics = useVaultMetrics(vaultConfig, actualAddress);
 
   const {
@@ -52,6 +55,7 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardP
   const sonicBalance = useTokenBalance(CONTRACTS.SONIC, isShadowVault ? undefined : actualAddress);
   const wsBalance = useTokenBalance(CONTRACTS.WS, isShadowVault ? actualAddress : undefined);
   const usdcBalance = useTokenBalance(CONTRACTS.USDC, actualAddress);
+  const wethBalance = useTokenBalance(CONTRACTS.WETH, actualAddress);
 
   // Calculate deposited amounts for display
   const depositedS = balances ? balances[0] : 0n;
@@ -100,8 +104,8 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardP
         <div className="mb-3">
           <div className="flex items-center gap-2 mb-1">
             <TokenPairLogos 
-              token0Logo="/SonicLogoRound.png" 
-              token1Logo="/USDCLogo.png" 
+              token0Logo={getTokenLogo(tokenX)} 
+              token1Logo={getTokenLogo(tokenY)} 
               size={42}
             />
             <h3 className="text-white font-semibold text-sm">{name}</h3>
@@ -174,6 +178,9 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardP
           sonicBalance={(sonicBalance?.data as bigint) || 0n}
           wsBalance={(wsBalance?.data as bigint) || 0n}
           usdcBalance={(usdcBalance?.data as bigint) || 0n}
+          wethBalance={(wethBalance?.data as bigint) || 0n}
+          tokenX={tokenX}
+          tokenY={tokenY}
           onClose={() => setShowDepositModal(false)}
         />
       )}
@@ -183,6 +190,8 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier }: VaultCardP
           vaultAddress={vaultAddress}
           vaultName={name}
           userShares={userShares || 0n}
+          tokenX={tokenX}
+          tokenY={tokenY}
           onClose={() => setShowWithdrawModal(false)}
         />
       )}

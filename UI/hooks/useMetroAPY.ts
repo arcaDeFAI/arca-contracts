@@ -18,10 +18,20 @@ interface TransferEvent {
   timestamp: number;
 }
 
+interface CachedData {
+  events: Array<{
+    from: string;
+    to: string;
+    value: string;
+    blockNumber: string;
+    timestamp: number;
+  }>;
+  firstEventTimestamp: number | null;
+  lastFetch: number;
+}
+
 /**
- * Calculates Metro vault APY based on Transfer events to the strat address
- * Uses continuous accumulation: stores ALL historical events and calculates
- * average daily rewards over the entire period, then extrapolates to annual
+ * Calculates Metro vault APY from accumulated historical rewards
  */
 export function useMetroAPY(
   stratAddress: string,
@@ -35,9 +45,7 @@ export function useMetroAPY(
   const publicClient = usePublicClient();
 
   useEffect(() => {
-    if (!publicClient || !stratAddress || !metroTokenAddress || !vaultTVL || !metroPrice) {
-      setApy(0);
-      setIsLoading(false);
+    if (!stratAddress || !vaultTVL || !metroPrice) {
       return;
     }
 
@@ -45,123 +53,85 @@ export function useMetroAPY(
     const storageKey = `${STORAGE_KEY_PREFIX}${stratAddress.toLowerCase()}`;
 
     const fetchAndCalculateAPY = async () => {
+      if (!publicClient) return;
+      
       try {
         setIsLoading(true);
 
         const now = Date.now();
-        const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
 
-        // Load ALL cached events (up to 1 year)
-        let cachedEvents: TransferEvent[] = [];
-        let firstEventTimestamp: number | null = null;
-        try {
-          const cached = localStorage.getItem(storageKey);
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            firstEventTimestamp = parsed.firstEventTimestamp || null;
-            cachedEvents = parsed.events
-              .filter((e: any) => e.timestamp >= oneYearAgo) // Keep up to 1 year
-              .map((e: any) => ({
-                from: e.from,
-                to: e.to,
-                value: BigInt(e.value),
-                blockNumber: BigInt(e.blockNumber),
-                timestamp: e.timestamp,
-              }));
+        let cachedData: CachedData = {
+          events: [],
+          firstEventTimestamp: null,
+          lastFetch: 0,
+        };
+        
+        const cached = localStorage.getItem(storageKey);
+        if (cached) {
+          try {
+            cachedData = JSON.parse(cached);
+          } catch (err) {
+            console.warn('Failed to parse cache:', err);
           }
-        } catch (err) {
-          console.warn('Failed to load cached Metro transfers:', err);
         }
 
         const currentBlock = await publicClient.getBlockNumber();
-        
-        let fromBlock: bigint;
-        if (cachedEvents.length > 0) {
-          fromBlock = cachedEvents[cachedEvents.length - 1].blockNumber + 1n;
-        } else {
-          const blocksPerDay = 86400n;
-          fromBlock = currentBlock > blocksPerDay ? currentBlock - blocksPerDay : 0n;
-        }
+        const blocksPerDay = 86400n;
+        const blocksPerWeek = blocksPerDay * 7n;
+        const fromBlock = currentBlock > blocksPerWeek ? currentBlock - blocksPerWeek : 0n;
 
-        // Fetch Transfer events TO the strat address
-        let newEvents: TransferEvent[] = [];
-        if (fromBlock <= currentBlock) {
-          const logs = await publicClient.getLogs({
-            address: metroTokenAddress as `0x${string}`,
-            event: TRANSFER_ABI[0],
-            args: {
-              to: stratAddress as `0x${string}`,
-            },
-            fromBlock,
-            toBlock: currentBlock,
-          });
-
-          newEvents = await Promise.all(
-            logs.map(async (log) => {
-              const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
-              return {
-                from: log.args.from as string,
-                to: log.args.to as string,
-                value: log.args.value as bigint,
-                blockNumber: log.blockNumber,
-                timestamp: Number(block.timestamp) * 1000,
-              };
-            })
-          );
-        }
+        const logs = await publicClient.getLogs({
+          address: metroTokenAddress as `0x${string}`,
+          event: TRANSFER_ABI[0],
+          args: {
+            to: stratAddress as `0x${string}`,
+          },
+          fromBlock,
+          toBlock: currentBlock,
+        });
 
         if (!isMounted) return;
 
-        const allEvents = [...cachedEvents, ...newEvents];
-        
-        // Track first event timestamp
-        if (!firstEventTimestamp && allEvents.length > 0) {
-          firstEventTimestamp = Math.min(...allEvents.map(e => e.timestamp));
-        }
-
-        // Save ALL events to localStorage (up to 1 year)
-        try {
-          localStorage.setItem(storageKey, JSON.stringify({
-            events: allEvents.map(e => ({
-              from: e.from,
-              to: e.to,
-              value: e.value.toString(),
-              blockNumber: e.blockNumber.toString(),
-              timestamp: e.timestamp,
-            })),
-            firstEventTimestamp,
-            lastFetch: now,
-          }));
-        } catch (err) {
-          console.warn('Failed to cache Metro transfers:', err);
-        }
-
-        // Calculate total Metro transferred across ALL accumulated events
-        const totalMetroToken = allEvents.reduce(
-          (sum, event) => sum + Number(event.value) / (10 ** 18),
-          0
+        const newEvents = await Promise.all(
+          logs.map(async (log) => {
+            const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+            return {
+              from: log.args.from as string,
+              to: log.args.to as string,
+              value: (log.args.value as bigint).toString(),
+              blockNumber: log.blockNumber.toString(),
+              timestamp: Number(block.timestamp) * 1000,
+            };
+          })
         );
 
-        const totalMetroUSD = totalMetroToken * metroPrice;
+        const existingBlockNumbers = new Set(cachedData.events.map(e => e.blockNumber));
+        const uniqueNewEvents = newEvents.filter(e => !existingBlockNumbers.has(e.blockNumber));
+        const allEvents = [...cachedData.events, ...uniqueNewEvents];
 
-        // Calculate time range from first event to now
-        const oldestEventTime = allEvents.length > 0 
+        const firstTimestamp = allEvents.length > 0
           ? Math.min(...allEvents.map(e => e.timestamp))
-          : now;
-        
-        const timeRangeDays = (now - oldestEventTime) / (1000 * 60 * 60 * 24);
+          : null;
 
-        // Calculate average daily rewards from accumulated data
-        let averageDailyRewardsUSD = 0;
-        if (timeRangeDays > 0) {
-          averageDailyRewardsUSD = totalMetroUSD / timeRangeDays;
-        }
+        localStorage.setItem(storageKey, JSON.stringify({
+          events: allEvents,
+          firstEventTimestamp: firstTimestamp,
+          lastFetch: now,
+        }));
 
-        // Calculate APY based on average daily rewards
-        if (averageDailyRewardsUSD > 0 && vaultTVL > 0) {
-          const dailyReturn = averageDailyRewardsUSD / vaultTVL;
-          const annualReturn = dailyReturn * 365;
-          const calculatedAPY = annualReturn * 100;
+        if (allEvents.length > 0 && vaultTVL > 0 && metroPrice > 0) {
+          const totalTokens = allEvents.reduce((sum, event) => {
+            return sum + (Number(event.value) / (10 ** 18));
+          }, 0);
+          const totalRewardUSD = totalTokens * metroPrice;
+
+          const oldestTimestamp = Math.min(...allEvents.map(e => e.timestamp));
+          const timeSpan = now - oldestTimestamp;
+          const daysSpan = Math.max(timeSpan / (1000 * 60 * 60 * 24), 0.01);
+
+          const dailyRewardRate = totalRewardUSD / daysSpan;
+          const annualRewardUSD = dailyRewardRate * 365;
+          const calculatedAPY = (annualRewardUSD / vaultTVL) * 100;
 
           if (isMounted) {
             setApy(Math.max(0, calculatedAPY));

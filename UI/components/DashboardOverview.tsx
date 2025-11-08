@@ -7,8 +7,12 @@ import { useBalanceHistory } from '@/hooks/useBalanceHistory'
 import { use24hHarvestedRewards } from '@/hooks/use24hHarvestedRewards'
 import { useDailyHarvestedRewards } from '@/hooks/useDailyHarvestedRewards'
 import { useTotalEarnedFromCache } from '@/hooks/useTotalEarnedFromCache'
+import { useTotalEarnedAllTime } from '@/hooks/useTotalEarnedAllTime'
+import { usePositionInRange } from '@/hooks/usePositionInRange'
 import { type UserRewardStructOutput } from '@/lib/typechain'
 import { CONTRACTS } from '@/lib/contracts'
+import { getTokenDecimals } from '@/lib/tokenHelpers'
+import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
 import { BalanceHistoryCard } from './BalanceHistoryCard'
 import { RewardsHistoryCard } from './RewardsHistoryCard'
@@ -20,6 +24,8 @@ interface VaultConfig {
   clpoolAddress?: string
   name: string
   tier: 'Active' | 'Premium' | 'Elite'
+  tokenX?: string
+  tokenY?: string
 }
 
 interface DashboardOverviewProps {
@@ -28,13 +34,26 @@ interface DashboardOverviewProps {
 }
 
 export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOverviewProps) {
+  const { prices } = usePrices()
+  
   // Fetch metrics for all vaults
   const vaultMetrics = vaultConfigs.map(config => 
     useVaultMetrics(config, userAddress)
   )
 
-  // Fetch total earned rewards from APY caches (all time)
-  const totalEarnedData = vaultConfigs.map((config, index) => {
+  // Check if each vault's position is in range
+  const positionsInRange = vaultConfigs.map(config => 
+    usePositionInRange({
+      vaultAddress: config.vaultAddress,
+      stratAddress: config.stratAddress,
+      lbBookAddress: config.lbBookAddress,
+      clpoolAddress: config.clpoolAddress,
+      name: config.name,
+    })
+  )
+
+  // Fetch latest reward from APY caches (most recent reward only)
+  const latestRewardData = vaultConfigs.map((config, index) => {
     const metrics = vaultMetrics[index]
     const isShadowVault = config.name.includes('Shadow')
     const tokenPrice = isShadowVault 
@@ -42,6 +61,17 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       : (metrics.prices?.metro || 0)
     
     return useTotalEarnedFromCache(config.stratAddress, isShadowVault, tokenPrice)
+  })
+
+  // Fetch total earned all-time (accumulated historical rewards)
+  const totalEarnedAllTimeData = vaultConfigs.map((config, index) => {
+    const metrics = vaultMetrics[index]
+    const isShadowVault = config.name.includes('Shadow')
+    const tokenPrice = isShadowVault 
+      ? (metrics.prices?.shadow || 0) 
+      : (metrics.prices?.metro || 0)
+    
+    return useTotalEarnedAllTime(config.stratAddress, isShadowVault, tokenPrice)
   })
 
   // Fetch 24h harvested rewards for calculating % change
@@ -67,16 +97,52 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     return useDailyHarvestedRewards(config.stratAddress, isShadowVault, tokenPrice)
   })
 
-  // Get earliest first earning date across all vaults
+  const [rewardPeriod, setRewardPeriod] = useState<'hourly' | 'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly')
+  const [ratePeriod, setRatePeriod] = useState<'DPR' | 'WPR' | 'APR'>('APR')
+  const [showRewardDropdown, setShowRewardDropdown] = useState(false)
+  const [showRateDropdown, setShowRateDropdown] = useState(false)
+
   const firstEarningDate = useMemo(() => {
-    const dates = totalEarnedData
+    const dates = totalEarnedAllTimeData
       .map(data => data.firstEventTimestamp)
       .filter((date): date is number => date !== null)
     
     return dates.length > 0 ? Math.min(...dates) : null
-  }, [totalEarnedData])
+  }, [totalEarnedAllTimeData])
 
-  // Aggregate data from all vaults
+  const extrapolatedReward = useMemo(() => {
+    const validRewards = latestRewardData.filter(data => data.latestRewardUSD > 0)
+    const avgLatestRewardUSD = validRewards.length > 0
+      ? validRewards.reduce((sum, data) => sum + data.latestRewardUSD, 0) / validRewards.length
+      : 0
+    
+    const periodMultiplier = {
+      hourly: 1,             // Base: one rebalance per hour
+      daily: 24,             // 24 hours of rebalances
+      weekly: 24 * 7,        // 168 hours of rebalances
+      monthly: 24 * 30,      // 720 hours of rebalances
+      yearly: 24 * 365,      // 8760 hours of rebalances
+    }
+
+    return avgLatestRewardUSD * periodMultiplier[rewardPeriod]
+  }, [latestRewardData, rewardPeriod])
+
+  const avgAPY = useMemo(() => {
+    const allAPYs = vaultMetrics
+      .map(metrics => metrics.apy)
+      .filter(apy => apy > 0)
+    
+    return allAPYs.length > 0 
+      ? allAPYs.reduce((sum, apy) => sum + apy, 0) / allAPYs.length 
+      : 0
+  }, [vaultMetrics])
+
+  const calculatedRate = useMemo(() => {
+    if (ratePeriod === 'DPR') return avgAPY / 365
+    if (ratePeriod === 'WPR') return avgAPY / 52
+    return avgAPY // APR (monthly)
+  }, [avgAPY, ratePeriod])
+
   const aggregatedData = useMemo(() => {
     let totalBalanceUSD = 0
     let totalMetroRewardsUSD = 0
@@ -105,37 +171,48 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       if (metrics.balances && metrics.userShares && metrics.totalSupply && metrics.totalSupply > 0n) {
         const shareRatio = Number(metrics.userShares) / Number(metrics.totalSupply)
         
-        // Token 0 (S or WS) - Complete strategy balance × share %
-        const token0Amount = Number(formatUnits(metrics.balances[0], 18)) * shareRatio
-        const token0Value = token0Amount * (metrics.sonicPrice || 0)
-        const token0Name = isShadowVault ? 'WS' : 'S'
+        // Get token names from config
+        const tokenX = config.tokenX || 'S'
+        const tokenY = config.tokenY || 'USDC'
         
-        const existing0 = tokenAllocations.get(token0Name) || { amount: 0, usdValue: 0 }
-        tokenAllocations.set(token0Name, {
+        // Token 0 - use dynamic decimals
+        const token0Decimals = getTokenDecimals(tokenX)
+        const token0Amount = Number(formatUnits(metrics.balances[0], token0Decimals)) * shareRatio
+        const token0Value = token0Amount * (metrics.sonicPrice || 0)
+        
+        const existing0 = tokenAllocations.get(tokenX) || { amount: 0, usdValue: 0 }
+        tokenAllocations.set(tokenX, {
           amount: existing0.amount + token0Amount,
           usdValue: existing0.usdValue + token0Value
         })
 
         // Track deposited amounts separately (same calculation for now)
-        const existingDeposit0 = depositedAmounts.get(token0Name) || { amount: 0, usdValue: 0 }
-        depositedAmounts.set(token0Name, {
+        const existingDeposit0 = depositedAmounts.get(tokenX) || { amount: 0, usdValue: 0 }
+        depositedAmounts.set(tokenX, {
           amount: existingDeposit0.amount + token0Amount,
           usdValue: existingDeposit0.usdValue + token0Value
         })
 
-        // Token 1 (USDC) - Complete strategy balance × share %
-        const token1Amount = Number(formatUnits(metrics.balances[1], 6)) * shareRatio
-        const token1Value = token1Amount // USDC is 1:1 with USD
+        // Token 1 - use dynamic decimals and price
+        const token1Decimals = getTokenDecimals(tokenY)
+        const token1Amount = Number(formatUnits(metrics.balances[1], token1Decimals)) * shareRatio
         
-        const existing1 = tokenAllocations.get('USDC') || { amount: 0, usdValue: 0 }
-        tokenAllocations.set('USDC', {
+        // Get token1 price (USDC = 1, WETH = eth price)
+        let token1Price = 1 // Default for USDC
+        if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
+          token1Price = prices?.weth || 0
+        }
+        const token1Value = token1Amount * token1Price
+        
+        const existing1 = tokenAllocations.get(tokenY) || { amount: 0, usdValue: 0 }
+        tokenAllocations.set(tokenY, {
           amount: existing1.amount + token1Amount,
           usdValue: existing1.usdValue + token1Value
         })
 
-        // Track deposited USDC
-        const existingDeposit1 = depositedAmounts.get('USDC') || { amount: 0, usdValue: 0 }
-        depositedAmounts.set('USDC', {
+        // Track deposited token1
+        const existingDeposit1 = depositedAmounts.get(tokenY) || { amount: 0, usdValue: 0 }
+        depositedAmounts.set(tokenY, {
           amount: existingDeposit1.amount + token1Amount,
           usdValue: existingDeposit1.usdValue + token1Value
         })
@@ -183,8 +260,8 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       }
     })
 
-    // Process total earned rewards from APY caches
-    totalEarnedData.forEach((earnedData, index) => {
+    // Process total earned all-time (accumulated historical rewards)
+    totalEarnedAllTimeData.forEach((earnedData, index) => {
       const config = vaultConfigs[index]
       const isShadowVault = config.name.includes('Shadow')
 
@@ -201,9 +278,10 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       
       // Assign colors based on token - military/tactical theme
       let color = '#6B7280' // gray fallback
-      if (token === 'S') color = '#00FFA3' // Forest Green (military inspired)
-      else if (token === 'WS') color = '#059669' // Deep Red (danger/alert accent)
-      else if (token === 'USDC') color = '#15803D' // Gunmetal Gray
+      if (token === 'S') color = '#00FFA3' // Bright arca-green
+      else if (token === 'WS') color = '#059669' // Medium green
+      else if (token === 'USDC') color = '#15803D' // Dark green
+      else if (token === 'WETH' || token === 'ETH') color = '#10B981' // Emerald green
       
       return {
         token,
@@ -235,7 +313,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       metroRewards,
       shadowRewards
     }
-  }, [vaultMetrics, vaultConfigs, totalEarnedData])
+  }, [vaultMetrics, vaultConfigs, totalEarnedAllTimeData])
 
   // Track balance history and calculate real 24h changes
   const { calculate24hChange } = useBalanceHistory(
@@ -256,29 +334,16 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     ? (total24hHarvestedUSD / (aggregatedData.totalHarvestedUSD - total24hHarvestedUSD)) * 100 
     : 0
 
-  // Calculate daily harvested rewards (8am to 8am)
   const totalDailyHarvestedUSD = dailyHarvestedData.reduce((sum, data) => sum + data.dailyHarvestedUSD, 0)
 
-  // Advanced mode toggle state
   const [advancedMode, setAdvancedMode] = useState(false)
 
-  // Calculate average APY across all vaults
-  const avgAPY = useMemo(() => {
-    const apys = vaultMetrics.map(m => m.apy).filter(apy => apy > 0)
-    return apys.length > 0 ? apys.reduce((sum, apy) => sum + apy, 0) / apys.length : 0
-  }, [vaultMetrics])
-
-  // Calculate 30-day APR (APY / 12)
-  const avgAPR30d = avgAPY / 12
-
-  // Count active LP positions (vaults with deposits)
   const activeLPs = useMemo(() => {
     return vaultMetrics.filter(metrics => 
       metrics.depositedValueUSD && metrics.depositedValueUSD > 0
     ).length
   }, [vaultMetrics])
 
-  // Format time duration since first earning
   const formatTimeSince = (timestamp: number | null): string => {
     if (!timestamp) return ''
     
@@ -302,58 +367,96 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
   return (
     <div className="space-y-5 mb-6">
-      {/* Top Stats Cards - 6 Equal Width Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 md:gap-4">
-        {/* Balance Card */}
+      {/* Top Stats Cards - 5 Equal Width Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+        {/* Total Deposits Card */}
         <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
-          <div className="text-gray-400 text-sm mb-2">Balance</div>
-          <div className="text-arca-green text-2xl font-bold">
+          <div className="text-white text-lg font-semibold mb-2">Total Deposits</div>
+          <div className="text-arca-green text-xl font-bold">
             ${aggregatedData.totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
 
-        {/* Daily Reward Card */}
+        {/* Earned (All-Time) Card */}
         <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
-          <div className="text-gray-400 text-sm mb-2">Daily Reward</div>
-          <div className="text-arca-green text-2xl font-bold">
-            ${totalDailyHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          <div className="text-white text-lg font-semibold mb-2">
+            Total Earned
           </div>
-        </div>
-
-        {/* Earned Card */}
-        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
-          <div className="text-gray-400 text-sm mb-2">
-            Earned {firstEarningDate && (
-              <span className="text-gray-500 text-xs ml-1">
-                (since {formatTimeSince(firstEarningDate)})
-              </span>
-            )}
-          </div>
-          <div className="text-arca-green text-2xl font-bold">
+          <div className="text-arca-green text-xl font-bold">
             ${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
         </div>
 
-        {/* AVG APR (30D) Card */}
-        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
-          <div className="text-gray-400 text-sm mb-2">APR (30D)</div>
-          <div className="text-arca-green text-2xl font-bold">
-            {avgAPR30d.toFixed(0)}%
-          </div>
+        {/* Rewards Dropdown Card */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5 relative">
+          <button
+            onClick={() => setShowRewardDropdown(!showRewardDropdown)}
+            className="w-full text-left"
+          >
+            <div className="text-white text-lg font-semibold mb-2 flex items-center justify-between">
+              <span className="capitalize">{rewardPeriod} Rewards</span>
+              <span className="text-xs">▼</span>
+            </div>
+            <div className="text-arca-green text-xl font-bold">
+              ${extrapolatedReward.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </div>
+          </button>
+          {showRewardDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-full bg-black border border-gray-700 rounded-lg shadow-lg z-50">
+              {(['hourly', 'daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => {
+                    setRewardPeriod(period)
+                    setShowRewardDropdown(false)
+                  }}
+                  className="w-full px-4 py-2 text-left text-white hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg flex items-center justify-between"
+                >
+                  <span className="capitalize">{period} Rewards</span>
+                  {rewardPeriod === period && <span className="text-arca-green">✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* APY Card */}
-        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
-          <div className="text-gray-400 text-sm mb-2">AVG APY</div>
-          <div className="text-arca-green text-2xl font-bold">
-            {avgAPY.toFixed(0)}%
-          </div>
+        {/* Rate Dropdown Card */}
+        <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5 relative">
+          <button
+            onClick={() => setShowRateDropdown(!showRateDropdown)}
+            className="w-full text-left"
+          >
+            <div className="text-white text-lg font-semibold mb-2 flex items-center justify-between">
+              <span>{ratePeriod}</span>
+              <span className="text-xs">▼</span>
+            </div>
+            <div className="text-arca-green text-xl font-bold">
+              {calculatedRate.toFixed(2)}%
+            </div>
+          </button>
+          {showRateDropdown && (
+            <div className="absolute top-full left-0 mt-1 w-full bg-black border border-gray-700 rounded-lg shadow-lg z-50">
+              {(['DPR', 'WPR', 'APR'] as const).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => {
+                    setRatePeriod(period)
+                    setShowRateDropdown(false)
+                  }}
+                  className="w-full px-4 py-2 text-left text-white hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg flex items-center justify-between"
+                >
+                  <span>{period}</span>
+                  {ratePeriod === period && <span className="text-arca-green">✓</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Active LPs Card */}
         <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
-          <div className="text-gray-400 text-sm mb-2">Active Positions</div>
-          <div className="text-arca-green text-2xl font-bold">
+          <div className="text-white text-lg font-semibold mb-2">Active Positions</div>
+          <div className="text-arca-green text-xl font-bold">
             {activeLPs}
           </div>
         </div>

@@ -23,9 +23,14 @@ export function use24hHarvestedRewards(
   const publicClient = usePublicClient();
 
   useEffect(() => {
-    if (!publicClient || !vaultAddress || !userAddress || !tokenPrice) {
-      setHarvested24hUSD(0);
+    if (!publicClient || !vaultAddress || !userAddress) {
       setIsLoading(false);
+      return;
+    }
+    
+    // If price not ready yet, keep loading state but don't reset value
+    if (!tokenPrice) {
+      setIsLoading(true);
       return;
     }
 

@@ -8,13 +8,22 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Format token amounts for display
-export function formatTokenAmount(amount: bigint, token: 'SONIC' | 'WS' | 'USDC'): string {
+export function formatTokenAmount(amount: bigint, token: 'SONIC' | 'WS' | 'USDC' | 'S' | 'WETH' | 'ETH' | string): string {
   // Handle undefined/null amounts
   if (amount === undefined || amount === null) {
     return '0.00'
   }
   
-  const decimals = DECIMALS[token as keyof typeof DECIMALS] as number
+  // Normalize token name
+  const normalizedToken = token.toUpperCase();
+  let decimals = 18; // Default for most tokens
+  
+  if (normalizedToken === 'USDC') {
+    decimals = 6;
+  } else if (normalizedToken === 'SONIC' || normalizedToken === 'S' || normalizedToken === 'WS' || normalizedToken === 'WETH' || normalizedToken === 'ETH') {
+    decimals = 18;
+  }
+  
   const formatted = formatUnits(amount, decimals)
   const num = parseFloat(formatted)
   
@@ -35,8 +44,17 @@ export function formatTokenAmount(amount: bigint, token: 'SONIC' | 'WS' | 'USDC'
 }
 
 // Parse token amounts from user input
-export function parseTokenAmount(amount: string, token: 'SONIC' | 'WS' | 'USDC'): bigint {
-  const decimals = DECIMALS[token as keyof typeof DECIMALS] as number
+export function parseTokenAmount(amount: string, token: 'SONIC' | 'WS' | 'USDC' | 'S' | 'WETH' | 'ETH' | string): bigint {
+  // Normalize token name
+  const normalizedToken = token.toUpperCase();
+  let decimals = 18; // Default for most tokens
+  
+  if (normalizedToken === 'USDC') {
+    decimals = 6;
+  } else if (normalizedToken === 'SONIC' || normalizedToken === 'S' || normalizedToken === 'WS' || normalizedToken === 'WETH' || normalizedToken === 'ETH') {
+    decimals = 18;
+  }
+  
   return parseUnits(amount, decimals)
 }
 
