@@ -166,6 +166,31 @@ export function PriceProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const fetchMetroShadow = async () => {
+      try {
+        const response = await fetch(
+          'https://api.coingecko.com/api/v3/simple/price?ids=metropolis,shadow-2&vs_currencies=usd'
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setPrices(prev => ({
+            ...prev,
+            metro: data.metropolis?.usd || prev.metro,
+            shadow: data['shadow-2']?.usd || prev.shadow,
+            xShadow: data['shadow-2']?.usd || prev.shadow,
+          }));
+          setLastUpdated(Date.now());
+          console.log('💰 Metro/Shadow Prices Updated:', {
+            metro: data.metropolis?.usd,
+            shadow: data['shadow-2']?.usd,
+            timestamp: new Date().toLocaleTimeString()
+          });
+        }
+      } catch {
+        console.warn('Failed to fetch Metro/Shadow prices');
+      }
+    };
+
     // Fetch immediately on mount
     fetchPrices();
     fetchMetroShadow();

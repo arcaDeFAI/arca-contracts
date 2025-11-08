@@ -60,7 +60,8 @@ export function DashboardVaultCard({
     pendingRewards,
     currentRound,
     queuedWithdrawal,
-    claimableWithdrawal,
+    claimableWithdrawals,
+    totalClaimableAmount,
     handleClaimRewards,
     handleRedeemWithdrawal,
     isClaimingRewards,
@@ -226,7 +227,7 @@ export function DashboardVaultCard({
   const hasShares = !!(userShares && userShares > 0n);
 const hasPendingRewards = !!(pendingRewards && pendingRewards.some((r: UserRewardStructOutput) => r.pendingRewards > 0n));
 const hasQueuedWithdrawal = !!(queuedWithdrawal && queuedWithdrawal > 0n);
-const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0n);
+const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.length > 0);
 
   // Filter non-zero rewards for both Metro and Shadow vaults
   const nonZeroRewards = pendingRewards 
@@ -599,7 +600,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal:</span>
               <span className="text-arca-green font-semibold">
-                {claimableWithdrawal ? (Number(claimableWithdrawal) / 1e12).toFixed(2) : '0.00'} shares
+                {claimableWithdrawals ? (Number(claimableWithdrawals) / 1e12).toFixed(2) : '0.00'} shares
               </span>
             </div>
             <div className="text-sm text-gray-400 mb-3">

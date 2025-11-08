@@ -110,7 +110,6 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   }, [totalEarnedAllTimeData])
 
 
-
   const avgAPY = useMemo(() => {
     const allAPYs = vaultMetrics
       .map(metrics => metrics.apy)
