@@ -18,6 +18,7 @@ interface DashboardVaultCardProps {
   lbBookAddress?: string;
   clpoolAddress?: string;
   rewardsAddress?: string;
+  poolSymbol?: string;
   name: string;
   tier: 'Active' | 'Premium' | 'Elite';
   userAddress?: string;
@@ -31,13 +32,14 @@ export function DashboardVaultCard({
   lbBookAddress,
   clpoolAddress,
   rewardsAddress,
+  poolSymbol,
   name, 
   tier, 
   userAddress,
   tokenX = 'S',
   tokenY = 'USDC'
 }: DashboardVaultCardProps) {
-  const config = { vaultAddress, stratAddress, rewardsAddress, name, tier, tokenX, tokenY };
+  const config = { vaultAddress, stratAddress, rewardsAddress, poolSymbol, name, tier, tokenX, tokenY };
   
   // Use the connected wallet address
   const actualAddress = userAddress;
@@ -53,6 +55,7 @@ export function DashboardVaultCard({
     idleBalances,
     totalSupply,
     apy,
+    apy30dMean,
     aprLoading,
     pendingRewards,
     currentRound,
@@ -286,9 +289,16 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
         <div className="space-y-3">
         {/* User Shares & APY */}
         <div className="bg-black/50 rounded-lg p-3 border border-gray-700/50">
-          {/* APY Display - Vault-wide 24h */}
+          {/* APR Display - Vault-wide 24h */}
           <div className="mb-3 pb-3 border-b border-gray-700/30">
-            <div className="text-gray-400 text-xs uppercase tracking-wider mb-1 text-center">APY</div>
+            <div className="text-gray-400 text-xs uppercase tracking-wider mb-1 text-center group relative">
+              APR
+              {apy30dMean !== null && (
+                <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-black border border-arca-green rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                  30d Avg: {formatPercentage(apy30dMean)}
+                </div>
+              )}
+            </div>
             <div className="text-center">
               <div className="text-arca-green text-xl font-bold">
                 {aprLoading ? '...' : formatPercentage(apy || 0)}

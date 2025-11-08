@@ -134,12 +134,6 @@ export function PriceProvider({ children }: { children: ReactNode }) {
 
         setError(null);
         setIsLoading(false);
-
-        console.log('💰 Prices Updated (S/WETH):', {
-          sonic: sonicPrice,
-          weth: wethPrice,
-          timestamp: new Date().toLocaleTimeString()
-        });
       } catch (err) {
         console.warn('Using fallback token prices due to API error');
         setError(null);
@@ -166,11 +160,6 @@ export function PriceProvider({ children }: { children: ReactNode }) {
             xShadow: shadowPrice,
           }));
           setLastUpdated(Date.now());
-          console.log('💰 Metro/Shadow Prices Updated:', {
-            metro: metroPrice,
-            shadow: shadowPrice,
-            timestamp: new Date().toLocaleTimeString()
-          });
         }
       } catch (error) {
         console.warn('Failed to fetch Metro/Shadow prices');
