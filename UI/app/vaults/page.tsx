@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount, useReadContracts } from 'wagmi';
 import { Header } from '@/components/Header';
 import { VaultCard } from '@/components/VaultCard';
+import { SocialLinks } from '@/components/SocialLinks';
 import { formatUSD } from '@/lib/utils';
 import { useVaultData } from '@/hooks/useVaultData';
 import { usePrices } from '@/contexts/PriceContext';
@@ -47,6 +48,7 @@ const VAULT_CONFIGS = [
     vaultAddress: '0x727e6D1FF1f1836Bb7Cdfad30e89EdBbef878ab5',
     stratAddress: '0x64efeA2531f2b1A3569555084B88bb5714f5286c',
     clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
+    poolSymbol: 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' as const, // DeFi Llama pool ID
     name: 'S • USDC | Shadow',
     tier: 'Premium' as const,
     tokenX: 'WS',
@@ -56,6 +58,7 @@ const VAULT_CONFIGS = [
     vaultAddress: '0xB6a8129779E57845588Db74435A9aFAE509e1454',
     stratAddress: '0x58c244BE630753e8E668f18C0F2Cffe3ea0E8126',
     clpoolAddress: '0xb6d9b069f6b96a507243d501d1a23b3fccfc85d3',
+    poolSymbol: 'e50ce450-d2b8-45fe-b496-9ee1fb5673c2' as const, // DeFi Llama pool ID
     name: 'WS • WETH | Shadow',
     tier: 'Premium' as const,
     tokenX: 'WS',
@@ -65,6 +68,7 @@ const VAULT_CONFIGS = [
     vaultAddress: '0xd4083994F3ce977bcb5d3022041D489B162f5B85',
     stratAddress: '0x0806709c30A2999867160A1e4064f29ecCFA4605',
     clpoolAddress: '0x6fb30f3fcb864d49cdff15061ed5c6adfee40b40',
+    poolSymbol: 'a5ea7bec-91e2-4743-964d-35ea9034b0bd' as const, // DeFi Llama pool ID
     name: 'USDC • WETH | Shadow',
     tier: 'Premium' as const,
     tokenX: 'USDC',
@@ -76,16 +80,12 @@ export default function Home() {
   const { address, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
 
-  // Use actual wallet address for testing
-  const testAddress = '0x10dF75c83571b5dAA9638a84BB7490177A8E5816' as `0x${string}`;
-  const actualAddress = address || testAddress;
-
   const { prices } = usePrices();
   const sonicPrice = prices.sonic;
 
   // Get vault data for all vaults
-  const vault1Data = useVaultData(VAULT_CONFIGS[0], actualAddress);
-  const vault2Data = useVaultData(VAULT_CONFIGS[1], actualAddress);
+  const vault1Data = useVaultData(VAULT_CONFIGS[0], address);
+  const vault2Data = useVaultData(VAULT_CONFIGS[1], address);
 
   useEffect(() => {
     setMounted(true);
@@ -208,6 +208,7 @@ export default function Home() {
                   key={index}
                   vaultAddress={vault.vaultAddress}
                   stratAddress={vault.stratAddress}
+                  poolSymbol={(vault as any).poolSymbol}
                   name={vault.name}
                   tier={vault.tier}
                   tokenX={vault.tokenX}
@@ -229,6 +230,7 @@ export default function Home() {
                   key={index}
                   vaultAddress={vault.vaultAddress}
                   stratAddress={vault.stratAddress}
+                  poolSymbol={(vault as any).poolSymbol}
                   name={vault.name}
                   tier={vault.tier}
                   tokenX={vault.tokenX}
@@ -239,12 +241,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Footer Info */}
-        <div className="mt-12 text-center text-gray-500 text-sm">
-          <p>
-            Smart contracts are audited and secure. Always do your own research before investing.
-          </p>
-        </div>
+        {/* Social Links & Footer */}
+        <SocialLinks />
       </main>
       </div>
     </div>

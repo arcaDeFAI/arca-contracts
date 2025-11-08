@@ -152,23 +152,6 @@ export default function PositionVisualizationCard({
   const shadowLowerPrice = isWETHVault ? (shadowRangeData ? tickToPriceWETH(shadowRangeData[0], isWSWETHVault ? 18 : 6, 18) : null) : (shadowRangeData ? tickToPrice(shadowRangeData[0]) : null);
   const shadowUpperPrice = isWETHVault ? (shadowRangeData ? tickToPriceWETH(shadowRangeData[1], isWSWETHVault ? 18 : 6, 18) : null) : (shadowRangeData ? tickToPrice(shadowRangeData[1]) : null);
 
-  // Debug Shadow vault data loading
-  if (isShadow) {
-    console.log('🔍 SHADOW POSITION DEBUG:', {
-      clpoolAddress,
-      stratAddress,
-      slot0Data,
-      slot0Error: slot0Error?.message,
-      slot0Loading,
-      rangeDataShadow,
-      rangeError: rangeError?.message,
-      rangeLoading,
-      shadowActiveTick,
-      shadowRangeData,
-      activeId: shadowActiveTick !== null ? BigInt(shadowActiveTick) : null
-    });
-  }
-  
   // Use appropriate active ID/tick based on vault type - for Shadow, tick IS the activeID (int24, can be negative)
   const activeId = isMetropolis ? activeIdReal : (shadowActiveTick !== null ? BigInt(shadowActiveTick) : null);
   const rangeData = isMetropolis ? rangeDataMetro : shadowRangeData;

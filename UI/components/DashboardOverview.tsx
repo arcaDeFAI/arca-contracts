@@ -14,6 +14,7 @@ import { CONTRACTS } from '@/lib/contracts'
 import { getTokenDecimals } from '@/lib/tokenHelpers'
 import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
+import { APYTooltip } from './APYTooltip'
 
 interface VaultConfig {
   vaultAddress: string
@@ -118,6 +119,16 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     return allAPYs.length > 0 
       ? allAPYs.reduce((sum, apy) => sum + apy, 0) / allAPYs.length 
       : 0
+  }, [vaultMetrics])
+
+  const avg30dAPY = useMemo(() => {
+    const all30dAPYs = vaultMetrics
+      .map(metrics => metrics.apy30dMean)
+      .filter((apy): apy is number => apy !== null && apy > 0)
+    
+    return all30dAPYs.length > 0 
+      ? all30dAPYs.reduce((sum, apy) => sum + apy, 0) / all30dAPYs.length 
+      : null
   }, [vaultMetrics])
 
   const calculatedRate = useMemo(() => {
@@ -432,10 +443,18 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5 relative">
           <button
             onClick={() => setShowRateDropdown(!showRateDropdown)}
-            className="w-full text-left"
+            className="w-full text-left group"
           >
             <div className="text-white text-lg font-semibold mb-2 flex items-center justify-between">
-              <span>{ratePeriod}</span>
+              <div className="flex items-center gap-2 relative">
+                <span>{ratePeriod}</span>
+                <APYTooltip />
+                {avg30dAPY !== null && (
+                  <div className="absolute left-0 bottom-full mb-2 px-3 py-2 bg-black border border-arca-green rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    30d Avg: {avg30dAPY.toFixed(2)}%
+                  </div>
+                )}
+              </div>
               <span className="text-xs">▼</span>
             </div>
             <div className="text-arca-green text-xl font-bold">

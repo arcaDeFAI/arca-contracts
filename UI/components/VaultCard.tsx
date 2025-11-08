@@ -14,25 +14,22 @@ import { TokenPairLogos } from './TokenPairLogos';
 interface VaultCardProps {
   vaultAddress: string;
   stratAddress: string;
+  poolSymbol?: string;
   name: string;
   tier: 'Active' | 'Premium' | 'Elite';
   tokenX?: string;
   tokenY?: string;
 }
 
-export function VaultCard({ vaultAddress, stratAddress, name, tier, tokenX = 'S', tokenY = 'USDC' }: VaultCardProps) {
+export function VaultCard({ vaultAddress, stratAddress, poolSymbol, name, tier, tokenX = 'S', tokenY = 'USDC' }: VaultCardProps) {
   const { address, isConnected } = useAccount();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Use actual wallet address for testing
-  const testAddress = '0x10dF75c83571b5dAA9638a84BB7490177A8E5816' as `0x${string}`;
-  const actualAddress = address || testAddress;
-
   // Use unified metrics hook - eliminates duplication
-  const vaultConfig = { vaultAddress, stratAddress, name, tier, tokenX, tokenY };
-  const metrics = useVaultMetrics(vaultConfig, actualAddress);
+  const vaultConfig = { vaultAddress, stratAddress, poolSymbol, name, tier, tokenX, tokenY };
+  const metrics = useVaultMetrics(vaultConfig, address);
 
   const {
     userShares,
@@ -42,6 +39,7 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, tokenX = 'S'
     depositedValueUSD,
     vaultTVL,
     apy,
+    apy30dMean,
     aprLoading,
     pendingRewards,
     isLoading,
@@ -52,10 +50,10 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, tokenX = 'S'
   } = metrics;
 
   // Fetch token balances for deposit/withdraw
-  const sonicBalance = useTokenBalance(CONTRACTS.SONIC, isShadowVault ? undefined : actualAddress);
-  const wsBalance = useTokenBalance(CONTRACTS.WS, isShadowVault ? actualAddress : undefined);
-  const usdcBalance = useTokenBalance(CONTRACTS.USDC, actualAddress);
-  const wethBalance = useTokenBalance(CONTRACTS.WETH, actualAddress);
+  const sonicBalance = useTokenBalance(CONTRACTS.SONIC, isShadowVault ? undefined : address);
+  const wsBalance = useTokenBalance(CONTRACTS.WS, isShadowVault ? address : undefined);
+  const usdcBalance = useTokenBalance(CONTRACTS.USDC, address);
+  const wethBalance = useTokenBalance(CONTRACTS.WETH, address);
 
   // Calculate deposited amounts for display
   const depositedS = balances ? balances[0] : 0n;
@@ -139,9 +137,16 @@ export function VaultCard({ vaultAddress, stratAddress, name, tier, tokenX = 'S'
               </div>
             </div>
 
-            {/* APY Display */}
+            {/* APR Display */}
             <div className="bg-black/50 rounded-lg p-2.5 border border-gray-800/60">
-              <div className="text-gray-400 text-xs uppercase tracking-wider mb-0.5 text-center">APY</div>
+              <div className="text-gray-400 text-xs uppercase tracking-wider mb-0.5 text-center group relative">
+                APR
+                {apy30dMean !== null && (
+                  <div className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 px-3 py-2 bg-black border border-arca-green rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    30d Avg: {formatPercentage(apy30dMean)}
+                  </div>
+                )}
+              </div>
               <div className="text-center">
                 <div className="text-arca-green text-lg font-semibold">
                   {aprLoading || isLoading ? '...' : formatPercentage(apy)}
