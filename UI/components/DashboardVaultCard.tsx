@@ -7,6 +7,8 @@ import { formatUSD, formatPercentage } from '@/lib/utils';
 import { CONTRACTS } from '@/lib/contracts';
 import { type UserRewardStructOutput } from '@/lib/typechain';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
+import { getTokenLogo, getTokenDecimals } from '@/lib/tokenHelpers';
+import { usePrices } from '@/contexts/PriceContext';
 import PositionVisualizationCard from './PositionVisualizationCard';
 
 interface DashboardVaultCardProps {
@@ -14,9 +16,12 @@ interface DashboardVaultCardProps {
   stratAddress: string;
   lbBookAddress?: string;
   clpoolAddress?: string;
+  rewardsAddress?: string;
   name: string;
   tier: 'Active' | 'Premium' | 'Elite';
   userAddress?: string;
+  tokenX?: string;
+  tokenY?: string;
 }
 
 export function DashboardVaultCard({ 
@@ -24,17 +29,21 @@ export function DashboardVaultCard({
   stratAddress,
   lbBookAddress,
   clpoolAddress,
+  rewardsAddress,
   name, 
   tier, 
-  userAddress 
+  userAddress,
+  tokenX = 'S',
+  tokenY = 'USDC'
 }: DashboardVaultCardProps) {
-  const config = { vaultAddress, stratAddress, name, tier };
+  const config = { vaultAddress, stratAddress, rewardsAddress, name, tier, tokenX, tokenY };
   
   // Use the connected wallet address
   const actualAddress = userAddress;
 
   // Use unified metrics hook
   const metrics = useVaultMetrics(config, actualAddress);
+  const { prices } = usePrices();
 
   const {
     userShares,
@@ -48,10 +57,9 @@ export function DashboardVaultCard({
     queuedWithdrawal,
     claimableWithdrawal,
     handleClaimRewards,
-    isClaimingRewards,
     handleRedeemWithdrawal,
+    isClaimingRewards,
     isRedeemingWithdrawal,
-    prices,
     sonicPrice,
     isShadowVault,
   } = metrics;
@@ -64,17 +72,25 @@ export function DashboardVaultCard({
     
     const shareRatio = Number(userShares) / Number(totalSupply);
     
-    // Token 0 (S or WS)
-    const token0Amount = Number(formatUnits(balances[0], 18)) * shareRatio;
+    // Token 0 - use dynamic decimals
+    const token0Decimals = getTokenDecimals(tokenX);
+    const token0Amount = Number(formatUnits(balances[0], token0Decimals)) * shareRatio;
     const token0Value = token0Amount * (sonicPrice || 0);
     
-    // Token 1 (USDC)
-    const token1Amount = Number(formatUnits(balances[1], 6)) * shareRatio;
-    const token1Value = token1Amount; // USDC is 1:1 with USD
+    // Token 1 - use dynamic decimals and price
+    const token1Decimals = getTokenDecimals(tokenY);
+    const token1Amount = Number(formatUnits(balances[1], token1Decimals)) * shareRatio;
+    
+    // Get token1 price (USDC = 1, WETH = eth price)
+    let token1Price = 1; // Default for USDC
+    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
+      token1Price = prices?.weth || 0;
+    }
+    const token1Value = token1Amount * token1Price;
     
     return {
-      token0: { name: isShadowVault ? 'WS' : 'S', amount: token0Amount, usdValue: token0Value },
-      token1: { name: 'USDC', amount: token1Amount, usdValue: token1Value }
+      token0: { name: tokenX, amount: token0Amount, usdValue: token0Value },
+      token1: { name: tokenY, amount: token1Amount, usdValue: token1Value }
     };
   })();
 
@@ -110,12 +126,29 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
     ? pendingRewards.filter((reward: UserRewardStructOutput) => reward.pendingRewards > 0n)
     : [];
 
-  // Don't render if user has no wallet connected or no activity
+  // Don't render if user has no wallet connected
   if (!actualAddress) {
     return null;
   }
   
-  // Show card only if user has shares, pending rewards, or withdrawals
+  // CRITICAL FIX: Wait for withdrawal data to load before hiding card
+  // This prevents hiding cards with queued withdrawals when data hasn't loaded yet
+  const isWithdrawalDataLoading = currentRound === undefined;
+  
+  // If user has no shares but withdrawal data is still loading, keep card visible
+  // This ensures users with queued withdrawals can always see their cards
+  if (!hasShares && !hasPendingRewards && isWithdrawalDataLoading) {
+    // Show loading state while withdrawal data loads
+    return (
+      <div className="bg-black rounded-lg border border-arca-green/20 p-4">
+        <div className="text-gray-400 text-sm text-center animate-pulse">
+          Loading withdrawal data...
+        </div>
+      </div>
+    );
+  }
+  
+  // Only hide card after confirming no activity (shares, rewards, or withdrawals)
   if (!hasShares && !hasPendingRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal) {
     return null;
   }
@@ -140,6 +173,8 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
         name={name}
         tier={tier}
         userAddress={actualAddress}
+        tokenX={tokenX}
+        tokenY={tokenY}
       />
 
       {/* Dashboard Card */}
@@ -162,8 +197,8 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
           <div className="mt-2 pt-2 border-t border-gray-700/30">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-400">Share %:</span>
-              <span className="text-arca-green font-semibold">
-                {sharePercentage?.toFixed(4) || '0.0000'}%
+              <span className="text-white font-semibold text-sm">
+                {sharePercentage?.toFixed(2) || '0.0000'}%
               </span>
             </div>
           </div>
@@ -171,20 +206,25 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
           {/* Deposited Amounts */}
           {depositedAmounts && (
             <div className="mt-2 pt-2 border-t border-gray-700/30">
-              <div className="text-gray-400 text-sm mb-2">Deposited:</div>
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-gray-400 text-sm">Deposited:</div>
+                <div className="text-arca-green font-bold text-base">
+                  ${(depositedAmounts.token0.usdValue + depositedAmounts.token1.usdValue).toFixed(2)}
+                </div>
+              </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <img 
-                      src="/SonicLogoRound.png" 
-                      alt={depositedAmounts.token0.name} 
+                      src={getTokenLogo(tokenX)} 
+                      alt={tokenX} 
                       className="w-4 h-4 rounded-full"
                     />
-                    <span className="text-gray-400 text-sm">{depositedAmounts.token0.name}:</span>
+                    <span className="text-gray-400 text-sm">{tokenX}:</span>
                   </div>
                   <div className="text-right">
                     <div className="text-white font-semibold text-sm">
-                      {depositedAmounts.token0.amount.toFixed(4)}
+                      {depositedAmounts.token0.amount.toFixed(2)}
                     </div>
                     <div className="text-gray-400 text-xs">
                       ${depositedAmounts.token0.usdValue.toFixed(2)}
@@ -194,15 +234,15 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <img 
-                      src="/USDCLogo.png" 
-                      alt="USDC" 
+                      src={getTokenLogo(tokenY)} 
+                      alt={tokenY} 
                       className="w-4 h-4 rounded-full"
                     />
-                    <span className="text-gray-400 text-sm">{depositedAmounts.token1.name}:</span>
+                    <span className="text-gray-400 text-sm">{tokenY}:</span>
                   </div>
                   <div className="text-right">
                     <div className="text-white font-semibold text-sm">
-                      {depositedAmounts.token1.amount.toFixed(4)}
+                      {depositedAmounts.token1.amount.toFixed(2)}
                     </div>
                     <div className="text-gray-400 text-xs">
                       ${depositedAmounts.token1.usdValue.toFixed(2)}
@@ -276,7 +316,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
             <div className="flex justify-between items-center mb-2 text-sm">
               <span className="text-gray-400">Queued Withdrawal:</span>
               <span className="text-yellow-400 font-semibold">
-                {queuedWithdrawal ? (Number(queuedWithdrawal) / 1e10).toFixed(2) : '0.00'} shares
+                {queuedWithdrawal ? (Number(queuedWithdrawal) / 1e12).toFixed(2) : '0.00'} shares
               </span>
             </div>
             
@@ -314,7 +354,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal:</span>
               <span className="text-arca-green font-semibold">
-                {claimableWithdrawal ? (Number(claimableWithdrawal) / 1e10).toFixed(2) : '0.00'} shares
+                {claimableWithdrawal ? (Number(claimableWithdrawal) / 1e12).toFixed(2) : '0.00'} shares
               </span>
             </div>
             <div className="text-sm text-gray-400 mb-3">

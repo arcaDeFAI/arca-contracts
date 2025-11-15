@@ -10,6 +10,23 @@ const CLAIM_REWARDS_ABI = parseAbi([
 
 const STORAGE_KEY_PREFIX = 'shadow_claims_';
 
+// Utility function to clear all Shadow APY cache data
+export function clearShadowAPYCache() {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log(`🧹 Cleared ${keysToRemove.length} Shadow APY cache entries`);
+  } catch (error) {
+    console.warn('Failed to clear Shadow APY cache:', error);
+  }
+}
+
 interface ClaimEvent {
   period: bigint;
   positionHash: string;
@@ -20,10 +37,22 @@ interface ClaimEvent {
   timestamp: number;
 }
 
+interface CachedData {
+  events: Array<{
+    period: string;
+    positionHash: string;
+    receiver: string;
+    reward: string;
+    amount: string;
+    blockNumber: string;
+    timestamp: number;
+  }>;
+  firstEventTimestamp: number | null;
+  lastFetch: number;
+}
+
 /**
- * Calculates Shadow vault APY based on ClaimRewards events
- * Uses continuous accumulation: stores ALL historical events and calculates
- * average daily rewards over the entire period, then extrapolates to annual
+ * Calculates Shadow vault APY from accumulated historical rewards
  */
 export function useShadowAPY(
   stratAddress: string,
@@ -38,9 +67,13 @@ export function useShadowAPY(
   const publicClient = usePublicClient();
 
   useEffect(() => {
-    if (!publicClient || !stratAddress || !shadowRewardsAddress || !shadowTokenAddress || !vaultTVL || !shadowPrice) {
-      setApy(0);
+    if (!publicClient || !stratAddress || !shadowRewardsAddress || !shadowTokenAddress) {
       setIsLoading(false);
+      return;
+    }
+    
+    if (!vaultTVL || !shadowPrice) {
+      setIsLoading(true);
       return;
     }
 
@@ -52,128 +85,83 @@ export function useShadowAPY(
         setIsLoading(true);
 
         const now = Date.now();
-        const oneYearAgo = now - (365 * 24 * 60 * 60 * 1000);
 
-        // Load ALL cached events (up to 1 year)
-        let cachedEvents: ClaimEvent[] = [];
-        let firstEventTimestamp: number | null = null;
-        try {
-          const cached = localStorage.getItem(storageKey);
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            firstEventTimestamp = parsed.firstEventTimestamp || null;
-            cachedEvents = parsed.events
-              .filter((e: any) => e.timestamp >= oneYearAgo) // Keep up to 1 year
-              .map((e: any) => ({
-                period: BigInt(e.period),
-                positionHash: e.positionHash,
-                receiver: e.receiver,
-                reward: e.reward,
-                amount: BigInt(e.amount),
-                blockNumber: BigInt(e.blockNumber),
-                timestamp: e.timestamp,
-              }));
+        let cachedData: CachedData = {
+          events: [],
+          firstEventTimestamp: null,
+          lastFetch: 0,
+        };
+        
+        const cached = localStorage.getItem(storageKey);
+        if (cached) {
+          try {
+            cachedData = JSON.parse(cached);
+          } catch (err) {
+            console.warn('Failed to parse cache:', err);
           }
-        } catch (err) {
-          console.warn('Failed to load cached Shadow claims:', err);
         }
 
         const currentBlock = await publicClient.getBlockNumber();
-        
-        let fromBlock: bigint;
-        if (cachedEvents.length > 0) {
-          fromBlock = cachedEvents[cachedEvents.length - 1].blockNumber + 1n;
-        } else {
-          const blocksPerDay = 86400n;
-          fromBlock = currentBlock > blocksPerDay ? currentBlock - blocksPerDay : 0n;
-        }
+        const blocksPerDay = 86400n;
+        const blocksPerMonth = blocksPerDay * 30n; // Fetch 30 days of history instead of 7
+        const fromBlock = currentBlock > blocksPerMonth ? currentBlock - blocksPerMonth : 0n;
 
-        // Fetch ClaimRewards events where receiver is the strat address
-        let newEvents: ClaimEvent[] = [];
-        if (fromBlock <= currentBlock) {
-          const logs = await publicClient.getLogs({
-            address: shadowRewardsAddress as `0x${string}`,
-            event: CLAIM_REWARDS_ABI[0],
-            fromBlock,
-            toBlock: currentBlock,
-          });
-
-          // Filter for events where receiver is the strat address and reward is Shadow token
-          const filteredLogs = logs.filter(log => 
-            (log.args.receiver as string).toLowerCase() === stratAddress.toLowerCase() &&
-            (log.args.reward as string).toLowerCase() === shadowTokenAddress.toLowerCase()
-          );
-
-          newEvents = await Promise.all(
-            filteredLogs.map(async (log) => {
-              const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
-              return {
-                period: log.args.period as bigint,
-                positionHash: log.args._positionHash as string,
-                receiver: log.args.receiver as string,
-                reward: log.args.reward as string,
-                amount: log.args.amount as bigint,
-                blockNumber: log.blockNumber,
-                timestamp: Number(block.timestamp) * 1000,
-              };
-            })
-          );
-        }
+        const logs = await publicClient.getLogs({
+          address: shadowRewardsAddress as `0x${string}`,
+          event: CLAIM_REWARDS_ABI[0],
+          fromBlock,
+          toBlock: currentBlock,
+        });
 
         if (!isMounted) return;
 
-        const allEvents = [...cachedEvents, ...newEvents];
-        
-        // Track first event timestamp
-        if (!firstEventTimestamp && allEvents.length > 0) {
-          firstEventTimestamp = Math.min(...allEvents.map(e => e.timestamp));
-        }
-
-        // Save ALL events to localStorage (up to 1 year)
-        try {
-          localStorage.setItem(storageKey, JSON.stringify({
-            events: allEvents.map(e => ({
-              period: e.period.toString(),
-              positionHash: e.positionHash,
-              receiver: e.receiver,
-              reward: e.reward,
-              amount: e.amount.toString(),
-              blockNumber: e.blockNumber.toString(),
-              timestamp: e.timestamp,
-            })),
-            firstEventTimestamp,
-            lastFetch: now,
-          }));
-        } catch (err) {
-          console.warn('Failed to cache Shadow claims:', err);
-        }
-
-        // Calculate total Shadow claimed across ALL accumulated events
-        const totalShadowToken = allEvents.reduce(
-          (sum, event) => sum + Number(event.amount) / (10 ** 18),
-          0
+        const filteredLogs = logs.filter(log => 
+          (log.args.receiver as string).toLowerCase() === stratAddress.toLowerCase() &&
+          (log.args.reward as string).toLowerCase() === shadowTokenAddress.toLowerCase()
         );
 
-        const totalShadowUSD = totalShadowToken * shadowPrice;
+        const newEvents = await Promise.all(
+          filteredLogs.map(async (log) => {
+            const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
+            return {
+              period: (log.args.period as bigint).toString(),
+              positionHash: log.args._positionHash as string,
+              receiver: log.args.receiver as string,
+              reward: log.args.reward as string,
+              amount: (log.args.amount as bigint).toString(),
+              blockNumber: log.blockNumber.toString(),
+              timestamp: Number(block.timestamp) * 1000,
+            };
+          })
+        );
 
-        // Calculate time range from first event to now
-        const oldestEventTime = allEvents.length > 0 
+        const existingBlockNumbers = new Set(cachedData.events.map(e => e.blockNumber));
+        const uniqueNewEvents = newEvents.filter(e => !existingBlockNumbers.has(e.blockNumber));
+        const allEvents = [...cachedData.events, ...uniqueNewEvents];
+
+        const firstTimestamp = allEvents.length > 0
           ? Math.min(...allEvents.map(e => e.timestamp))
-          : now;
-        
-        const timeRangeDays = (now - oldestEventTime) / (1000 * 60 * 60 * 24);
+          : null;
 
-        // Calculate average daily rewards from accumulated data
-        let averageDailyRewardsUSD = 0;
-        if (timeRangeDays > 0) {
-          averageDailyRewardsUSD = totalShadowUSD / timeRangeDays;
-        }
+        localStorage.setItem(storageKey, JSON.stringify({
+          events: allEvents,
+          firstEventTimestamp: firstTimestamp,
+          lastFetch: now,
+        }));
 
-        // Calculate APY based on average daily rewards
-        if (averageDailyRewardsUSD > 0 && vaultTVL > 0) {
-          const dailyReturn = averageDailyRewardsUSD / vaultTVL;
-          const annualReturn = dailyReturn * 365;
-          const calculatedAPY = annualReturn * 100;
+        if (allEvents.length > 0 && vaultTVL > 0 && shadowPrice > 0) {
+          const totalTokens = allEvents.reduce((sum, event) => {
+            return sum + (Number(event.amount) / (10 ** 18));
+          }, 0);
+          const totalRewardUSD = totalTokens * shadowPrice;
+
+          const oldestTimestamp = Math.min(...allEvents.map(e => e.timestamp));
+          const timeSpan = now - oldestTimestamp;
+          const daysSpan = Math.max(timeSpan / (1000 * 60 * 60 * 24), 0.01);
+
+          const dailyRewardRate = totalRewardUSD / daysSpan;
+          const annualRewardUSD = dailyRewardRate * 365;
+          const calculatedAPY = (annualRewardUSD / vaultTVL) * 100;
 
           if (isMounted) {
             setApy(Math.max(0, calculatedAPY));

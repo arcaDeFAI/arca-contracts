@@ -1,6 +1,6 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 
@@ -65,6 +65,17 @@ function ConnectWallet() {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const { address, isConnected } = useAccount();
+  const [mounted, setMounted] = useState(false);
+
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Show nothing during SSR to prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
   // If wallet is not connected, show connect wallet screen
   if (!isConnected || !address) {
