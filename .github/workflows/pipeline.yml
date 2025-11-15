@@ -1,0 +1,75 @@
+name: Validation Pipeline
+
+on:
+  pull_request:
+    branches:
+          - main
+          - dev
+          - production
+          - 'releases/**'
+          - $default-branch
+  push:
+    branches:
+          - main
+          - dev
+          - production
+          - 'releases/**'
+          - $default-branch
+
+jobs:
+  # --- A: Contracts / Backend ---
+  contracts-and-ui:
+    name: Contract-lint-compile-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Checkout the git submodule (joe-v2 lib)
+      - name: Checkout submodules
+        run: git submodule update --init --recursive
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install deps (root)
+        run: npm ci
+
+      # Solidity
+      - name: Lint Solidity
+        run: npm run lint:sol
+
+      # Hardhat compile & tests
+      - name: Compile Contracts
+        run: npm run compile
+
+      - name: Run Hardhat Tests
+        run: npm run test:sol
+
+      # UI part starts here
+      - name: Install deps (UI)
+        working-directory: UI/
+        run: npm ci
+
+      # UI has linting errors!! This is not ideal, but it's not the immediate priority
+      # TODO: Fix linting errors and uncomment the linting step from the pipeline
+      # # Linting & formatting UI
+      # - name: Lint UI
+      #   working-directory: UI/
+      #   run: npm run lint
+
+      - name: Build UI
+        working-directory: UI/
+        run: npm run build
+
+      # TODO: The UI might get reworked heavily, ignore UI tests for now
+      #
+      # - name: Run UI Tests
+      #   working-directory: UI/
+      #   run: npm run test

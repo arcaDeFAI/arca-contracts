@@ -1,0 +1,29 @@
+{
+  "network": "sonic-mainnet",
+  "timestamp": "2025-08-24T16:40:50.198Z",
+  "vault": {
+    "proxy": "0xD0A83B5eA878193cCe3E084E39748a2417160c29",
+    "lbPair": "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC",
+    "tokenX": {
+      "address": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+      "symbol": "wS"
+    },
+    "tokenY": {
+      "address": "0x29219dd400f2Bf60E5a23d13Be72B486D4038894",
+      "symbol": "USDC"
+    },
+    "oracleHelper": "0x45987394DFAdA3854d376F285A9b1833A89757A8"
+  },
+  "strategy": {
+    "proxy": "0x56965Cd708DCF9db05176bAc4dEe04a0d5768B91"
+  },
+  "oracles": {
+    "dataFeedX": "0x2Ebc0a631fbc792BDCf1ECE5d75E5500a651227D",
+    "dataFeedY": "0x28eacad747409145827e852704130B7Ad56070A1",
+    "priceLens": "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B"
+  },
+  "dependencies": {
+    "vaultFactory": "0x9585e1731608DeEddc2ca870Ee43D58fD19e3bE8",
+    "priceLens": "0x8bF65Ab156b83bB6169866e5D2A14AeC0Ff87c7B"
+  }
+}

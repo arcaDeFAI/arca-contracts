@@ -1,0 +1,9 @@
+{
+  "network": "sonic-mainnet",
+  "timestamp": "2025-09-14T20:20:12.778Z",
+  "deployer": "0x6daF0A44419201a00d8364bbE57e6Ca7B4dC0A98",
+  "shadowVaultImplementation": "0x006Ab6C88c3669785bfBa34d384F5D7D1E8917B5",
+  "factoryUpdated": true,
+  "migrationRequired": true,
+  "affectedVaults": 3
+}
