@@ -1,0 +1,21 @@
+{
+  "name": "Arca DeFi - Vault Management",
+  "short_name": "Arca",
+  "description": "Deposit and earn yield on your crypto assets across our strategic vaults",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#00ff88",
+  "icons": [
+    {
+      "src": "/arca-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/arca-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

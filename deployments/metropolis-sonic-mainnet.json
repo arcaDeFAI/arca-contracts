@@ -1,0 +1,41 @@
+{
+  "network": "sonic-mainnet",
+  "timestamp": "2025-11-05T04:05:37.647Z",
+  "deployer": "0x646F78A4b96aCfb028CEbAC77fc40Bd00b1173bC",
+  "addresses": {
+    "vaultFactory": "0x85b3C119201E4A2FbE827a778749816ABa340083",
+    "vaultFactoryImpl": "0xe2BbCA4CeDd28a3d50C0dA63eE2303431d2C24AA",
+    "proxyAdmin": "0xaf4c8eAe23013237Fae3daE62f2aFC472b19B734",
+    "oracleVaultImpl": null,
+    "oracleRewardVaultImpl": "0xfbe51D8D5dc3E7e1001fa81124567Bc8DE11b350",
+    "oracleRewardShadowVaultImpl": "0xB813555f2BD90E9917702A0c06178524115bC859",
+    "strategyImpl": "0x99113A5B907B05102C61Ec906E6f708C63e1af38",
+    "shadowStrategyImpl": "0xC48abe84A037143eC26620676dcC67b6Da23f7b2",
+    "shadowNPM": "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406",
+    "shadowVoter": "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D",
+    "priceLens": "0x19Aca8B621413830c4D3c7500B54e87225808a6F",
+    "wnative": "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38",
+    "oracleHelperFactory": "0x1c4be246e60A602d09A2e5074ff99942353Cf750",
+    "shadowPriceHelper": "0x888Ba3Aea5fbf0b82102127E663f7Eb2C891D383",
+    "shadowPriceHelperWrapper": "0xa8D204f63885bdD531c1b5Bde9d8e540e76F2E53"
+  },
+  "configuration": {
+    "metropolisMaxRange": 51,
+    "shadowMaxRange": 887272,
+    "shadowConfig": {
+      "npm": "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406",
+      "voter": "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D",
+      "whitelist": [
+        "0x76F4aeb24dD5681dCDC23ef9778a95C6aB76a995",
+        "0x324963c267C354c7660Ce8CA3F5f167E05649970",
+        "0x97325a7854c604261002126267dAEd219E34b06b",
+        "0x64B93267B73CE6bb431b5799ED8674f9160CE214",
+        "0x6fb30f3fcb864d49cdff15061ed5c6adfee40b40",
+        "0xb6d9b069f6b96a507243d501d1a23b3fccfc85d3",
+        "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC",
+        "0x51910f84cc4df86f721f5a1d3bdbd1058af62297"
+      ],
+      "priceLens": "0x19Aca8B621413830c4D3c7500B54e87225808a6F"
+    }
+  }
+}

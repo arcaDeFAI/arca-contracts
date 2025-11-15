@@ -8,5 +8,9 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "baseUrl": ".",
+    "paths": {
+      "@arca/joe-v2/*": ["contracts-metropolis/lib/joe-v2/src/*"],
+      "@arca/joe-v2-periphery/*": ["contracts-metropolis/lib/joe-v2-periphery/src/*"]
+    }
   }
 }
