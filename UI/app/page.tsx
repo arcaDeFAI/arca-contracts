@@ -209,7 +209,7 @@ export default function Home() {
                   vaultAddress={vault.vaultAddress}
                   stratAddress={vault.stratAddress}
                   name={vault.name}
-                  // tier={vault.tier}
+                  tier={vault.tier}
                   tokenX={vault.tokenX}
                   tokenY={vault.tokenY}
                 />
@@ -230,7 +230,7 @@ export default function Home() {
                   vaultAddress={vault.vaultAddress}
                   stratAddress={vault.stratAddress}
                   name={vault.name}
-                  // tier={vault.tier}
+                  tier={vault.tier}
                   tokenX={vault.tokenX}
                   tokenY={vault.tokenY}
                 />

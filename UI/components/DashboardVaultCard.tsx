@@ -72,10 +72,18 @@ export function DashboardVaultCard({
     
     const shareRatio = Number(userShares) / Number(totalSupply);
     
-    // Token 0 - use dynamic decimals
+    // Token 0 - use dynamic decimals and price
     const token0Decimals = getTokenDecimals(tokenX);
     const token0Amount = Number(formatUnits(balances[0], token0Decimals)) * shareRatio;
-    const token0Value = token0Amount * (sonicPrice || 0);
+    
+    // Get token0 price (USDC = 1, S = sonic price, WETH = eth price)
+    let token0Price = sonicPrice || 0; // Default for S
+    if (tokenX.toUpperCase() === 'USDC') {
+      token0Price = 1;
+    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
+      token0Price = prices?.weth || 0;
+    }
+    const token0Value = token0Amount * token0Price;
     
     // Token 1 - use dynamic decimals and price
     const token1Decimals = getTokenDecimals(tokenY);

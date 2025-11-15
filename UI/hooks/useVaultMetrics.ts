@@ -36,7 +36,14 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     const token0Decimals = getTokenDecimals(tokenX);
     const token1Decimals = getTokenDecimals(tokenY);
     
-    const token0Value = (Number(vaultData.balances[0]) / (10 ** token0Decimals)) * sonicPrice;
+    // Get token0 price (USDC = 1, S = sonic price, WETH = eth price)
+    let token0Price = sonicPrice; // Default for S
+    if (tokenX.toUpperCase() === 'USDC') {
+      token0Price = 1;
+    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
+      token0Price = prices?.weth || 0;
+    }
+    const token0Value = (Number(vaultData.balances[0]) / (10 ** token0Decimals)) * token0Price;
     
     // Get token1 price (USDC = 1, WETH = eth price)
     let token1Price = 1;
