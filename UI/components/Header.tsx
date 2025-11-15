@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ArcaLogo } from './ArcaLogo';
@@ -9,6 +10,37 @@ import { formatUSD } from '@/lib/utils';
 export function Header() {
   const pathname = usePathname();
   const { prices, isLoading } = usePrices();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+  
+  // Close mobile menu when clicking outside or pressing escape
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (isMobileMenuOpen && !target.closest('header')) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (isMobileMenuOpen && event.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [isMobileMenuOpen]);
   
   return (
     <header className="bg-arca-dark border-b border-arca-light-gray">
@@ -16,8 +48,29 @@ export function Header() {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4 sm:gap-8">
             <div className="flex items-center gap-2 sm:gap-3">
-              <ArcaLogo size={32} className="sm:w-10 sm:h-10" />
-              <div className="text-2xl sm:text-3xl font-bold text-arca-green">ARCA</div>
+              <button 
+                onClick={toggleMobileMenu}
+                className="md:hidden flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity"
+              >
+                <ArcaLogo size={32} className="sm:w-10 sm:h-10" />
+                <div className="text-2xl sm:text-3xl font-bold text-arca-green">ARCA</div>
+                <svg 
+                  className="w-5 h-5 text-arca-green ml-1" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  {isMobileMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+              <div className="hidden md:flex items-center gap-2 sm:gap-3">
+                <ArcaLogo size={32} className="sm:w-10 sm:h-10" />
+                <div className="text-2xl sm:text-3xl font-bold text-arca-green">ARCA</div>
+              </div>
             </div>
             
             <nav className="hidden md:flex items-center gap-6">
@@ -59,6 +112,13 @@ export function Header() {
               <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-arca-green/10 rounded-lg border border-arca-green/20">
                 <span className="text-base text-gray-300">S :</span>
                 <span className="text-xl font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
+              </div>
+            )}
+            {/* Sonic Price - Mobile */}
+            {!isLoading && prices && (
+              <div className="md:hidden flex items-center gap-1 px-2 py-1 bg-arca-green/10 rounded-lg border border-arca-green/20">
+                <span className="text-xs text-gray-300">S:</span>
+                <span className="text-sm font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             <ConnectButton.Custom>
@@ -167,6 +227,48 @@ export function Header() {
             </ConnectButton.Custom>
           </div>
         </div>
+        
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden bg-arca-dark border-t border-arca-light-gray">
+            <div className="px-3 py-4 space-y-3">
+              <a 
+                href="/" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`block text-lg italic transition-colors ${
+                  pathname === '/' 
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2' 
+                    : 'text-white hover:text-arca-green'
+                }`}
+              >
+                Vaults
+              </a>
+              <a 
+                href="/dashboard" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`block text-lg italic transition-colors ${
+                  pathname.startsWith('/dashboard') 
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2' 
+                    : 'text-white hover:text-arca-green'
+                }`}
+              >
+                Dashboard
+              </a>
+              <a 
+                href="/staking" 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`block text-lg italic transition-colors ${
+                  pathname.startsWith('/staking') 
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2' 
+                    : 'text-white hover:text-arca-green'
+                }`}
+              >
+                Staking
+              </a>
+              
+                          </div>
+          </div>
+        )}
       </div>
     </header>
   );
