@@ -62,7 +62,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
 
   const shadowAPY = useShadowAPY(
     stratAddress,
-    CONTRACTS.SHADOW_REWARDS,
+    (config as any).rewardsAddress || CONTRACTS.SHADOW_REWARDS, // Use vault-specific rewards address if available
     CONTRACTS.SHADOW,
     vaultTVL,
     prices?.shadow || 0

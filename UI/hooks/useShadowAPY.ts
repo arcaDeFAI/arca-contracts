@@ -10,6 +10,23 @@ const CLAIM_REWARDS_ABI = parseAbi([
 
 const STORAGE_KEY_PREFIX = 'shadow_claims_';
 
+// Utility function to clear all Shadow APY cache data
+export function clearShadowAPYCache() {
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(STORAGE_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+    console.log(`🧹 Cleared ${keysToRemove.length} Shadow APY cache entries`);
+  } catch (error) {
+    console.warn('Failed to clear Shadow APY cache:', error);
+  }
+}
+
 interface ClaimEvent {
   period: bigint;
   positionHash: string;
@@ -86,8 +103,8 @@ export function useShadowAPY(
 
         const currentBlock = await publicClient.getBlockNumber();
         const blocksPerDay = 86400n;
-        const blocksPerWeek = blocksPerDay * 7n;
-        const fromBlock = currentBlock > blocksPerWeek ? currentBlock - blocksPerWeek : 0n;
+        const blocksPerMonth = blocksPerDay * 30n; // Fetch 30 days of history instead of 7
+        const fromBlock = currentBlock > blocksPerMonth ? currentBlock - blocksPerMonth : 0n;
 
         const logs = await publicClient.getLogs({
           address: shadowRewardsAddress as `0x${string}`,

@@ -43,7 +43,7 @@ export function WithdrawModal({
 
   const handleMaxWithdraw = () => {
     // Use the raw shares converted to string for max precision
-    const maxAmount = formatUnits(userShares, 10); // 10^-10 decimals for shares
+    const maxAmount = formatUnits(userShares, 12); // 10^-12 decimals for shares
     setWithdrawAmount(maxAmount);
   };
 

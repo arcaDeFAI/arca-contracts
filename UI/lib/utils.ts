@@ -73,7 +73,7 @@ export function formatPercentage(value: number): string {
 
 // Format shares with 10^-10 decimals
 export function formatShares(shares: bigint): string {
-  const formatted = formatUnits(shares, 10) // 10^-10 decimals
+  const formatted = formatUnits(shares, 12) // 10^-12 decimals
   const num = parseFloat(formatted)
   
   return num.toLocaleString(undefined, {
@@ -84,7 +84,7 @@ export function formatShares(shares: bigint): string {
 
 // Parse shares from user input (10^-10 decimals)
 export function parseShares(amount: string): bigint {
-  return parseUnits(amount, 10) // 10^-10 decimals
+  return parseUnits(amount, 12) // 10^-12 decimals
 }
 
 // Truncate address for display

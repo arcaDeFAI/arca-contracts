@@ -16,6 +16,7 @@ interface DashboardVaultCardProps {
   stratAddress: string;
   lbBookAddress?: string;
   clpoolAddress?: string;
+  rewardsAddress?: string;
   name: string;
   tier: 'Active' | 'Premium' | 'Elite';
   userAddress?: string;
@@ -28,13 +29,14 @@ export function DashboardVaultCard({
   stratAddress,
   lbBookAddress,
   clpoolAddress,
+  rewardsAddress,
   name, 
   tier, 
   userAddress,
   tokenX = 'S',
   tokenY = 'USDC'
 }: DashboardVaultCardProps) {
-  const config = { vaultAddress, stratAddress, name, tier, tokenX, tokenY };
+  const config = { vaultAddress, stratAddress, rewardsAddress, name, tier, tokenX, tokenY };
   
   // Use the connected wallet address
   const actualAddress = userAddress;
@@ -195,8 +197,8 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
           <div className="mt-2 pt-2 border-t border-gray-700/30">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-400">Share %:</span>
-              <span className="text-arca-green font-semibold">
-                {sharePercentage?.toFixed(4) || '0.0000'}%
+              <span className="text-white font-semibold text-sm">
+                {sharePercentage?.toFixed(2) || '0.0000'}%
               </span>
             </div>
           </div>
@@ -222,7 +224,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
                   </div>
                   <div className="text-right">
                     <div className="text-white font-semibold text-sm">
-                      {depositedAmounts.token0.amount.toFixed(4)}
+                      {depositedAmounts.token0.amount.toFixed(2)}
                     </div>
                     <div className="text-gray-400 text-xs">
                       ${depositedAmounts.token0.usdValue.toFixed(2)}
@@ -240,7 +242,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
                   </div>
                   <div className="text-right">
                     <div className="text-white font-semibold text-sm">
-                      {depositedAmounts.token1.amount.toFixed(4)}
+                      {depositedAmounts.token1.amount.toFixed(2)}
                     </div>
                     <div className="text-gray-400 text-xs">
                       ${depositedAmounts.token1.usdValue.toFixed(2)}
@@ -314,7 +316,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
             <div className="flex justify-between items-center mb-2 text-sm">
               <span className="text-gray-400">Queued Withdrawal:</span>
               <span className="text-yellow-400 font-semibold">
-                {queuedWithdrawal ? (Number(queuedWithdrawal) / 1e10).toFixed(2) : '0.00'} shares
+                {queuedWithdrawal ? (Number(queuedWithdrawal) / 1e12).toFixed(2) : '0.00'} shares
               </span>
             </div>
             
@@ -352,7 +354,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal:</span>
               <span className="text-arca-green font-semibold">
-                {claimableWithdrawal ? (Number(claimableWithdrawal) / 1e10).toFixed(2) : '0.00'} shares
+                {claimableWithdrawal ? (Number(claimableWithdrawal) / 1e12).toFixed(2) : '0.00'} shares
               </span>
             </div>
             <div className="text-sm text-gray-400 mb-3">

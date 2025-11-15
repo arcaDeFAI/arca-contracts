@@ -14,8 +14,6 @@ import { CONTRACTS } from '@/lib/contracts'
 import { getTokenDecimals } from '@/lib/tokenHelpers'
 import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
-import { BalanceHistoryCard } from './BalanceHistoryCard'
-import { RewardsHistoryCard } from './RewardsHistoryCard'
 
 interface VaultConfig {
   vaultAddress: string
@@ -110,22 +108,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     return dates.length > 0 ? Math.min(...dates) : null
   }, [totalEarnedAllTimeData])
 
-  const extrapolatedReward = useMemo(() => {
-    const validRewards = latestRewardData.filter(data => data.latestRewardUSD > 0)
-    const avgLatestRewardUSD = validRewards.length > 0
-      ? validRewards.reduce((sum, data) => sum + data.latestRewardUSD, 0) / validRewards.length
-      : 0
-    
-    const periodMultiplier = {
-      hourly: 1,             // Base: one rebalance per hour
-      daily: 24,             // 24 hours of rebalances
-      weekly: 24 * 7,        // 168 hours of rebalances
-      monthly: 24 * 30,      // 720 hours of rebalances
-      yearly: 24 * 365,      // 8760 hours of rebalances
-    }
 
-    return avgLatestRewardUSD * periodMultiplier[rewardPeriod]
-  }, [latestRewardData, rewardPeriod])
 
   const avgAPY = useMemo(() => {
     const allAPYs = vaultMetrics
@@ -314,7 +297,24 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       shadowRewards
     }
   }, [vaultMetrics, vaultConfigs, totalEarnedAllTimeData])
+  const extrapolatedReward = useMemo(() => {
+    // Calculate rewards based on APR and actual deposited amounts
+    const totalDeposited = aggregatedData.totalBalanceUSD
+    
+    if (totalDeposited === 0 || avgAPY === 0) return 0
+    
+    // Convert APR (monthly rate) to the selected period
+    const periodMultiplier = {
+      hourly: 1 / (365 * 24),        // APR / hours in year
+      daily: 1 / 365,                 // APR / days in year
+      weekly: 1 / 52,                 // APR / weeks in year
+      monthly: 1 / 12,                // APR / months in year
+      yearly: 1,                      // APR as is
+    }
 
+    // Calculate: (Deposited Amount × APR × Period Factor)
+    return totalDeposited * (avgAPY / 100) * periodMultiplier[rewardPeriod]
+  }, [aggregatedData.totalBalanceUSD, avgAPY, rewardPeriod])
   // Track balance history and calculate real 24h changes
   const { calculate24hChange } = useBalanceHistory(
     userAddress,
@@ -336,7 +336,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
   const totalDailyHarvestedUSD = dailyHarvestedData.reduce((sum, data) => sum + data.dailyHarvestedUSD, 0)
 
-  const [advancedMode, setAdvancedMode] = useState(false)
+  
 
   const activeLPs = useMemo(() => {
     return vaultMetrics.filter(metrics => 
@@ -491,23 +491,27 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             <div className="border-t border-gray-800/50 pt-4 mt-2"></div>
 
             {/* Metropolis Rewards */}
-            <div className="mb-4">
+            <div>
               <div className="flex items-center gap-2 mb-3">
                 <img src="/MetropolisLogo.png" alt="Metropolis" className="w-5 h-5" />
                 <span className="text-white font-semibold">Metropolis Rewards</span>
               </div>
-              {aggregatedData.metroRewards.map((reward, idx) => (
-                <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-800/30 last:border-0">
+              {aggregatedData.totalMetroRewardsUSD > 0 ? (
+                <div className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-2">
                     <img src="/MetropolisLogo.png" alt="Metro" className="w-4 h-4" />
                     <span className="text-gray-300 text-sm">Metro</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-white font-semibold">{reward.amount.toFixed(4)}</div>
-                    <div className="text-gray-400 text-xs">${reward.usdValue.toFixed(2)}</div>
+                    <div className="text-white font-semibold">
+                      {aggregatedData.metroRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                    </div>
+                    <div className="text-gray-400 text-xs">${aggregatedData.totalMetroRewardsUSD.toFixed(2)}</div>
                   </div>
                 </div>
-              ))}
+              ) : (
+                <div className="text-gray-500 text-sm py-2">No Metropolis rewards</div>
+              )}
             </div>
 
             {/* Shadow Rewards */}
@@ -516,18 +520,22 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
                 <img src="/SHadowLogo.jpg" alt="Shadow" className="w-5 h-5 rounded-full" />
                 <span className="text-white font-semibold">Shadow Rewards</span>
               </div>
-              {aggregatedData.shadowRewards.map((reward, idx) => (
-                <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-800/30 last:border-0">
+              {aggregatedData.totalShadowRewardsUSD > 0 ? (
+                <div className="flex items-center justify-between py-2">
                   <div className="flex items-center gap-2">
                     <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full" />
                     <span className="text-gray-300 text-sm">Shadow</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-white font-semibold">{reward.amount.toFixed(4)}</div>
-                    <div className="text-gray-400 text-xs">${reward.usdValue.toFixed(2)}</div>
+                    <div className="text-white font-semibold">
+                      {aggregatedData.shadowRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                    </div>
+                    <div className="text-gray-400 text-xs">${aggregatedData.totalShadowRewardsUSD.toFixed(2)}</div>
                   </div>
                 </div>
-              ))}
+              ) : (
+                <div className="text-gray-500 text-sm py-2">No Shadow rewards</div>
+              )}
             </div>
         </div>
 
@@ -541,33 +549,8 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         </div>
       </div>
 
-      {/* Advanced Mode Toggle */}
-      <div className="flex justify-center">
-        <button
-          onClick={() => setAdvancedMode(!advancedMode)}
-          className="text-gray-400 hover:text-arca-green transition-colors text-sm flex items-center gap-2"
-        >
-          {advancedMode ? '▼' : '▶'} Advanced Mode
-        </button>
-      </div>
 
-      {/* Advanced Mode: Charts */}
-      {advancedMode && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 pt-5 border-t border-gray-800/50">
-          <BalanceHistoryCard
-            currentBalance={aggregatedData.totalBalanceUSD}
-            change24h={balanceChange24h}
-            changePercentage={balanceChangePercentage}
-          />
-          <RewardsHistoryCard
-            totalRewardsUSD={aggregatedData.totalHarvestedUSD}
-            metroRewardsUSD={aggregatedData.totalHarvestedMetroUSD}
-            shadowRewardsUSD={aggregatedData.totalHarvestedShadowUSD}
-            change24h={rewardsChange24h}
-            changePercentage={rewardsChangePercentage}
-          />
-        </div>
-      )}
+      
     </div>
   )
 }

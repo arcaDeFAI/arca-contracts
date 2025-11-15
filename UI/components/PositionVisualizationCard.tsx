@@ -41,10 +41,12 @@ export default function PositionVisualizationCard({
     }
   };
 
-  // Determine vault type
+  // Determine vault type and token decimals
   const isMetropolis = name.includes('Metropolis');
   const isShadow = name.includes('Shadow');
   const isWETHVault = name.includes('WETH');
+  const isWSWETHVault = name.includes('WS') && isWETHVault; // WS-WETH pair
+  const isUSDCWETHVault = name.includes('USDC') && isWETHVault; // USDC-WETH pair
   
   // Get active ID from LB Book contract (for Metropolis)
   const { data: activeIdReal } = useReadContract({
@@ -133,15 +135,22 @@ export default function PositionVisualizationCard({
   const lowerPrice = isWETHVault ? (prices?.weth || null) : (lowerPriceRaw ? Number(lowerPriceRaw) / Math.pow(2, 128) * 1e12 : null);
   const upperPrice = isWETHVault ? (prices?.weth || null) : (upperPriceRaw ? Number(upperPriceRaw) / Math.pow(2, 128) * 1e12 : null);
 
-  // Convert Shadow ticks to prices
+  // Convert Shadow ticks to prices using Uniswap V3/Ramses V3 formula for WETH vaults
   const tickToPrice = (tick: number): number => {
     const exponentResult = Math.pow(1.0001, tick);
     return exponentResult * 1e12;
   };
 
-  const shadowActivePrice = isWETHVault ? (prices?.weth || null) : (shadowActiveTick !== null ? tickToPrice(shadowActiveTick) : null);
-  const shadowLowerPrice = isWETHVault ? (prices?.weth || null) : (shadowRangeData ? tickToPrice(shadowRangeData[0]) : null);
-  const shadowUpperPrice = isWETHVault ? (prices?.weth || null) : (shadowRangeData ? tickToPrice(shadowRangeData[1]) : null);
+  // Uniswap V3/Ramses V3 formula for WETH vaults
+  const tickToPriceWETH = (tick: number, decimalsX: number = 18, decimalsY: number = 18): number => {
+    const basePrice = Math.pow(1.0001, tick);
+    const decimalAdjustment = Math.pow(10, decimalsY - decimalsX - (isWSWETHVault ? 0 : 24)); // Only reduce for USDC-WETH by 24 total
+    return basePrice * decimalAdjustment;
+  };
+
+  const shadowActivePrice = isWETHVault ? (shadowActiveTick !== null ? tickToPriceWETH(shadowActiveTick, isWSWETHVault ? 18 : 6, 18) : null) : (shadowActiveTick !== null ? tickToPrice(shadowActiveTick) : null);
+  const shadowLowerPrice = isWETHVault ? (shadowRangeData ? tickToPriceWETH(shadowRangeData[0], isWSWETHVault ? 18 : 6, 18) : null) : (shadowRangeData ? tickToPrice(shadowRangeData[0]) : null);
+  const shadowUpperPrice = isWETHVault ? (shadowRangeData ? tickToPriceWETH(shadowRangeData[1], isWSWETHVault ? 18 : 6, 18) : null) : (shadowRangeData ? tickToPrice(shadowRangeData[1]) : null);
 
   // Debug Shadow vault data loading
   if (isShadow) {
@@ -242,7 +251,7 @@ export default function PositionVisualizationCard({
           <div className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded p-2 min-w-0">
             <div className="text-xs text-blue-400 mb-1 truncate">Active Price</div>
             <div className="text-base font-bold text-white truncate">
-              {shadowActivePrice ? `$${shadowActivePrice.toFixed(4)}` : '...'}
+              {shadowActivePrice ? (isWETHVault ? `${shadowActivePrice.toFixed(8)} WETH` : `$${shadowActivePrice.toFixed(4)}`) : '...'}
             </div>
           </div>
           
@@ -288,7 +297,7 @@ export default function PositionVisualizationCard({
               />
               {/* Current price indicator - positioned relative to range */}
               <div 
-                className="absolute top-0 w-0.5 h-full bg-red-400"
+                className="absolute top-0 w-1 h-full bg-red-400"
                 style={{
                   left: `${((activeIdNum - lowRangeNum) / (upperRangeNum - lowRangeNum)) * 100}%`,
                   boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)'
@@ -301,14 +310,14 @@ export default function PositionVisualizationCard({
               <div className="flex flex-col items-start">
                 <span className="text-gray-500 mb-0.5">Lower Price</span>
                 <span className="text-white font-semibold">
-                  {shadowLowerPrice ? `$${shadowLowerPrice.toFixed(4)}` : '...'}
+                  {shadowLowerPrice ? (isWETHVault ? `${shadowLowerPrice.toFixed(8)} WETH` : `$${shadowLowerPrice.toFixed(4)}`) : '...'}
                 </span>
               </div>
               
               <div className="flex flex-col items-end">
                 <span className="text-gray-500 mb-0.5">Upper Price</span>
                 <span className="text-white font-semibold">
-                  {shadowUpperPrice ? `$${shadowUpperPrice.toFixed(4)}` : '...'}
+                  {shadowUpperPrice ? (isWETHVault ? `${shadowUpperPrice.toFixed(8)} WETH` : `$${shadowUpperPrice.toFixed(4)}`) : '...'}
                 </span>
               </div>
             </div>
@@ -400,7 +409,7 @@ export default function PositionVisualizationCard({
             />
             {/* Current price indicator - positioned relative to range */}
             <div 
-              className="absolute top-0 w-0.5 h-full bg-red-400"
+              className="absolute top-0 w-1 h-full bg-red-400"
               style={{
                 left: `${((activeIdNum - lowRangeNum) / (upperRangeNum - lowRangeNum)) * 100}%`,
                 boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)'
