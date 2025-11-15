@@ -11,6 +11,8 @@ interface WithdrawModalProps {
   vaultAddress: string;
   vaultName: string;
   userShares: bigint;
+  tokenX?: string;
+  tokenY?: string;
   onClose: () => void;
 }
 
@@ -18,6 +20,8 @@ export function WithdrawModal({
   vaultAddress, 
   vaultName, 
   userShares,
+  tokenX = 'S',
+  tokenY = 'USDC',
   onClose 
 }: WithdrawModalProps) {
   const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -39,7 +43,7 @@ export function WithdrawModal({
 
   const handleMaxWithdraw = () => {
     // Use the raw shares converted to string for max precision
-    const maxAmount = formatUnits(userShares, 10); // 10^-10 decimals for shares
+    const maxAmount = formatUnits(userShares, 12); // 10^-12 decimals for shares
     setWithdrawAmount(maxAmount);
   };
 
@@ -132,15 +136,15 @@ export function WithdrawModal({
             <div className="bg-arca-dark rounded-lg p-4 space-y-2">
               <div className="text-sm text-gray-400 mb-2">You will receive approximately:</div>
               <div className="flex justify-between">
-                <span className="text-gray-400">S:</span>
+                <span className="text-gray-400">{tokenX}:</span>
                 <span className="text-white font-semibold">
-                  {formatTokenAmount(estimatedS, 'SONIC')}
+                  {formatTokenAmount(estimatedS, tokenX.toUpperCase() as any)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">USDC:</span>
+                <span className="text-gray-400">{tokenY}:</span>
                 <span className="text-white font-semibold">
-                  {formatTokenAmount(estimatedUsdc, 'USDC')}
+                  {formatTokenAmount(estimatedUsdc, tokenY.toUpperCase() as any)}
                 </span>
               </div>
             </div>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 
-// Storage keys from APY hooks
 const METRO_STORAGE_KEY_PREFIX = 'metro_transfers_';
 const SHADOW_STORAGE_KEY_PREFIX = 'shadow_claims_';
 
@@ -25,9 +24,8 @@ interface ClaimEvent {
 }
 
 /**
- * Calculates daily rewards from 8am ET to 8am ET
- * Reads from the existing localStorage caches populated by APY hooks
- * No blockchain calls - just reads cached data
+ * Calculates daily harvested rewards (8am ET to 8am ET)
+ * Returns latest reward if it occurred today
  */
 export function useDailyHarvestedRewards(
   stratAddress: string,
@@ -37,19 +35,20 @@ export function useDailyHarvestedRewards(
   const [dailyHarvestedUSD, setDailyHarvestedUSD] = useState(0);
 
   useEffect(() => {
-    if (!stratAddress || !tokenPrice) {
-      setDailyHarvestedUSD(0);
+    if (!stratAddress) {
+      return;
+    }
+    
+    if (!tokenPrice) {
       return;
     }
 
     const calculateDaily = () => {
       try {
-        // Calculate today's 8am Eastern Time
         const now = Date.now();
         const today8amET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
         today8amET.setHours(8, 0, 0, 0);
         
-        // If current time is before 8am ET, use yesterday's 8am ET
         const nowET = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
         if (nowET < today8amET) {
           today8amET.setDate(today8amET.getDate() - 1);
@@ -57,7 +56,6 @@ export function useDailyHarvestedRewards(
         
         const startTime8amET = today8amET.getTime();
 
-        // Read from the appropriate cache (Metro or Shadow)
         const storageKeyPrefix = isShadowVault ? SHADOW_STORAGE_KEY_PREFIX : METRO_STORAGE_KEY_PREFIX;
         const storageKey = `${storageKeyPrefix}${stratAddress.toLowerCase()}`;
         
@@ -70,28 +68,32 @@ export function useDailyHarvestedRewards(
         const parsed = JSON.parse(cached);
         const events = parsed.events || [];
 
-        // Filter events since 8am ET today
-        const todayEvents = events.filter((e: any) => 
-          e.timestamp >= startTime8amET
-        );
+        if (events.length === 0) {
+          setDailyHarvestedUSD(0);
+          return;
+        }
 
-        // Calculate total tokens - different field names for Metro vs Shadow
+        const todayEvents = events.filter((event: any) => event.timestamp >= startTime8amET);
+
+        if (todayEvents.length === 0) {
+          setDailyHarvestedUSD(0);
+          return;
+        }
+
         let totalTokens = 0;
         if (isShadowVault) {
-          // Shadow uses ClaimRewards events with 'amount' field
-          totalTokens = todayEvents.reduce((sum: number, event: ClaimEvent) => {
+          totalTokens = todayEvents.reduce((sum: number, event: any) => {
             return sum + (Number(event.amount) / (10 ** 18));
           }, 0);
         } else {
-          // Metro uses Transfer events with 'value' field
-          totalTokens = todayEvents.reduce((sum: number, event: TransferEvent) => {
+          totalTokens = todayEvents.reduce((sum: number, event: any) => {
             return sum + (Number(event.value) / (10 ** 18));
           }, 0);
         }
 
-        const totalUSD = totalTokens * tokenPrice;
+        const rewardUSD = totalTokens * tokenPrice;
 
-        setDailyHarvestedUSD(totalUSD);
+        setDailyHarvestedUSD(rewardUSD);
       } catch (err) {
         console.warn('Failed to calculate daily rewards:', err);
         setDailyHarvestedUSD(0);
@@ -100,7 +102,6 @@ export function useDailyHarvestedRewards(
 
     calculateDaily();
 
-    // Refresh every minute to stay current
     const interval = setInterval(calculateDaily, 60 * 1000);
 
     return () => {
