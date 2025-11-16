@@ -31,6 +31,17 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   const { prices, isLoading: pricesLoading } = useTokenPrices();
   const sonicPrice = prices?.sonic || 0.17;
 
+  // Calculate active vs reserved liquidity
+  const activeLiquidity = vaultData.balances && vaultData.idleBalances ? {
+    token0: vaultData.balances[0] - vaultData.idleBalances[0],
+    token1: vaultData.balances[1] - vaultData.idleBalances[1],
+  } : { token0: 0n, token1: 0n };
+
+  const reservedLiquidity = vaultData.idleBalances ? {
+    token0: vaultData.idleBalances[0],
+    token1: vaultData.idleBalances[1],
+  } : { token0: 0n, token1: 0n };
+
   // Calculate vault TVL (total value locked) - vault's total balances with dynamic decimals
   const vaultTVL = vaultData.balances ? (() => {
     const token0Decimals = getTokenDecimals(tokenX);
@@ -84,6 +95,11 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     totalSupply: vaultData.totalSupply,
     sharePercentage: vaultData.sharePercentage,
     balances: vaultData.balances,
+    idleBalances: vaultData.idleBalances,
+
+    // Liquidity breakdown
+    activeLiquidity,
+    reservedLiquidity,
 
     // Calculated values
     depositedValueUSD,

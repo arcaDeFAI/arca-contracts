@@ -43,6 +43,16 @@ export function useVaultData(config: VaultConfig, userAddress?: string) {
     },
   });
 
+  // Get strategy idle balances (tokens not in LP)
+  const { data: idleBalances } = useReadContract({
+    address: config.stratAddress as `0x${string}`,
+    abi: METRO_STRAT_ABI,
+    functionName: 'getIdleBalances',
+    query: {
+      enabled: !!config.stratAddress,
+    },
+  });
+
   // Calculate user's percentage share of vault
   const sharePercentage = userShares && totalSupply && totalSupply > 0n
     ? (Number(userShares) / Number(totalSupply)) * 100
@@ -74,6 +84,7 @@ export function useVaultData(config: VaultConfig, userAddress?: string) {
     totalSupply,
     sharePercentage,
     balances: balances as [bigint, bigint] | undefined,
+    idleBalances: idleBalances as [bigint, bigint] | undefined,
     isLoading: sharesLoading || totalSupplyLoading,
     isError: false,
     config,

@@ -9,6 +9,7 @@ import { type UserRewardStructOutput } from '@/lib/typechain';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { getTokenLogo, getTokenDecimals } from '@/lib/tokenHelpers';
 import { usePrices } from '@/contexts/PriceContext';
+import { useState } from 'react';
 import PositionVisualizationCard from './PositionVisualizationCard';
 
 interface DashboardVaultCardProps {
@@ -49,6 +50,7 @@ export function DashboardVaultCard({
     userShares,
     sharePercentage,
     balances,
+    idleBalances,
     totalSupply,
     apy,
     aprLoading,
@@ -62,6 +64,8 @@ export function DashboardVaultCard({
     isRedeemingWithdrawal,
     sonicPrice,
     isShadowVault,
+    activeLiquidity,
+    reservedLiquidity,
   } = metrics;
 
   // Calculate deposited amounts based on user's share percentage
@@ -99,6 +103,98 @@ export function DashboardVaultCard({
     return {
       token0: { name: tokenX, amount: token0Amount, usdValue: token0Value },
       token1: { name: tokenY, amount: token1Amount, usdValue: token1Value }
+    };
+  })();
+
+  const [showActiveBreakdown, setShowActiveBreakdown] = useState(false);
+  const [showReservedBreakdown, setShowReservedBreakdown] = useState(false);
+
+  // Calculate liquidity percentages
+  const liquidityPercentages = (() => {
+    if (!balances || !idleBalances) {
+      return { activePercentage: 0, reservedPercentage: 0 };
+    }
+    
+    const totalToken0 = Number(balances[0]);
+    const totalToken1 = Number(balances[1]);
+    const idleToken0 = Number(idleBalances[0]);
+    const idleToken1 = Number(idleBalances[1]);
+    
+    // Calculate percentages based on total value
+    const totalValue = totalToken0 + totalToken1;
+    const idleValue = idleToken0 + idleToken1;
+    
+    if (totalValue === 0) {
+      return { activePercentage: 0, reservedPercentage: 0 };
+    }
+    
+    const reservedPercentage = (idleValue / totalValue) * 100;
+    const activePercentage = 100 - reservedPercentage;
+    
+    return { activePercentage, reservedPercentage };
+  })();
+
+  // Calculate user's share of active and reserved liquidity
+  const userLiquidityBreakdown = (() => {
+    if (!balances || !idleBalances || !userShares || !totalSupply || totalSupply === 0n) {
+      return {
+        activeLiquidity: { token0: 0, token1: 0, usdValue: 0, token0Percentage: 0, token1Percentage: 0 },
+        reservedLiquidity: { token0: 0, token1: 0, usdValue: 0, token0Percentage: 0, token1Percentage: 0 },
+        totalLiquidity: { token0: 0, token1: 0 }
+      };
+    }
+    
+    const shareRatio = Number(userShares) / Number(totalSupply);
+    
+    // Get token prices
+    let token0Price = sonicPrice || 0; // Default for S
+    if (tokenX.toUpperCase() === 'USDC') {
+      token0Price = 1;
+    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
+      token0Price = prices?.weth || 0;
+    }
+    
+    let token1Price = 1; // Default for USDC
+    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
+      token1Price = prices?.weth || 0;
+    }
+    
+    // User's total token amounts
+    const totalToken0 = Number(formatUnits(balances[0], getTokenDecimals(tokenX))) * shareRatio;
+    const totalToken1 = Number(formatUnits(balances[1], getTokenDecimals(tokenY))) * shareRatio;
+    
+    // User's share of active liquidity (total - idle)
+    const userActiveToken0 = Number(formatUnits(activeLiquidity.token0, getTokenDecimals(tokenX))) * shareRatio;
+    const userActiveToken1 = Number(formatUnits(activeLiquidity.token1, getTokenDecimals(tokenY))) * shareRatio;
+    const activeUSDValue = (userActiveToken0 * token0Price) + (userActiveToken1 * token1Price);
+    
+    // User's share of reserved liquidity (idle)
+    const userReservedToken0 = Number(formatUnits(reservedLiquidity.token0, getTokenDecimals(tokenX))) * shareRatio;
+    const userReservedToken1 = Number(formatUnits(reservedLiquidity.token1, getTokenDecimals(tokenY))) * shareRatio;
+    const reservedUSDValue = (userReservedToken0 * token0Price) + (userReservedToken1 * token1Price);
+    
+    // Calculate percentages for each token relative to total
+    const activeToken0Percentage = totalToken0 > 0 ? (userActiveToken0 / totalToken0) * 100 : 0;
+    const activeToken1Percentage = totalToken1 > 0 ? (userActiveToken1 / totalToken1) * 100 : 0;
+    const reservedToken0Percentage = totalToken0 > 0 ? (userReservedToken0 / totalToken0) * 100 : 0;
+    const reservedToken1Percentage = totalToken1 > 0 ? (userReservedToken1 / totalToken1) * 100 : 0;
+    
+    return {
+      activeLiquidity: { 
+        token0: userActiveToken0, 
+        token1: userActiveToken1, 
+        usdValue: activeUSDValue,
+        token0Percentage: activeToken0Percentage,
+        token1Percentage: activeToken1Percentage
+      },
+      reservedLiquidity: { 
+        token0: userReservedToken0, 
+        token1: userReservedToken1, 
+        usdValue: reservedUSDValue,
+        token0Percentage: reservedToken0Percentage,
+        token1Percentage: reservedToken1Percentage
+      },
+      totalLiquidity: { token0: totalToken0, token1: totalToken1 }
     };
   })();
 
@@ -214,13 +310,16 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
           {/* Deposited Amounts */}
           {depositedAmounts && (
             <div className="mt-2 pt-2 border-t border-gray-700/30">
+              {/* Total Balance - Keep in Green */}
               <div className="flex justify-between items-center mb-2">
-                <div className="text-gray-400 text-sm">Deposited:</div>
+                <div className="text-gray-400 text-sm">Balance:</div>
                 <div className="text-arca-green font-bold text-base">
                   ${(depositedAmounts.token0.usdValue + depositedAmounts.token1.usdValue).toFixed(2)}
                 </div>
               </div>
-              <div className="space-y-2">
+              
+              {/* Token Breakdown */}
+              <div className="space-y-2 mb-3">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <img 
@@ -258,10 +357,138 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
                   </div>
                 </div>
               </div>
+
+              {/* Liquidity Breakdown Dropdowns */}
+              {balances && idleBalances && (
+                <>
+                  <div className="border-t border-gray-700/20 pt-2 mt-2">
+                    <span className="text-gray-400 text-sm font-medium">Liquidity Breakdown</span>
+                  </div>
+
+                  {/* Active Liquidity Dropdown */}
+                  <div className="pt-1 mt-1">
+                    <div className="flex justify-between items-center">
+                      <button
+                        onClick={() => setShowActiveBreakdown(!showActiveBreakdown)}
+                        className="flex justify-between items-center text-left hover:bg-black/20 p-1 rounded-lg transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400 text-sm font-medium">Active</span>
+                          <span className="text-white text-xs">({liquidityPercentages.activePercentage.toFixed(1)}%)</span>
+                          <div className="text-gray-400 text-xs">
+                            {showActiveBreakdown ? '▼' : '▶'}
+                          </div>
+                        </div>
+                      </button>
+                      {showActiveBreakdown && (
+                        <div className="text-white font-semibold text-xs">
+                          ${userLiquidityBreakdown.activeLiquidity.usdValue.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+
+                    {showActiveBreakdown && (
+                      <div className="px-2 pb-2 mt-1">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={getTokenLogo(tokenX)} 
+                              alt={tokenX} 
+                              className="w-4 h-4 rounded-full"
+                            />
+                            <div>
+                              <div className="text-white font-medium text-xs">
+                                {userLiquidityBreakdown.activeLiquidity.token0.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.activeLiquidity.token0Percentage.toFixed(1)}%)</span>
+                              </div>
+                              <div className="text-gray-400 text-xs">
+                                ${(userLiquidityBreakdown.activeLiquidity.token0 * (tokenX.toUpperCase() === 'USDC' ? 1 : (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={getTokenLogo(tokenY)} 
+                              alt={tokenY} 
+                              className="w-4 h-4 rounded-full"
+                            />
+                            <div>
+                              <div className="text-white font-medium text-xs">
+                                {userLiquidityBreakdown.activeLiquidity.token1.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.activeLiquidity.token1Percentage.toFixed(1)}%)</span>
+                              </div>
+                              <div className="text-gray-400 text-xs">
+                                ${(userLiquidityBreakdown.activeLiquidity.token1 * (tokenY.toUpperCase() === 'USDC' ? 1 : (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reserved Liquidity Dropdown */}
+                  <div className="pt-1">
+                    <div className="flex justify-between items-center">
+                      <button
+                        onClick={() => setShowReservedBreakdown(!showReservedBreakdown)}
+                        className="flex justify-between items-center text-left hover:bg-black/20 p-1 rounded-lg transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-400 text-sm font-medium">Reserved</span>
+                          <span className="text-white text-xs">({liquidityPercentages.reservedPercentage.toFixed(1)}%)</span>
+                          <div className="text-gray-400 text-xs">
+                            {showReservedBreakdown ? '▼' : '▶'}
+                          </div>
+                        </div>
+                      </button>
+                      {showReservedBreakdown && (
+                        <div className="text-white font-semibold text-xs">
+                          ${userLiquidityBreakdown.reservedLiquidity.usdValue.toFixed(2)}
+                        </div>
+                      )}
+                    </div>
+
+                    {showReservedBreakdown && (
+                      <div className="px-2 pb-2 mt-1">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={getTokenLogo(tokenX)} 
+                              alt={tokenX} 
+                              className="w-4 h-4 rounded-full"
+                            />
+                            <div>
+                              <div className="text-white font-medium text-xs">
+                                {userLiquidityBreakdown.reservedLiquidity.token0.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.reservedLiquidity.token0Percentage.toFixed(1)}%)</span>
+                              </div>
+                              <div className="text-gray-400 text-xs">
+                                ${(userLiquidityBreakdown.reservedLiquidity.token0 * (tokenX.toUpperCase() === 'USDC' ? 1 : (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <img 
+                              src={getTokenLogo(tokenY)} 
+                              alt={tokenY} 
+                              className="w-4 h-4 rounded-full"
+                            />
+                            <div>
+                              <div className="text-white font-medium text-xs">
+                                {userLiquidityBreakdown.reservedLiquidity.token1.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.reservedLiquidity.token1Percentage.toFixed(1)}%)</span>
+                              </div>
+                              <div className="text-gray-400 text-xs">
+                                ${(userLiquidityBreakdown.reservedLiquidity.token1 * (tokenY.toUpperCase() === 'USDC' ? 1 : (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
-
 
         {/* Rewards Section - Shows only non-zero rewards (works for both Metro and Shadow) */}
         {hasPendingRewards && (
