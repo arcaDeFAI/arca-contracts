@@ -158,10 +158,18 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         const tokenX = config.tokenX || 'S'
         const tokenY = config.tokenY || 'USDC'
         
-        // Token 0 - use dynamic decimals
+        // Token 0 - use dynamic decimals and price
         const token0Decimals = getTokenDecimals(tokenX)
         const token0Amount = Number(formatUnits(metrics.balances[0], token0Decimals)) * shareRatio
-        const token0Value = token0Amount * (metrics.sonicPrice || 0)
+        
+        // Get token0 price (USDC = 1, S = sonic price, WETH = eth price)
+        let token0Price = metrics.sonicPrice || 0 // Default for S
+        if (tokenX.toUpperCase() === 'USDC') {
+          token0Price = 1
+        } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
+          token0Price = metrics.prices?.weth || 0
+        }
+        const token0Value = token0Amount * token0Price
         
         const existing0 = tokenAllocations.get(tokenX) || { amount: 0, usdValue: 0 }
         tokenAllocations.set(tokenX, {

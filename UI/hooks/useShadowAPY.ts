@@ -21,9 +21,8 @@ export function clearShadowAPYCache() {
       }
     }
     keysToRemove.forEach(key => localStorage.removeItem(key));
-    console.log(`🧹 Cleared ${keysToRemove.length} Shadow APY cache entries`);
   } catch (error) {
-    console.warn('Failed to clear Shadow APY cache:', error);
+    // Failed to clear Shadow APY cache
   }
 }
 
@@ -97,7 +96,7 @@ export function useShadowAPY(
           try {
             cachedData = JSON.parse(cached);
           } catch (err) {
-            console.warn('Failed to parse cache:', err);
+            // Cache parsing failed, using empty data
           }
         }
 
@@ -150,21 +149,35 @@ export function useShadowAPY(
         }));
 
         if (allEvents.length > 0 && vaultTVL > 0 && shadowPrice > 0) {
-          const totalTokens = allEvents.reduce((sum, event) => {
-            return sum + (Number(event.amount) / (10 ** 18));
-          }, 0);
-          const totalRewardUSD = totalTokens * shadowPrice;
+          // 🎯 NOUVELLE LOGIQUE: Prendre seulement les 3 derniers events
+          const last3Events = allEvents.slice(-2);
+          
+          if (last3Events.length >= 2) { // Besoin min de 2 events pour calculer intervalle
+            // Calculer récompenses des 3 derniers events seulement
+            const recentTokens = last3Events.reduce((sum, event) => {
+              return sum + (Number(event.amount) / (10 ** 18));
+            }, 0);
+            const recentRewardUSD = recentTokens * shadowPrice;
 
-          const oldestTimestamp = Math.min(...allEvents.map(e => e.timestamp));
-          const timeSpan = now - oldestTimestamp;
-          const daysSpan = Math.max(timeSpan / (1000 * 60 * 60 * 24), 0.01);
+            // Calculer intervalle de temps entre premier et dernier des 3 events
+            const oldestTimestamp = Math.min(...last3Events.map(e => e.timestamp));
+            const newestTimestamp = Math.max(...last3Events.map(e => e.timestamp));
+            const timeSpan = newestTimestamp - oldestTimestamp;
+            const daysSpan = Math.max(timeSpan / (1000 * 60 * 60 * 24), 0.01); // Min 0.01 jours
 
-          const dailyRewardRate = totalRewardUSD / daysSpan;
-          const annualRewardUSD = dailyRewardRate * 365;
-          const calculatedAPY = (annualRewardUSD / vaultTVL) * 100;
+            // APY basé sur les 3 derniers events
+            const dailyRewardRate = recentRewardUSD / daysSpan;
+            const annualRewardUSD = dailyRewardRate * 365;
+            const calculatedAPY = (annualRewardUSD / vaultTVL) * 100;
 
-          if (isMounted) {
-            setApy(Math.max(0, calculatedAPY));
+            if (isMounted) {
+              setApy(Math.max(0, calculatedAPY));
+            }
+          } else {
+            // Pas assez d'events pour calculer
+            if (isMounted) {
+              setApy(0);
+            }
           }
         } else {
           if (isMounted) {
@@ -172,7 +185,6 @@ export function useShadowAPY(
           }
         }
       } catch (err) {
-        console.warn('Shadow APY calculation failed:', err);
         if (isMounted) {
           setApy(0);
         }

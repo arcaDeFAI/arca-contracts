@@ -1,252 +1,138 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { useAccount, useReadContracts } from 'wagmi';
-import { Header } from '@/components/Header';
-import { VaultCard } from '@/components/VaultCard';
-import { formatUSD } from '@/lib/utils';
-import { useVaultData } from '@/hooks/useVaultData';
-import { usePrices } from '@/contexts/PriceContext';
-import { METRO_VAULT_ABI, METRO_STRAT_ABI } from '@/lib/typechain';
-
-// Vault configurations with real contract addresses
-const VAULT_CONFIGS = [
-  // Metropolis Vaults
-  {
-    vaultAddress: '0xF5708969da13879d7A6D2F21d0411BF9eEB045E9',
-    stratAddress: '0x20302bc08CcaAFB039916e4a06f0B3917506019a',
-    lbBookAddress: '0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC',
-    name: 'S • USDC | Metropolis',
-    tier: 'Premium' as const,
-    tokenX: 'S',
-    tokenY: 'USDC',
-  },
-  // TODO: Add Metropolis S/WETH vault when deployed
-  // {
-  //   vaultAddress: 'TBD',
-  //   stratAddress: 'TBD',
-  //   lbBookAddress: '0x9ede606c7168bb09ff73ebde7bfd6fcfabda9bc3',
-  //   name: 'S • WETH | Metropolis',
-  //   tier: 'Premium' as const,
-  //   tokenX: 'S',
-  //   tokenY: 'WETH',
-  // },
-  // TODO: Add Metropolis USDC/WETH vault when deployed
-  // {
-  //   vaultAddress: 'TBD',
-  //   stratAddress: 'TBD',
-  //   lbBookAddress: '0x51910f84cc4df86f721f5a1d3bdbd1058af62297',
-  //   name: 'USDC • WETH | Metropolis',
-  //   tier: 'Premium' as const,
-  //   tokenX: 'USDC',
-  //   tokenY: 'WETH',
-  // },
-
-  // Shadow Vaults
-  {
-    vaultAddress: '0x727e6D1FF1f1836Bb7Cdfad30e89EdBbef878ab5',
-    stratAddress: '0x64efeA2531f2b1A3569555084B88bb5714f5286c',
-    clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
-    name: 'S • USDC | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'WS',
-    tokenY: 'USDC',
-  },
-  {
-    vaultAddress: '0xB6a8129779E57845588Db74435A9aFAE509e1454',
-    stratAddress: '0x58c244BE630753e8E668f18C0F2Cffe3ea0E8126',
-    clpoolAddress: '0xb6d9b069f6b96a507243d501d1a23b3fccfc85d3',
-    name: 'WS • WETH | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'WS',
-    tokenY: 'WETH',
-  },
-  {
-    vaultAddress: '0xd4083994F3ce977bcb5d3022041D489B162f5B85',
-    stratAddress: '0x0806709c30A2999867160A1e4064f29ecCFA4605',
-    clpoolAddress: '0x6fb30f3fcb864d49cdff15061ed5c6adfee40b40',
-    name: 'USDC • WETH | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'USDC',
-    tokenY: 'WETH',
-  },
-];
+import { useState } from 'react'
+import Link from 'next/link'
+import { ArcaLogo } from '@/components/ArcaLogo'
 
 export default function Home() {
-  const { address, isConnected } = useAccount();
-  const [mounted, setMounted] = useState(false);
-
-  // Use actual wallet address for testing
-  const testAddress = '0x10dF75c83571b5dAA9638a84BB7490177A8E5816' as `0x${string}`;
-  const actualAddress = address || testAddress;
-
-  const { prices } = usePrices();
-  const sonicPrice = prices.sonic;
-
-  // Get vault data for all vaults
-  const vault1Data = useVaultData(VAULT_CONFIGS[0], actualAddress);
-  const vault2Data = useVaultData(VAULT_CONFIGS[1], actualAddress);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Prevent hydration mismatch
-  if (!mounted) {
-    return null;
-  }
-
-  // Calculate total TVL from all vaults
-  const totalTVL = (() => {
-    let total = 0;
-    
-    if (vault1Data.balances) {
-      total += Number(vault1Data.balances[1]) / (10 ** 6) + // USDC
-               (Number(vault1Data.balances[0]) / (10 ** 18)) * sonicPrice; // S * price
-    }
-    
-    if (vault2Data.balances) {
-      total += Number(vault2Data.balances[1]) / (10 ** 6) + // USDC
-               (Number(vault2Data.balances[0]) / (10 ** 18)) * sonicPrice; // S * price
-    }
-    
-    return total;
-  })();
-
-  // Calculate user's total deposited value across all vaults
-  const userTotalBalance = (() => {
-    let total = 0;
-    
-    // Get preview amounts for each vault if user has shares
-    const vaults = [vault1Data, vault2Data];
-    
-    vaults.forEach((vaultData) => {
-      if (vaultData.userShares && vaultData.userShares > 0n) {
-        // We'll need to add preview amounts calculation here
-        // For now, using a simplified calculation based on share percentage
-        if (vaultData.balances && vaultData.sharePercentage > 0) {
-          const userUSDC = (Number(vaultData.balances[1]) / (10 ** 6)) * (vaultData.sharePercentage / 100);
-          const userS = (Number(vaultData.balances[0]) / (10 ** 18)) * (vaultData.sharePercentage / 100) * sonicPrice;
-          total += userUSDC + userS;
-        }
-      }
-    });
-    
-    return total;
-  })();
+  const [understandsRisks, setUnderstandsRisks] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-arca-dark to-black" style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.03) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 100%)'}}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
-      <div className="relative z-10">
-      <Header />
+    <div className="min-h-screen bg-arca-dark text-white overflow-hidden">
+      {/* Background with green gradient */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-black via-arca-dark to-black">
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute top-0 left-1/4 w-96 h-96 bg-arca-green rounded-full filter blur-3xl"></div>
+            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-arca-green rounded-full filter blur-3xl"></div>
+          </div>
+        </div>
+      </div>
       
-      <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-6" style={{maxWidth: '100%'}}>
-        {/* Hero Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-3">
-            Yield Vault Strategies
+      {/* Navigation */}
+      <nav className="relative z-10 px-6 py-6 md:px-12 lg:px-16">
+        <div className="flex justify-between items-center">
+          {/* Logo */}
+          <div className="flex items-center gap-3">
+            <ArcaLogo size={40} className="w-10 h-10" />
+            <div className="text-3xl font-bold text-arca-green">ARCA</div>
+          </div>
+
+          {/* Mobile Menu Button - Removed since no navigation items */}
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <main className="relative z-20 flex flex-col items-center justify-center px-6 py-20 md:py-32 lg:py-40 min-h-[600px]">
+        <div className="text-center max-w-4xl mx-auto relative z-30">
+          {/* Main Title */}
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-to-r from-white to-arca-green bg-clip-text text-transparent">
+            DeFi, Reinvented
           </h1>
-          <p className="text-gray-400 text-base">
-            Deposit and earn yield on your crypto assets across our strategic vaults
+
+          {/* Subtitle */}
+          <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-2xl mx-auto">
+            AI-powered LP rebalancing strategies.
           </p>
-        </div>
 
-        {/* Stats Cards */}
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
-            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Total TVL</div>
-            <div className="text-xl font-bold text-arca-green whitespace-nowrap">
-              {vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(totalTVL)}
-            </div>
-          </div>
-          
-          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
-            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Your Total Balance</div>
-            <div className="text-xl font-bold text-white whitespace-nowrap">
-              {!mounted ? '--' : 
-               (!isConnected ? '--' : 
-                (vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(userTotalBalance))
-               )}
-            </div>
-          </div>
-          
-          <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
-            <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Active Vaults</div>
-            <div className="text-xl font-bold text-white whitespace-nowrap">
-              {VAULT_CONFIGS.length}
-            </div>
-          </div>
-        </div>
+          {/* CTA Button */}
+          <div className="flex flex-col justify-center items-center gap-6 relative z-50">
+            <Link
+              href={understandsRisks ? "/vaults" : "#"}
+              className={`px-8 py-4 font-semibold rounded-lg transition-all transform ${
+                understandsRisks 
+                  ? "bg-arca-green text-black hover:bg-arca-green/90 hover:scale-105 shadow-lg cursor-pointer" 
+                  : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
+              }`}
+              onClick={(e) => {
+                if (!understandsRisks) {
+                  e.preventDefault()
+                }
+              }}
+            >
+              Launch App
+            </Link>
+            
+            {/* Arca Disclaimer */}
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-orange-900/20 border border-orange-600/50 rounded-lg p-6 text-left">
+                <div className="flex items-center justify-center gap-2 mb-4">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
+                  <span className="text-orange-400 text-sm font-semibold">ALPHA VERSION</span>
+                </div>
+                
+                {/* Disclaimer Content */}
+                <div className="space-y-3 text-xs leading-relaxed">
+                  <p className="text-gray-300">
+                    <span className="text-orange-400 font-semibold">⚠️ Disclaimer:</span>
+                    The Arca DeFi platform is currently in alpha phase. This software is provided "as is" without any warranties. By using this platform, you acknowledge and agree that you are using it at your own risk.
+                  </p>
+                  
+                  <p className="text-gray-300">
+                    <span className="text-orange-400 font-semibold">Financial Risks:</span>
+                    Cryptocurrency investments are subject to high market volatility and may result in partial or complete loss of funds. Past performance does not guarantee future results. Never invest more than you can afford to lose.
+                  </p>
+                  
+                  <p className="text-gray-300">
+                    <span className="text-orange-400 font-semibold">Smart Contract Risk:</span>
+                    While our smart contracts are based on audited protocols from Metropolis and undergo security testing, all smart contracts carry inherent risks of bugs, exploits, or vulnerabilities that could result in loss of funds.
+                  </p>
+                  
+                  <p className="text-gray-300">
+                    <span className="text-orange-400 font-semibold">Technical Risk:</span>
+                    The platform may experience downtime, bugs, or technical issues. We are not responsible for any losses incurred due to technical failures or platform unavailability.
+                  </p>
+                  
+                  <p className="text-gray-300">
+                    <span className="text-orange-400 font-semibold">Regulatory Risk:</span>
+                    Cryptocurrency regulations vary by jurisdiction and are subject to change. Users are responsible for ensuring compliance with their local laws and regulations.
+                  </p>
+                  
+                  <p className="text-gray-300">
+                    <span className="text-orange-400 font-semibold">No Financial Advice:</span>
+                    Nothing on this platform constitutes financial advice, investment recommendations, or solicitation to buy or sell any financial instruments. All content is for informational purposes only.
+                  </p>
+                  
+                  <p className="text-gray-300">
+                    <span className="text-orange-400 font-semibold">Do Your Own Research:</span>
+                    You are solely responsible for conducting your own research and due diligence before making any investment decisions. Consult with qualified financial advisors if needed.
+                  </p>
+                </div>
 
-        {/* Connection Prompt */}
-        {mounted && !isConnected && (
-          <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="text-yellow-400 text-lg">⚠️</div>
-              <div>
-                <h3 className="text-yellow-400 font-semibold mb-1 text-sm">Connect Your Wallet</h3>
-                <p className="text-yellow-300/80 text-xs">
-                  Connect your Web3 wallet to view your balances and interact with the vaults.
-                </p>
+                {/* Checkbox and Agreement */}
+                <div className="mt-6 pt-4 border-t border-orange-600/30">
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={understandsRisks}
+                      onChange={(e) => setUnderstandsRisks(e.target.checked)}
+                      className="mt-1 w-4 h-4 text-arca-green bg-arca-dark border-orange-600 rounded focus:ring-arca-green focus:ring-2"
+                    />
+                    <span className="text-xs text-gray-300 group-hover:text-white transition-colors">
+                      I have read, understood, and accept all risks associated with using the Arca DeFi platform. I acknowledge that I am using this service at my own risk and that cryptocurrency investments may result in complete loss of funds.
+                    </span>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
-        )}
-
-        {/* Split Screen Layout - Metropolis and Shadow */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Metropolis Vaults Container */}
-          <div className="bg-black/40 rounded-xl p-6 border border-gray-800/50">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <h2 className="text-3xl font-bold text-white">Metropolis Vaults</h2>
-              <img src="/MetropolisLogo.png" alt="Metropolis" className="w-12 h-12" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {VAULT_CONFIGS.filter(v => v.name.includes('Metropolis')).map((vault, index) => (
-                <VaultCard
-                  key={index}
-                  vaultAddress={vault.vaultAddress}
-                  stratAddress={vault.stratAddress}
-                  name={vault.name}
-                  tier={vault.tier}
-                  tokenX={vault.tokenX}
-                  tokenY={vault.tokenY}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Shadow Vaults Container */}
-          <div className="bg-black/40 rounded-xl p-6 border border-gray-800/50">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <h2 className="text-3xl font-bold text-white">Shadow Vaults</h2>
-              <img src="/SHadowLogo.jpg" alt="Shadow" className="w-12 h-12 rounded-full" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {VAULT_CONFIGS.filter(v => v.name.includes('Shadow')).map((vault, index) => (
-                <VaultCard
-                  key={index}
-                  vaultAddress={vault.vaultAddress}
-                  stratAddress={vault.stratAddress}
-                  name={vault.name}
-                  tier={vault.tier}
-                  tokenX={vault.tokenX}
-                  tokenY={vault.tokenY}
-                />
-              ))}
-            </div>
-          </div>
         </div>
 
-        {/* Footer Info */}
-        <div className="mt-12 text-center text-gray-500 text-sm">
-          <p>
-            Smart contracts are audited and secure. Always do your own research before investing.
-          </p>
-        </div>
+        {/* Decorative Elements */}
+        <div className="absolute top-20 left-10 w-20 h-20 border border-arca-green/30 rounded-lg transform rotate-45 z-10"></div>
+        <div className="absolute bottom-20 right-10 w-32 h-32 border border-arca-green/30 rounded-full z-10"></div>
+        <div className="absolute top-40 right-20 w-16 h-16 border border-arca-green/30 rounded-lg transform rotate-12 z-10"></div>
       </main>
-      </div>
     </div>
-  );
+  )
 }
