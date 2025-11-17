@@ -31,12 +31,30 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   const { prices, isLoading: pricesLoading } = useTokenPrices();
   const sonicPrice = prices?.sonic || 0.17;
 
+  // Calculate active vs reserved liquidity
+  const activeLiquidity = vaultData.balances && vaultData.idleBalances ? {
+    token0: vaultData.balances[0] - vaultData.idleBalances[0],
+    token1: vaultData.balances[1] - vaultData.idleBalances[1],
+  } : { token0: 0n, token1: 0n };
+
+  const reservedLiquidity = vaultData.idleBalances ? {
+    token0: vaultData.idleBalances[0],
+    token1: vaultData.idleBalances[1],
+  } : { token0: 0n, token1: 0n };
+
   // Calculate vault TVL (total value locked) - vault's total balances with dynamic decimals
   const vaultTVL = vaultData.balances ? (() => {
     const token0Decimals = getTokenDecimals(tokenX);
     const token1Decimals = getTokenDecimals(tokenY);
     
-    const token0Value = (Number(vaultData.balances[0]) / (10 ** token0Decimals)) * sonicPrice;
+    // Get token0 price (USDC = 1, S = sonic price, WETH = eth price)
+    let token0Price = sonicPrice; // Default for S
+    if (tokenX.toUpperCase() === 'USDC') {
+      token0Price = 1;
+    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
+      token0Price = prices?.weth || 0;
+    }
+    const token0Value = (Number(vaultData.balances[0]) / (10 ** token0Decimals)) * token0Price;
     
     // Get token1 price (USDC = 1, WETH = eth price)
     let token1Price = 1;
@@ -77,6 +95,11 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     totalSupply: vaultData.totalSupply,
     sharePercentage: vaultData.sharePercentage,
     balances: vaultData.balances,
+    idleBalances: vaultData.idleBalances,
+
+    // Liquidity breakdown
+    activeLiquidity,
+    reservedLiquidity,
 
     // Calculated values
     depositedValueUSD,
