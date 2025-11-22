@@ -64,36 +64,34 @@ function ConnectWallet() {
 }
 
 export function AuthGuard({ children }: AuthGuardProps) {
-  // *** UNCOMMENT THE FOLLOWING CODE TO RESTRIC ACCESS TO ONLY WHITELISTED WALLETS ***
+  const { address, isConnected } = useAccount();
+  const [mounted, setMounted] = useState(false);
 
-  // const { address, isConnected } = useAccount();
-  // const [mounted, setMounted] = useState(false);
+  // Prevent hydration mismatch by only rendering after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  // // Prevent hydration mismatch by only rendering after mount
-  // useEffect(() => {
-  //   setMounted(true);
-  // }, []);
+  // Show nothing during SSR to prevent hydration mismatch
+  if (!mounted) {
+    return null;
+  }
 
-  // // Show nothing during SSR to prevent hydration mismatch
-  // if (!mounted) {
-  //   return null;
-  // }
+  // If wallet is not connected, show connect wallet screen
+  if (!isConnected || !address) {
+    return <ConnectWallet />;
+  }
 
-  // // If wallet is not connected, show connect wallet screen
-  // if (!isConnected || !address) {
-  //   return <ConnectWallet />;
-  // }
+  // Check if the connected address is in the whitelist
+  const whitelistedAddresses = process.env.NEXT_PUBLIC_WHITELISTED_ADDRESSES?.split(',') || [];
+  const isAuthorized = whitelistedAddresses.some(
+    whitelistedAddress => whitelistedAddress.toLowerCase().trim() === address.toLowerCase()
+  );
 
-  // // Check if the connected address is in the whitelist
-  // const whitelistedAddresses = process.env.NEXT_PUBLIC_WHITELISTED_ADDRESSES?.split(',') || [];
-  // const isAuthorized = whitelistedAddresses.some(
-  //   whitelistedAddress => whitelistedAddress.toLowerCase().trim() === address.toLowerCase()
-  // );
-
-  // // If wallet is connected but not authorized, show access denied
-  // if (!isAuthorized) {
-  //   return <AccessDenied />;
-  // }
+  // If wallet is connected but not authorized, show access denied
+  if (!isAuthorized) {
+    return <AccessDenied />;
+  }
 
   // If wallet is connected and authorized, show the protected content
   return <>{children}</>;
