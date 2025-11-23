@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import {
-    IOracleHelper
-} from "../../contracts-metropolis/src/interfaces/IOracleHelper.sol";
+import {IOracleHelper} from "../../contracts-metropolis/src/interfaces/IOracleHelper.sol";
 
 /**
  * @title TestOracleVault

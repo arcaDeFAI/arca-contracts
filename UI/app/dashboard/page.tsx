@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { Header } from '@/components/Header';
 import DashboardVaultCard from '@/components/DashboardVaultCard';
 import { DashboardOverview } from '@/components/DashboardOverview';
+import { SocialLinks } from '@/components/SocialLinks';
 
 // Vault configurations from main page
 const VAULT_CONFIGS = [
@@ -25,6 +26,7 @@ const VAULT_CONFIGS = [
     stratAddress: '0x64efeA2531f2b1A3569555084B88bb5714f5286c',
     clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
     rewardsAddress: '0xe879d0E44e6873cf4ab71686055a4f6817685f02', // S-USDC uses old rewards contract
+    poolSymbol: 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' as const, // DeFi Llama pool ID
     name: 'S • USDC | Shadow',
     tier: 'Premium' as const,
     tokenX: 'WS',
@@ -35,6 +37,7 @@ const VAULT_CONFIGS = [
     stratAddress: '0x58c244BE630753e8E668f18C0F2Cffe3ea0E8126',
     clpoolAddress: '0xb6d9b069f6b96a507243d501d1a23b3fccfc85d3',
     rewardsAddress: '0xf5c7598c953e49755576cda6b2b2a9daaf89a837', // WS-WETH uses new rewards contract
+    poolSymbol: 'e50ce450-d2b8-45fe-b496-9ee1fb5673c2' as const, // DeFi Llama pool ID
     name: 'WS • WETH | Shadow',
     tier: 'Premium' as const,
     tokenX: 'WS',
@@ -45,6 +48,7 @@ const VAULT_CONFIGS = [
     stratAddress: '0x0806709c30A2999867160A1e4064f29ecCFA4605',
     clpoolAddress: '0x6fb30f3fcb864d49cdff15061ed5c6adfee40b40',
     rewardsAddress: '0x8cdec539ba3d3857ec29b491c78cfb48f5d34f56', // USDC-WETH uses its own rewards contract
+    poolSymbol: 'a5ea7bec-91e2-4743-964d-35ea9034b0bd' as const, // DeFi Llama pool ID
     name: 'USDC • WETH | Shadow',
     tier: 'Premium' as const,
     tokenX: 'USDC',
@@ -65,8 +69,6 @@ export default function Dashboard() {
   }
 
   return (
-    // Replace line 68-69 with this:
-
     <div className="min-h-screen bg-gradient-to-br from-black via-arca-dark to-black" 
         style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.08) 0%, rgba(0, 0, 0, 1) 100%)'}}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,163,0.15),rgba(0,255,163,0.05)_50%,transparent_80%)] pointer-events-none"></div>
@@ -136,6 +138,7 @@ export default function Dashboard() {
                     lbBookAddress={vault.lbBookAddress}
                     clpoolAddress={vault.clpoolAddress}
                     rewardsAddress={(vault as any).rewardsAddress}
+                    poolSymbol={(vault as any).poolSymbol}
                     name={vault.name}
                     tier={vault.tier}
                     userAddress={address}
@@ -161,6 +164,7 @@ export default function Dashboard() {
                     lbBookAddress={vault.lbBookAddress}
                     clpoolAddress={vault.clpoolAddress}
                     rewardsAddress={(vault as any).rewardsAddress}
+                    poolSymbol={(vault as any).poolSymbol}
                     name={vault.name}
                     tier={vault.tier}
                     userAddress={address}
@@ -173,6 +177,9 @@ export default function Dashboard() {
           </div>
           </>
         )}
+
+        {/* Social Links & Footer */}
+        <SocialLinks />
       </main>
       </div>
     </div>

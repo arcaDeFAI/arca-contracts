@@ -1,0 +1,8 @@
+* text eol=lf
+# Prevent line-ending conversion for common image files
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.webp binary
+*.svg -text

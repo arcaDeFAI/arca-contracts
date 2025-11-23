@@ -3,37 +3,23 @@
 pragma solidity 0.8.26;
 
 import {Clone} from "@arca/joe-v2/libraries/Clone.sol";
-import {
-    IERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {
-    SafeERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {SafeCast} from "@arca/joe-v2/libraries/math/SafeCast.sol";
 import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
-import {
-    IVaultFactory
-} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
+import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
 import {IShadowStrategy} from "./interfaces/IShadowStrategy.sol";
-import {
-    INonfungiblePositionManager
-} from "../CL/periphery/interfaces/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from "../CL/periphery/interfaces/INonfungiblePositionManager.sol";
 import {IRamsesV3Pool} from "../CL/core/interfaces/IRamsesV3Pool.sol";
 import {IMinimalGauge} from "./interfaces/IMinimalGauge.sol";
 import {IMinimalVoter} from "./interfaces/IMinimalVoter.sol";
 import {LiquidityAmounts} from "../CL/periphery/libraries/LiquidityAmounts.sol";
 import {TickMath} from "../CL/core/libraries/TickMath.sol";
-import {
-    IOracleRewardVault
-} from "../../contracts-metropolis/src/interfaces/IOracleRewardVault.sol";
+import {IOracleRewardVault} from "../../contracts-metropolis/src/interfaces/IOracleRewardVault.sol";
 import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
-import {
-    IOracleRewardShadowVault
-} from "./interfaces/IOracleRewardShadowVault.sol";
+import {IOracleRewardShadowVault} from "./interfaces/IOracleRewardShadowVault.sol";
 import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 
 /**
@@ -1063,13 +1049,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
                 duration = duration > 1 days ? 1 days : duration;
 
                 // Calculate and transfer fees
-                uint256 feeX = (totalBalanceX *
-                    annualFee *
-                    duration +
+                uint256 feeX = (totalBalanceX * annualFee * duration +
                     _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
-                uint256 feeY = (totalBalanceY *
-                    annualFee *
-                    duration +
+                uint256 feeY = (totalBalanceY * annualFee * duration +
                     _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
 
                 if (feeX > 0) {

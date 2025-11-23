@@ -5,6 +5,7 @@ import { useDashboardData } from './useDashboardData';
 import { useTokenPrices } from './useAPYCalculation';
 import { useMetroAPY } from './useMetroAPY';
 import { useShadowAPY } from './useShadowAPY';
+import { useShadowAPYAdjusted } from './useShadowAPYAdjusted';
 import { CONTRACTS } from '@/lib/contracts';
 import { getTokenDecimals } from '@/lib/tokenHelpers';
 
@@ -15,6 +16,7 @@ interface VaultConfig {
   tier: 'Active' | 'Premium' | 'Elite';
   tokenX?: string;
   tokenY?: string;
+  poolSymbol?: string; // For Shadow vaults - DeFi Llama pool ID
 }
 
 /**
@@ -78,16 +80,27 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     prices?.metro || 0
   );
 
-  const shadowAPY = useShadowAPY(
+  // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided
+  const shadowAPYAdjusted = useShadowAPYAdjusted(
     stratAddress,
-    (config as any).rewardsAddress || CONTRACTS.SHADOW_REWARDS, // Use vault-specific rewards address if available
+    config.poolSymbol || 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' // Default to WS-USDC pool ID if not specified
+  );
+
+  // Fallback to old Shadow APY calculation (kept for backwards compatibility)
+  const shadowAPYOld = useShadowAPY(
+    stratAddress,
+    (config as any).rewardsAddress || CONTRACTS.SHADOW_REWARDS,
     CONTRACTS.SHADOW,
     vaultTVL,
     prices?.shadow || 0
   );
 
+  // Use new DeFi Llama APY if available and poolSymbol is provided, otherwise fallback to old calculation
+  const shadowAPY = config.poolSymbol && !shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld;
+
   const apy = isShadowVault ? shadowAPY.apy : metroAPY.apy;
   const aprLoading = isShadowVault ? shadowAPY.isLoading : metroAPY.isLoading;
+  const apy30dMean = isShadowVault && config.poolSymbol ? shadowAPYAdjusted.apy30dMean : null;
 
   return {
     // Vault data
@@ -107,6 +120,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
 
     // APY metrics
     apy,
+    apy30dMean,
     aprLoading,
 
     // Dashboard data
