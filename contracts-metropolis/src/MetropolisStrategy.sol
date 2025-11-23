@@ -4,25 +4,15 @@ pragma solidity 0.8.26;
 
 import {SafeCast} from "@arca/joe-v2/libraries/math/SafeCast.sol";
 import {PriceHelper} from "@arca/joe-v2/libraries/PriceHelper.sol";
-import {
-    IERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {ILBToken} from "@arca/joe-v2/interfaces/ILBToken.sol";
-import {
-    LiquidityAmounts
-} from "@arca/joe-v2-periphery/periphery/LiquidityAmounts.sol";
+import {LiquidityAmounts} from "@arca/joe-v2-periphery/periphery/LiquidityAmounts.sol";
 import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
-import {
-    LiquidityConfigurations
-} from "@arca/joe-v2/libraries/math/LiquidityConfigurations.sol";
+import {LiquidityConfigurations} from "@arca/joe-v2/libraries/math/LiquidityConfigurations.sol";
 import {Clone} from "@arca/joe-v2/libraries/Clone.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {
-    SafeERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
@@ -939,13 +929,9 @@ contract MetropolisStrategy is
                 duration = duration > 1 days ? 1 days : duration;
 
                 // Round up the fees and transfer them to the fee recipient.
-                uint256 feeX = (totalBalanceX *
-                    annualFee *
-                    duration +
+                uint256 feeX = (totalBalanceX * annualFee * duration +
                     _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
-                uint256 feeY = (totalBalanceY *
-                    annualFee *
-                    duration +
+                uint256 feeY = (totalBalanceY * annualFee * duration +
                     _SCALED_YEAR_SUB_ONE) / _SCALED_YEAR;
 
                 if (feeX > 0) {

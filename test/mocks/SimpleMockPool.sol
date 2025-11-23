@@ -69,8 +69,7 @@ contract SimpleMockPool {
     ) external view returns (int56[] memory tickCumulatives, uint160[] memory) {
         tickCumulatives = new int56[](1);
         tickCumulatives[0] =
-            int56(_slot0.tick) *
-            int56(uint56(block.timestamp));
+            int56(_slot0.tick) * int56(uint56(block.timestamp));
 
         uint160[] memory liquidityCumulatives = new uint160[](1);
         liquidityCumulatives[0] = 0;
