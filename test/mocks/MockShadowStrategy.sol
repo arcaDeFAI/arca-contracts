@@ -1,15 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import {
-    IERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {
-    IVaultFactory
-} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
-import {
-    IStrategyCommon
-} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
+import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
 
 /**
  * @title MockShadowStrategy

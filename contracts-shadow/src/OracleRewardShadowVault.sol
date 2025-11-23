@@ -3,42 +3,22 @@
 pragma solidity 0.8.26;
 
 import {Clone} from "@arca/joe-v2/libraries/Clone.sol";
-import {
-    ERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
-import {
-    IERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IRamsesV3Pool} from "../CL/core/interfaces/IRamsesV3Pool.sol";
 import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
-import {
-    ReentrancyGuardUpgradeable
-} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {
-    SafeERC20Upgradeable
-} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {SafeCast} from "@arca/joe-v2/libraries/math/SafeCast.sol";
-import {
-    IStrategyCommon
-} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
+import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
 import {IShadowStrategy} from "./interfaces/IShadowStrategy.sol";
-import {
-    IVaultFactory
-} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
+import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
 import {IWNative} from "../../contracts-metropolis/src/interfaces/IWNative.sol";
-import {
-    IERC20
-} from "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
-import {
-    TokenHelper
-} from "../../contracts-metropolis/src/libraries/TokenHelper.sol";
-import {
-    Precision
-} from "../../contracts-metropolis/src/libraries/Precision.sol";
+import {IERC20} from "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
+import {TokenHelper} from "../../contracts-metropolis/src/libraries/TokenHelper.sol";
+import {Precision} from "../../contracts-metropolis/src/libraries/Precision.sol";
 import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
-import {
-    IOracleRewardShadowVault
-} from "./interfaces/IOracleRewardShadowVault.sol";
+import {IOracleRewardShadowVault} from "./interfaces/IOracleRewardShadowVault.sol";
 import {ShadowPriceHelper} from "./libraries/ShadowPriceHelper.sol";
 
 /**
@@ -761,7 +741,7 @@ contract OracleRewardShadowVault is
         if (
             newStrategy.getVault() != address(this) ||
             IShadowStrategy(address(newStrategy)).getPool() !=
-            address(_pool()) ||
+                address(_pool()) ||
             newStrategy.getTokenX() != _tokenX() ||
             newStrategy.getTokenY() != _tokenY()
         ) revert ShadowVault__InvalidStrategy();
@@ -822,7 +802,7 @@ contract OracleRewardShadowVault is
             token == _tokenX() &&
             (strategy == address(0) ||
                 token.balanceOf(address(this)) <
-                _totalAmountX + amount + _rewardX())
+                    _totalAmountX + amount + _rewardX())
         ) {
             revert ShadowVault__InvalidToken();
         }
@@ -831,7 +811,7 @@ contract OracleRewardShadowVault is
             token == _tokenY() &&
             (strategy == address(0) ||
                 token.balanceOf(address(this)) <
-                _totalAmountY + amount + _rewardY())
+                    _totalAmountY + amount + _rewardY())
         ) {
             revert ShadowVault__InvalidToken();
         }

@@ -8,9 +8,7 @@ import {OracleVault} from "./OracleVault.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IERC20} from "./interfaces/IHooksRewarder.sol";
-import {
-    IMinimalVault
-} from "../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
+import {IMinimalVault} from "../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
 import {TokenHelper} from "./libraries/TokenHelper.sol";
 import {Precision} from "./libraries/Precision.sol";
 

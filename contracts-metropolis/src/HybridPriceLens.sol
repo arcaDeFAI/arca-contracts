@@ -6,9 +6,7 @@ import {IPriceLens} from "./interfaces/IPriceLens.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
 import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {
-    IERC20Metadata
-} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 /**
  * @title HybridPriceLens
@@ -214,13 +212,11 @@ contract HybridPriceLens is IPriceLens, Ownable {
                 if (tokenDecimals < nativeDecimals) {
                     // Token has fewer decimals, price needs scaling up
                     rawPrice =
-                        rawPrice *
-                        10 ** (nativeDecimals - tokenDecimals);
+                        rawPrice * 10 ** (nativeDecimals - tokenDecimals);
                 } else {
                     // Token has more decimals, price needs scaling down
                     rawPrice =
-                        rawPrice /
-                        10 ** (tokenDecimals - nativeDecimals);
+                        rawPrice / 10 ** (tokenDecimals - nativeDecimals);
                 }
             }
         } else {
@@ -233,13 +229,11 @@ contract HybridPriceLens is IPriceLens, Ownable {
                 if (tokenDecimals < nativeDecimals) {
                     // Token has fewer decimals, inverse price needs scaling down
                     rawPrice =
-                        rawPrice /
-                        10 ** (nativeDecimals - tokenDecimals);
+                        rawPrice / 10 ** (nativeDecimals - tokenDecimals);
                 } else {
                     // Token has more decimals, inverse price needs scaling up
                     rawPrice =
-                        rawPrice *
-                        10 ** (tokenDecimals - nativeDecimals);
+                        rawPrice * 10 ** (tokenDecimals - nativeDecimals);
                 }
             }
         }
