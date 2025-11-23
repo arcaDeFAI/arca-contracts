@@ -69,8 +69,6 @@ export default function Dashboard() {
   }
 
   return (
-    // Replace line 68-69 with this:
-
     <div className="min-h-screen bg-gradient-to-br from-black via-arca-dark to-black" 
         style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.08) 0%, rgba(0, 0, 0, 1) 100%)'}}>
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,255,163,0.15),rgba(0,255,163,0.05)_50%,transparent_80%)] pointer-events-none"></div>
