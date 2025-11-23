@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ArcaLogo } from './ArcaLogo';
 import { usePrices } from '@/contexts/PriceContext';
@@ -74,17 +75,17 @@ export function Header() {
             </div>
             
             <nav className="hidden md:flex items-center gap-6">
-              <a 
-                href="/" 
+              <Link 
+                href="/vaults" 
                 className={`text-lg italic transition-colors ${
-                  pathname === '/' 
+                  pathname === '/vaults' || pathname === '/vaults/'
                     ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1' 
                     : 'text-white hover:text-arca-green'
                 }`}
               >
                 Vaults
-              </a>
-              <a 
+              </Link>
+              <Link 
                 href="/dashboard" 
                 className={`text-lg italic transition-colors ${
                   pathname.startsWith('/dashboard') 
@@ -93,8 +94,8 @@ export function Header() {
                 }`}
               >
                 Dashboard
-              </a>
-              <a 
+              </Link>
+              <Link 
                 href="/staking" 
                 className={`text-lg italic transition-colors ${
                   pathname.startsWith('/staking') 
@@ -103,7 +104,7 @@ export function Header() {
                 }`}
               >
                 Staking
-              </a>
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
@@ -232,18 +233,18 @@ export function Header() {
         {isMobileMenuOpen && (
           <div className="md:hidden bg-arca-dark border-t border-arca-light-gray">
             <div className="px-3 py-4 space-y-3">
-              <a 
-                href="/" 
+              <Link 
+                href="/vaults" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`block text-lg italic transition-colors ${
-                  pathname === '/' 
+                  pathname === '/vaults' || pathname === '/vaults/'
                     ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2' 
                     : 'text-white hover:text-arca-green'
                 }`}
               >
                 Vaults
-              </a>
-              <a 
+              </Link>
+              <Link 
                 href="/dashboard" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`block text-lg italic transition-colors ${
@@ -253,8 +254,8 @@ export function Header() {
                 }`}
               >
                 Dashboard
-              </a>
-              <a 
+              </Link>
+              <Link 
                 href="/staking" 
                 onClick={() => setIsMobileMenuOpen(false)}
                 className={`block text-lg italic transition-colors ${
@@ -264,9 +265,8 @@ export function Header() {
                 }`}
               >
                 Staking
-              </a>
-              
-                          </div>
+              </Link>
+            </div>
           </div>
         )}
       </div>

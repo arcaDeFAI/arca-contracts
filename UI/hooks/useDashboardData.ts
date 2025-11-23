@@ -71,19 +71,6 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     },
   });
 
-  // Debug logging to help diagnose withdrawal visibility issues
-  if (userAddress && currentRound !== undefined) {
-    console.log('🔍 WITHDRAWAL DATA:', {
-      vault: config.name,
-      userAddress,
-      currentRound: currentRound.toString(),
-      queuedWithdrawal: queuedWithdrawal?.toString() || '0',
-      claimableWithdrawal: claimableWithdrawal?.toString() || '0',
-      hasQueued: !!(queuedWithdrawal && queuedWithdrawal > 0n),
-      hasClaimable: !!(claimableWithdrawal && claimableWithdrawal > 0n),
-    });
-  }
-
   // Write contract hooks for transactions
   const { writeContract: claimRewards, isPending: isClaimingRewards } = useWriteContract();
 

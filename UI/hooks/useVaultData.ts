@@ -58,27 +58,6 @@ export function useVaultData(config: VaultConfig, userAddress?: string) {
     ? (Number(userShares) / Number(totalSupply)) * 100
     : 0;
 
-  // Debug contract call results - RAW VALUES
-  if (userShares !== undefined || totalSupply !== undefined) {
-    console.log('🔍 RAW CONTRACT VALUES:', {
-      vault: config.name,
-      vaultAddress: config.vaultAddress,
-      userAddress,
-      userShares_RAW: userShares,
-      userShares_STRING: userShares?.toString(),
-      userShares_DECIMAL: userShares ? Number(userShares) : 0,
-      totalSupply_RAW: totalSupply,
-      totalSupply_STRING: totalSupply?.toString(),
-      totalSupply_DECIMAL: totalSupply ? Number(totalSupply) : 0,
-      sharePercentage: sharePercentage.toFixed(8),
-      sharesLoading,
-      totalSupplyLoading,
-      calculation: userShares && totalSupply ? `${userShares.toString()} / ${totalSupply.toString()} = ${sharePercentage}%` : 'N/A',
-      manualCalc: userShares && totalSupply ? `${Number(userShares)} / ${Number(totalSupply)} * 100 = ${(Number(userShares) / Number(totalSupply) * 100).toFixed(6)}%` : 'N/A',
-      WARNING: userShares === totalSupply ? '⚠️ userShares equals totalSupply - check contract' : 'OK'
-    });
-  }
-
   return {
     userShares,
     totalSupply,
