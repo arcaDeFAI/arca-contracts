@@ -60,7 +60,8 @@ export function DashboardVaultCard({
     pendingRewards,
     currentRound,
     queuedWithdrawal,
-    claimableWithdrawal,
+    claimableWithdrawals,
+    totalClaimableAmount,
     handleClaimRewards,
     handleRedeemWithdrawal,
     isClaimingRewards,
@@ -226,7 +227,7 @@ export function DashboardVaultCard({
   const hasShares = !!(userShares && userShares > 0n);
 const hasPendingRewards = !!(pendingRewards && pendingRewards.some((r: UserRewardStructOutput) => r.pendingRewards > 0n));
 const hasQueuedWithdrawal = !!(queuedWithdrawal && queuedWithdrawal > 0n);
-const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0n);
+const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.length > 0);
 
   // Filter non-zero rewards for both Metro and Shadow vaults
   const nonZeroRewards = pendingRewards 
@@ -593,29 +594,36 @@ const hasClaimableWithdrawal = !!(claimableWithdrawal && claimableWithdrawal > 0
           </div>
         )}
 
-        {/* Claimable Withdrawal Section - Shows withdrawal from previous round (can claim now) */}
+        {/* Claimable Withdrawal Section - Shows all withdrawals from past rounds (can claim now) */}
         {hasClaimableWithdrawal && (
           <div className="bg-black/50 rounded-lg p-4 border border-gray-700/50">
             <div className="flex justify-between items-center mb-3">
-              <span className="text-gray-400">Claimable Withdrawal:</span>
+              <span className="text-gray-400">Claimable Withdrawal{claimableWithdrawals && claimableWithdrawals.length > 1 ? 's' : ''}:</span>
               <span className="text-arca-green font-semibold">
-                {claimableWithdrawal ? (Number(claimableWithdrawal) / 1e12).toFixed(2) : '0.00'} shares
+                {totalClaimableAmount ? (Number(totalClaimableAmount) / 1e12).toFixed(2) : '0.00'} shares
               </span>
             </div>
-            <div className="text-sm text-gray-400 mb-3">
-              From Round: {currentRound !== undefined ? Number(currentRound) - 1 : 'Loading...'}
-            </div>
-            <button
-              onClick={handleRedeemWithdrawal}
-              disabled={isRedeemingWithdrawal}
-              className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                isRedeemingWithdrawal
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-arca-green text-black hover:bg-arca-green/90'
-              }`}
-            >
-              {isRedeemingWithdrawal ? 'Claiming...' : 'Claim Withdrawal'}
-            </button>
+            
+            {/* Show all rounds with claimable withdrawals */}
+            {claimableWithdrawals && claimableWithdrawals.map((withdrawal) => (
+              <div key={Number(withdrawal.round)} className="mb-3">
+                <div className="flex justify-between items-center text-sm mb-2">
+                  <span className="text-gray-500">Round {Number(withdrawal.round)}:</span>
+                  <span className="text-gray-300">{(Number(withdrawal.amount) / 1e12).toFixed(2)} shares</span>
+                </div>
+                <button
+                  onClick={() => handleRedeemWithdrawal(withdrawal.round)}
+                  disabled={isRedeemingWithdrawal}
+                  className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors text-sm ${
+                    isRedeemingWithdrawal
+                      ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                      : 'bg-arca-green text-black hover:bg-arca-green/90'
+                  }`}
+                >
+                  {isRedeemingWithdrawal ? 'Claiming...' : `Claim from Round ${Number(withdrawal.round)}`}
+                </button>
+              </div>
+            ))}
           </div>
         )}
 

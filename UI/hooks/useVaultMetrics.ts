@@ -127,7 +127,8 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     pendingRewards: dashboardData.pendingRewards,
     currentRound: dashboardData.currentRound,
     queuedWithdrawal: dashboardData.queuedWithdrawal,
-    claimableWithdrawal: dashboardData.claimableWithdrawal,
+    claimableWithdrawals: dashboardData.claimableWithdrawals,
+    totalClaimableAmount: dashboardData.totalClaimableAmount,
 
     // Actions
     handleClaimRewards: dashboardData.handleClaimRewards,
