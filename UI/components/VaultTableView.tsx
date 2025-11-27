@@ -282,15 +282,20 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (metrics.handleRedeemWithdrawal && metrics.claimableWithdrawals) {
+                      if (metrics.handleRedeemWithdrawal && metrics.claimableWithdrawals && !metrics.isRedeemingWithdrawal) {
                         // Claim from the first available round
                         metrics.handleRedeemWithdrawal(metrics.claimableWithdrawals[0].round);
                       }
                     }}
-                    className="px-3 py-1 bg-arca-green/10 border border-arca-green/50 rounded text-xs font-semibold text-arca-green hover:bg-arca-green/20 transition-all animate-pulse"
+                    disabled={metrics.isRedeemingWithdrawal}
+                    className={`px-3 py-1 border rounded text-xs font-semibold transition-all ${
+                      metrics.isRedeemingWithdrawal
+                        ? 'bg-gray-700/20 border-gray-600/50 text-gray-500 cursor-not-allowed'
+                        : 'bg-arca-green/10 border-arca-green/50 text-arca-green hover:bg-arca-green/20 animate-pulse'
+                    }`}
                     title={metrics.claimableWithdrawals.length > 1 ? `${metrics.claimableWithdrawals.length} withdrawals available` : undefined}
                   >
-                    Claim{metrics.claimableWithdrawals.length > 1 ? ` (${metrics.claimableWithdrawals.length})` : ''}
+                    {metrics.isRedeemingWithdrawal ? 'Processing...' : `Claim${metrics.claimableWithdrawals.length > 1 ? ` (${metrics.claimableWithdrawals.length})` : ''}`}
                   </button>
                 ) : metrics.queuedWithdrawal && metrics.queuedWithdrawal > 0n ? (
                   /* Show queued status if withdrawal is queued in current round */
@@ -394,14 +399,19 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (metrics.handleRedeemWithdrawal && metrics.claimableWithdrawals) {
+                        if (metrics.handleRedeemWithdrawal && metrics.claimableWithdrawals && !metrics.isRedeemingWithdrawal) {
                           metrics.handleRedeemWithdrawal(metrics.claimableWithdrawals[0].round);
                         }
                       }}
-                      className="px-2 py-1 bg-arca-green/10 border border-arca-green/50 rounded text-xs font-semibold text-arca-green hover:bg-arca-green/20 transition-all animate-pulse"
+                      disabled={metrics.isRedeemingWithdrawal}
+                      className={`px-2 py-1 border rounded text-xs font-semibold transition-all ${
+                        metrics.isRedeemingWithdrawal
+                          ? 'bg-gray-700/20 border-gray-600/50 text-gray-500 cursor-not-allowed'
+                          : 'bg-arca-green/10 border-arca-green/50 text-arca-green hover:bg-arca-green/20 animate-pulse'
+                      }`}
                       title={metrics.claimableWithdrawals.length > 1 ? `${metrics.claimableWithdrawals.length} withdrawals available` : undefined}
                     >
-                      Claim{metrics.claimableWithdrawals.length > 1 ? ` (${metrics.claimableWithdrawals.length})` : ''}
+                      {metrics.isRedeemingWithdrawal ? 'Processing...' : `Claim${metrics.claimableWithdrawals.length > 1 ? ` (${metrics.claimableWithdrawals.length})` : ''}`}
                     </button>
                   ) : metrics.queuedWithdrawal && metrics.queuedWithdrawal > 0n ? (
                     <span className="text-xs text-orange-400 font-medium">Queued</span>

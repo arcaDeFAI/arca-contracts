@@ -1,6 +1,6 @@
 'use client';
 
-import { useReadContract, useWriteContract, useReadContracts } from 'wagmi';
+import { useReadContract, useWriteContract, useReadContracts, useWaitForTransactionReceipt } from 'wagmi';
 import { useEffect, useState } from 'react';
 import {
   METRO_VAULT_ABI,
@@ -116,12 +116,24 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     });
   };
 
-  const { writeContract: redeemWithdrawal, isPending: isRedeemingWithdrawal } = useWriteContract();
+  const { writeContract: redeemWithdrawal, data: redeemTxHash, isPending: isRedeemingWithdrawal } = useWriteContract();
+
+  // Track transaction receipt for withdrawal claims
+  const { isSuccess: redeemTxSuccess } = useWaitForTransactionReceipt({
+    hash: redeemTxHash,
+  });
+
+  // State to track if we're processing multiple claims
+  const [processingClaims, setProcessingClaims] = useState(false);
+  const [processedTxHash, setProcessedTxHash] = useState<`0x${string}` | undefined>();
+  const [lastClaimedRound, setLastClaimedRound] = useState<bigint | null>(null);
 
   // Redeem withdrawal from a specific round
   const handleRedeemWithdrawal = (round: bigint) => {
     if (!userAddress || !config.vaultAddress) return;
     
+    setProcessingClaims(true);
+    setLastClaimedRound(round);
     redeemWithdrawal({
       address: config.vaultAddress as `0x${string}`,
       abi: METRO_VAULT_ABI,
@@ -129,6 +141,21 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       args: [round, userAddress as `0x${string}`],
     });
   };
+
+  // Handle successful transaction and immediately remove from local state
+  useEffect(() => {
+    if (redeemTxSuccess && redeemTxHash && redeemTxHash !== processedTxHash && processingClaims && lastClaimedRound !== null) {
+      // Mark this transaction as processed
+      setProcessedTxHash(redeemTxHash);
+      
+      // Immediately remove the claimed withdrawal from local state
+      setClaimableWithdrawals(prev => prev.filter(w => w.round !== lastClaimedRound));
+      
+      // Reset processing state
+      setProcessingClaims(false);
+      setLastClaimedRound(null);
+    }
+  }, [redeemTxSuccess, redeemTxHash, processedTxHash, processingClaims, lastClaimedRound]);
 
   // Calculate total claimable amount across all rounds
   const totalClaimableAmount = claimableWithdrawals.reduce((sum, w) => sum + w.amount, 0n);
