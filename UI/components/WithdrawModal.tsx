@@ -42,8 +42,10 @@ export function WithdrawModal({
   }
 
   const handleMaxWithdraw = () => {
-    // Use the raw shares converted to string for max precision
-    const maxAmount = formatUnits(userShares, 12); // 10^-12 decimals for shares
+    // Use vault-specific decimals (18 for WETH, 12 for others)
+    const isWETHVault = tokenX === 'WETH' || tokenY === 'WETH';
+    const decimals = isWETHVault ? 18 : 12;
+    const maxAmount = formatUnits(userShares, decimals);
     setWithdrawAmount(maxAmount);
   };
 
@@ -52,7 +54,7 @@ export function WithdrawModal({
       address: vaultAddress as `0x${string}`,
       abi: METRO_VAULT_ABI,
       functionName: 'queueWithdrawal',
-      args: [withdrawAmount ? parseShares(withdrawAmount) : BigInt(0), address as `0x${string}`],
+      args: [withdrawAmount ? parseShares(withdrawAmount, tokenX, tokenY) : BigInt(0), address as `0x${string}`],
     });
   };
 
@@ -67,7 +69,7 @@ export function WithdrawModal({
   const isValidAmount = (amount: string) => {
     if (!amount || parseFloat(amount) <= 0) return false;
     try {
-      const parsed = parseShares(amount);
+      const parsed = parseShares(amount, tokenX, tokenY);
       return parsed <= userShares;
     } catch {
       return false;
@@ -77,7 +79,7 @@ export function WithdrawModal({
   const canProceed = withdrawAmount && isValidAmount(withdrawAmount);
 
   // Get preview amounts from contract
-  const withdrawShares = withdrawAmount ? parseShares(withdrawAmount) : 0n;
+  const withdrawShares = withdrawAmount ? parseShares(withdrawAmount, tokenX, tokenY) : 0n;
   
   const { data: previewData } = useReadContract({
     address: vaultAddress as `0x${string}`,
@@ -112,7 +114,7 @@ export function WithdrawModal({
               <div className="flex justify-between mb-2">
                 <label className="text-sm text-gray-400">Shares to Withdraw</label>
                 <span className="text-sm text-gray-400">
-                  Available: {formatShares(userShares)}
+                  Available: {formatShares(userShares, tokenX, tokenY)}
                 </span>
               </div>
               <div className="relative">
@@ -152,7 +154,7 @@ export function WithdrawModal({
             {/* Warning */}
             <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3">
               <p className="text-yellow-400 text-sm">
-                ⚠️ Withdrawals are queued and may take some time to process. You'll be able to claim once ready.
+                ⚠️ Withdrawals are queued and may take some time to process. You'll be able to claim your withdrawal on the Dashboard page once ready.
               </p>
             </div>
 

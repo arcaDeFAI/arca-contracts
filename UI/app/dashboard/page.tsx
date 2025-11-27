@@ -6,6 +6,7 @@ import { Header } from '@/components/Header';
 import DashboardVaultCard from '@/components/DashboardVaultCard';
 import { DashboardOverview } from '@/components/DashboardOverview';
 import { SocialLinks } from '@/components/SocialLinks';
+import { VaultTableView } from '@/components/VaultTableView';
 
 // Vault configurations from main page
 const VAULT_CONFIGS = [
@@ -56,9 +57,12 @@ const VAULT_CONFIGS = [
   },
 ];
 
+type VaultConfig = typeof VAULT_CONFIGS[number];
+
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
+  const [selectedVault, setSelectedVault] = useState<VaultConfig | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -118,11 +122,54 @@ export default function Dashboard() {
                 <div className="w-1 h-6 bg-arca-green rounded-full"></div>
                 <h2 className="text-xl font-bold text-white">Active Vaults</h2>
               </div>
-              <p className="text-gray-400 text-xs ml-5">Monitor and manage your vault positions</p>
+              <p className="text-gray-400 text-xs ml-5">Click on a vault to view details</p>
             </div>
 
-            {/* Split Screen Layout - Metropolis and Shadow */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Table View with Slide-out Panel */}
+            <div className="flex flex-col lg:flex-row gap-5">
+              {/* Vault Table */}
+              <div className={`transition-all duration-300 ${selectedVault ? 'lg:w-2/3' : 'w-full'}`}>
+                <VaultTableView
+                  vaults={VAULT_CONFIGS}
+                  userAddress={address}
+                  onVaultClick={(vault) => setSelectedVault(vault)}
+                  selectedVault={selectedVault || undefined}
+                />
+              </div>
+
+              {/* Detail Panel - Side on desktop, below on mobile */}
+              {selectedVault && (
+                <div className="w-full lg:w-1/3 transition-all duration-300">
+                  <div className="lg:sticky lg:top-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-white font-semibold">Vault Details</h3>
+                      <button
+                        onClick={() => setSelectedVault(null)}
+                        className="text-gray-400 hover:text-white"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <DashboardVaultCard
+                      vaultAddress={selectedVault.vaultAddress}
+                      stratAddress={selectedVault.stratAddress}
+                      lbBookAddress={selectedVault.lbBookAddress}
+                      clpoolAddress={selectedVault.clpoolAddress}
+                      rewardsAddress={(selectedVault as any).rewardsAddress}
+                      poolSymbol={(selectedVault as any).poolSymbol}
+                      name={selectedVault.name}
+                      tier={selectedVault.tier}
+                      userAddress={address}
+                      tokenX={selectedVault.tokenX}
+                      tokenY={selectedVault.tokenY}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Original Split Screen Layout - Hidden for now */}
+            <div className="hidden grid-cols-1 lg:grid-cols-2 gap-5">
             {/* Metropolis Vaults Container */}
             <div className="bg-black/40 rounded-xl p-5 border border-gray-800/50">
               <div className="flex items-center justify-center gap-2 mb-5">

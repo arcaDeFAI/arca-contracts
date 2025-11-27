@@ -44,8 +44,9 @@ export function Header() {
   }, [isMobileMenuOpen]);
   
   return (
-    <header className="bg-arca-dark border-b border-arca-light-gray">
-      <div className="container mx-auto px-3 sm:px-6 lg:px-8" style={{maxWidth: '100%'}}>
+    <header className="relative border-b border-arca-light-gray" style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.03) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 100%)'}}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
+      <div className="relative z-10 container mx-auto px-3 sm:px-6 lg:px-8" style={{maxWidth: '100%'}}>
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4 sm:gap-8">
             <div className="flex items-center gap-2 sm:gap-3">
@@ -231,7 +232,7 @@ export function Header() {
         
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-arca-dark border-t border-arca-light-gray">
+          <div className="md:hidden border-t border-arca-light-gray" style={{background: 'rgba(0, 0, 0, 0.95)'}}>
             <div className="px-3 py-4 space-y-3">
               <Link 
                 href="/vaults" 

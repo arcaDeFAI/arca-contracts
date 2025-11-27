@@ -71,20 +71,28 @@ export function formatPercentage(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
-// Format shares with 10^-10 decimals
-export function formatShares(shares: bigint): string {
-  const formatted = formatUnits(shares, 12) // 10^-12 decimals
+// Format shares with vault-specific decimals
+export function formatShares(shares: bigint, tokenX?: string, tokenY?: string): string {
+  // WETH vaults use 18 decimals, others use 12
+  const isWETHVault = tokenX === 'WETH' || tokenY === 'WETH';
+  const decimals = isWETHVault ? 18 : 12;
+  
+  const formatted = formatUnits(shares, decimals)
   const num = parseFloat(formatted)
   
   return num.toLocaleString(undefined, {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 10,
+    maximumFractionDigits: 4,
   })
 }
 
-// Parse shares from user input (10^-10 decimals)
-export function parseShares(amount: string): bigint {
-  return parseUnits(amount, 12) // 10^-12 decimals
+// Parse shares from user input with vault-specific decimals
+export function parseShares(amount: string, tokenX?: string, tokenY?: string): bigint {
+  // WETH vaults use 18 decimals, others use 12
+  const isWETHVault = tokenX === 'WETH' || tokenY === 'WETH';
+  const decimals = isWETHVault ? 18 : 12;
+  
+  return parseUnits(amount, decimals)
 }
 
 // Truncate address for display

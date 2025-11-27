@@ -20,10 +20,25 @@ interface PortfolioAllocationCardProps {
   allocations: TokenAllocation[]
   totalValueUSD: number
   deposited?: DepositedAmount[]
+  isCollapsible?: boolean
+  isExpanded?: boolean
+  onToggle?: () => void
 }
 
-export function PortfolioAllocationCard({ allocations, totalValueUSD, deposited }: PortfolioAllocationCardProps) {
+export function PortfolioAllocationCard({ 
+  allocations, 
+  totalValueUSD, 
+  deposited, 
+  isCollapsible = false,
+  isExpanded: controlledIsExpanded,
+  onToggle
+}: PortfolioAllocationCardProps) {
   const [hoveredToken, setHoveredToken] = useState<string | null>(null)
+  const [internalIsExpanded, setInternalIsExpanded] = useState(true)
+  
+  // Use controlled state if provided, otherwise use internal state
+  const isExpanded = controlledIsExpanded !== undefined ? controlledIsExpanded : internalIsExpanded
+  const handleToggle = onToggle || (() => setInternalIsExpanded(!internalIsExpanded))
 
   // Calculate pie chart segments
   const pieSegments = useMemo(() => {
@@ -80,10 +95,30 @@ export function PortfolioAllocationCard({ allocations, totalValueUSD, deposited 
   }
 
   return (
-    <div className="bg-black border border-gray-800/60 rounded-xl p-5 h-full">
-      <h3 className="text-lg font-semibold text-white mb-6">Capital Allocation</h3>
+    <div className={`bg-black border border-gray-800/60 rounded-xl transition-all h-full ${isExpanded ? 'p-5' : 'p-3'}`}>
+      <div className={`flex items-center justify-between ${isExpanded ? 'mb-6' : 'mb-0'}`}>
+        {isCollapsible ? (
+          <button
+            onClick={handleToggle}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <h3 className="text-lg font-semibold text-white">Capital Allocation</h3>
+            <svg 
+              className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        ) : (
+          <h3 className="text-lg font-semibold text-white">Capital Allocation</h3>
+        )}
+      </div>
       
-      <div className="flex flex-col lg:flex-row items-center gap-6">
+      {isExpanded && (
+        <div className="flex flex-col lg:flex-row items-center gap-6">
         {/* Pie Chart */}
         <div className="flex-shrink-0 w-40 h-40 sm:w-48 sm:h-48 lg:w-52 lg:h-52">
           <svg width="100%" height="100%" viewBox="0 0 200 200" className="drop-shadow-lg">
@@ -147,6 +182,7 @@ export function PortfolioAllocationCard({ allocations, totalValueUSD, deposited 
           ))}
         </div>
       </div>
+      )}
     </div>
   )
 }
