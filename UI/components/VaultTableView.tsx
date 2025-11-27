@@ -124,9 +124,9 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
   const positionData = vaults.map(vault => useVaultPositionData(vault));
 
   return (
-    <div className="bg-black border border-gray-800/60 rounded-xl overflow-hidden">
+    <div className="bg-black/40 border-2 border-gray-700/50 rounded-xl overflow-hidden backdrop-blur-sm">
       {/* Table Header - Responsive */}
-      <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-black border-b border-gray-800/60 text-sm font-semibold text-white uppercase tracking-wider">
+      <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-black/60 border-b-2 border-gray-700/50 text-sm font-semibold text-white uppercase tracking-wider">
         <div className="flex items-center gap-2">
           <span>Vaults</span>
         </div>
@@ -140,7 +140,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
       </div>
       
       {/* Mobile Header */}
-      <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3 bg-black border-b border-gray-800/60 text-xs font-semibold text-white uppercase tracking-wider">
+      <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3 bg-black/60 border-b-2 border-gray-700/50 text-xs font-semibold text-white uppercase tracking-wider">
         <div>Vault</div>
         <div className="text-center">Withdraw</div>
         <div className="text-center">Status</div>
@@ -148,7 +148,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
       </div>
 
       {/* Table Rows */}
-      <div className="divide-y divide-gray-800/30">
+      <div className="divide-y divide-gray-700/40">
         {vaults.map((vault, index) => {
           const metrics = vaultMetrics[index];
           const harvested = harvestedData[index];
