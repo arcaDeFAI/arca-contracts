@@ -146,7 +146,6 @@ export function PriceProvider({ children }: { children: ReactNode }) {
         const response = await fetch(
           'https://api.coingecko.com/api/v3/simple/price?ids=metropolis,shadow-2&vs_currencies=usd'
         );
-        
         if (response.ok) {
           const data = await response.json();
           
@@ -160,6 +159,11 @@ export function PriceProvider({ children }: { children: ReactNode }) {
             xShadow: shadowPrice,
           }));
           setLastUpdated(Date.now());
+          console.log('💰 Metro/Shadow Prices Updated:', {
+            metro: metroPrice,
+            shadow: shadowPrice,
+            timestamp: new Date().toLocaleTimeString()
+          });
         }
       } catch (error) {
         console.warn('Failed to fetch Metro/Shadow prices');

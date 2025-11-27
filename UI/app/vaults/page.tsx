@@ -49,7 +49,7 @@ const VAULT_CONFIGS = [
     stratAddress: '0x64efeA2531f2b1A3569555084B88bb5714f5286c',
     clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
     poolSymbol: 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' as const, // DeFi Llama pool ID
-    name: 'S • USDC | Shadow',
+    name: 'WS • USDC | Shadow',
     tier: 'Premium' as const,
     tokenX: 'WS',
     tokenY: 'USDC',
@@ -136,8 +136,14 @@ export default function Home() {
   })();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-arca-dark to-black" style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.03) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 100%)'}}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
+    <div className="min-h-screen bg-black relative">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80"
+        style={{ backgroundImage: 'url(/backgroundarca.png)' }}
+      />
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
       <div className="relative z-10">
       <Header />
       
