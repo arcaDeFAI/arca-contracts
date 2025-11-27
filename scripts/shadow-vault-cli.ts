@@ -1151,11 +1151,12 @@ class ShadowVaultTester {
     async showAdminMenu() {
         console.log(chalk.blue("\n🔐 Admin Functions\n"));
         console.log(chalk.gray("1. Pause/Resume Deposits"));
-        console.log(chalk.gray("2. Set TWAP Interval"));
-        console.log(chalk.gray("3. Submit/Cancel Shutdown"));
+        console.log(chalk.gray("2. Set TWAP Interval (TODO)"));
+        console.log(chalk.gray("3. Submit/Cancel Shutdown (TODO)"));
         console.log(chalk.gray("4. Emergency Mode"));
         console.log(chalk.gray("5. Recover ERC20"));
-        console.log(chalk.gray("6. Back"));
+        console.log(chalk.gray("6. Register Vault for FeeM"));
+        console.log(chalk.gray("7. Back"));
         
         const choice = await this.question("\nSelect option: ");
         
@@ -1176,6 +1177,9 @@ class ShadowVaultTester {
                 break;
             case '5':
                 await this.testRecoverERC20();
+                break;
+            case '6':
+                await this.registerVaultForFeeM();
                 break;
         }
     }
@@ -1323,6 +1327,19 @@ class ShadowVaultTester {
             }
         } catch (error) {
             console.error(chalk.red("❌ Error initializing recovery:"), error);
+        }
+    }
+
+    async registerVaultForFeeM() {
+        console.log(chalk.gray("\nRegistering Vault for FeeM...\n"));
+        try {
+            await this.executeAction("Update Rewards", async () => {
+            return await this.vault!.registerMe();
+        });
+            
+        } catch (error) {
+            console.error(chalk.red("❌ Error:"), error);
+            return;
         }
     }
 

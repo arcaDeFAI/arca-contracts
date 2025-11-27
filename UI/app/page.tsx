@@ -8,16 +8,14 @@ export default function Home() {
   const [understandsRisks, setUnderstandsRisks] = useState(false)
 
   return (
-    <div className="min-h-screen bg-arca-dark text-white overflow-hidden">
-      {/* Background with green gradient */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-black via-arca-dark to-black">
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-arca-green rounded-full filter blur-3xl"></div>
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-arca-green rounded-full filter blur-3xl"></div>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-black text-white overflow-hidden relative">
+      {/* Background Image */}
+      <div 
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-60"
+        style={{ backgroundImage: 'url(/backgroundarca.png)' }}
+      />
+      {/* Gradient Overlay */}
+      <div className="fixed inset-0 z-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
       
       {/* Navigation */}
       <nav className="relative z-10 px-6 py-6 md:px-12 lg:px-16">

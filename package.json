@@ -176,7 +176,7 @@
     "strip-json-comments": "^3.1.1",
     "supports-color": "^7.2.0",
     "tinyglobby": "^0.2.14",
-    "tmp": "^0.0.33",
+    "tmp": "^0.2.5",
     "to-regex-range": "^5.0.1",
     "toidentifier": "^1.0.1",
     "tslib": "^1.14.1",
@@ -198,6 +198,10 @@
     "yargs-parser": "^20.2.9",
     "yargs-unparser": "^2.0.0",
     "yocto-queue": "^0.1.0"
+  },
+  "overrides": {
+    "tmp": "^0.2.5",
+    "cookie": "^1.0.1"
   },
   "repository": {
     "type": "git",
