@@ -93,7 +93,7 @@ export function WithdrawModal({
   const estimatedUsdc = previewData ? previewData[1] : 0n;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
       <div className="bg-arca-gray rounded-lg p-6 w-full max-w-md border border-arca-light-gray">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">

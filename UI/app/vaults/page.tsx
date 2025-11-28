@@ -49,7 +49,7 @@ const VAULT_CONFIGS = [
     stratAddress: '0x64efeA2531f2b1A3569555084B88bb5714f5286c',
     clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
     poolSymbol: 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' as const, // DeFi Llama pool ID
-    name: 'S • USDC | Shadow',
+    name: 'WS • USDC | Shadow',
     tier: 'Premium' as const,
     tokenX: 'WS',
     tokenY: 'USDC',

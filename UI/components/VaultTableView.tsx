@@ -124,9 +124,10 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
   const positionData = vaults.map(vault => useVaultPositionData(vault));
 
   return (
-    <div className="bg-black/40 border-2 border-gray-700/50 rounded-xl overflow-hidden backdrop-blur-sm">
-      {/* Table Header - Responsive */}
-      <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-black/60 border-b-2 border-gray-700/50 text-sm font-semibold text-white uppercase tracking-wider">
+    <>
+      <div className="bg-black/40 border-2 border-gray-700/50 rounded-xl overflow-hidden backdrop-blur-sm">
+        {/* Table Header - Responsive */}
+        <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-black/60 border-b-2 border-gray-700/50 text-sm font-semibold text-white uppercase tracking-wider">
         <div className="flex items-center gap-2">
           <span>Vaults</span>
         </div>
@@ -464,8 +465,9 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
           );
         })}
       </div>
+      </div>
 
-      {/* Modals */}
+      {/* Modals - Outside table container to avoid overflow clipping */}
       {depositModalVault && (() => {
         const vault = vaults.find(v => v.vaultAddress === depositModalVault);
         if (!vault) return null;
@@ -501,6 +503,6 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
           />
         );
       })()}
-    </div>
+    </>
   );
 }
