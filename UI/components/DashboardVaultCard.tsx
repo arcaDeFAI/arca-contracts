@@ -614,7 +614,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal{claimableWithdrawals && claimableWithdrawals.length > 1 ? 's' : ''}:</span>
               <span className="text-arca-green font-semibold">
-                {claimableWithdrawals ? (Number(claimableWithdrawals) / 1e12).toFixed(2) : '0.00'} shares
+                {totalClaimableAmount ? (Number(totalClaimableAmount) / 1e12).toFixed(2) : '0.00'} shares
               </span>
             </div>
             
