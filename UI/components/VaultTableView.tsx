@@ -86,9 +86,9 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
   const [withdrawModalVault, setWithdrawModalVault] = useState<string | null>(null);
   
   // Fetch token balances
+  // SONIC is the native token, so don't pass the token parameter
   const sonicBalance = useBalance({
     address: userAddress as `0x${string}` | undefined,
-    token: CONTRACTS.SONIC as `0x${string}`,
   });
   
   const wsBalance = useBalance({
