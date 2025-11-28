@@ -113,26 +113,40 @@ export function DashboardVaultCard({
   const [showActiveBreakdown, setShowActiveBreakdown] = useState(false);
   const [showReservedBreakdown, setShowReservedBreakdown] = useState(false);
 
-  // Calculate liquidity percentages
+  // Calculate liquidity percentages based on USD value
   const liquidityPercentages = (() => {
     if (!balances || !idleBalances) {
       return { activePercentage: 0, reservedPercentage: 0 };
     }
     
-    const totalToken0 = Number(balances[0]);
-    const totalToken1 = Number(balances[1]);
-    const idleToken0 = Number(idleBalances[0]);
-    const idleToken1 = Number(idleBalances[1]);
+    // Get token prices
+    let token0Price = sonicPrice || 0;
+    if (tokenX.toUpperCase() === 'USDC') {
+      token0Price = 1;
+    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
+      token0Price = prices?.weth || 0;
+    }
     
-    // Calculate percentages based on total value
-    const totalValue = totalToken0 + totalToken1;
-    const idleValue = idleToken0 + idleToken1;
+    let token1Price = 1;
+    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
+      token1Price = prices?.weth || 0;
+    }
     
-    if (totalValue === 0) {
+    // Convert to actual token amounts with proper decimals
+    const totalToken0 = Number(formatUnits(balances[0], getTokenDecimals(tokenX)));
+    const totalToken1 = Number(formatUnits(balances[1], getTokenDecimals(tokenY)));
+    const idleToken0 = Number(formatUnits(idleBalances[0], getTokenDecimals(tokenX)));
+    const idleToken1 = Number(formatUnits(idleBalances[1], getTokenDecimals(tokenY)));
+    
+    // Calculate USD values
+    const totalValueUSD = (totalToken0 * token0Price) + (totalToken1 * token1Price);
+    const idleValueUSD = (idleToken0 * token0Price) + (idleToken1 * token1Price);
+    
+    if (totalValueUSD === 0) {
       return { activePercentage: 0, reservedPercentage: 0 };
     }
     
-    const reservedPercentage = (idleValue / totalValue) * 100;
+    const reservedPercentage = (idleValueUSD / totalValueUSD) * 100;
     const activePercentage = 100 - reservedPercentage;
     
     return { activePercentage, reservedPercentage };
