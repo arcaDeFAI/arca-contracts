@@ -28,7 +28,7 @@ const VAULT_CONFIGS = [
     clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
     rewardsAddress: '0xe879d0E44e6873cf4ab71686055a4f6817685f02', // S-USDC uses old rewards contract
     poolSymbol: 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' as const, // DeFi Llama pool ID
-    name: 'S • USDC | Shadow',
+    name: 'wS • USDC | Shadow',
     tier: 'Premium' as const,
     tokenX: 'WS',
     tokenY: 'USDC',
