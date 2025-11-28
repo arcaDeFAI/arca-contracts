@@ -6,8 +6,7 @@ import { useVaultMetrics } from '@/hooks/useVaultMetrics'
 import { useBalanceHistory } from '@/hooks/useBalanceHistory'
 import { use24hHarvestedRewards } from '@/hooks/use24hHarvestedRewards'
 import { useDailyHarvestedRewards } from '@/hooks/useDailyHarvestedRewards'
-import { useTotalEarnedFromCache } from '@/hooks/useTotalEarnedFromCache'
-import { useTotalEarnedAllTime } from '@/hooks/useTotalEarnedAllTime'
+import { useTotalHarvestedRewards } from '@/hooks/useTotalHarvestedRewards'
 import { usePositionInRange } from '@/hooks/usePositionInRange'
 import { type UserRewardStructOutput } from '@/lib/typechain'
 import { CONTRACTS } from '@/lib/contracts'
@@ -51,26 +50,16 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     })
   )
 
-  // Fetch latest reward from APY caches (most recent reward only)
-  const latestRewardData = vaultConfigs.map((config, index) => {
+  // Fetch total harvested rewards for this specific user
+  const totalHarvestedData = vaultConfigs.map((config, index) => {
     const metrics = vaultMetrics[index]
     const isShadowVault = config.name.includes('Shadow')
     const tokenPrice = isShadowVault 
       ? (metrics.prices?.shadow || 0) 
       : (metrics.prices?.metro || 0)
+    const hasBalance = !!(metrics.depositedValueUSD && metrics.depositedValueUSD > 0)
     
-    return useTotalEarnedFromCache(config.stratAddress, isShadowVault, tokenPrice)
-  })
-
-  // Fetch total earned all-time (accumulated historical rewards)
-  const totalEarnedAllTimeData = vaultConfigs.map((config, index) => {
-    const metrics = vaultMetrics[index]
-    const isShadowVault = config.name.includes('Shadow')
-    const tokenPrice = isShadowVault 
-      ? (metrics.prices?.shadow || 0) 
-      : (metrics.prices?.metro || 0)
-    
-    return useTotalEarnedAllTime(config.stratAddress, isShadowVault, tokenPrice)
+    return useTotalHarvestedRewards(config.vaultAddress, userAddress, tokenPrice, hasBalance)
   })
 
   // Fetch 24h harvested rewards for calculating % change
@@ -100,15 +89,15 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   const [ratePeriod, setRatePeriod] = useState<'DPR' | 'WPR' | 'APR'>('APR')
   const [showRewardDropdown, setShowRewardDropdown] = useState(false)
   const [showRateDropdown, setShowRateDropdown] = useState(false)
+  const [showSections, setShowSections] = useState(false) // Single state for both sections, default collapsed
 
   const firstEarningDate = useMemo(() => {
-    const dates = totalEarnedAllTimeData
-      .map(data => data.firstEventTimestamp)
+    const dates = totalHarvestedData
+      .map(data => data.firstHarvestTimestamp)
       .filter((date): date is number => date !== null)
     
     return dates.length > 0 ? Math.min(...dates) : null
-  }, [totalEarnedAllTimeData])
-
+  }, [totalHarvestedData])
 
 
   const avgAPY = useMemo(() => {
@@ -262,15 +251,15 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       }
     })
 
-    // Process total earned all-time (accumulated historical rewards)
-    totalEarnedAllTimeData.forEach((earnedData, index) => {
+    // Process total harvested rewards (user-specific)
+    totalHarvestedData.forEach((harvestData, index) => {
       const config = vaultConfigs[index]
       const isShadowVault = config.name.includes('Shadow')
 
       if (isShadowVault) {
-        totalHarvestedShadowUSD += earnedData.totalEarnedUSD
+        totalHarvestedShadowUSD += harvestData.totalHarvestedUSD
       } else {
-        totalHarvestedMetroUSD += earnedData.totalEarnedUSD
+        totalHarvestedMetroUSD += harvestData.totalHarvestedUSD
       }
     })
 
@@ -315,7 +304,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       metroRewards,
       shadowRewards
     }
-  }, [vaultMetrics, vaultConfigs, totalEarnedAllTimeData])
+  }, [vaultMetrics, vaultConfigs, totalHarvestedData])
   const extrapolatedReward = useMemo(() => {
     // Calculate rewards based on APR and actual deposited amounts
     const totalDeposited = aggregatedData.totalBalanceUSD
@@ -492,19 +481,44 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       {/* Main Content Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Left Column: Claimable Rewards */}
-        <div className="bg-black border border-gray-800/60 rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
+        <div className={`bg-black border border-gray-800/60 rounded-xl transition-all ${showSections ? 'p-5' : 'p-3'}`}>
+            <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-white text-lg font-semibold">Claimable Rewards</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-white text-lg font-semibold">Claimable Rewards</h3>
+                  <button
+                    onClick={() => setShowSections(!showSections)}
+                    className="hover:opacity-80 transition-opacity"
+                  >
+                    <svg 
+                      className={`w-5 h-5 text-gray-400 transition-transform ${showSections ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
                 <div className="text-arca-green text-xl font-bold mt-1">
                   ${aggregatedData.totalClaimableUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               </div>
               <button
                 onClick={() => {
-                  // Claim all rewards logic here
-                  vaultMetrics.forEach(metrics => {
-                    if (metrics.handleClaimRewards) {
+                  // Claim rewards from each vault that has claimable rewards
+                  const vaultsWithRewards = new Set<string>()
+                  
+                  vaultMetrics.forEach((metrics, index) => {
+                    const config = vaultConfigs[index]
+                    const vaultKey = config.vaultAddress.toLowerCase()
+                    
+                    // Only claim if this vault has rewards and we haven't claimed from it yet
+                    if (metrics.handleClaimRewards && 
+                        metrics.pendingRewards && 
+                        metrics.pendingRewards.length > 0 &&
+                        !vaultsWithRewards.has(vaultKey)) {
+                      vaultsWithRewards.add(vaultKey)
                       metrics.handleClaimRewards()
                     }
                   })
@@ -515,55 +529,60 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
                 Claim Rewards
               </button>
             </div>
-            <div className="border-t border-gray-800/50 pt-4 mt-2"></div>
+            
+            {showSections && (
+              <>
+                <div className="border-t border-gray-800/50 pt-4 mt-4"></div>
 
-            {/* Metropolis Rewards */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <img src="/MetropolisLogo.png" alt="Metropolis" className="w-5 h-5" />
-                <span className="text-white font-semibold">Metropolis Rewards</span>
-              </div>
-              {aggregatedData.totalMetroRewardsUSD > 0 ? (
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <img src="/MetropolisLogo.png" alt="Metro" className="w-4 h-4" />
-                    <span className="text-gray-300 text-sm">Metro</span>
+                {/* Metropolis Rewards */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <img src="/MetropolisLogo.png" alt="Metropolis" className="w-5 h-5" />
+                    <span className="text-white font-semibold">Metropolis Rewards</span>
                   </div>
-                  <div className="text-right">
-                    <div className="text-white font-semibold">
-                      {aggregatedData.metroRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                  {aggregatedData.totalMetroRewardsUSD > 0 ? (
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-2">
+                        <img src="/MetropolisLogo.png" alt="Metro" className="w-4 h-4" />
+                        <span className="text-gray-300 text-sm">Metro</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-white font-semibold">
+                          {aggregatedData.metroRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                        </div>
+                        <div className="text-gray-400 text-xs">${aggregatedData.totalMetroRewardsUSD.toFixed(2)}</div>
+                      </div>
                     </div>
-                    <div className="text-gray-400 text-xs">${aggregatedData.totalMetroRewardsUSD.toFixed(2)}</div>
-                  </div>
+                  ) : (
+                    <div className="text-gray-500 text-sm py-2">No Metropolis rewards</div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-gray-500 text-sm py-2">No Metropolis rewards</div>
-              )}
-            </div>
 
-            {/* Shadow Rewards */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <img src="/SHadowLogo.jpg" alt="Shadow" className="w-5 h-5 rounded-full" />
-                <span className="text-white font-semibold">Shadow Rewards</span>
-              </div>
-              {aggregatedData.totalShadowRewardsUSD > 0 ? (
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full" />
-                    <span className="text-gray-300 text-sm">Shadow</span>
+                {/* Shadow Rewards */}
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <img src="/SHadowLogo.jpg" alt="Shadow" className="w-5 h-5 rounded-full" />
+                    <span className="text-white font-semibold">Shadow Rewards</span>
                   </div>
-                  <div className="text-right">
-                    <div className="text-white font-semibold">
-                      {aggregatedData.shadowRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                  {aggregatedData.totalShadowRewardsUSD > 0 ? (
+                    <div className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-2">
+                        <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full" />
+                        <span className="text-gray-300 text-sm">Shadow</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-white font-semibold">
+                          {aggregatedData.shadowRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                        </div>
+                        <div className="text-gray-400 text-xs">${aggregatedData.totalShadowRewardsUSD.toFixed(2)}</div>
+                      </div>
                     </div>
-                    <div className="text-gray-400 text-xs">${aggregatedData.totalShadowRewardsUSD.toFixed(2)}</div>
-                  </div>
+                  ) : (
+                    <div className="text-gray-500 text-sm py-2">No Shadow rewards</div>
+                  )}
                 </div>
-              ) : (
-                <div className="text-gray-500 text-sm py-2">No Shadow rewards</div>
-              )}
-            </div>
+              </>
+            )}
         </div>
 
         {/* Right Column: Capital Allocation */}
@@ -572,6 +591,9 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             allocations={aggregatedData.allocations}
             totalValueUSD={aggregatedData.totalBalanceUSD}
             deposited={aggregatedData.deposited}
+            isCollapsible={true}
+            isExpanded={showSections}
+            onToggle={() => setShowSections(!showSections)}
           />
         </div>
       </div>
