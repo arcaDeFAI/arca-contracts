@@ -7,7 +7,7 @@ interface ArcaLogoProps {
   size?: number;
 }
 
-export function ArcaLogo({ className = "", size = 32 }: ArcaLogoProps) {
+export function ArcaLogo({ className = "", size = 40 }: ArcaLogoProps) {
   return (
     <Image
       src="/arca-logo.png"

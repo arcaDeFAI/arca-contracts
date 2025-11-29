@@ -24,10 +24,8 @@ export function clearAllShadowCaches() {
     // Remove all found keys
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
-    console.log(`✅ Cleared ${keysToRemove.length} Shadow APY cache entries`);
     return keysToRemove.length;
   } catch (error) {
-    console.error('❌ Failed to clear Shadow APY caches:', error);
     return 0;
   }
 }
@@ -48,10 +46,8 @@ export function clearAllMetroCaches() {
     
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
-    console.log(`✅ Cleared ${keysToRemove.length} Metro APY cache entries`);
     return keysToRemove.length;
   } catch (error) {
-    console.error('❌ Failed to clear Metro APY caches:', error);
     return 0;
   }
 }
@@ -63,7 +59,6 @@ export function clearAllAPYCaches() {
   const shadowCount = clearAllShadowCaches();
   const metroCount = clearAllMetroCaches();
   
-  console.log(`✅ Total cleared: ${shadowCount + metroCount} cache entries`);
   return shadowCount + metroCount;
 }
 
@@ -97,7 +92,6 @@ export function getCacheStats() {
     
     return stats;
   } catch (error) {
-    console.error('❌ Failed to get cache stats:', error);
     return null;
   }
 }
@@ -105,20 +99,13 @@ export function getCacheStats() {
 /**
  * Display cache statistics in console
  */
-export function displayCacheStats() {
+export function logCacheStats() {
   const stats = getCacheStats();
   
-  if (!stats) {
-    console.error('❌ Could not retrieve cache statistics');
-    return;
-  }
+  if (!stats) return;
   
-  console.log('📊 Cache Statistics:');
-  console.log(`   Shadow Claims: ${stats.shadowClaims}`);
-  console.log(`   Metro Transfers: ${stats.metroTransfers}`);
-  console.log(`   DeFi Llama: ${stats.defiLlama}`);
-  console.log(`   Other: ${stats.other}`);
-  console.log(`   Total: ${stats.total}`);
+  // Cache stats available for debugging if needed
+  return stats;
 }
 
 // Make functions available in browser console for debugging
@@ -126,5 +113,6 @@ if (typeof window !== 'undefined') {
   (window as any).clearAllShadowCaches = clearAllShadowCaches;
   (window as any).clearAllMetroCaches = clearAllMetroCaches;
   (window as any).clearAllAPYCaches = clearAllAPYCaches;
-  (window as any).displayCacheStats = displayCacheStats;
+  (window as any).getCacheStats = getCacheStats;
+  (window as any).logCacheStats = logCacheStats;
 }

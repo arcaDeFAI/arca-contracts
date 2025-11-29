@@ -29,7 +29,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
 
   // Fetch all data
   const vaultData = useVaultData(config, userAddress);
-  const dashboardData = useDashboardData(config, userAddress);
+  const dashboardData = useDashboardData(config, userAddress, vaultData.sharePercentage);
   const { prices, isLoading: pricesLoading } = useTokenPrices();
   const sonicPrice = prices?.sonic || 0.17;
 

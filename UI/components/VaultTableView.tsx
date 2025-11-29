@@ -162,7 +162,38 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
           const nonZeroRewards = metrics.pendingRewards 
             ? metrics.pendingRewards.filter((reward: any) => reward.pendingRewards > 0n)
             : [];
-          const hasClaimableRewards = nonZeroRewards.length > 0;
+          
+          // Calculate total USD value of pending rewards
+          const totalPendingRewardsUSD = nonZeroRewards.reduce((total: number, reward: any) => {
+            const tokenAmount = Number(reward.pendingRewards) / 1e18;
+            let price = 0;
+            
+            // Get token price based on token address
+            const tokenLower = reward.token.toLowerCase();
+            const metroAddr = '0x2c7c9963111a233a2d86b7d2c6f63a52c4997f6f';
+            const shadowAddr = '0xd0c6379b7f78ae5db887ef06ee97e9d22fc46c15';
+            
+            if (tokenLower === metroAddr.toLowerCase()) {
+              price = metrics.prices?.metro || 0;
+            } else if (tokenLower === shadowAddr.toLowerCase()) {
+              price = metrics.prices?.shadow || 0;
+            }
+            
+            return total + (tokenAmount * price);
+          }, 0);
+          
+          // For Shadow vaults, only allow claiming if rewards are >= $0.01
+          const hasClaimableRewards = nonZeroRewards.length > 0 && 
+            (!isShadow || totalPendingRewardsUSD >= 0.01);
+          
+          // Check for claimable or queued withdrawals
+          const hasQueuedWithdrawal = metrics.queuedWithdrawal && metrics.queuedWithdrawal > 0n;
+          const hasClaimableWithdrawal = metrics.claimableWithdrawals && metrics.claimableWithdrawals.length > 0;
+          
+          // Only show vaults with positions, rewards, or withdrawals
+          if (!hasPosition && !hasClaimableRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal) {
+            return null;
+          }
           
           // Calculate daily rewards from APR
           const dailyRewardsUSD = metrics.depositedValueUSD && metrics.apy > 0
@@ -176,11 +207,18 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
             <div
               key={vault.vaultAddress}
               onClick={() => onVaultClick(vault)}
-              className={`w-full transition-all duration-200 cursor-pointer ${
+              className={`w-full transition-all duration-200 cursor-pointer relative ${
                 isSelected 
-                  ? 'bg-arca-green/5 border-l-2 border-arca-green' 
-                  : 'hover:bg-gray-900/30 hover:border-l-2 hover:border-arca-green/30'
+                  ? 'bg-arca-green/5 border-l-4' 
+                  : 'hover:bg-gray-900/30 hover:border-l-4'
               }`}
+              style={{
+                borderLeftColor: isSelected || undefined ? '#00ff88' : undefined
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.borderLeftColor = '#00ff88'}
+              onMouseLeave={(e) => {
+                if (!isSelected) e.currentTarget.style.borderLeftColor = 'transparent';
+              }}
             >
               {/* Desktop Layout */}
               <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4">

@@ -14,6 +14,7 @@ import { getTokenDecimals } from '@/lib/tokenHelpers'
 import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
 import { APYTooltip } from './APYTooltip'
+import { TotalEarnedTooltip } from './TotalEarnedTooltip'
 
 interface VaultConfig {
   vaultAddress: string
@@ -101,23 +102,39 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
 
   const avgAPY = useMemo(() => {
-    const allAPYs = vaultMetrics
-      .map(metrics => metrics.apy)
-      .filter(apy => apy > 0)
+    // Calculate weighted average APY based on user's TVL in each vault
+    let totalWeightedAPY = 0
+    let totalTVL = 0
     
-    return allAPYs.length > 0 
-      ? allAPYs.reduce((sum, apy) => sum + apy, 0) / allAPYs.length 
-      : 0
+    vaultMetrics.forEach(metrics => {
+      const userTVL = metrics.depositedValueUSD || 0
+      const vaultAPY = metrics.apy || 0
+      
+      if (userTVL > 0 && vaultAPY > 0) {
+        totalWeightedAPY += userTVL * vaultAPY
+        totalTVL += userTVL
+      }
+    })
+    
+    return totalTVL > 0 ? totalWeightedAPY / totalTVL : 0
   }, [vaultMetrics])
 
   const avg30dAPY = useMemo(() => {
-    const all30dAPYs = vaultMetrics
-      .map(metrics => metrics.apy30dMean)
-      .filter((apy): apy is number => apy !== null && apy > 0)
+    // Calculate weighted average 30d APY based on user's TVL in each vault
+    let totalWeighted30dAPY = 0
+    let totalTVL = 0
     
-    return all30dAPYs.length > 0 
-      ? all30dAPYs.reduce((sum, apy) => sum + apy, 0) / all30dAPYs.length 
-      : null
+    vaultMetrics.forEach(metrics => {
+      const userTVL = metrics.depositedValueUSD || 0
+      const vault30dAPY = metrics.apy30dMean
+      
+      if (userTVL > 0 && vault30dAPY !== null && vault30dAPY > 0) {
+        totalWeighted30dAPY += userTVL * vault30dAPY
+        totalTVL += userTVL
+      }
+    })
+    
+    return totalTVL > 0 ? totalWeighted30dAPY / totalTVL : null
   }, [vaultMetrics])
 
   const calculatedRate = useMemo(() => {
@@ -387,8 +404,9 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
         {/* Earned (All-Time) Card */}
         <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
-          <div className="text-white text-lg font-semibold mb-2">
-            Total Earned
+          <div className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
+            <span>Total Earned</span>
+            <TotalEarnedTooltip />
           </div>
           <div className="text-arca-green text-xl font-bold">
             ${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
