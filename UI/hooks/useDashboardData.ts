@@ -1,10 +1,11 @@
 'use client';
 
 import { useReadContract, useWriteContract, useReadContracts, useWaitForTransactionReceipt } from 'wagmi';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   METRO_VAULT_ABI,
-  SHADOW_VAULT_ABI
+  SHADOW_VAULT_ABI,
+  SHADOW_STRAT_ABI
 } from '@/lib/typechain';
 
 interface VaultConfig {
@@ -14,7 +15,7 @@ interface VaultConfig {
   tier: 'Active' | 'Premium' | 'Elite';
 }
 
-export function useDashboardData(config: VaultConfig, userAddress?: string) {
+export function useDashboardData(config: VaultConfig, userAddress?: string, sharePercentage?: number) {
   const isShadowVault = config.name.includes('Shadow');
   
   // Simple contract calls - exactly like VaultCard
@@ -28,8 +29,8 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     },
   });
 
-  // Pending rewards - works for both Metro and Shadow vaults
-  const { data: pendingRewards } = useReadContract({
+  // Pending rewards from vault (already harvested)
+  const { data: vaultPendingRewards } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
     abi: isShadowVault ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
     functionName: 'getPendingRewards',
@@ -38,6 +39,33 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       enabled: !!userAddress && !!config.vaultAddress,
     },
   });
+
+  // Strategy gauge rewards (unharvested) - Shadow vaults only
+  const { data: strategyRewardStatus } = useReadContract({
+    address: config.stratAddress as `0x${string}`,
+    abi: SHADOW_STRAT_ABI,
+    functionName: 'getRewardStatus',
+    query: {
+      enabled: !!config.stratAddress && isShadowVault,
+    },
+  });
+
+  // Combine vault pending rewards + user's share of strategy gauge rewards
+  const pendingRewards = useMemo(() => {
+    if (!vaultPendingRewards) return vaultPendingRewards;
+    if (!isShadowVault || !strategyRewardStatus || !sharePercentage || sharePercentage === 0) {
+      return vaultPendingRewards;
+    }
+
+    const earned = (strategyRewardStatus as any)[1] as readonly bigint[];
+    const userShareRatio = sharePercentage / 100;
+
+    // Add user's share of gauge rewards to vault pending rewards
+    return (vaultPendingRewards as any[]).map((vaultReward: any, i: number) => ({
+      ...vaultReward,
+      pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(earned[i] || 0n) * userShareRatio))
+    }));
+  }, [vaultPendingRewards, strategyRewardStatus, sharePercentage, isShadowVault]);
 
 
   // Get current round

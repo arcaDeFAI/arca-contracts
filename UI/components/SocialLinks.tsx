@@ -51,7 +51,7 @@ export function SocialLinks() {
             <img
               src={social.logo}
               alt={social.name}
-              className="w-8 h-8 rounded-lg transition-all duration-300 hover:scale-110 hover:shadow-[0_0_20px_rgba(0,255,163,0.5)]"
+              className="w-8 h-8 rounded-lg object-cover bg-black transition-all duration-300 hover:scale-110 hover:shadow-[0_0_20px_rgba(0,255,163,0.5)]"
             />
             {/* Tooltip on hover */}
             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-black border border-arca-green rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
