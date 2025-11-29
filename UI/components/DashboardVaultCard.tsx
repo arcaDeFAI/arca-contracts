@@ -3,43 +3,28 @@
 import { formatUnits } from 'viem';
 import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
-import { formatUSD, formatPercentage } from '@/lib/utils';
+import { formatUSD, formatPercentage, formatShares } from '@/lib/utils';
 import { CONTRACTS } from '@/lib/contracts';
 import { type UserRewardStructOutput } from '@/lib/typechain';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
-import { getTokenLogo, getTokenDecimals } from '@/lib/tokenHelpers';
+import { getTokenLogo, getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { usePrices } from '@/contexts/PriceContext';
 import { useState } from 'react';
 import PositionVisualizationCard from './PositionVisualizationCard';
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
 interface DashboardVaultCardProps {
-  vaultAddress: string;
-  stratAddress: string;
-  lbBookAddress?: string;
-  clpoolAddress?: string;
-  rewardsAddress?: string;
-  poolSymbol?: string;
-  name: string;
-  tier: 'Active' | 'Premium' | 'Elite';
+  config: VaultConfig;
   userAddress?: string;
-  tokenX?: string;
-  tokenY?: string;
 }
 
-export function DashboardVaultCard({ 
-  vaultAddress, 
-  stratAddress,
-  lbBookAddress,
-  clpoolAddress,
-  rewardsAddress,
-  poolSymbol,
-  name, 
-  tier, 
+export function DashboardVaultCard({
+  config,
   userAddress,
-  tokenX = 'S',
-  tokenY = 'USDC'
 }: DashboardVaultCardProps) {
-  const config = { vaultAddress, stratAddress, rewardsAddress, poolSymbol, name, tier, tokenX, tokenY };
+  const { vaultAddress, stratAddress, name, tier, tokenX, tokenY } = config;
+  const lbBookAddress = config.protocol === 'metropolis' ? config.lbBookAddress : undefined;
+  const clpoolAddress = config.protocol === 'shadow' ? config.clpoolAddress : undefined;
   
   // Use the connected wallet address
   const actualAddress = userAddress;
@@ -64,8 +49,10 @@ export function DashboardVaultCard({
     totalClaimableAmount,
     handleClaimRewards,
     handleRedeemWithdrawal,
+    handleCancelWithdrawal,
     isClaimingRewards,
     isRedeemingWithdrawal,
+    isCancellingWithdrawal,
     sonicPrice,
     isShadowVault,
     activeLiquidity,
@@ -83,25 +70,17 @@ export function DashboardVaultCard({
     // Token 0 - use dynamic decimals and price
     const token0Decimals = getTokenDecimals(tokenX);
     const token0Amount = Number(formatUnits(balances[0], token0Decimals)) * shareRatio;
-    
-    // Get token0 price (USDC = 1, S = sonic price, WETH = eth price)
-    let token0Price = sonicPrice || 0; // Default for S
-    if (tokenX.toUpperCase() === 'USDC') {
-      token0Price = 1;
-    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-      token0Price = prices?.weth || 0;
-    }
+
+    // Get token0 price using centralized utility
+    const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
     const token0Value = token0Amount * token0Price;
-    
+
     // Token 1 - use dynamic decimals and price
     const token1Decimals = getTokenDecimals(tokenY);
     const token1Amount = Number(formatUnits(balances[1], token1Decimals)) * shareRatio;
-    
-    // Get token1 price (USDC = 1, WETH = eth price)
-    let token1Price = 1; // Default for USDC
-    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-      token1Price = prices?.weth || 0;
-    }
+
+    // Get token1 price using centralized utility
+    const token1Price = getTokenPrice(tokenY, prices);
     const token1Value = token1Amount * token1Price;
     
     return {
@@ -119,18 +98,9 @@ export function DashboardVaultCard({
       return { activePercentage: 0, reservedPercentage: 0 };
     }
     
-    // Get token prices
-    let token0Price = sonicPrice || 0;
-    if (tokenX.toUpperCase() === 'USDC') {
-      token0Price = 1;
-    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-      token0Price = prices?.weth || 0;
-    }
-    
-    let token1Price = 1;
-    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-      token1Price = prices?.weth || 0;
-    }
+    // Get token prices using centralized utility
+    const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
+    const token1Price = getTokenPrice(tokenY, prices);
     
     // Convert to actual token amounts with proper decimals
     const totalToken0 = Number(formatUnits(balances[0], getTokenDecimals(tokenX)));
@@ -163,19 +133,10 @@ export function DashboardVaultCard({
     }
     
     const shareRatio = Number(userShares) / Number(totalSupply);
-    
-    // Get token prices
-    let token0Price = sonicPrice || 0; // Default for S
-    if (tokenX.toUpperCase() === 'USDC') {
-      token0Price = 1;
-    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-      token0Price = prices?.weth || 0;
-    }
-    
-    let token1Price = 1; // Default for USDC
-    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-      token1Price = prices?.weth || 0;
-    }
+
+    // Get token prices using centralized utility
+    const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
+    const token1Price = getTokenPrice(tokenY, prices);
     
     // User's total token amounts
     const totalToken0 = Number(formatUnits(balances[0], getTokenDecimals(tokenX))) * shareRatio;
@@ -426,7 +387,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
                                 {userLiquidityBreakdown.activeLiquidity.token0.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.activeLiquidity.token0Percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="text-gray-400 text-xs">
-                                ${(userLiquidityBreakdown.activeLiquidity.token0 * (tokenX.toUpperCase() === 'USDC' ? 1 : (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                                ${(userLiquidityBreakdown.activeLiquidity.token0 * getTokenPrice(tokenX, prices, sonicPrice)).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -441,7 +402,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
                                 {userLiquidityBreakdown.activeLiquidity.token1.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.activeLiquidity.token1Percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="text-gray-400 text-xs">
-                                ${(userLiquidityBreakdown.activeLiquidity.token1 * (tokenY.toUpperCase() === 'USDC' ? 1 : (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                                ${(userLiquidityBreakdown.activeLiquidity.token1 * getTokenPrice(tokenY, prices, sonicPrice)).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -486,7 +447,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
                                 {userLiquidityBreakdown.reservedLiquidity.token0.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.reservedLiquidity.token0Percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="text-gray-400 text-xs">
-                                ${(userLiquidityBreakdown.reservedLiquidity.token0 * (tokenX.toUpperCase() === 'USDC' ? 1 : (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                                ${(userLiquidityBreakdown.reservedLiquidity.token0 * getTokenPrice(tokenX, prices, sonicPrice)).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -501,7 +462,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
                                 {userLiquidityBreakdown.reservedLiquidity.token1.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.reservedLiquidity.token1Percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="text-gray-400 text-xs">
-                                ${(userLiquidityBreakdown.reservedLiquidity.token1 * (tokenY.toUpperCase() === 'USDC' ? 1 : (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                                ${(userLiquidityBreakdown.reservedLiquidity.token1 * getTokenPrice(tokenY, prices, sonicPrice)).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -576,7 +537,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
             <div className="flex justify-between items-center mb-2 text-sm">
               <span className="text-gray-400">Queued Withdrawal:</span>
               <span className="text-yellow-400 font-semibold">
-                {queuedWithdrawal ? (Number(queuedWithdrawal) / 1e12).toFixed(2) : '0.00'} shares
+                {queuedWithdrawal ? formatShares(queuedWithdrawal, tokenX, tokenY) : '0.00'} shares
               </span>
             </div>
             
@@ -585,15 +546,15 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
               <div className="bg-arca-dark/50 rounded-lg p-2 mb-2 space-y-1">
                 <div className="text-xs text-gray-400 mb-2">Estimated withdrawal:</div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">{isShadowVault ? 'WS' : 'S'}:</span>
+                  <span className="text-gray-400">{tokenX}:</span>
                   <span className="text-white font-medium">
-                    {Number(formatUnits(queuedPreviewAmounts[0], 18)).toFixed(4)}
+                    {Number(formatUnits(queuedPreviewAmounts[0], getTokenDecimals(tokenX))).toFixed(4)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">USDC:</span>
+                  <span className="text-gray-400">{tokenY}:</span>
                   <span className="text-white font-medium">
-                    {Number(formatUnits(queuedPreviewAmounts[1], 6)).toFixed(4)}
+                    {Number(formatUnits(queuedPreviewAmounts[1], getTokenDecimals(tokenY))).toFixed(4)}
                   </span>
                 </div>
               </div>
@@ -602,9 +563,23 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
             <div className="text-sm text-gray-400 mb-2">
               Round: {currentRound !== undefined ? Number(currentRound) : 'Loading...'}
             </div>
-            <div className="text-sm text-orange-400 text-center py-2">
+            <div className="text-sm text-orange-400 text-center py-2 mb-2">
               Withdrawal will be claimable in the next round
             </div>
+            
+            {/* Cancel Button */}
+            <button
+              onClick={() => queuedWithdrawal && handleCancelWithdrawal(queuedWithdrawal)}
+              disabled={isCancellingWithdrawal || !queuedWithdrawal}
+              className={`w-full py-2 px-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                isCancellingWithdrawal || !queuedWithdrawal
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-red-600 text-white hover:bg-red-700'
+              }`}
+            >
+              <span className="text-lg">✕</span>
+              {isCancellingWithdrawal ? 'Cancelling...' : 'Cancel Withdrawal'}
+            </button>
           </div>
         )}
 
@@ -614,7 +589,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal{claimableWithdrawals && claimableWithdrawals.length > 1 ? 's' : ''}:</span>
               <span className="text-arca-green font-semibold">
-                {totalClaimableAmount ? (Number(totalClaimableAmount) / 1e12).toFixed(2) : '0.00'} shares
+                {totalClaimableAmount ? formatShares(totalClaimableAmount, tokenX, tokenY) : '0.00'} shares
               </span>
             </div>
             
@@ -623,7 +598,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
               <div key={Number(withdrawal.round)} className="mb-3">
                 <div className="flex justify-between items-center text-sm mb-2">
                   <span className="text-gray-500">Round {Number(withdrawal.round)}:</span>
-                  <span className="text-gray-300">{(Number(withdrawal.amount) / 1e12).toFixed(2)} shares</span>
+                  <span className="text-gray-300">{formatShares(withdrawal.amount, tokenX, tokenY)} shares</span>
                 </div>
                 <button
                   onClick={() => handleRedeemWithdrawal(withdrawal.round)}

@@ -1,10 +1,42 @@
 'use client'
 
-import { useReadContract } from 'wagmi'
+import { useReadContract, usePublicClient } from 'wagmi'
+import { useState, useEffect } from 'react'
 import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain'
 import { TokenPairLogos } from './TokenPairLogos'
 import { usePrices } from '@/contexts/PriceContext'
 import { getTokenLogo } from '@/lib/tokenHelpers'
+import { parseAbi } from 'viem'
+
+// Minimal ABI for getLastRebalance
+const REBALANCE_ABI = [
+  {
+    "inputs": [],
+    "name": "getLastRebalance",
+    "outputs": [{"type": "uint256", "name": "lastRebalance"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
+] as const;
+
+// RebalanceStarted event ABI for Shadow vaults
+const REBALANCE_EVENT_ABI = parseAbi([
+  'event RebalanceStarted(address indexed operator, int24 tickLower, int24 tickUpper, uint256 amountX, uint256 amountY)'
+]);
+
+// Helper function to format time elapsed
+function formatTimeElapsed(timestamp: bigint): string {
+  const now = Math.floor(Date.now() / 1000);
+  const timestampNum = Number(timestamp);
+  const elapsed = now - timestampNum;
+  
+  const hours = Math.floor(elapsed / 3600);
+  const minutes = Math.floor((elapsed % 3600) / 60);
+  
+  if (hours > 0) return `${hours}h ${minutes}m ago`;
+  if (minutes > 0) return `${minutes}m ago`;
+  return 'just now';
+}
 
 interface PositionVisualizationCardProps {
   vaultAddress: string
@@ -152,29 +184,111 @@ export default function PositionVisualizationCard({
   const shadowLowerPrice = isWETHVault ? (shadowRangeData ? tickToPriceWETH(shadowRangeData[0], isWSWETHVault ? 18 : 6, 18) : null) : (shadowRangeData ? tickToPrice(shadowRangeData[0]) : null);
   const shadowUpperPrice = isWETHVault ? (shadowRangeData ? tickToPriceWETH(shadowRangeData[1], isWSWETHVault ? 18 : 6, 18) : null) : (shadowRangeData ? tickToPrice(shadowRangeData[1]) : null);
 
+  // Get last rebalance timestamp from contract (Metropolis only)
+  const { data: contractLastRebalance } = useReadContract({
+    address: stratAddress as `0x${string}`,
+    abi: REBALANCE_ABI,
+    functionName: 'getLastRebalance',
+    query: {
+      enabled: !!stratAddress && isMetropolis,
+    },
+  });
+
+  // Get last rebalance from RebalanceStarted event for Shadow vaults
+  const publicClient = usePublicClient();
+  const [shadowLastRebalance, setShadowLastRebalance] = useState<bigint | null>(null);
+
+  useEffect(() => {
+    if (!isShadow || !publicClient || !stratAddress) return;
+
+    let isMounted = true;
+
+    const fetchLastRebalance = async () => {
+      try {
+        const currentBlock = await publicClient.getBlockNumber();
+        const blocksPerMonth = 86400n * 30n; // 30 days
+        const fromBlock = currentBlock > blocksPerMonth ? currentBlock - blocksPerMonth : 0n;
+
+        const logs = await publicClient.getLogs({
+          address: stratAddress as `0x${string}`,
+          event: REBALANCE_EVENT_ABI[0],
+          fromBlock,
+          toBlock: currentBlock,
+        });
+
+        if (!isMounted || logs.length === 0) return;
+
+        // Get the most recent rebalance event
+        const lastLog = logs[logs.length - 1];
+        const block = await publicClient.getBlock({ blockNumber: lastLog.blockNumber });
+        
+        if (isMounted) {
+          setShadowLastRebalance(block.timestamp);
+        }
+      } catch (err) {
+        // Silently handle error - not critical for UI
+      }
+    };
+
+    fetchLastRebalance();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isShadow, publicClient, stratAddress]);
+
+  // Use contract data for Metropolis, cached events for Shadow
+  const lastRebalance = isMetropolis ? contractLastRebalance : shadowLastRebalance;
+
+  // State to force re-render for time updates
+  const [, setTick] = useState(0);
+  
+  // Update time display every minute
+  useEffect(() => {
+    if (!lastRebalance) return;
+    const interval = setInterval(() => {
+      setTick(t => t + 1);
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
+  }, [lastRebalance]);
+
   // Use appropriate active ID/tick based on vault type - for Shadow, tick IS the activeID (int24, can be negative)
   const activeId = isMetropolis ? activeIdReal : (shadowActiveTick !== null ? BigInt(shadowActiveTick) : null);
   const rangeData = isMetropolis ? rangeDataMetro : shadowRangeData;
 
   if (!rangeData || activeId === null) {
     return (
-      <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-6 mb-4">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-white">Position Range</h3>
-          <span className={`px-2 py-1 rounded text-xs font-medium border ${getTierColor(tier)}`}>
-            {tier}
-          </span>
+      <>
+        <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-6 mb-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold text-white">Position Range</h3>
+            <span className={`px-2 py-1 rounded text-xs font-medium border ${getTierColor(tier)}`}>
+              {tier}
+            </span>
+          </div>
+          <div className="text-center text-gray-400">
+            {isShadow ? 'Loading Shadow position data...' : 'Loading position data...'}
+            {isShadow && (
+              <div className="text-xs mt-2">
+                CLPool: {clpoolAddress ? 'Connected' : 'Missing'}<br/>
+                Strategy: {stratAddress ? 'Connected' : 'Missing'}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="text-center text-gray-400">
-          {isShadow ? 'Loading Shadow position data...' : 'Loading position data...'}
-          {isShadow && (
-            <div className="text-xs mt-2">
-              CLPool: {clpoolAddress ? 'Connected' : 'Missing'}<br/>
-              Strategy: {stratAddress ? 'Connected' : 'Missing'}
+        
+        {/* Last Rebalance */}
+        {lastRebalance && (
+          <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3 mb-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Last Rebalance:</span>
+              <span className="text-white font-semibold">
+                {formatTimeElapsed(lastRebalance)}
+              </span>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </>
     );
   }
 
@@ -307,6 +421,18 @@ export default function PositionVisualizationCard({
           </div>
         </div>
 
+        {/* Last Rebalance for Shadow */}
+        {shadowLastRebalance && (
+          <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-gray-400">Last Rebalance:</span>
+              <span className="text-white font-semibold">
+                {formatTimeElapsed(shadowLastRebalance)}
+              </span>
+            </div>
+          </div>
+        )}
+
       </div>
     );
   }
@@ -418,6 +544,18 @@ export default function PositionVisualizationCard({
           </div>
         </div>
       </div>
+
+      {/* Last Rebalance */}
+      {lastRebalance && (
+        <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-gray-400">Last Rebalance:</span>
+            <span className="text-white font-semibold">
+              {formatTimeElapsed(lastRebalance)}
+            </span>
+          </div>
+        </div>
+      )}
 
     </div>
   );

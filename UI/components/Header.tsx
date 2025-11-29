@@ -44,7 +44,14 @@ export function Header() {
   }, [isMobileMenuOpen]);
   
   return (
-    <header className="relative border-b border-arca-light-gray" style={{background: 'radial-gradient(ellipse at top, rgba(0, 255, 163, 0.03) 0%, rgba(0, 0, 0, 1) 50%, rgba(0, 0, 0, 1) 100%)'}}>
+    <header className="relative border-b border-arca-light-gray">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-0"
+        style={{ backgroundImage: 'url(/backgroundarca.png)' }}
+      />
+      {/* Gradient Overlays */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/50 to-black/50 pointer-events-none"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
       <div className="relative z-10 container mx-auto px-3 sm:px-6 lg:px-8" style={{maxWidth: '100%'}}>
         <div className="flex items-center justify-between h-16">

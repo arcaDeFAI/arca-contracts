@@ -7,57 +7,7 @@ import DashboardVaultCard from '@/components/DashboardVaultCard';
 import { DashboardOverview } from '@/components/DashboardOverview';
 import { SocialLinks } from '@/components/SocialLinks';
 import { VaultTableView } from '@/components/VaultTableView';
-
-// Vault configurations from main page
-const VAULT_CONFIGS = [
-  // Metropolis Vaults
-  {
-    vaultAddress: '0xF5708969da13879d7A6D2F21d0411BF9eEB045E9',
-    stratAddress: '0x20302bc08CcaAFB039916e4a06f0B3917506019a',
-    lbBookAddress: '0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC',
-    name: 'S • USDC | Metropolis',
-    tier: 'Premium' as const,
-    tokenX: 'S',
-    tokenY: 'USDC',
-  },
-
-  // Shadow Vaults
-  {
-    vaultAddress: '0x727e6D1FF1f1836Bb7Cdfad30e89EdBbef878ab5',
-    stratAddress: '0x64efeA2531f2b1A3569555084B88bb5714f5286c',
-    clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
-    rewardsAddress: '0xe879d0E44e6873cf4ab71686055a4f6817685f02', // S-USDC uses old rewards contract
-    poolSymbol: 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' as const, // DeFi Llama pool ID
-    name: 'wS • USDC | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'WS',
-    tokenY: 'USDC',
-  },
-  {
-    vaultAddress: '0xB6a8129779E57845588Db74435A9aFAE509e1454',
-    stratAddress: '0x58c244BE630753e8E668f18C0F2Cffe3ea0E8126',
-    clpoolAddress: '0xb6d9b069f6b96a507243d501d1a23b3fccfc85d3',
-    rewardsAddress: '0xf5c7598c953e49755576cda6b2b2a9daaf89a837', // WS-WETH uses new rewards contract
-    poolSymbol: 'e50ce450-d2b8-45fe-b496-9ee1fb5673c2' as const, // DeFi Llama pool ID
-    name: 'WS • WETH | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'WS',
-    tokenY: 'WETH',
-  },
-  {
-    vaultAddress: '0xd4083994F3ce977bcb5d3022041D489B162f5B85',
-    stratAddress: '0x0806709c30A2999867160A1e4064f29ecCFA4605',
-    clpoolAddress: '0x6fb30f3fcb864d49cdff15061ed5c6adfee40b40',
-    rewardsAddress: '0x8cdec539ba3d3857ec29b491c78cfb48f5d34f56', // USDC-WETH uses its own rewards contract
-    poolSymbol: 'a5ea7bec-91e2-4743-964d-35ea9034b0bd' as const, // DeFi Llama pool ID
-    name: 'USDC • WETH | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'USDC',
-    tokenY: 'WETH',
-  },
-];
-
-type VaultConfig = typeof VAULT_CONFIGS[number];
+import { VAULT_CONFIGS, type VaultConfig, isShadowVault } from '@/lib/vaultConfigs';
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
@@ -76,8 +26,8 @@ export default function Dashboard() {
     <div className="min-h-screen bg-black relative">
       {/* Background Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80"
-        style={{ backgroundImage: 'url(/backgroundarca.png)' }}
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5"
+        style={{ backgroundImage: 'url(/backgroundarca.jpg)' }}
       />
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
@@ -156,17 +106,8 @@ export default function Dashboard() {
                       </button>
                     </div>
                     <DashboardVaultCard
-                      vaultAddress={selectedVault.vaultAddress}
-                      stratAddress={selectedVault.stratAddress}
-                      lbBookAddress={selectedVault.lbBookAddress}
-                      clpoolAddress={selectedVault.clpoolAddress}
-                      rewardsAddress={(selectedVault as any).rewardsAddress}
-                      poolSymbol={(selectedVault as any).poolSymbol}
-                      name={selectedVault.name}
-                      tier={selectedVault.tier}
+                      config={selectedVault}
                       userAddress={address}
-                      tokenX={selectedVault.tokenX}
-                      tokenY={selectedVault.tokenY}
                     />
                   </div>
                 </div>
@@ -185,17 +126,8 @@ export default function Dashboard() {
                 {VAULT_CONFIGS.filter(v => v.name.includes('Metropolis')).map((vault, index) => (
                   <DashboardVaultCard
                     key={index}
-                    vaultAddress={vault.vaultAddress}
-                    stratAddress={vault.stratAddress}
-                    lbBookAddress={vault.lbBookAddress}
-                    clpoolAddress={vault.clpoolAddress}
-                    rewardsAddress={(vault as any).rewardsAddress}
-                    poolSymbol={(vault as any).poolSymbol}
-                    name={vault.name}
-                    tier={vault.tier}
+                    config={vault}
                     userAddress={address}
-                    tokenX={vault.tokenX}
-                    tokenY={vault.tokenY}
                   />
                 ))}
               </div>
@@ -211,17 +143,8 @@ export default function Dashboard() {
                 {VAULT_CONFIGS.filter(v => v.name.includes('Shadow')).map((vault, index) => (
                   <DashboardVaultCard
                     key={index}
-                    vaultAddress={vault.vaultAddress}
-                    stratAddress={vault.stratAddress}
-                    lbBookAddress={vault.lbBookAddress}
-                    clpoolAddress={vault.clpoolAddress}
-                    rewardsAddress={(vault as any).rewardsAddress}
-                    poolSymbol={(vault as any).poolSymbol}
-                    name={vault.name}
-                    tier={vault.tier}
+                    config={vault}
                     userAddress={address}
-                    tokenX={vault.tokenX}
-                    tokenY={vault.tokenY}
                   />
                 ))}
               </div>

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-interface TokenPrices {
+export interface TokenPrices {
   sonic: number;
   metro: number;
   shadow: number;
@@ -88,7 +88,7 @@ export function PriceProvider({ children }: { children: ReactNode }) {
               sonicPrice = cgData['sonic-3']?.usd || 0.17;
             }
           } catch {
-            console.warn('Using fallback S price');
+            // Using fallback S price
           }
         }
 
@@ -113,7 +113,7 @@ export function PriceProvider({ children }: { children: ReactNode }) {
               wethPrice = cgData.ethereum?.usd || 3400;
             }
           } catch {
-            console.warn('Using fallback WETH price');
+            // Using fallback WETH price
           }
         }
 
@@ -135,7 +135,7 @@ export function PriceProvider({ children }: { children: ReactNode }) {
         setError(null);
         setIsLoading(false);
       } catch (err) {
-        console.warn('Using fallback token prices due to API error');
+        // Using fallback token prices due to API error
         setError(null);
         setIsLoading(false);
       }
@@ -159,14 +159,9 @@ export function PriceProvider({ children }: { children: ReactNode }) {
             xShadow: shadowPrice,
           }));
           setLastUpdated(Date.now());
-          console.log('💰 Metro/Shadow Prices Updated:', {
-            metro: metroPrice,
-            shadow: shadowPrice,
-            timestamp: new Date().toLocaleTimeString()
-          });
         }
       } catch (error) {
-        console.warn('Failed to fetch Metro/Shadow prices');
+        // Failed to fetch Metro/Shadow prices - using cached values
       }
     };
 

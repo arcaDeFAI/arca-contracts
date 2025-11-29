@@ -7,17 +7,8 @@ import { useMetroAPY } from './useMetroAPY';
 import { useShadowAPY } from './useShadowAPY';
 import { useShadowAPYAdjusted } from './useShadowAPYAdjusted';
 import { CONTRACTS } from '@/lib/contracts';
-import { getTokenDecimals } from '@/lib/tokenHelpers';
-
-interface VaultConfig {
-  vaultAddress: string;
-  stratAddress: string;
-  name: string;
-  tier: 'Active' | 'Premium' | 'Elite';
-  tokenX?: string;
-  tokenY?: string;
-  poolSymbol?: string; // For Shadow vaults - DeFi Llama pool ID
-}
+import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
 /**
  * Unified hook for vault metrics (TVL, APY, user balances)
@@ -29,7 +20,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
 
   // Fetch all data
   const vaultData = useVaultData(config, userAddress);
-  const dashboardData = useDashboardData(config, userAddress);
+  const dashboardData = useDashboardData(config, userAddress, vaultData.sharePercentage);
   const { prices, isLoading: pricesLoading } = useTokenPrices();
   const sonicPrice = prices?.sonic || 0.17;
 
@@ -48,23 +39,14 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   const vaultTVL = vaultData.balances ? (() => {
     const token0Decimals = getTokenDecimals(tokenX);
     const token1Decimals = getTokenDecimals(tokenY);
-    
-    // Get token0 price (USDC = 1, S = sonic price, WETH = eth price)
-    let token0Price = sonicPrice; // Default for S
-    if (tokenX.toUpperCase() === 'USDC') {
-      token0Price = 1;
-    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-      token0Price = prices?.weth || 0;
-    }
+
+    // Get token prices using centralized utility
+    const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
     const token0Value = (Number(vaultData.balances[0]) / (10 ** token0Decimals)) * token0Price;
-    
-    // Get token1 price (USDC = 1, WETH = eth price)
-    let token1Price = 1;
-    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-      token1Price = prices?.weth || 0;
-    }
+
+    const token1Price = getTokenPrice(tokenY, prices);
     const token1Value = (Number(vaultData.balances[1]) / (10 ** token1Decimals)) * token1Price;
-    
+
     return token0Value + token1Value;
   })() : 0;
 
@@ -135,6 +117,8 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     isClaimingRewards: dashboardData.isClaimingRewards,
     handleRedeemWithdrawal: dashboardData.handleRedeemWithdrawal,
     isRedeemingWithdrawal: dashboardData.isRedeemingWithdrawal,
+    handleCancelWithdrawal: dashboardData.handleCancelWithdrawal,
+    isCancellingWithdrawal: dashboardData.isCancellingWithdrawal,
 
     // Loading states
     isLoading: vaultData.isLoading || pricesLoading,

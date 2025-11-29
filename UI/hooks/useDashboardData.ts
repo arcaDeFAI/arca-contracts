@@ -1,20 +1,15 @@
 'use client';
 
 import { useReadContract, useWriteContract, useReadContracts, useWaitForTransactionReceipt } from 'wagmi';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   METRO_VAULT_ABI,
-  SHADOW_VAULT_ABI
+  SHADOW_VAULT_ABI,
+  SHADOW_STRAT_ABI
 } from '@/lib/typechain';
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
-interface VaultConfig {
-  vaultAddress: string;
-  stratAddress: string;
-  name: string;
-  tier: 'Active' | 'Premium' | 'Elite';
-}
-
-export function useDashboardData(config: VaultConfig, userAddress?: string) {
+export function useDashboardData(config: VaultConfig, userAddress?: string, sharePercentage?: number) {
   const isShadowVault = config.name.includes('Shadow');
   
   // Simple contract calls - exactly like VaultCard
@@ -28,8 +23,8 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     },
   });
 
-  // Pending rewards - works for both Metro and Shadow vaults
-  const { data: pendingRewards } = useReadContract({
+  // Pending rewards from vault (already harvested)
+  const { data: vaultPendingRewards } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
     abi: isShadowVault ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
     functionName: 'getPendingRewards',
@@ -38,6 +33,33 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       enabled: !!userAddress && !!config.vaultAddress,
     },
   });
+
+  // Strategy gauge rewards (unharvested) - Shadow vaults only
+  const { data: strategyRewardStatus } = useReadContract({
+    address: config.stratAddress as `0x${string}`,
+    abi: SHADOW_STRAT_ABI,
+    functionName: 'getRewardStatus',
+    query: {
+      enabled: !!config.stratAddress && isShadowVault,
+    },
+  });
+
+  // Combine vault pending rewards + user's share of strategy gauge rewards
+  const pendingRewards = useMemo(() => {
+    if (!vaultPendingRewards) return vaultPendingRewards;
+    if (!isShadowVault || !strategyRewardStatus || !sharePercentage || sharePercentage === 0) {
+      return vaultPendingRewards;
+    }
+
+    const earned = (strategyRewardStatus as any)[1] as readonly bigint[];
+    const userShareRatio = sharePercentage / 100;
+
+    // Add user's share of gauge rewards to vault pending rewards
+    return (vaultPendingRewards as any[]).map((vaultReward: any, i: number) => ({
+      ...vaultReward,
+      pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(earned[i] || 0n) * userShareRatio))
+    }));
+  }, [vaultPendingRewards, strategyRewardStatus, sharePercentage, isShadowVault]);
 
 
   // Get current round
@@ -50,6 +72,15 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     },
   });
 
+  // Debug logging for WS-WETH vault
+  useEffect(() => {
+    if (config.name.includes('WS • WETH')) {
+      console.log('🔍 [WS-WETH Debug] Vault:', config.vaultAddress);
+      console.log('🔍 [WS-WETH Debug] Current Round:', currentRound !== undefined ? Number(currentRound) : 'undefined');
+      console.log('🔍 [WS-WETH Debug] Current Round (raw):', currentRound);
+    }
+  }, [currentRound, config.name, config.vaultAddress]);
+
   // Get queued withdrawal for current round (shows as "queued", not claimable)
   const { data: queuedWithdrawal } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
@@ -60,6 +91,16 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       enabled: !!userAddress && !!config.vaultAddress && currentRound !== undefined,
     },
   });
+
+  // Debug logging for queued withdrawal
+  useEffect(() => {
+    if (config.name.includes('WS • WETH')) {
+      console.log('🔍 [WS-WETH Debug] User Address:', userAddress);
+      console.log('🔍 [WS-WETH Debug] Queued Withdrawal (raw):', queuedWithdrawal);
+      console.log('🔍 [WS-WETH Debug] Queued Withdrawal (number):', queuedWithdrawal ? Number(queuedWithdrawal) : 'none');
+      console.log('🔍 [WS-WETH Debug] Query enabled:', !!userAddress && !!config.vaultAddress && currentRound !== undefined);
+    }
+  }, [queuedWithdrawal, userAddress, currentRound, config.name, config.vaultAddress]);
 
   // Scan ALL rounds for claimable withdrawals
   const [claimableWithdrawals, setClaimableWithdrawals] = useState<Array<{round: bigint, amount: bigint}>>([]);
@@ -99,8 +140,17 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       }
     });
 
+    // Debug logging for WS-WETH vault
+    if (config.name.includes('WS • WETH')) {
+      console.log('🔍 [WS-WETH Debug] Round scan results:', roundResults.length, 'rounds checked');
+      console.log('🔍 [WS-WETH Debug] Claimable withdrawals found:', withdrawals.length);
+      withdrawals.forEach(w => {
+        console.log(`🔍 [WS-WETH Debug] - Round ${Number(w.round)}: ${Number(w.amount)} (raw: ${w.amount})`);
+      });
+    }
+
     setClaimableWithdrawals(withdrawals);
-  }, [roundResults, currentRound]);
+  }, [roundResults, currentRound, config.name]);
 
   // Write contract hooks for transactions
   const { writeContract: claimRewards, isPending: isClaimingRewards } = useWriteContract();
@@ -117,6 +167,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
   };
 
   const { writeContract: redeemWithdrawal, data: redeemTxHash, isPending: isRedeemingWithdrawal } = useWriteContract();
+  const { writeContract: cancelWithdrawal, isPending: isCancellingWithdrawal } = useWriteContract();
 
   // Track transaction receipt for withdrawal claims
   const { isSuccess: redeemTxSuccess } = useWaitForTransactionReceipt({
@@ -139,6 +190,18 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
       abi: METRO_VAULT_ABI,
       functionName: 'redeemQueuedWithdrawal',
       args: [round, userAddress as `0x${string}`],
+    });
+  };
+
+  // Cancel queued withdrawal
+  const handleCancelWithdrawal = (shares: bigint) => {
+    if (!userAddress || !config.vaultAddress) return;
+    
+    cancelWithdrawal({
+      address: config.vaultAddress as `0x${string}`,
+      abi: isShadowVault ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
+      functionName: 'cancelQueuedWithdrawal',
+      args: [shares],
     });
   };
 
@@ -171,5 +234,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string) {
     isClaimingRewards,
     handleRedeemWithdrawal,  // Now takes round parameter
     isRedeemingWithdrawal,
+    handleCancelWithdrawal,  // Cancel queued withdrawal
+    isCancellingWithdrawal,
   };
 }
