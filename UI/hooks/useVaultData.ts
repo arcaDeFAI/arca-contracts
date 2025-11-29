@@ -2,13 +2,7 @@
 
 import { useReadContract, useReadContracts } from 'wagmi';
 import { METRO_VAULT_ABI, METRO_STRAT_ABI } from '@/lib/typechain';
-
-interface VaultConfig {
-  vaultAddress: string;
-  stratAddress: string;
-  name: string;
-  tier: 'Active' | 'Premium' | 'Elite';
-}
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
 export function useVaultData(config: VaultConfig, userAddress?: string) {
   // Get user's vault shares

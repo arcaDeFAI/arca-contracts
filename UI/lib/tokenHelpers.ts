@@ -53,3 +53,15 @@ export function getTokenLogo(token: string): string {
   if (upperToken === 'WS' || upperToken === 'S' || upperToken === 'SONIC') return '/SonicLogoRound.png';
   return '/SonicLogoRound.png'; // Default to Sonic logo
 }
+
+/**
+ * Token price utilities - re-exported from tokenPriceHelpers
+ * Provides centralized token price calculation with support for aliases
+ */
+export {
+  getTokenPrice,
+  calculateTokenValueUSD,
+  getBulkTokenPrices,
+  isSupportedToken,
+  getCanonicalTokenName,
+} from './tokenPriceHelpers';

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from 'wagmi';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { formatTokenAmount, parseTokenAmount, formatShares, parseShares } from '@/lib/utils';
@@ -35,11 +35,13 @@ export function WithdrawModal({
   });
 
   // Handle transaction success
-  if (isSuccess && !showClaim) {
-    setShowClaim(true);
-  } else if (isSuccess && showClaim) {
-    onClose();
-  }
+  useEffect(() => {
+    if (isSuccess && !showClaim) {
+      setShowClaim(true);
+    } else if (isSuccess && showClaim) {
+      onClose();
+    }
+  }, [isSuccess, showClaim, onClose]);
 
   const handleMaxWithdraw = () => {
     // Use vault-specific decimals (18 for WETH, 12 for others)
@@ -154,7 +156,7 @@ export function WithdrawModal({
             {/* Warning */}
             <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3">
               <p className="text-yellow-400 text-sm">
-                ⚠️ Withdrawals are queued and may take some time to process. You'll be able to claim your withdrawal on the Dashboard page once ready.
+                ⚠️ Withdrawals are ONLY cancelable while QUEUED. You'll be able to claim your withdrawal on the DASHBOARD PAGE once ready (Next Rebalance).
               </p>
             </div>
 

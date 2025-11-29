@@ -1,91 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAccount, useReadContracts } from 'wagmi';
 import { Header } from '@/components/Header';
 import { VaultCard } from '@/components/VaultCard';
 import { SocialLinks } from '@/components/SocialLinks';
 import { formatUSD } from '@/lib/utils';
-import { useVaultData } from '@/hooks/useVaultData';
-import { usePrices } from '@/contexts/PriceContext';
+import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { METRO_VAULT_ABI, METRO_STRAT_ABI } from '@/lib/typechain';
-
-// Vault configurations with real contract addresses
-const VAULT_CONFIGS = [
-  // Metropolis Vaults
-  {
-    vaultAddress: '0xF5708969da13879d7A6D2F21d0411BF9eEB045E9',
-    stratAddress: '0x20302bc08CcaAFB039916e4a06f0B3917506019a',
-    lbBookAddress: '0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC',
-    name: 'S • USDC | Metropolis',
-    tier: 'Premium' as const,
-    tokenX: 'S',
-    tokenY: 'USDC',
-  },
-  // TODO: Add Metropolis S/WETH vault when deployed
-  // {
-  //   vaultAddress: 'TBD',
-  //   stratAddress: 'TBD',
-  //   lbBookAddress: '0x9ede606c7168bb09ff73ebde7bfd6fcfabda9bc3',
-  //   name: 'S • WETH | Metropolis',
-  //   tier: 'Premium' as const,
-  //   tokenX: 'S',
-  //   tokenY: 'WETH',
-  // },
-  // TODO: Add Metropolis USDC/WETH vault when deployed
-  // {
-  //   vaultAddress: 'TBD',
-  //   stratAddress: 'TBD',
-  //   lbBookAddress: '0x51910f84cc4df86f721f5a1d3bdbd1058af62297',
-  //   name: 'USDC • WETH | Metropolis',
-  //   tier: 'Premium' as const,
-  //   tokenX: 'USDC',
-  //   tokenY: 'WETH',
-  // },
-
-  // Shadow Vaults
-  {
-    vaultAddress: '0x727e6D1FF1f1836Bb7Cdfad30e89EdBbef878ab5',
-    stratAddress: '0x64efeA2531f2b1A3569555084B88bb5714f5286c',
-    clpoolAddress: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
-    poolSymbol: 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' as const, // DeFi Llama pool ID
-    name: 'WS • USDC | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'WS',
-    tokenY: 'USDC',
-  },
-  {
-    vaultAddress: '0xB6a8129779E57845588Db74435A9aFAE509e1454',
-    stratAddress: '0x58c244BE630753e8E668f18C0F2Cffe3ea0E8126',
-    clpoolAddress: '0xb6d9b069f6b96a507243d501d1a23b3fccfc85d3',
-    poolSymbol: 'e50ce450-d2b8-45fe-b496-9ee1fb5673c2' as const, // DeFi Llama pool ID
-    name: 'WS • WETH | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'WS',
-    tokenY: 'WETH',
-  },
-  {
-    vaultAddress: '0xd4083994F3ce977bcb5d3022041D489B162f5B85',
-    stratAddress: '0x0806709c30A2999867160A1e4064f29ecCFA4605',
-    clpoolAddress: '0x6fb30f3fcb864d49cdff15061ed5c6adfee40b40',
-    poolSymbol: 'a5ea7bec-91e2-4743-964d-35ea9034b0bd' as const, // DeFi Llama pool ID
-    name: 'USDC • WETH | Shadow',
-    tier: 'Premium' as const,
-    tokenX: 'USDC',
-    tokenY: 'WETH',
-  },
-];
+import { VAULT_CONFIGS } from '@/lib/vaultConfigs';
 
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
 
-  const { prices } = usePrices();
-  const sonicPrice = prices.sonic;
+  // Get vault metrics for all vaults - includes TVL, user balance, APY
+  const allVaultMetrics = VAULT_CONFIGS.map(config =>
+    useVaultMetrics(config, address)
+  );
 
-  // Get vault data for all vaults
-  const vault1Data = useVaultData(VAULT_CONFIGS[0], address);
-  const vault2Data = useVaultData(VAULT_CONFIGS[1], address);
+  // Calculate total TVL across all vaults
+  const totalTVL = useMemo(() => {
+    return allVaultMetrics.reduce((sum, metrics) => {
+      return sum + (metrics.vaultTVL || 0);
+    }, 0);
+  }, [allVaultMetrics]);
+
+  // Calculate user's total deposited value across all vaults
+  const userTotalBalance = useMemo(() => {
+    return allVaultMetrics.reduce((sum, metrics) => {
+      return sum + (metrics.depositedValueUSD || 0);
+    }, 0);
+  }, [allVaultMetrics]);
 
   useEffect(() => {
     setMounted(true);
@@ -96,51 +42,12 @@ export default function Home() {
     return null;
   }
 
-  // Calculate total TVL from all vaults
-  const totalTVL = (() => {
-    let total = 0;
-    
-    if (vault1Data.balances) {
-      total += Number(vault1Data.balances[1]) / (10 ** 6) + // USDC
-               (Number(vault1Data.balances[0]) / (10 ** 18)) * sonicPrice; // S * price
-    }
-    
-    if (vault2Data.balances) {
-      total += Number(vault2Data.balances[1]) / (10 ** 6) + // USDC
-               (Number(vault2Data.balances[0]) / (10 ** 18)) * sonicPrice; // S * price
-    }
-    
-    return total;
-  })();
-
-  // Calculate user's total deposited value across all vaults
-  const userTotalBalance = (() => {
-    let total = 0;
-    
-    // Get preview amounts for each vault if user has shares
-    const vaults = [vault1Data, vault2Data];
-    
-    vaults.forEach((vaultData) => {
-      if (vaultData.userShares && vaultData.userShares > 0n) {
-        // We'll need to add preview amounts calculation here
-        // For now, using a simplified calculation based on share percentage
-        if (vaultData.balances && vaultData.sharePercentage > 0) {
-          const userUSDC = (Number(vaultData.balances[1]) / (10 ** 6)) * (vaultData.sharePercentage / 100);
-          const userS = (Number(vaultData.balances[0]) / (10 ** 18)) * (vaultData.sharePercentage / 100) * sonicPrice;
-          total += userUSDC + userS;
-        }
-      }
-    });
-    
-    return total;
-  })();
-
   return (
     <div className="min-h-screen bg-black relative">
       {/* Background Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-80"
-        style={{ backgroundImage: 'url(/backgroundarca.png)' }}
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5"
+        style={{ backgroundImage: 'url(/backgroundarca.jpg)' }}
       />
       {/* Gradient Overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
@@ -163,16 +70,16 @@ export default function Home() {
           <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
             <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Total TVL</div>
             <div className="text-xl font-bold text-arca-green whitespace-nowrap">
-              {vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(totalTVL)}
+              {allVaultMetrics.some(m => m.isLoading) ? '...' : formatUSD(totalTVL)}
             </div>
           </div>
           
           <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
             <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Your Total Balance</div>
             <div className="text-xl font-bold text-white whitespace-nowrap">
-              {!mounted ? '--' : 
-               (!isConnected ? '--' : 
-                (vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(userTotalBalance))
+              {!mounted ? '--' :
+               (!isConnected ? '--' :
+                (allVaultMetrics.some(m => m.isLoading) ? '...' : formatUSD(userTotalBalance))
                )}
             </div>
           </div>
@@ -212,13 +119,7 @@ export default function Home() {
               {VAULT_CONFIGS.filter(v => v.name.includes('Metropolis')).map((vault, index) => (
                 <VaultCard
                   key={index}
-                  vaultAddress={vault.vaultAddress}
-                  stratAddress={vault.stratAddress}
-                  poolSymbol={(vault as any).poolSymbol}
-                  name={vault.name}
-                  tier={vault.tier}
-                  tokenX={vault.tokenX}
-                  tokenY={vault.tokenY}
+                  config={vault}
                 />
               ))}
             </div>
@@ -234,13 +135,7 @@ export default function Home() {
               {VAULT_CONFIGS.filter(v => v.name.includes('Shadow')).map((vault, index) => (
                 <VaultCard
                   key={index}
-                  vaultAddress={vault.vaultAddress}
-                  stratAddress={vault.stratAddress}
-                  poolSymbol={(vault as any).poolSymbol}
-                  name={vault.name}
-                  tier={vault.tier}
-                  tokenX={vault.tokenX}
-                  tokenY={vault.tokenY}
+                  config={vault}
                 />
               ))}
             </div>

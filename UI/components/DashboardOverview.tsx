@@ -10,21 +10,12 @@ import { useTotalHarvestedRewards } from '@/hooks/useTotalHarvestedRewards'
 import { usePositionInRange } from '@/hooks/usePositionInRange'
 import { type UserRewardStructOutput } from '@/lib/typechain'
 import { CONTRACTS } from '@/lib/contracts'
-import { getTokenDecimals } from '@/lib/tokenHelpers'
+import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers'
 import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
-import { APYTooltip } from './APYTooltip'
-
-interface VaultConfig {
-  vaultAddress: string
-  stratAddress: string
-  lbBookAddress?: string
-  clpoolAddress?: string
-  name: string
-  tier: 'Active' | 'Premium' | 'Elite'
-  tokenX?: string
-  tokenY?: string
-}
+import { Tooltip } from './Tooltip'
+import { getAPYCalculationExplanation } from '@/hooks/useShadowAPYAdjusted'
+import { type VaultConfig } from '@/lib/vaultConfigs'
 
 interface DashboardOverviewProps {
   vaultConfigs: VaultConfig[]
@@ -101,23 +92,39 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
 
   const avgAPY = useMemo(() => {
-    const allAPYs = vaultMetrics
-      .map(metrics => metrics.apy)
-      .filter(apy => apy > 0)
+    // Calculate weighted average APY based on user's TVL in each vault
+    let totalWeightedAPY = 0
+    let totalTVL = 0
     
-    return allAPYs.length > 0 
-      ? allAPYs.reduce((sum, apy) => sum + apy, 0) / allAPYs.length 
-      : 0
+    vaultMetrics.forEach(metrics => {
+      const userTVL = metrics.depositedValueUSD || 0
+      const vaultAPY = metrics.apy || 0
+      
+      if (userTVL > 0 && vaultAPY > 0) {
+        totalWeightedAPY += userTVL * vaultAPY
+        totalTVL += userTVL
+      }
+    })
+    
+    return totalTVL > 0 ? totalWeightedAPY / totalTVL : 0
   }, [vaultMetrics])
 
   const avg30dAPY = useMemo(() => {
-    const all30dAPYs = vaultMetrics
-      .map(metrics => metrics.apy30dMean)
-      .filter((apy): apy is number => apy !== null && apy > 0)
+    // Calculate weighted average 30d APY based on user's TVL in each vault
+    let totalWeighted30dAPY = 0
+    let totalTVL = 0
     
-    return all30dAPYs.length > 0 
-      ? all30dAPYs.reduce((sum, apy) => sum + apy, 0) / all30dAPYs.length 
-      : null
+    vaultMetrics.forEach(metrics => {
+      const userTVL = metrics.depositedValueUSD || 0
+      const vault30dAPY = metrics.apy30dMean
+      
+      if (userTVL > 0 && vault30dAPY !== null && vault30dAPY > 0) {
+        totalWeighted30dAPY += userTVL * vault30dAPY
+        totalTVL += userTVL
+      }
+    })
+    
+    return totalTVL > 0 ? totalWeighted30dAPY / totalTVL : null
   }, [vaultMetrics])
 
   const calculatedRate = useMemo(() => {
@@ -161,14 +168,9 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         // Token 0 - use dynamic decimals and price
         const token0Decimals = getTokenDecimals(tokenX)
         const token0Amount = Number(formatUnits(metrics.balances[0], token0Decimals)) * shareRatio
-        
-        // Get token0 price (USDC = 1, S = sonic price, WETH = eth price)
-        let token0Price = metrics.sonicPrice || 0 // Default for S
-        if (tokenX.toUpperCase() === 'USDC') {
-          token0Price = 1
-        } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-          token0Price = metrics.prices?.weth || 0
-        }
+
+        // Get token0 price using centralized utility
+        const token0Price = getTokenPrice(tokenX, metrics.prices, metrics.sonicPrice)
         const token0Value = token0Amount * token0Price
         
         const existing0 = tokenAllocations.get(tokenX) || { amount: 0, usdValue: 0 }
@@ -187,12 +189,9 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         // Token 1 - use dynamic decimals and price
         const token1Decimals = getTokenDecimals(tokenY)
         const token1Amount = Number(formatUnits(metrics.balances[1], token1Decimals)) * shareRatio
-        
-        // Get token1 price (USDC = 1, WETH = eth price)
-        let token1Price = 1 // Default for USDC
-        if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-          token1Price = prices?.weth || 0
-        }
+
+        // Get token1 price using centralized utility
+        const token1Price = getTokenPrice(tokenY, prices)
         const token1Value = token1Amount * token1Price
         
         const existing1 = tokenAllocations.get(tokenY) || { amount: 0, usdValue: 0 }
@@ -387,8 +386,9 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
         {/* Earned (All-Time) Card */}
         <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
-          <div className="text-white text-lg font-semibold mb-2">
-            Total Earned
+          <div className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
+            <span>Total Earned</span>
+            <Tooltip text="Total claimed rewards since first deposit." width="sm" ariaLabel="Total Earned explanation" />
           </div>
           <div className="text-arca-green text-xl font-bold">
             ${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -435,14 +435,9 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             className="w-full text-left group"
           >
             <div className="text-white text-lg font-semibold mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-2 relative">
+              <div className="flex items-center gap-2">
                 <span>{ratePeriod}</span>
-                <APYTooltip />
-                {avg30dAPY !== null && (
-                  <div className="absolute left-0 bottom-full mb-2 px-3 py-2 bg-black border border-arca-green rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    30d Avg: {avg30dAPY.toFixed(2)}%
-                  </div>
-                )}
+                <Tooltip text={getAPYCalculationExplanation()} width="lg" position="right" ariaLabel="APY calculation explanation" />
               </div>
               <span className="text-xs">▼</span>
             </div>
