@@ -84,8 +84,9 @@ export default function Home() {
   const sonicPrice = prices.sonic;
 
   // Get vault data for all vaults
-  const vault1Data = useVaultData(VAULT_CONFIGS[0], address);
-  const vault2Data = useVaultData(VAULT_CONFIGS[1], address);
+  const allVaultData = VAULT_CONFIGS.map(config => 
+    useVaultData(config, address)
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -100,15 +101,31 @@ export default function Home() {
   const totalTVL = (() => {
     let total = 0;
     
-    if (vault1Data.balances) {
-      total += Number(vault1Data.balances[1]) / (10 ** 6) + // USDC
-               (Number(vault1Data.balances[0]) / (10 ** 18)) * sonicPrice; // S * price
-    }
-    
-    if (vault2Data.balances) {
-      total += Number(vault2Data.balances[1]) / (10 ** 6) + // USDC
-               (Number(vault2Data.balances[0]) / (10 ** 18)) * sonicPrice; // S * price
-    }
+    allVaultData.forEach((vaultData, index) => {
+      if (vaultData.balances) {
+        const config = VAULT_CONFIGS[index];
+        const tokenX = config.tokenX || 'S';
+        const tokenY = config.tokenY || 'USDC';
+        
+        // Token 0 (X) - get price based on token type
+        let token0Price = sonicPrice; // Default for S
+        if (tokenX === 'USDC') token0Price = 1;
+        else if (tokenX === 'WETH' || tokenX === 'ETH') token0Price = prices?.weth || 0;
+        else if (tokenX === 'WS') token0Price = sonicPrice; // WS uses S price
+        
+        const token0Decimals = tokenX === 'USDC' ? 6 : 18;
+        const token0Value = (Number(vaultData.balances[0]) / (10 ** token0Decimals)) * token0Price;
+        
+        // Token 1 (Y) - get price based on token type
+        let token1Price = 1; // Default for USDC
+        if (tokenY === 'WETH' || tokenY === 'ETH') token1Price = prices?.weth || 0;
+        
+        const token1Decimals = tokenY === 'USDC' ? 6 : 18;
+        const token1Value = (Number(vaultData.balances[1]) / (10 ** token1Decimals)) * token1Price;
+        
+        total += token0Value + token1Value;
+      }
+    });
     
     return total;
   })();
@@ -117,18 +134,29 @@ export default function Home() {
   const userTotalBalance = (() => {
     let total = 0;
     
-    // Get preview amounts for each vault if user has shares
-    const vaults = [vault1Data, vault2Data];
-    
-    vaults.forEach((vaultData) => {
-      if (vaultData.userShares && vaultData.userShares > 0n) {
-        // We'll need to add preview amounts calculation here
-        // For now, using a simplified calculation based on share percentage
-        if (vaultData.balances && vaultData.sharePercentage > 0) {
-          const userUSDC = (Number(vaultData.balances[1]) / (10 ** 6)) * (vaultData.sharePercentage / 100);
-          const userS = (Number(vaultData.balances[0]) / (10 ** 18)) * (vaultData.sharePercentage / 100) * sonicPrice;
-          total += userUSDC + userS;
-        }
+    allVaultData.forEach((vaultData, index) => {
+      if (vaultData.userShares && vaultData.userShares > 0n && vaultData.balances && vaultData.sharePercentage > 0) {
+        const config = VAULT_CONFIGS[index];
+        const tokenX = config.tokenX || 'S';
+        const tokenY = config.tokenY || 'USDC';
+        
+        // Token 0 (X) - get price based on token type
+        let token0Price = sonicPrice; // Default for S
+        if (tokenX === 'USDC') token0Price = 1;
+        else if (tokenX === 'WETH' || tokenX === 'ETH') token0Price = prices?.weth || 0;
+        else if (tokenX === 'WS') token0Price = sonicPrice; // WS uses S price
+        
+        const token0Decimals = tokenX === 'USDC' ? 6 : 18;
+        const userToken0 = (Number(vaultData.balances[0]) / (10 ** token0Decimals)) * (vaultData.sharePercentage / 100) * token0Price;
+        
+        // Token 1 (Y) - get price based on token type
+        let token1Price = 1; // Default for USDC
+        if (tokenY === 'WETH' || tokenY === 'ETH') token1Price = prices?.weth || 0;
+        
+        const token1Decimals = tokenY === 'USDC' ? 6 : 18;
+        const userToken1 = (Number(vaultData.balances[1]) / (10 ** token1Decimals)) * (vaultData.sharePercentage / 100) * token1Price;
+        
+        total += userToken0 + userToken1;
       }
     });
     
@@ -163,7 +191,7 @@ export default function Home() {
           <div className="bg-black rounded-lg p-4 border border-gray-800/50 min-w-[180px]">
             <div className="text-xs text-gray-400 mb-1 whitespace-nowrap">Total TVL</div>
             <div className="text-xl font-bold text-arca-green whitespace-nowrap">
-              {vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(totalTVL)}
+              {allVaultData.some(v => v.isLoading) ? '...' : formatUSD(totalTVL)}
             </div>
           </div>
           
@@ -172,7 +200,7 @@ export default function Home() {
             <div className="text-xl font-bold text-white whitespace-nowrap">
               {!mounted ? '--' : 
                (!isConnected ? '--' : 
-                (vault1Data.isLoading || vault2Data.isLoading ? '...' : formatUSD(userTotalBalance))
+                (allVaultData.some(v => v.isLoading) ? '...' : formatUSD(userTotalBalance))
                )}
             </div>
           </div>
