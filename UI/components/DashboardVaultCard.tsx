@@ -3,7 +3,7 @@
 import { formatUnits } from 'viem';
 import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
-import { formatUSD, formatPercentage } from '@/lib/utils';
+import { formatUSD, formatPercentage, formatShares } from '@/lib/utils';
 import { CONTRACTS } from '@/lib/contracts';
 import { type UserRewardStructOutput } from '@/lib/typechain';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
@@ -64,8 +64,10 @@ export function DashboardVaultCard({
     totalClaimableAmount,
     handleClaimRewards,
     handleRedeemWithdrawal,
+    handleCancelWithdrawal,
     isClaimingRewards,
     isRedeemingWithdrawal,
+    isCancellingWithdrawal,
     sonicPrice,
     isShadowVault,
     activeLiquidity,
@@ -576,7 +578,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
             <div className="flex justify-between items-center mb-2 text-sm">
               <span className="text-gray-400">Queued Withdrawal:</span>
               <span className="text-yellow-400 font-semibold">
-                {queuedWithdrawal ? (Number(queuedWithdrawal) / 1e12).toFixed(2) : '0.00'} shares
+                {queuedWithdrawal ? formatShares(queuedWithdrawal, tokenX, tokenY) : '0.00'} shares
               </span>
             </div>
             
@@ -585,15 +587,15 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
               <div className="bg-arca-dark/50 rounded-lg p-2 mb-2 space-y-1">
                 <div className="text-xs text-gray-400 mb-2">Estimated withdrawal:</div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">{isShadowVault ? 'WS' : 'S'}:</span>
+                  <span className="text-gray-400">{tokenX}:</span>
                   <span className="text-white font-medium">
-                    {Number(formatUnits(queuedPreviewAmounts[0], 18)).toFixed(4)}
+                    {Number(formatUnits(queuedPreviewAmounts[0], getTokenDecimals(tokenX))).toFixed(4)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">USDC:</span>
+                  <span className="text-gray-400">{tokenY}:</span>
                   <span className="text-white font-medium">
-                    {Number(formatUnits(queuedPreviewAmounts[1], 6)).toFixed(4)}
+                    {Number(formatUnits(queuedPreviewAmounts[1], getTokenDecimals(tokenY))).toFixed(4)}
                   </span>
                 </div>
               </div>
@@ -602,9 +604,23 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
             <div className="text-sm text-gray-400 mb-2">
               Round: {currentRound !== undefined ? Number(currentRound) : 'Loading...'}
             </div>
-            <div className="text-sm text-orange-400 text-center py-2">
+            <div className="text-sm text-orange-400 text-center py-2 mb-2">
               Withdrawal will be claimable in the next round
             </div>
+            
+            {/* Cancel Button */}
+            <button
+              onClick={() => queuedWithdrawal && handleCancelWithdrawal(queuedWithdrawal)}
+              disabled={isCancellingWithdrawal || !queuedWithdrawal}
+              className={`w-full py-2 px-3 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-2 ${
+                isCancellingWithdrawal || !queuedWithdrawal
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-red-600 text-white hover:bg-red-700'
+              }`}
+            >
+              <span className="text-lg">✕</span>
+              {isCancellingWithdrawal ? 'Cancelling...' : 'Cancel Withdrawal'}
+            </button>
           </div>
         )}
 
@@ -614,7 +630,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
             <div className="flex justify-between items-center mb-3">
               <span className="text-gray-400">Claimable Withdrawal{claimableWithdrawals && claimableWithdrawals.length > 1 ? 's' : ''}:</span>
               <span className="text-arca-green font-semibold">
-                {totalClaimableAmount ? (Number(totalClaimableAmount) / 1e12).toFixed(2) : '0.00'} shares
+                {totalClaimableAmount ? formatShares(totalClaimableAmount, tokenX, tokenY) : '0.00'} shares
               </span>
             </div>
             
@@ -623,7 +639,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
               <div key={Number(withdrawal.round)} className="mb-3">
                 <div className="flex justify-between items-center text-sm mb-2">
                   <span className="text-gray-500">Round {Number(withdrawal.round)}:</span>
-                  <span className="text-gray-300">{(Number(withdrawal.amount) / 1e12).toFixed(2)} shares</span>
+                  <span className="text-gray-300">{formatShares(withdrawal.amount, tokenX, tokenY)} shares</span>
                 </div>
                 <button
                   onClick={() => handleRedeemWithdrawal(withdrawal.round)}

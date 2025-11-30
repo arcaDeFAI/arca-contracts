@@ -121,7 +121,7 @@ export function useMetroAPY(
 
         if (allEvents.length > 0 && vaultTVL > 0 && metroPrice > 0) {
           // 🎯 NOUVELLE LOGIQUE: Prendre seulement les 3 derniers events
-          const last3Events = allEvents.slice(-10);
+          const last3Events = allEvents.slice(-5);
           
           if (last3Events.length >= 2) { // Besoin min de 2 events pour calculer intervalle
             // Calculer récompenses des 3 derniers events seulement
