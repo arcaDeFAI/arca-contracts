@@ -135,6 +135,8 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     isClaimingRewards: dashboardData.isClaimingRewards,
     handleRedeemWithdrawal: dashboardData.handleRedeemWithdrawal,
     isRedeemingWithdrawal: dashboardData.isRedeemingWithdrawal,
+    handleCancelWithdrawal: dashboardData.handleCancelWithdrawal,
+    isCancellingWithdrawal: dashboardData.isCancellingWithdrawal,
 
     // Loading states
     isLoading: vaultData.isLoading || pricesLoading,

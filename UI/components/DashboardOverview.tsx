@@ -13,8 +13,8 @@ import { CONTRACTS } from '@/lib/contracts'
 import { getTokenDecimals } from '@/lib/tokenHelpers'
 import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
-import { APYTooltip } from './APYTooltip'
-import { TotalEarnedTooltip } from './TotalEarnedTooltip'
+import { Tooltip } from './Tooltip'
+import { getAPYCalculationExplanation } from '@/hooks/useShadowAPYAdjusted'
 
 interface VaultConfig {
   vaultAddress: string
@@ -406,7 +406,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         <div className="bg-black border border-gray-800/60 rounded-xl p-3 md:p-5">
           <div className="text-white text-lg font-semibold mb-2 flex items-center gap-2">
             <span>Total Earned</span>
-            <TotalEarnedTooltip />
+            <Tooltip text="Total claimed rewards since first deposit." width="sm" ariaLabel="Total Earned explanation" />
           </div>
           <div className="text-arca-green text-xl font-bold">
             ${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -453,14 +453,9 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             className="w-full text-left group"
           >
             <div className="text-white text-lg font-semibold mb-2 flex items-center justify-between">
-              <div className="flex items-center gap-2 relative">
+              <div className="flex items-center gap-2">
                 <span>{ratePeriod}</span>
-                <APYTooltip />
-                {avg30dAPY !== null && (
-                  <div className="absolute left-0 bottom-full mb-2 px-3 py-2 bg-black border border-arca-green rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-                    30d Avg: {avg30dAPY.toFixed(2)}%
-                  </div>
-                )}
+                <Tooltip text={getAPYCalculationExplanation()} width="lg" position="right" ariaLabel="APY calculation explanation" />
               </div>
               <span className="text-xs">▼</span>
             </div>
