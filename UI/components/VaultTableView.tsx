@@ -290,9 +290,9 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
               const addr = reward.token.toLowerCase();
               let price = 0;
               
-              if (addr === CONTRACTS.METRO.toLowerCase()) price = metrics.prices.metro || 0;
-              else if (addr === CONTRACTS.SHADOW.toLowerCase()) price = metrics.prices.shadow || 0;
-              else if (addr === CONTRACTS.xSHADOW.toLowerCase()) price = metrics.prices.xShadow || 0;
+              if (addr === CONTRACTS.METRO.toLowerCase()) price = metrics.prices?.metro || 0;
+              else if (addr === CONTRACTS.SHADOW.toLowerCase()) price = metrics.prices?.shadow || 0;
+              else if (addr === CONTRACTS.xSHADOW.toLowerCase()) price = metrics.prices?.xShadow || 0;
               
               return sum + (amount * price);
             }, 0);
