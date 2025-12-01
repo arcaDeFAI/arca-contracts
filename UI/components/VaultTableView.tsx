@@ -250,7 +250,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
         <SortableHeader column="apr">APR</SortableHeader>
         <div className="text-center flex items-center justify-center gap-1">
           <span>Withdraw</span>
-          <Tooltip text="Withdrawal only cancelable while queued" width="sm" ariaLabel="Withdrawal information" />
+          <Tooltip text="Withdrawal are only cancelable while queued" width="sm" ariaLabel="Withdrawal information" />
         </div>
         <div className="w-[110px]"></div> {/* Actions column */}
       </div>
