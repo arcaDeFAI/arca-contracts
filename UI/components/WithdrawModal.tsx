@@ -156,7 +156,7 @@ export function WithdrawModal({
             {/* Warning */}
             <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3">
               <p className="text-yellow-400 text-sm">
-                ⚠️ Withdrawals are queued and are ONLY cancelable while QUEUED. You'll be able to claim your withdrawal on the DASHBOARD PAGE once ready (Next Rebalance).
+                ⚠️ Withdrawals are ONLY cancelable while QUEUED. You'll be able to claim your withdrawal on the DASHBOARD PAGE once ready (Next Rebalance).
               </p>
             </div>
 

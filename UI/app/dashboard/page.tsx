@@ -76,7 +76,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-black relative">
       {/* Background Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5"
         style={{ backgroundImage: 'url(/backgroundarca.jpg)' }}
       />
       {/* Gradient Overlay */}
