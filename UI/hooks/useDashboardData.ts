@@ -7,13 +7,7 @@ import {
   SHADOW_VAULT_ABI,
   SHADOW_STRAT_ABI
 } from '@/lib/typechain';
-
-interface VaultConfig {
-  vaultAddress: string;
-  stratAddress: string;
-  name: string;
-  tier: 'Active' | 'Premium' | 'Elite';
-}
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
 export function useDashboardData(config: VaultConfig, userAddress?: string, sharePercentage?: number) {
   const isShadowVault = config.name.includes('Shadow');

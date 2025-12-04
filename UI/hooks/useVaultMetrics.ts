@@ -8,16 +8,7 @@ import { useShadowAPY } from './useShadowAPY';
 import { useShadowAPYAdjusted } from './useShadowAPYAdjusted';
 import { CONTRACTS } from '@/lib/contracts';
 import { getTokenDecimals } from '@/lib/tokenHelpers';
-
-interface VaultConfig {
-  vaultAddress: string;
-  stratAddress: string;
-  name: string;
-  tier: 'Active' | 'Premium' | 'Elite';
-  tokenX?: string;
-  tokenY?: string;
-  poolSymbol?: string; // For Shadow vaults - DeFi Llama pool ID
-}
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
 /**
  * Unified hook for vault metrics (TVL, APY, user balances)
