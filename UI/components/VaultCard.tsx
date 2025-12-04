@@ -10,26 +10,21 @@ import { getTokenLogo } from '@/lib/tokenUtils';
 import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
 import { TokenPairLogos } from './TokenPairLogos';
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
 interface VaultCardProps {
-  vaultAddress: string;
-  stratAddress: string;
-  poolSymbol?: string;
-  name: string;
-  tier: 'Active' | 'Premium' | 'Elite';
-  tokenX?: string;
-  tokenY?: string;
+  config: VaultConfig;
 }
 
-export function VaultCard({ vaultAddress, stratAddress, poolSymbol, name, tier, tokenX = 'S', tokenY = 'USDC' }: VaultCardProps) {
+export function VaultCard({ config }: VaultCardProps) {
+  const { vaultAddress, stratAddress, name, tier, tokenX, tokenY } = config;
   const { address, isConnected } = useAccount();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Use unified metrics hook - eliminates duplication
-  const vaultConfig = { vaultAddress, stratAddress, poolSymbol, name, tier, tokenX, tokenY };
-  const metrics = useVaultMetrics(vaultConfig, address);
+  const metrics = useVaultMetrics(config, address);
 
   const {
     userShares,

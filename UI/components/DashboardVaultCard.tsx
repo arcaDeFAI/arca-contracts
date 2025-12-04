@@ -11,35 +11,20 @@ import { getTokenLogo, getTokenDecimals } from '@/lib/tokenHelpers';
 import { usePrices } from '@/contexts/PriceContext';
 import { useState } from 'react';
 import PositionVisualizationCard from './PositionVisualizationCard';
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
 interface DashboardVaultCardProps {
-  vaultAddress: string;
-  stratAddress: string;
-  lbBookAddress?: string;
-  clpoolAddress?: string;
-  rewardsAddress?: string;
-  poolSymbol?: string;
-  name: string;
-  tier: 'Active' | 'Premium' | 'Elite';
+  config: VaultConfig;
   userAddress?: string;
-  tokenX?: string;
-  tokenY?: string;
 }
 
-export function DashboardVaultCard({ 
-  vaultAddress, 
-  stratAddress,
-  lbBookAddress,
-  clpoolAddress,
-  rewardsAddress,
-  poolSymbol,
-  name, 
-  tier, 
+export function DashboardVaultCard({
+  config,
   userAddress,
-  tokenX = 'S',
-  tokenY = 'USDC'
 }: DashboardVaultCardProps) {
-  const config = { vaultAddress, stratAddress, rewardsAddress, poolSymbol, name, tier, tokenX, tokenY };
+  const { vaultAddress, stratAddress, name, tier, tokenX, tokenY } = config;
+  const lbBookAddress = config.protocol === 'metropolis' ? config.lbBookAddress : undefined;
+  const clpoolAddress = config.protocol === 'shadow' ? config.clpoolAddress : undefined;
   
   // Use the connected wallet address
   const actualAddress = userAddress;
