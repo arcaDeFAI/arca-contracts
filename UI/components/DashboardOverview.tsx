@@ -15,17 +15,7 @@ import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
 import { Tooltip } from './Tooltip'
 import { getAPYCalculationExplanation } from '@/hooks/useShadowAPYAdjusted'
-
-interface VaultConfig {
-  vaultAddress: string
-  stratAddress: string
-  lbBookAddress?: string
-  clpoolAddress?: string
-  name: string
-  tier: 'Active' | 'Premium' | 'Elite'
-  tokenX?: string
-  tokenY?: string
-}
+import { type VaultConfig } from '@/lib/vaultConfigs'
 
 interface DashboardOverviewProps {
   vaultConfigs: VaultConfig[]
