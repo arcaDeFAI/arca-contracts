@@ -150,18 +150,18 @@ export function useShadowAPY(
 
         if (allEvents.length > 0 && vaultTVL > 0 && shadowPrice > 0) {
           // 🎯 NOUVELLE LOGIQUE: Prendre seulement les 3 derniers events
-          const last3Events = allEvents.slice(-2);
+          const lastFewEvents = allEvents.slice(-2);
           
-          if (last3Events.length >= 2) { // Besoin min de 2 events pour calculer intervalle
+          if (lastFewEvents.length >= 2) { // Besoin min de 2 events pour calculer intervalle
             // Calculer récompenses des 3 derniers events seulement
-            const recentTokens = last3Events.reduce((sum, event) => {
+            const recentTokens = lastFewEvents.reduce((sum, event) => {
               return sum + (Number(event.amount) / (10 ** 18));
             }, 0);
             const recentRewardUSD = recentTokens * shadowPrice;
 
             // Calculer intervalle de temps entre premier et dernier des 3 events
-            const oldestTimestamp = Math.min(...last3Events.map(e => e.timestamp));
-            const newestTimestamp = Math.max(...last3Events.map(e => e.timestamp));
+            const oldestTimestamp = Math.min(...lastFewEvents.map(e => e.timestamp));
+            const newestTimestamp = Math.max(...lastFewEvents.map(e => e.timestamp));
             const timeSpan = newestTimestamp - oldestTimestamp;
             const daysSpan = Math.max(timeSpan / (1000 * 60 * 60 * 24), 0.01); // Min 0.01 jours
 
