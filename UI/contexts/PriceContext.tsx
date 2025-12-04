@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-interface TokenPrices {
+export interface TokenPrices {
   sonic: number;
   metro: number;
   shadow: number;
