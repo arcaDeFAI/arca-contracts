@@ -7,7 +7,7 @@ import { formatUSD, formatPercentage, formatShares } from '@/lib/utils';
 import { CONTRACTS } from '@/lib/contracts';
 import { type UserRewardStructOutput } from '@/lib/typechain';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
-import { getTokenLogo, getTokenDecimals } from '@/lib/tokenHelpers';
+import { getTokenLogo, getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { usePrices } from '@/contexts/PriceContext';
 import { useState } from 'react';
 import PositionVisualizationCard from './PositionVisualizationCard';
@@ -70,25 +70,17 @@ export function DashboardVaultCard({
     // Token 0 - use dynamic decimals and price
     const token0Decimals = getTokenDecimals(tokenX);
     const token0Amount = Number(formatUnits(balances[0], token0Decimals)) * shareRatio;
-    
-    // Get token0 price (USDC = 1, S = sonic price, WETH = eth price)
-    let token0Price = sonicPrice || 0; // Default for S
-    if (tokenX.toUpperCase() === 'USDC') {
-      token0Price = 1;
-    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-      token0Price = prices?.weth || 0;
-    }
+
+    // Get token0 price using centralized utility
+    const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
     const token0Value = token0Amount * token0Price;
-    
+
     // Token 1 - use dynamic decimals and price
     const token1Decimals = getTokenDecimals(tokenY);
     const token1Amount = Number(formatUnits(balances[1], token1Decimals)) * shareRatio;
-    
-    // Get token1 price (USDC = 1, WETH = eth price)
-    let token1Price = 1; // Default for USDC
-    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-      token1Price = prices?.weth || 0;
-    }
+
+    // Get token1 price using centralized utility
+    const token1Price = getTokenPrice(tokenY, prices);
     const token1Value = token1Amount * token1Price;
     
     return {
@@ -106,18 +98,9 @@ export function DashboardVaultCard({
       return { activePercentage: 0, reservedPercentage: 0 };
     }
     
-    // Get token prices
-    let token0Price = sonicPrice || 0;
-    if (tokenX.toUpperCase() === 'USDC') {
-      token0Price = 1;
-    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-      token0Price = prices?.weth || 0;
-    }
-    
-    let token1Price = 1;
-    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-      token1Price = prices?.weth || 0;
-    }
+    // Get token prices using centralized utility
+    const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
+    const token1Price = getTokenPrice(tokenY, prices);
     
     // Convert to actual token amounts with proper decimals
     const totalToken0 = Number(formatUnits(balances[0], getTokenDecimals(tokenX)));
@@ -150,19 +133,10 @@ export function DashboardVaultCard({
     }
     
     const shareRatio = Number(userShares) / Number(totalSupply);
-    
-    // Get token prices
-    let token0Price = sonicPrice || 0; // Default for S
-    if (tokenX.toUpperCase() === 'USDC') {
-      token0Price = 1;
-    } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-      token0Price = prices?.weth || 0;
-    }
-    
-    let token1Price = 1; // Default for USDC
-    if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-      token1Price = prices?.weth || 0;
-    }
+
+    // Get token prices using centralized utility
+    const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
+    const token1Price = getTokenPrice(tokenY, prices);
     
     // User's total token amounts
     const totalToken0 = Number(formatUnits(balances[0], getTokenDecimals(tokenX))) * shareRatio;
@@ -413,7 +387,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
                                 {userLiquidityBreakdown.activeLiquidity.token0.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.activeLiquidity.token0Percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="text-gray-400 text-xs">
-                                ${(userLiquidityBreakdown.activeLiquidity.token0 * (tokenX.toUpperCase() === 'USDC' ? 1 : (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                                ${(userLiquidityBreakdown.activeLiquidity.token0 * getTokenPrice(tokenX, prices, sonicPrice)).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -428,7 +402,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
                                 {userLiquidityBreakdown.activeLiquidity.token1.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.activeLiquidity.token1Percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="text-gray-400 text-xs">
-                                ${(userLiquidityBreakdown.activeLiquidity.token1 * (tokenY.toUpperCase() === 'USDC' ? 1 : (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                                ${(userLiquidityBreakdown.activeLiquidity.token1 * getTokenPrice(tokenY, prices, sonicPrice)).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -473,7 +447,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
                                 {userLiquidityBreakdown.reservedLiquidity.token0.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.reservedLiquidity.token0Percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="text-gray-400 text-xs">
-                                ${(userLiquidityBreakdown.reservedLiquidity.token0 * (tokenX.toUpperCase() === 'USDC' ? 1 : (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                                ${(userLiquidityBreakdown.reservedLiquidity.token0 * getTokenPrice(tokenX, prices, sonicPrice)).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -488,7 +462,7 @@ const hasClaimableWithdrawal = !!(claimableWithdrawals && claimableWithdrawals.l
                                 {userLiquidityBreakdown.reservedLiquidity.token1.toFixed(4)} <span className="text-gray-400 text-xs">({userLiquidityBreakdown.reservedLiquidity.token1Percentage.toFixed(1)}%)</span>
                               </div>
                               <div className="text-gray-400 text-xs">
-                                ${(userLiquidityBreakdown.reservedLiquidity.token1 * (tokenY.toUpperCase() === 'USDC' ? 1 : (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH' ? (prices?.weth || 0) : (sonicPrice || 0)))).toFixed(2)}
+                                ${(userLiquidityBreakdown.reservedLiquidity.token1 * getTokenPrice(tokenY, prices, sonicPrice)).toFixed(2)}
                               </div>
                             </div>
                           </div>
