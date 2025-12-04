@@ -8,6 +8,8 @@ import { SHADOW_STRAT_ABI } from '@/lib/typechain';
 // DeFi Llama uses a 1400 tick range as the base for APY calculations
 const DEFI_LLAMA_BASE_TICKS = 1400;
 
+const DEFAULT_APY_MULTIPLIER = 0.1; // 10%
+
 interface ShadowAPYResult {
   apy: number;
   baseAPY: number; // Raw APY from DeFi Llama
@@ -65,11 +67,11 @@ export function useShadowAPYAdjusted(
       
       const raw30dMean = poolData.apyMean30d || null;
 
-      // If we don't have range data yet, use the raw APY with 15% multiplier
+      // If we don't have range data yet, use the raw APY with DEFAULT_APY_MULTIPLIER multiplier
       if (!rangeData) {
-        setApy(rawAPY * 0.10);
-        setAdjustedAPY(rawAPY * 0.10);
-        setApy30dMean(raw30dMean !== null ? raw30dMean * 0.10 : null);
+        setApy(rawAPY * DEFAULT_APY_MULTIPLIER);
+        setAdjustedAPY(rawAPY * DEFAULT_APY_MULTIPLIER);
+        setApy30dMean(raw30dMean !== null ? raw30dMean * DEFAULT_APY_MULTIPLIER : null);
         setTickRange(null);
         return;
       }
@@ -80,22 +82,22 @@ export function useShadowAPYAdjusted(
       setTickRange(actualTickRange);
 
       // Calculate adjusted APY based on tick range ratio
-      // Formula: Adjusted APY = Base APY × (DeFi Llama Base Ticks / Our Actual Ticks) × 0.15
+      // Formula: Adjusted APY = Base APY × (DeFi Llama Base Ticks / Our Actual Ticks) × DEFAULT_APY_MULTIPLIER
       // 
       // Reasoning: DeFi Llama calculates APY assuming a 1400 tick range.
       // If our range is narrower (fewer ticks), we're more concentrated and should earn MORE per unit of liquidity.
       // If our range is wider (more ticks), we're less concentrated and should earn LESS per unit of liquidity.
       //
-      // We multiply by 0.15 (15%) because only ~15% of the vault TVL is used per LP position.
+      // We multiply by DEFAULT_APY_MULTIPLIER (ex: 10%) because only ~10% of the vault TVL is used per LP position.
       //
       // Example:
       // - If we use 700 ticks (half of 1400), we're 2x more concentrated → APY should be 2x higher
       // - If we use 2800 ticks (double of 1400), we're 0.5x concentrated → APY should be 0.5x lower
       const adjustmentFactor = DEFI_LLAMA_BASE_TICKS / actualTickRange;
-      const calculatedAPY = rawAPY * adjustmentFactor * 0.10;
+      const calculatedAPY = rawAPY * adjustmentFactor * DEFAULT_APY_MULTIPLIER;
       
       // Apply the same adjustment to the 30-day mean
-      const adjusted30dMean = raw30dMean !== null ? raw30dMean * adjustmentFactor * 0.10 : null;
+      const adjusted30dMean = raw30dMean !== null ? raw30dMean * adjustmentFactor * DEFAULT_APY_MULTIPLIER : null;
 
       setAdjustedAPY(calculatedAPY);
       setApy(calculatedAPY);
