@@ -9,9 +9,9 @@ module.exports = {
     extend: {
       colors: {
         'arca-green': '#00ff88',
-        'arca-dark': '#0a0a0a',
-        'arca-gray': '#1a1a1a',
-        'arca-light-gray': '#2a2a2a',
+        'arca-dark': '#050505',
+        'arca-gray': '#0a0a0a',
+        'arca-light-gray': '#141414',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],
