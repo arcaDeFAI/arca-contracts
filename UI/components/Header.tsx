@@ -12,11 +12,11 @@ export function Header() {
   const pathname = usePathname();
   const { prices, isLoading } = usePrices();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
-  
+
   // Close mobile menu when clicking outside or pressing escape
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -42,31 +42,27 @@ export function Header() {
       document.removeEventListener('keydown', handleEscapeKey);
     };
   }, [isMobileMenuOpen]);
-  
+
   return (
-    <header className="relative border-b border-arca-light-gray">
-      {/* Background Image */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-0"
-        style={{ backgroundImage: 'url(/backgroundarca.png)' }}
-      />
+    <header className="relative border-b border-gray-800/50 bg-black/20 backdrop-blur-md sticky top-0 z-50">
+      {/* Background Image Removed to prevent layering issues */}
       {/* Gradient Overlays */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/50 to-black/50 pointer-events-none"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
-      <div className="relative z-10 container mx-auto px-3 sm:px-6 lg:px-8" style={{maxWidth: '100%'}}>
+      <div className="relative z-10 container mx-auto px-3 sm:px-6 lg:px-8" style={{ maxWidth: '100%' }}>
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4 sm:gap-8">
             <div className="flex items-center gap-2 sm:gap-3">
-              <button 
+              <button
                 onClick={toggleMobileMenu}
                 className="md:hidden flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity"
               >
                 <ArcaLogo size={32} className="sm:w-10 sm:h-10" />
                 <div className="text-2xl sm:text-3xl font-bold text-arca-green">ARCA</div>
-                <svg 
-                  className="w-5 h-5 text-arca-green ml-1" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  className="w-5 h-5 text-arca-green ml-1"
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
                   {isMobileMenuOpen ? (
@@ -81,35 +77,32 @@ export function Header() {
                 <div className="text-2xl sm:text-3xl font-bold text-arca-green">ARCA</div>
               </div>
             </div>
-            
+
             <nav className="hidden md:flex items-center gap-6">
-              <Link 
-                href="/vaults" 
-                className={`text-lg italic transition-colors ${
-                  pathname === '/vaults' || pathname === '/vaults/'
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1' 
+              <Link
+                href="/vaults"
+                className={`text-lg italic transition-colors ${pathname === '/vaults' || pathname === '/vaults/'
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
                     : 'text-white hover:text-arca-green'
-                }`}
+                  }`}
               >
                 Vaults
               </Link>
-              <Link 
-                href="/dashboard" 
-                className={`text-lg italic transition-colors ${
-                  pathname.startsWith('/dashboard') 
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1' 
+              <Link
+                href="/dashboard"
+                className={`text-lg italic transition-colors ${pathname.startsWith('/dashboard')
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
                     : 'text-white hover:text-arca-green'
-                }`}
+                  }`}
               >
                 Dashboard
               </Link>
-              <Link 
-                href="/staking" 
-                className={`text-lg italic transition-colors ${
-                  pathname.startsWith('/staking') 
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1' 
+              <Link
+                href="/staking"
+                className={`text-lg italic transition-colors ${pathname.startsWith('/staking')
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
                     : 'text-white hover:text-arca-green'
-                }`}
+                  }`}
               >
                 Staking
               </Link>
@@ -155,8 +148,8 @@ export function Header() {
                             className="bg-arca-green text-black font-semibold py-2 px-3 sm:px-4 rounded-lg hover:bg-arca-green/90 transition-colors flex items-center gap-2 text-sm sm:text-base"
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
-                              <path d="M20 5H4c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1z"/>
+                              <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+                              <path d="M20 5H4c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1z" />
                             </svg>
                             <span className="hidden sm:inline">Connect Wallet</span>
                             <span className="sm:hidden">Connect</span>
@@ -217,8 +210,8 @@ export function Header() {
                             className="bg-arca-green text-black font-semibold py-2 px-2 sm:px-4 rounded-lg hover:bg-arca-green/90 transition-colors flex items-center gap-1 sm:gap-2 text-xs sm:text-base"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="sm:w-4 sm:h-4">
-                              <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
-                              <path d="M20 5H4c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1z"/>
+                              <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+                              <path d="M20 5H4c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1z" />
                             </svg>
                             <span className="truncate max-w-[120px] sm:max-w-none">
                               {account.displayName}
@@ -236,41 +229,38 @@ export function Header() {
             </ConnectButton.Custom>
           </div>
         </div>
-        
+
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-arca-light-gray" style={{background: 'rgba(0, 0, 0, 0.95)'}}>
+          <div className="md:hidden border-t border-arca-light-gray" style={{ background: 'rgba(0, 0, 0, 0.95)' }}>
             <div className="px-3 py-4 space-y-3">
-              <Link 
-                href="/vaults" 
+              <Link
+                href="/vaults"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${
-                  pathname === '/vaults' || pathname === '/vaults/'
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2' 
+                className={`block text-lg italic transition-colors ${pathname === '/vaults' || pathname === '/vaults/'
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
                     : 'text-white hover:text-arca-green'
-                }`}
+                  }`}
               >
                 Vaults
               </Link>
-              <Link 
-                href="/dashboard" 
+              <Link
+                href="/dashboard"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${
-                  pathname.startsWith('/dashboard') 
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2' 
+                className={`block text-lg italic transition-colors ${pathname.startsWith('/dashboard')
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
                     : 'text-white hover:text-arca-green'
-                }`}
+                  }`}
               >
                 Dashboard
               </Link>
-              <Link 
-                href="/staking" 
+              <Link
+                href="/staking"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${
-                  pathname.startsWith('/staking') 
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2' 
+                className={`block text-lg italic transition-colors ${pathname.startsWith('/staking')
+                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
                     : 'text-white hover:text-arca-green'
-                }`}
+                  }`}
               >
                 Staking
               </Link>

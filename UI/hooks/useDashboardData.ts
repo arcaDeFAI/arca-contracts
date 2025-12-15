@@ -11,7 +11,7 @@ import { type VaultConfig } from '@/lib/vaultConfigs';
 
 export function useDashboardData(config: VaultConfig, userAddress?: string, sharePercentage?: number) {
   const isShadowVault = config.name.includes('Shadow');
-  
+
   // Simple contract calls - exactly like VaultCard
   const { data: userShares } = useReadContract({
     address: config.vaultAddress as `0x${string}`,
@@ -72,14 +72,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     },
   });
 
-  // Debug logging for WS-WETH vault
-  useEffect(() => {
-    if (config.name.includes('WS • WETH')) {
-      console.log('🔍 [WS-WETH Debug] Vault:', config.vaultAddress);
-      console.log('🔍 [WS-WETH Debug] Current Round:', currentRound !== undefined ? Number(currentRound) : 'undefined');
-      console.log('🔍 [WS-WETH Debug] Current Round (raw):', currentRound);
-    }
-  }, [currentRound, config.name, config.vaultAddress]);
+
 
   // Get queued withdrawal for current round (shows as "queued", not claimable)
   const { data: queuedWithdrawal } = useReadContract({
@@ -92,27 +85,17 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     },
   });
 
-  // Debug logging for queued withdrawal
-  useEffect(() => {
-    if (config.name.includes('WS • WETH')) {
-      console.log('🔍 [WS-WETH Debug] User Address:', userAddress);
-      console.log('🔍 [WS-WETH Debug] Queued Withdrawal (raw):', queuedWithdrawal);
-      console.log('🔍 [WS-WETH Debug] Queued Withdrawal (number):', queuedWithdrawal ? Number(queuedWithdrawal) : 'none');
-      console.log('🔍 [WS-WETH Debug] Query enabled:', !!userAddress && !!config.vaultAddress && currentRound !== undefined);
-    }
-  }, [queuedWithdrawal, userAddress, currentRound, config.name, config.vaultAddress]);
-
   // Scan ALL rounds for claimable withdrawals
-  const [claimableWithdrawals, setClaimableWithdrawals] = useState<Array<{round: bigint, amount: bigint}>>([]);
-  
+  const [claimableWithdrawals, setClaimableWithdrawals] = useState<Array<{ round: bigint, amount: bigint }>>([]);
+
   // Build contract calls for all rounds from 0 to currentRound - 1
   const roundChecks = currentRound !== undefined && currentRound > 0n && userAddress
     ? Array.from({ length: Number(currentRound) }, (_, i) => ({
-        address: config.vaultAddress as `0x${string}`,
-        abi: METRO_VAULT_ABI,
-        functionName: 'getQueuedWithdrawal' as const,
-        args: [BigInt(i), userAddress as `0x${string}`],
-      }))
+      address: config.vaultAddress as `0x${string}`,
+      abi: METRO_VAULT_ABI,
+      functionName: 'getQueuedWithdrawal' as const,
+      args: [BigInt(i), userAddress as `0x${string}`],
+    }))
     : [];
 
   const { data: roundResults } = useReadContracts({
@@ -129,8 +112,8 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
       return;
     }
 
-    const withdrawals: Array<{round: bigint, amount: bigint}> = [];
-    
+    const withdrawals: Array<{ round: bigint, amount: bigint }> = [];
+
     roundResults.forEach((result, index) => {
       if (result.status === 'success' && result.result && result.result > 0n) {
         withdrawals.push({
@@ -140,17 +123,8 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
       }
     });
 
-    // Debug logging for WS-WETH vault
-    if (config.name.includes('WS • WETH')) {
-      console.log('🔍 [WS-WETH Debug] Round scan results:', roundResults.length, 'rounds checked');
-      console.log('🔍 [WS-WETH Debug] Claimable withdrawals found:', withdrawals.length);
-      withdrawals.forEach(w => {
-        console.log(`🔍 [WS-WETH Debug] - Round ${Number(w.round)}: ${Number(w.amount)} (raw: ${w.amount})`);
-      });
-    }
-
     setClaimableWithdrawals(withdrawals);
-  }, [roundResults, currentRound, config.name]);
+  }, [roundResults, currentRound]);
 
   // Write contract hooks for transactions
   const { writeContract: claimRewards, isPending: isClaimingRewards } = useWriteContract();
@@ -158,7 +132,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
   // Claim rewards function - unified for both Metro and Shadow vaults
   const handleClaimRewards = () => {
     if (!userAddress || !config.vaultAddress || !pendingRewards || pendingRewards.length === 0) return;
-    
+
     claimRewards({
       address: config.vaultAddress as `0x${string}`,
       abi: isShadowVault ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
@@ -182,7 +156,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
   // Redeem withdrawal from a specific round
   const handleRedeemWithdrawal = (round: bigint) => {
     if (!userAddress || !config.vaultAddress) return;
-    
+
     setProcessingClaims(true);
     setLastClaimedRound(round);
     redeemWithdrawal({
@@ -196,7 +170,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
   // Cancel queued withdrawal
   const handleCancelWithdrawal = (shares: bigint) => {
     if (!userAddress || !config.vaultAddress) return;
-    
+
     cancelWithdrawal({
       address: config.vaultAddress as `0x${string}`,
       abi: isShadowVault ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
@@ -210,10 +184,10 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     if (redeemTxSuccess && redeemTxHash && redeemTxHash !== processedTxHash && processingClaims && lastClaimedRound !== null) {
       // Mark this transaction as processed
       setProcessedTxHash(redeemTxHash);
-      
+
       // Immediately remove the claimed withdrawal from local state
       setClaimableWithdrawals(prev => prev.filter(w => w.round !== lastClaimedRound));
-      
+
       // Reset processing state
       setProcessingClaims(false);
       setLastClaimedRound(null);
