@@ -26,8 +26,7 @@ const STORAGE_KEY_PREFIX = 'user_harvested_';
 export function useTotalHarvestedRewards(
   vaultAddress: string,
   userAddress?: string,
-  tokenPrice?: number,
-  hasBalance?: boolean
+  tokenPrice?: number
 ) {
   const [totalHarvestedUSD, setTotalHarvestedUSD] = useState(0);
   const [firstHarvestTimestamp, setFirstHarvestTimestamp] = useState<number | null>(null);
@@ -38,15 +37,6 @@ export function useTotalHarvestedRewards(
   useEffect(() => {
     if (!publicClient || !vaultAddress || !userAddress) {
       setIsLoading(false);
-      setTotalHarvestedUSD(0);
-      setFirstHarvestTimestamp(null);
-      return;
-    }
-
-    // If user has no balance, reset the cache
-    if (hasBalance === false) {
-      const storageKey = `${STORAGE_KEY_PREFIX}${vaultAddress.toLowerCase()}_${userAddress.toLowerCase()}`;
-      localStorage.removeItem(storageKey);
       setTotalHarvestedUSD(0);
       setFirstHarvestTimestamp(null);
       return;
@@ -105,13 +95,14 @@ export function useTotalHarvestedRewards(
         // Fetch new events
         const currentBlock = await publicClient.getBlockNumber();
         
-        // Get last cached block or start from 7 days ago
-        const blocksPerWeek = 86400n * 7n;
+        // Get last cached block or start from 0 (genesis)
         const lastCachedBlock = cachedData.events.length > 0
           ? BigInt(cachedData.events[cachedData.events.length - 1].blockNumber)
-          : currentBlock > blocksPerWeek ? currentBlock - blocksPerWeek : 0n;
+          : 0n;
 
-        const fromBlock = lastCachedBlock > 0n ? lastCachedBlock : 0n;
+        // If we have no cache, we fetch from block 0 to capture full history
+        // If we have cache, we fetch from the last cached block + 1
+        const fromBlock = lastCachedBlock > 0n ? lastCachedBlock + 1n : 0n;
 
         // Fetch Harvested events for this specific user
         const logs = await publicClient.getLogs({
@@ -141,8 +132,13 @@ export function useTotalHarvestedRewards(
         );
 
         // Merge with cached events (avoid duplicates)
-        const existingBlockNumbers = new Set(cachedData.events.map(e => e.blockNumber));
-        const uniqueNewEvents = newEvents.filter(e => !existingBlockNumbers.has(e.blockNumber));
+        // We use a Map keyed by blockNumber + logIndex equivalent (or just transactionHash + index)
+        // Since we don't have tx hash in the simple interface, we rely on block number filter + dedupe
+        
+        // Simple dedupe by blockNumber + amount (heuristic) or just rely on block range correctness
+        const existingSignatures = new Set(cachedData.events.map(e => `${e.blockNumber}-${e.amount}`));
+        const uniqueNewEvents = newEvents.filter(e => !existingSignatures.has(`${e.blockNumber}-${e.amount}`));
+        
         const allEvents = [...cachedData.events, ...uniqueNewEvents];
 
         // Sort by timestamp
@@ -172,10 +168,7 @@ export function useTotalHarvestedRewards(
         }
       } catch (err) {
         console.warn('Failed to fetch harvested rewards:', err);
-        if (isMounted) {
-          setTotalHarvestedUSD(0);
-          setFirstHarvestTimestamp(null);
-        }
+        // Don't reset to 0 on error, keep previous state if any
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -192,7 +185,7 @@ export function useTotalHarvestedRewards(
       isMounted = false;
       clearInterval(interval);
     };
-  }, [publicClient, vaultAddress, userAddress, tokenPrice, hasBalance]);
+  }, [publicClient, vaultAddress, userAddress, tokenPrice]);
 
   return { totalHarvestedUSD, firstHarvestTimestamp, isLoading };
 }
