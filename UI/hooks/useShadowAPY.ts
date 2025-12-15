@@ -62,7 +62,7 @@ export function useShadowAPY(
 ) {
   const [apy, setApy] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const publicClient = usePublicClient();
 
   useEffect(() => {
@@ -70,7 +70,7 @@ export function useShadowAPY(
       setIsLoading(false);
       return;
     }
-    
+
     if (!vaultTVL || !shadowPrice) {
       setIsLoading(true);
       return;
@@ -90,7 +90,7 @@ export function useShadowAPY(
           firstEventTimestamp: null,
           lastFetch: 0,
         };
-        
+
         const cached = localStorage.getItem(storageKey);
         if (cached) {
           try {
@@ -102,19 +102,59 @@ export function useShadowAPY(
 
         const currentBlock = await publicClient.getBlockNumber();
         const blocksPerDay = 86400n;
-        const blocksPerMonth = blocksPerDay * 30n; // Fetch 30 days of history instead of 7
-        const fromBlock = currentBlock > blocksPerMonth ? currentBlock - blocksPerMonth : 0n;
+        const lookbackBlocks = blocksPerDay * 7n; // Reduce to 7 days from 30
+        const fromBlock = currentBlock > lookbackBlocks ? currentBlock - lookbackBlocks : 0n;
 
-        const logs = await publicClient.getLogs({
-          address: shadowRewardsAddress as `0x${string}`,
-          event: CLAIM_REWARDS_ABI[0],
-          fromBlock,
-          toBlock: currentBlock,
-        });
+        // Optimized: If we have cache, start from last cached block + 1
+        const lastCachedBlock = cachedData.events.length > 0
+          ? BigInt(cachedData.events[cachedData.events.length - 1].blockNumber)
+          : 0n;
+
+        const actualFromBlock = lastCachedBlock > fromBlock ? lastCachedBlock + 1n : fromBlock;
+
+        // If up to date, skip fetch
+        if (actualFromBlock > currentBlock) {
+          if (isMounted) setIsLoading(false);
+          return;
+        }
+
+        const CHUNK_SIZE = 20000n;
+        const chunks: { start: bigint; end: bigint }[] = [];
+
+        for (let start = actualFromBlock; start <= currentBlock; start += CHUNK_SIZE) {
+          const end = start + CHUNK_SIZE - 1n < currentBlock ? start + CHUNK_SIZE - 1n : currentBlock;
+          chunks.push({ start, end });
+        }
+
+        const allLogs: any[] = [];
+        const BATCH_SIZE = 5; // Fetch 5 chunks in parallel
+
+        for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+          const batch = chunks.slice(i, i + BATCH_SIZE);
+          if (!isMounted) break;
+
+          const results = await Promise.all(batch.map(async ({ start, end }) => {
+            try {
+              return await publicClient.getLogs({
+                address: shadowRewardsAddress as `0x${string}`,
+                event: CLAIM_REWARDS_ABI[0],
+                fromBlock: start,
+                toBlock: end,
+              });
+            } catch (chunkError) {
+              console.warn(`Failed to fetch logs for chunk ${start}-${end}`, chunkError);
+              return [];
+            }
+          }));
+
+          results.forEach(logs => allLogs.push(...logs));
+        }
+
+        const logs = allLogs;
 
         if (!isMounted) return;
 
-        const filteredLogs = logs.filter(log => 
+        const filteredLogs = logs.filter(log =>
           (log.args.receiver as string).toLowerCase() === stratAddress.toLowerCase() &&
           (log.args.reward as string).toLowerCase() === shadowTokenAddress.toLowerCase()
         );
@@ -151,7 +191,7 @@ export function useShadowAPY(
         if (allEvents.length > 0 && vaultTVL > 0 && shadowPrice > 0) {
           // 🎯 NOUVELLE LOGIQUE: Prendre seulement les 3 derniers events
           const lastFewEvents = allEvents.slice(-2);
-          
+
           if (lastFewEvents.length >= 2) { // Besoin min de 2 events pour calculer intervalle
             // Calculer récompenses des 3 derniers events seulement
             const recentTokens = lastFewEvents.reduce((sum, event) => {

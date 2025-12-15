@@ -10,13 +10,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden relative">
       {/* Background Image */}
-      <div 
-        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-60"
+      <div
+        className="fixed inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-20"
         style={{ backgroundImage: 'url(/backgroundarca.png)' }}
       />
       {/* Gradient Overlay */}
-      <div className="fixed inset-0 z-0 bg-gradient-to-b from-black/60 via-transparent to-black/80 pointer-events-none" />
-      
+      <div className="fixed inset-0 z-0 bg-gradient-to-b from-black/80 via-black/40 to-black/80 pointer-events-none" />
+
       {/* Navigation */}
       <nav className="relative z-10 px-6 py-6 md:px-12 lg:px-16">
         <div className="flex justify-between items-center">
@@ -47,11 +47,10 @@ export default function Home() {
           <div className="flex flex-col justify-center items-center gap-6 relative z-50">
             <Link
               href={understandsRisks ? "/vaults" : "#"}
-              className={`px-8 py-4 font-semibold rounded-lg transition-all transform ${
-                understandsRisks 
-                  ? "bg-arca-green text-black hover:bg-arca-green/90 hover:scale-105 shadow-lg cursor-pointer" 
+              className={`px-8 py-4 font-semibold rounded-lg transition-all transform ${understandsRisks
+                  ? "bg-arca-green text-black hover:bg-arca-green/90 hover:scale-105 shadow-lg cursor-pointer"
                   : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"
-              }`}
+                }`}
               onClick={(e) => {
                 if (!understandsRisks) {
                   e.preventDefault()
@@ -60,7 +59,7 @@ export default function Home() {
             >
               Launch App
             </Link>
-            
+
             {/* Arca Disclaimer */}
             <div className="max-w-2xl mx-auto">
               <div className="bg-orange-900/20 border border-orange-600/50 rounded-lg p-6 text-left">
@@ -68,39 +67,39 @@ export default function Home() {
                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
                   <span className="text-orange-400 text-sm font-semibold">ALPHA VERSION</span>
                 </div>
-                
+
                 {/* Disclaimer Content */}
                 <div className="space-y-3 text-xs leading-relaxed">
                   <p className="text-gray-300">
                     <span className="text-orange-400 font-semibold">⚠️ Disclaimer:</span>
                     The Arca DeFi platform is currently in alpha phase. This software is provided "as is" without any warranties. By using this platform, you acknowledge and agree that you are using it at your own risk.
                   </p>
-                  
+
                   <p className="text-gray-300">
                     <span className="text-orange-400 font-semibold">Financial Risks:</span>
                     Cryptocurrency investments are subject to high market volatility and may result in partial or complete loss of funds. Past performance does not guarantee future results. Never invest more than you can afford to lose.
                   </p>
-                  
+
                   <p className="text-gray-300">
                     <span className="text-orange-400 font-semibold">Smart Contract Risk:</span>
                     While our smart contracts are based on audited protocols from Metropolis and undergo security testing, all smart contracts carry inherent risks of bugs, exploits, or vulnerabilities that could result in loss of funds.
                   </p>
-                  
+
                   <p className="text-gray-300">
                     <span className="text-orange-400 font-semibold">Technical Risk:</span>
                     The platform may experience downtime, bugs, or technical issues. We are not responsible for any losses incurred due to technical failures or platform unavailability.
                   </p>
-                  
+
                   <p className="text-gray-300">
                     <span className="text-orange-400 font-semibold">Regulatory Risk:</span>
                     Cryptocurrency regulations vary by jurisdiction and are subject to change. Users are responsible for ensuring compliance with their local laws and regulations.
                   </p>
-                  
+
                   <p className="text-gray-300">
                     <span className="text-orange-400 font-semibold">No Financial Advice:</span>
                     Nothing on this platform constitutes financial advice, investment recommendations, or solicitation to buy or sell any financial instruments. All content is for informational purposes only.
                   </p>
-                  
+
                   <p className="text-gray-300">
                     <span className="text-orange-400 font-semibold">Do Your Own Research:</span>
                     You are solely responsible for conducting your own research and due diligence before making any investment decisions. Consult with qualified financial advisors if needed.
