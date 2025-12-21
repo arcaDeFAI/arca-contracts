@@ -93,9 +93,9 @@ export default function Home() {
             {/* Global Stats - Compact Row */}
             <div className="flex flex-wrap gap-4 w-full">
               {/* TVL */}
-              <div className="flex-1 sm:flex-none sm:w-[210px]">
+              <div className="flex-1 sm:flex-none sm:w-[240px]">
                 <StatsCard
-                  title="TVL"
+                  title="Total TVL"
                   value={allVaultMetrics.some(m => m.isLoading) ? undefined : formatUSD(totalTVL)}
                   loading={allVaultMetrics.some(m => m.isLoading)}
                   className="h-full"
@@ -103,9 +103,9 @@ export default function Home() {
               </div>
 
               {/* Balance */}
-              <div className="flex-1 sm:flex-none sm:w-[210px]">
+              <div className="flex-1 sm:flex-none sm:w-[240px]">
                 <StatsCard
-                  title="My Balance"
+                  title="Your Total Balance"
                   value={!isConnected ? '--' : (allVaultMetrics.some(m => m.isLoading) ? undefined : formatUSD(userTotalBalance))}
                   loading={isConnected && allVaultMetrics.some(m => m.isLoading)}
                   className="h-full"
@@ -113,9 +113,9 @@ export default function Home() {
               </div>
 
               {/* Count */}
-              <div className="flex-1 sm:flex-none sm:w-[210px]">
+              <div className="flex-1 sm:flex-none sm:w-[240px]">
                 <StatsCard
-                  title="Vaults"
+                  title="Active Vaults"
                   value={VAULT_CONFIGS.length}
                   className="h-full"
                 />
