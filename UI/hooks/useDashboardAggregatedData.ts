@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { formatUnits } from 'viem'
 import { CONTRACTS } from '@/lib/contracts'
-import { getTokenDecimals } from '@/lib/tokenHelpers'
+import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers'
 import type { VaultConfig } from '@/lib/vaultConfigs'
 
 export interface AggregatedData {
@@ -80,13 +80,8 @@ export function useDashboardAggregatedData(
                 const token0Decimals = getTokenDecimals(tokenX)
                 const token0Amount = Number(formatUnits(metrics.balances[0], token0Decimals)) * shareRatio
 
-                // Get token0 price
-                let token0Price = metrics.sonicPrice || 0 // Default for S
-                if (tokenX.toUpperCase() === 'USDC') {
-                    token0Price = 1
-                } else if (tokenX.toUpperCase() === 'WETH' || tokenX.toUpperCase() === 'ETH') {
-                    token0Price = metrics.prices?.weth || 0
-                }
+                // Get token0 price using centralized utility
+                const token0Price = getTokenPrice(tokenX, metrics.prices, metrics.sonicPrice)
                 const token0Value = token0Amount * token0Price
 
                 const existing0 = tokenAllocations.get(tokenX) || { amount: 0, usdValue: 0 }
@@ -106,11 +101,8 @@ export function useDashboardAggregatedData(
                 const token1Decimals = getTokenDecimals(tokenY)
                 const token1Amount = Number(formatUnits(metrics.balances[1], token1Decimals)) * shareRatio
 
-                // Get token1 price
-                let token1Price = 1 // Default for USDC
-                if (tokenY.toUpperCase() === 'WETH' || tokenY.toUpperCase() === 'ETH') {
-                    token1Price = prices?.weth || 0
-                }
+                // Get token1 price using centralized utility
+                const token1Price = getTokenPrice(tokenY, prices)
                 const token1Value = token1Amount * token1Price
 
                 const existing1 = tokenAllocations.get(tokenY) || { amount: 0, usdValue: 0 }
