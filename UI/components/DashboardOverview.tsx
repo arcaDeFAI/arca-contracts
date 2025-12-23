@@ -1,4 +1,5 @@
 'use client'
+import { VAULT_CONFIGS, type VaultConfig } from '@/lib/vaultConfigs';
 
 import { formatUnits } from 'viem';
 import { CONTRACTS } from '@/lib/contracts';
@@ -17,16 +18,7 @@ import { StatsCard } from './StatsCard'
 import { useDashboardAggregatedData } from '@/hooks/useDashboardAggregatedData'
 import { getAPYCalculationExplanation } from '@/hooks/useShadowAPYAdjusted'
 
-interface VaultConfig {
-  vaultAddress: string
-  stratAddress: string
-  lbBookAddress?: string
-  clpoolAddress?: string
-  name: string
-  tier: 'Active' | 'Premium' | 'Elite'
-  tokenX?: string
-  tokenY?: string
-}
+
 
 interface DashboardOverviewProps {
   vaultConfigs: VaultConfig[]
