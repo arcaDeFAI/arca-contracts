@@ -9,15 +9,13 @@ import { useTotalHarvestedRewards } from './useTotalHarvestedRewards';
 export function useUserHarvestedForVault(
   vaultAddress: string,
   userAddress?: string,
-  tokenPrice?: number,
-  hasBalance?: boolean
+  tokenPrice?: number
 ) {
   // Use the same hook as Total Earned to ensure data consistency
   const { totalHarvestedUSD, isLoading } = useTotalHarvestedRewards(
     vaultAddress,
     userAddress,
-    tokenPrice,
-    hasBalance
+    tokenPrice
   );
 
   return { totalHarvestedUSD, isLoading };
