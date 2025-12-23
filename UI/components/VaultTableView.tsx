@@ -123,7 +123,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
     const tokenPrice = isShadow ? (metrics.prices?.shadow || 0) : (metrics.prices?.metro || 0);
     const hasBalance = !!(metrics.depositedValueUSD && metrics.depositedValueUSD > 0);
 
-    return useUserHarvestedForVault(vault.vaultAddress, userAddress, tokenPrice, hasBalance);
+    return useUserHarvestedForVault(vault.vaultAddress, userAddress, tokenPrice);
   });
 
   // Fetch position data for each vault
