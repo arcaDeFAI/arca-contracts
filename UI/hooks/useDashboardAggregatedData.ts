@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { formatUnits } from 'viem'
 import { CONTRACTS } from '@/lib/contracts'
 import { getTokenDecimals } from '@/lib/tokenHelpers'
+import type { VaultConfig } from '@/lib/vaultConfigs'
 
 export interface AggregatedData {
     totalBalanceUSD: number
@@ -31,11 +32,7 @@ interface VaultMetric {
     pendingRewards?: any[] // Using any for the struct to avoid deep import issues
 }
 
-interface VaultConfig {
-    name: string
-    tokenX?: string
-    tokenY?: string
-}
+
 
 interface TotalHarvestedData {
     totalHarvestedUSD: number
