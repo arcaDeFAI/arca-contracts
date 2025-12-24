@@ -1,8 +1,8 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { usePublicClient } from 'wagmi';
 import { parseAbi } from 'viem';
+import { usePrices } from '@/contexts/PriceContext';
+import { CONTRACTS } from '@/lib/contracts';
 
 const HARVEST_ABI = parseAbi([
   'event Harvested(address indexed user, address indexed token, uint256 amount)'
@@ -16,35 +16,48 @@ interface HarvestEvent {
   timestamp: number;
 }
 
-const STORAGE_KEY_PREFIX = 'user_harvested_';
+const STORAGE_KEY_PREFIX = 'user_harvested_v2_';
 
 /**
  * Fetches and caches all Harvested events for a specific user since their first deposit
  * This tracks the actual rewards claimed/harvested by the user
- * Resets when user has no balance in any vault
  */
 export function useTotalHarvestedRewards(
   vaultAddress: string,
   userAddress?: string,
-  tokenPrice?: number
+  deprecatedTokenPrice?: number // Kept for signature compatibility but ignored in favor of global prices
 ) {
-  const [totalHarvestedUSD, setTotalHarvestedUSD] = useState(0);
+  const [events, setEvents] = useState<HarvestEvent[]>([]);
   const [firstHarvestTimestamp, setFirstHarvestTimestamp] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const publicClient = usePublicClient();
+  const { prices } = usePrices();
+
+  // Calculate total USD based on current prices and events
+  const totalHarvestedUSD = useMemo(() => {
+    if (!events.length || !prices) return 0;
+
+    return events.reduce((sum, event) => {
+      const amount = Number(event.amount) / (10 ** 18);
+      const tokenAddr = event.token.toLowerCase();
+
+      let price = 0;
+      if (tokenAddr === CONTRACTS.METRO.toLowerCase()) price = prices.metro || 0;
+      else if (tokenAddr === CONTRACTS.SHADOW.toLowerCase()) price = prices.shadow || 0;
+      else if (tokenAddr === CONTRACTS.xSHADOW.toLowerCase()) price = prices.xShadow || 0;
+      else if (tokenAddr === '0x0000000000000000000000000000000000000000' || tokenAddr === 's') price = prices.sonic || 0;
+      else if (tokenAddr === CONTRACTS.WS.toLowerCase()) price = prices.sonic || 0;
+
+      return sum + (amount * price);
+    }, 0);
+  }, [events, prices]);
 
   useEffect(() => {
     if (!publicClient || !vaultAddress || !userAddress) {
       setIsLoading(false);
-      setTotalHarvestedUSD(0);
+      setEvents([]);
       setFirstHarvestTimestamp(null);
-      return;
-    }
-    
-    // If price not ready yet, keep loading state
-    if (!tokenPrice) {
-      setIsLoading(true);
       return;
     }
 
@@ -52,10 +65,8 @@ export function useTotalHarvestedRewards(
 
     const fetchAndCacheHarvests = async () => {
       try {
-        setIsLoading(true);
-
         const storageKey = `${STORAGE_KEY_PREFIX}${vaultAddress.toLowerCase()}_${userAddress.toLowerCase()}`;
-        
+
         // Load cached data
         let cachedData: { events: HarvestEvent[]; firstEventTimestamp: number | null; lastFetch: number } = {
           events: [],
@@ -67,58 +78,88 @@ export function useTotalHarvestedRewards(
         if (cached) {
           try {
             cachedData = JSON.parse(cached);
+            if (isMounted) {
+              setEvents(cachedData.events);
+              setFirstHarvestTimestamp(cachedData.firstEventTimestamp);
+            }
           } catch (err) {
-            // Cache parsing failed, using empty data
+            // Cache parsing failed
           }
         }
 
         const now = Date.now();
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+        const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes for faster updates
 
-        // Only fetch if cache is stale
+        // Only fetch if cache is stale or empty
         if (now - cachedData.lastFetch < CACHE_DURATION && cachedData.events.length > 0) {
-          // Use cached data
-          const totalTokens = cachedData.events.reduce((sum, event) => {
-            return sum + (Number(event.amount) / (10 ** 18));
-          }, 0);
-
-          const totalUSD = totalTokens * tokenPrice;
-
-          if (isMounted) {
-            setTotalHarvestedUSD(totalUSD);
-            setFirstHarvestTimestamp(cachedData.firstEventTimestamp);
-            setIsLoading(false);
-          }
+          setIsLoading(false);
           return;
         }
 
+        if (isMounted) setIsLoading(true);
+
         // Fetch new events
         const currentBlock = await publicClient.getBlockNumber();
-        
-        // Get last cached block or start from 0 (genesis)
+
+        // Baseline block to avoid scanning 50M+ empty blocks.
+        // Block 40,000,000 is safely before the November launch/migration period.
+        const ARCA_START_BLOCK = 45000000n;
+
         const lastCachedBlock = cachedData.events.length > 0
           ? BigInt(cachedData.events[cachedData.events.length - 1].blockNumber)
           : 0n;
 
-        // If we have no cache, we fetch from block 0 to capture full history
-        // If we have cache, we fetch from the last cached block + 1
-        const fromBlock = lastCachedBlock > 0n ? lastCachedBlock + 1n : 0n;
+        const actualFromBlock = lastCachedBlock > 0n ? lastCachedBlock + 1n : ARCA_START_BLOCK;
 
-        // Fetch Harvested events for this specific user
-        const logs = await publicClient.getLogs({
-          address: vaultAddress as `0x${string}`,
-          event: HARVEST_ABI[0],
-          args: {
-            user: userAddress as `0x${string}`
-          },
-          fromBlock,
-          toBlock: currentBlock,
-        });
+        if (actualFromBlock > currentBlock) {
+          if (isMounted) setIsLoading(false);
+          return;
+        }
+
+        // Parallel chunked fetching
+        const CHUNK_SIZE = 500000n;
+        const chunks: { start: bigint; end: bigint }[] = [];
+        for (let start = actualFromBlock; start <= currentBlock; start += CHUNK_SIZE) {
+          const end = start + CHUNK_SIZE - 1n < currentBlock ? start + CHUNK_SIZE - 1n : currentBlock;
+          chunks.push({ start, end });
+        }
+
+        const allLogs: any[] = [];
+        const BATCH_SIZE = 5; // 5 chunks in parallel
+
+        for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+          if (!isMounted) break;
+          const batch = chunks.slice(i, i + BATCH_SIZE);
+
+          const batchResults = await Promise.all(batch.map(async (chunk) => {
+            try {
+              return await publicClient.getLogs({
+                address: vaultAddress as `0x${string}`,
+                event: HARVEST_ABI[0],
+                args: { user: userAddress as `0x${string}` },
+                fromBlock: chunk.start,
+                toBlock: chunk.end,
+              });
+            } catch (e) {
+              console.warn(`Chunk failed: ${chunk.start}-${chunk.end}`, e);
+              return [];
+            }
+          }));
+
+          batchResults.forEach(logs => allLogs.push(...logs));
+
+          // Small delay between batches to respect rate limits
+          if (i + BATCH_SIZE < chunks.length) {
+            await new Promise(r => setTimeout(r, 200));
+          }
+        }
+
+        const logs = allLogs;
 
         if (!isMounted) return;
 
         // Convert logs to events
-        const newEvents = await Promise.all(
+        const newEventsBatch = await Promise.all(
           logs.map(async (log) => {
             const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
             return {
@@ -131,48 +172,36 @@ export function useTotalHarvestedRewards(
           })
         );
 
-        // Merge with cached events (avoid duplicates)
-        // We use a Map keyed by blockNumber + logIndex equivalent (or just transactionHash + index)
-        // Since we don't have tx hash in the simple interface, we rely on block number filter + dedupe
-        
-        // Simple dedupe by blockNumber + amount (heuristic) or just rely on block range correctness
-        const existingSignatures = new Set(cachedData.events.map(e => `${e.blockNumber}-${e.amount}`));
-        const uniqueNewEvents = newEvents.filter(e => !existingSignatures.has(`${e.blockNumber}-${e.amount}`));
-        
-        const allEvents = [...cachedData.events, ...uniqueNewEvents];
+        const allEvents = [...cachedData.events, ...newEventsBatch];
 
-        // Sort by timestamp
-        allEvents.sort((a, b) => a.timestamp - b.timestamp);
+        // Deduplicate and Sort
+        const seen = new Set();
+        const uniqueEvents = allEvents.filter(e => {
+          const key = `${e.blockNumber}-${e.amount}-${e.token}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        }).sort((a, b) => a.timestamp - b.timestamp);
 
-        const firstTimestamp = allEvents.length > 0
-          ? allEvents[0].timestamp
+        const firstTimestamp = uniqueEvents.length > 0
+          ? uniqueEvents[0].timestamp
           : null;
 
         // Save to cache
         localStorage.setItem(storageKey, JSON.stringify({
-          events: allEvents,
+          events: uniqueEvents,
           firstEventTimestamp: firstTimestamp,
           lastFetch: now,
         }));
 
-        // Calculate total
-        const totalTokens = allEvents.reduce((sum, event) => {
-          return sum + (Number(event.amount) / (10 ** 18));
-        }, 0);
-
-        const totalUSD = totalTokens * tokenPrice;
-
         if (isMounted) {
-          setTotalHarvestedUSD(totalUSD);
+          setEvents(uniqueEvents);
           setFirstHarvestTimestamp(firstTimestamp);
+          setIsLoading(false);
         }
       } catch (err) {
         console.warn('Failed to fetch harvested rewards:', err);
-        // Don't reset to 0 on error, keep previous state if any
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -185,7 +214,7 @@ export function useTotalHarvestedRewards(
       isMounted = false;
       clearInterval(interval);
     };
-  }, [publicClient, vaultAddress, userAddress, tokenPrice]);
+  }, [publicClient, vaultAddress, userAddress]);
 
   return { totalHarvestedUSD, firstHarvestTimestamp, isLoading };
 }

@@ -80,9 +80,26 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   // Use new DeFi Llama APY if available and poolSymbol is provided, otherwise fallback to old calculation
   const shadowAPY = config.poolSymbol && !shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld;
 
-  const apy = isShadowVault ? shadowAPY.apy : metroAPY.apy;
+  // Calculate activePercentage for Shadow APY adjustment
+  const activePercentage = (vaultData.balances && vaultData.idleBalances) ? (() => {
+    const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
+    const token1Price = getTokenPrice(tokenY, prices);
+    const totalToken0 = Number(vaultData.balances[0]) / (10 ** getTokenDecimals(tokenX));
+    const totalToken1 = Number(vaultData.balances[1]) / (10 ** getTokenDecimals(tokenY));
+    const idleToken0 = Number(vaultData.idleBalances[0]) / (10 ** getTokenDecimals(tokenX));
+    const idleToken1 = Number(vaultData.idleBalances[1]) / (10 ** getTokenDecimals(tokenY));
+    const totalUSD = (totalToken0 * token0Price) + (totalToken1 * token1Price);
+    const idleUSD = (idleToken0 * token0Price) + (idleToken1 * token1Price);
+    return totalUSD > 0 ? ((totalUSD - idleUSD) / totalUSD) * 100 : 0;
+  })() : 0;
+
+  // Metro APY is already calculated against Total TVL in useMetroAPY hook.
+  // Shadow APY (from pool data) needs scaling by the % of vault TVL actually in the pool.
+  const apy = isShadowVault ? (shadowAPY.apy * (activePercentage / 100)) : metroAPY.apy;
   const aprLoading = isShadowVault ? shadowAPY.isLoading : metroAPY.isLoading;
-  const apy30dMean = isShadowVault && config.poolSymbol ? shadowAPYAdjusted.apy30dMean : null;
+
+  const raw30dMean = isShadowVault && config.poolSymbol ? shadowAPYAdjusted.apy30dMean : null;
+  const apy30dMean = (isShadowVault && raw30dMean !== null) ? (raw30dMean * (activePercentage / 100)) : raw30dMean;
 
   return {
     // Vault data
@@ -128,5 +145,6 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     prices,
     sonicPrice,
     isShadowVault,
+    activePercentage,
   };
 }

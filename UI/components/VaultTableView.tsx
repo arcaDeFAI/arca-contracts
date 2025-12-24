@@ -240,15 +240,15 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
       <div className="bg-arca-gray border-2 border-gray-700/50 rounded-xl overflow-hidden backdrop-blur-sm">
         {/* Table Header - Responsive */}
         <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-arca-gray border-b-2 border-gray-700/50 text-sm font-semibold text-white uppercase tracking-wider">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-start pl-4 gap-2">
             <span>Vaults</span>
           </div>
-          <div className="text-center">Status</div>
+          <div className="flex items-center justify-center">Status</div>
           <SortableHeader column="deposit">Deposit</SortableHeader>
           <SortableHeader column="dailyRewards">Daily Rewards</SortableHeader>
           <SortableHeader column="earned">Earned</SortableHeader>
           <SortableHeader column="apr">APR</SortableHeader>
-          <div className="text-center flex items-center justify-center gap-1">
+          <div className="flex items-center justify-center gap-1">
             <span>Withdraw</span>
             <Tooltip text="Withdrawal are only cancelable while queued" width="sm" ariaLabel="Withdrawal information" />
           </div>
