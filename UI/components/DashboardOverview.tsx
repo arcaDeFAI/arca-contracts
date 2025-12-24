@@ -105,13 +105,13 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
   // Right Element for Reward Card
   const RewardDropdown = (
-    <div className="relative">
+    <div className="relative z-[300]">
       <button onClick={() => setShowRewardDropdown(!showRewardDropdown)} className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
         <span className="capitalize">{rewardPeriod}</span>
         <span>▼</span>
       </button>
       {showRewardDropdown && (
-        <div className="absolute top-full right-0 mt-1 w-32 bg-black border border-gray-700 rounded-lg shadow-lg z-50">
+        <div className="absolute top-full right-0 mt-1 w-32 bg-black border border-gray-700 rounded-lg shadow-xl z-[300]">
           {(['hourly', 'daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => (
             <button
               key={period}
@@ -132,13 +132,13 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
   // Right Element for Rate Card
   const RateDropdown = (
-    <div className="relative">
+    <div className="relative z-[300]">
       <button onClick={() => setShowRateDropdown(!showRateDropdown)} className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
         <span>{ratePeriod}</span>
         <span>▼</span>
       </button>
       {showRateDropdown && (
-        <div className="absolute top-full right-0 mt-1 w-32 bg-black border border-gray-700 rounded-lg shadow-lg z-50">
+        <div className="absolute top-full right-0 mt-1 w-32 bg-black border border-gray-700 rounded-lg shadow-xl z-[300]">
           {(['DPR', 'WPR', 'APR'] as const).map((period) => (
             <button
               key={period}
@@ -200,10 +200,11 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   return (
     <div className="space-y-5 mb-6">
       {/* Top Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 overflow-visible">
         <StatsCard
           title="Total Deposits"
           value={`$${aggregatedData.totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          loading={aggregatedData.isLoading}
         />
 
         <StatsCard
@@ -214,6 +215,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             </>
           }
           value={`$${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          loading={aggregatedData.isLoading}
           subtitle={
             aggregatedData.earliestFirstDeposit ? (
               <span className="text-xs text-gray-500 block -mt-1">
@@ -228,6 +230,8 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           subtitle={<span className="text-xs text-gray-500 block -mt-1 capitalize">Est. {rewardPeriod}</span>}
           value={`$${extrapolatedReward.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           rightElement={RewardDropdown}
+          loading={aggregatedData.isLoading && extrapolatedReward === 0}
+          className="z-[300]"
         />
 
         <StatsCard
@@ -240,11 +244,14 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           subtitle={<span className="text-xs text-gray-500 block -mt-1">{ratePeriod}</span>}
           value={`${calculatedRate.toFixed(2)}%`}
           rightElement={RateDropdown}
+          loading={aggregatedData.isLoading && calculatedRate === 0}
+          className="z-[300]"
         />
 
         <StatsCard
           title="Active Positions"
           value={activeLPs}
+          loading={aggregatedData.isLoading}
         />
       </div>
 

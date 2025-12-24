@@ -14,6 +14,11 @@ export interface AggregatedData {
     totalHarvestedMetroUSD: number
     totalHarvestedShadowUSD: number
     earliestFirstDeposit: number | null
+    allocations: any[]
+    deposited: any[]
+    metroRewards: any[]
+    shadowRewards: any[]
+    isLoading: boolean
 }
 
 // Minimal types for the inputs we need
@@ -29,7 +34,8 @@ interface VaultMetric {
         xShadow: number
         weth: number
     }
-    pendingRewards?: any[] // Using any for the struct to avoid deep import issues
+    pendingRewards?: any[]
+    isLoading?: boolean // Added for aggregation
 }
 
 
@@ -37,6 +43,7 @@ interface VaultMetric {
 interface TotalHarvestedData {
     totalHarvestedUSD: number
     firstHarvestTimestamp: number | null
+    isLoading?: boolean // Added for aggregation
 }
 
 export function useDashboardAggregatedData(
@@ -76,6 +83,11 @@ export function useDashboardAggregatedData(
                 const tokenX = config.tokenX || 'S'
                 const tokenY = config.tokenY || 'USDC'
 
+                // Normalize S and WS for aggregation
+                const getAllocKey = (name: string) => (name === 'S' || name === 'WS') ? 'S / wS' : name;
+                const keyX = getAllocKey(tokenX);
+                const keyY = getAllocKey(tokenY);
+
                 // Token 0 - use dynamic decimals and price
                 const token0Decimals = getTokenDecimals(tokenX)
                 const token0Amount = Number(formatUnits(metrics.balances[0], token0Decimals)) * shareRatio
@@ -84,15 +96,15 @@ export function useDashboardAggregatedData(
                 const token0Price = getTokenPrice(tokenX, metrics.prices, metrics.sonicPrice)
                 const token0Value = token0Amount * token0Price
 
-                const existing0 = tokenAllocations.get(tokenX) || { amount: 0, usdValue: 0 }
-                tokenAllocations.set(tokenX, {
+                const existing0 = tokenAllocations.get(keyX) || { amount: 0, usdValue: 0 }
+                tokenAllocations.set(keyX, {
                     amount: existing0.amount + token0Amount,
                     usdValue: existing0.usdValue + token0Value
                 })
 
                 // Track deposited amounts
-                const existingDeposit0 = depositedAmounts.get(tokenX) || { amount: 0, usdValue: 0 }
-                depositedAmounts.set(tokenX, {
+                const existingDeposit0 = depositedAmounts.get(keyX) || { amount: 0, usdValue: 0 }
+                depositedAmounts.set(keyX, {
                     amount: existingDeposit0.amount + token0Amount,
                     usdValue: existingDeposit0.usdValue + token0Value
                 })
@@ -105,15 +117,15 @@ export function useDashboardAggregatedData(
                 const token1Price = getTokenPrice(tokenY, prices)
                 const token1Value = token1Amount * token1Price
 
-                const existing1 = tokenAllocations.get(tokenY) || { amount: 0, usdValue: 0 }
-                tokenAllocations.set(tokenY, {
+                const existing1 = tokenAllocations.get(keyY) || { amount: 0, usdValue: 0 }
+                tokenAllocations.set(keyY, {
                     amount: existing1.amount + token1Amount,
                     usdValue: existing1.usdValue + token1Value
                 })
 
                 // Track deposited token1
-                const existingDeposit1 = depositedAmounts.get(tokenY) || { amount: 0, usdValue: 0 }
-                depositedAmounts.set(tokenY, {
+                const existingDeposit1 = depositedAmounts.get(keyY) || { amount: 0, usdValue: 0 }
+                depositedAmounts.set(keyY, {
                     amount: existingDeposit1.amount + token1Amount,
                     usdValue: existingDeposit1.usdValue + token1Value
                 })
@@ -186,10 +198,10 @@ export function useDashboardAggregatedData(
 
             // Assign colors based on token
             let color = '#6B7280' // gray fallback
-            if (token === 'S') color = '#00FFA3'
-            else if (token === 'WS') color = '#059669'
-            else if (token === 'USDC') color = '#15803D'
-            else if (token === 'WETH' || token === 'ETH') color = '#10B981'
+            if (token === 'S' || token === 'S / wS') color = '#00FFA3' // Neon Green
+            else if (token === 'WS') color = '#2DD4BF' // Teal
+            else if (token === 'USDC') color = '#3B82F6' // Blue
+            else if (token === 'WETH' || token === 'ETH') color = '#8B5CF6' // Purple (matching standard WETH)
 
             return {
                 token,
@@ -207,11 +219,15 @@ export function useDashboardAggregatedData(
             usdValue: data.usdValue
         }))
 
+        const isAnyVaultLoading = vaultMetrics.some(m => m.isLoading);
+        const isAnyHarvestLoading = totalHarvestedData.some(h => h.isLoading);
+        const isLoading = isAnyVaultLoading || isAnyHarvestLoading;
+
         return {
             totalBalanceUSD,
             totalRewardsUSD: totalMetroRewardsUSD + totalShadowRewardsUSD,
             totalMetroRewardsUSD,
-            totalShadowRewardsUSD,
+            totalShadowRewardsUSD: totalShadowRewardsUSD, // Consistency
             totalClaimableUSD,
             totalHarvestedUSD: totalHarvestedMetroUSD + totalHarvestedShadowUSD,
             totalHarvestedMetroUSD,
@@ -220,7 +236,8 @@ export function useDashboardAggregatedData(
             allocations,
             deposited,
             metroRewards,
-            shadowRewards
+            shadowRewards,
+            isLoading
         }
     }, [vaultMetrics, vaultConfigs, totalHarvestedData, prices])
 }

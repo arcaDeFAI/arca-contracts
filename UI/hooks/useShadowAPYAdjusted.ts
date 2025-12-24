@@ -8,7 +8,7 @@ import { SHADOW_STRAT_ABI } from '@/lib/typechain';
 // DeFi Llama uses a 1400 tick range as the base for APY calculations
 const DEFI_LLAMA_BASE_TICKS = 1400;
 
-const DEFAULT_APY_MULTIPLIER = 0.1; // 10%
+const DEFAULT_APY_MULTIPLIER = 1; // Removed static 10% multiplier in favor of dynamic activePercentage
 
 interface ShadowAPYResult {
   apy: number;
@@ -53,7 +53,7 @@ export function useShadowAPYAdjusted(
     try {
       // Get pool data from DeFi Llama using pool ID
       const poolData = getPoolAPY(poolId);
-      
+
       if (!poolData) {
         setError('Pool data not available');
         setApy(0);
@@ -64,7 +64,7 @@ export function useShadowAPYAdjusted(
 
       const rawAPY = poolData.apy || 0;
       setBaseAPY(rawAPY);
-      
+
       const raw30dMean = poolData.apyMean30d || null;
 
       // If we don't have range data yet, use the raw APY with DEFAULT_APY_MULTIPLIER multiplier
@@ -95,7 +95,7 @@ export function useShadowAPYAdjusted(
       // - If we use 2800 ticks (double of 1400), we're 0.5x concentrated → APY should be 0.5x lower
       const adjustmentFactor = DEFI_LLAMA_BASE_TICKS / actualTickRange;
       const calculatedAPY = rawAPY * adjustmentFactor * DEFAULT_APY_MULTIPLIER;
-      
+
       // Apply the same adjustment to the 30-day mean
       const adjusted30dMean = raw30dMean !== null ? raw30dMean * adjustmentFactor * DEFAULT_APY_MULTIPLIER : null;
 
