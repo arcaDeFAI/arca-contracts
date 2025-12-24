@@ -29,7 +29,7 @@ export function StatsCard({
 }: StatsCardProps) {
     // Glassmorphism: bg-arca-gray with slight opacity and blur
     const CardContent = (
-        <div className={`bg-arca-gray/95 backdrop-blur-sm border border-gray-800/60 rounded-xl p-4 md:p-5 h-full flex flex-col gap-3 transition-all hover:border-gray-700/80 ${className}`}>
+        <div className={`relative bg-arca-gray/95 backdrop-blur-sm border border-gray-800/60 rounded-xl p-4 md:p-5 h-full flex flex-col gap-3 transition-all hover:border-gray-700/80 ${className}`}>
             <div className="flex justify-between items-start mb-2">
                 <div className="text-gray-400 text-sm font-medium flex items-center gap-2">
                     {title}
