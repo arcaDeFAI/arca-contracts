@@ -200,10 +200,11 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   return (
     <div className="space-y-5 mb-6">
       {/* Top Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         <StatsCard
           title="Total Deposits"
           value={`$${aggregatedData.totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          loading={aggregatedData.isLoading}
         />
 
         <StatsCard
@@ -214,6 +215,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             </>
           }
           value={`$${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          loading={aggregatedData.isLoading}
           subtitle={
             aggregatedData.earliestFirstDeposit ? (
               <span className="text-xs text-gray-500 block -mt-1">
@@ -228,6 +230,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           subtitle={<span className="text-xs text-gray-500 block -mt-1 capitalize">Est. {rewardPeriod}</span>}
           value={`$${extrapolatedReward.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           rightElement={RewardDropdown}
+          loading={aggregatedData.isLoading && extrapolatedReward === 0}
         />
 
         <StatsCard
@@ -240,11 +243,14 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           subtitle={<span className="text-xs text-gray-500 block -mt-1">{ratePeriod}</span>}
           value={`${calculatedRate.toFixed(2)}%`}
           rightElement={RateDropdown}
+          loading={aggregatedData.isLoading && calculatedRate === 0}
         />
 
         <StatsCard
           title="Active Positions"
           value={activeLPs}
+          loading={aggregatedData.isLoading}
+          className="col-span-2 lg:col-span-1"
         />
       </div>
 

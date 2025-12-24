@@ -14,6 +14,11 @@ export interface AggregatedData {
     totalHarvestedMetroUSD: number
     totalHarvestedShadowUSD: number
     earliestFirstDeposit: number | null
+    allocations: any[]
+    deposited: any[]
+    metroRewards: any[]
+    shadowRewards: any[]
+    isLoading: boolean
 }
 
 // Minimal types for the inputs we need
@@ -29,7 +34,8 @@ interface VaultMetric {
         xShadow: number
         weth: number
     }
-    pendingRewards?: any[] // Using any for the struct to avoid deep import issues
+    pendingRewards?: any[]
+    isLoading?: boolean // Added for aggregation
 }
 
 
@@ -37,6 +43,7 @@ interface VaultMetric {
 interface TotalHarvestedData {
     totalHarvestedUSD: number
     firstHarvestTimestamp: number | null
+    isLoading?: boolean // Added for aggregation
 }
 
 export function useDashboardAggregatedData(
@@ -207,11 +214,15 @@ export function useDashboardAggregatedData(
             usdValue: data.usdValue
         }))
 
+        const isAnyVaultLoading = vaultMetrics.some(m => m.isLoading);
+        const isAnyHarvestLoading = totalHarvestedData.some(h => h.isLoading);
+        const isLoading = isAnyVaultLoading || isAnyHarvestLoading;
+
         return {
             totalBalanceUSD,
             totalRewardsUSD: totalMetroRewardsUSD + totalShadowRewardsUSD,
             totalMetroRewardsUSD,
-            totalShadowRewardsUSD,
+            totalShadowRewardsUSD: totalShadowRewardsUSD, // Consistency
             totalClaimableUSD,
             totalHarvestedUSD: totalHarvestedMetroUSD + totalHarvestedShadowUSD,
             totalHarvestedMetroUSD,
@@ -220,7 +231,8 @@ export function useDashboardAggregatedData(
             allocations,
             deposited,
             metroRewards,
-            shadowRewards
+            shadowRewards,
+            isLoading
         }
     }, [vaultMetrics, vaultConfigs, totalHarvestedData, prices])
 }
