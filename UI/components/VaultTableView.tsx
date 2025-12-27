@@ -12,6 +12,8 @@ import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
 import { Tooltip } from './Tooltip';
 import { CONTRACTS } from '@/lib/contracts';
+import { AutocompoundModal } from './AutocompoundModal';
+import { BoltIcon } from '@heroicons/react/24/outline';
 
 interface VaultTableViewProps {
   vaults: any[];
@@ -88,6 +90,7 @@ type SortDirection = 'asc' | 'desc' | null;
 export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVault }: VaultTableViewProps) {
   const [depositModalVault, setDepositModalVault] = useState<string | null>(null);
   const [withdrawModalVault, setWithdrawModalVault] = useState<string | null>(null);
+  const [autocompoundModalVault, setAutocompoundModalVault] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
@@ -495,6 +498,29 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                       </svg>
                     </button>
 
+                    {/* Autocompound Button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (hasClaimableRewards) {
+                          setAutocompoundModalVault(vault.vaultAddress);
+                        }
+                      }}
+                      disabled={!hasClaimableRewards}
+                      className={`w-7 h-7 flex items-center justify-center bg-gray-900/50 border border-gray-700/50 rounded transition-all ${!hasClaimableRewards
+                        ? 'opacity-30 cursor-not-allowed'
+                        : 'hover:bg-yellow-500/10 hover:border-yellow-500/50'
+                        }`}
+                      title={hasClaimableRewards ? "Autocompound Rewards" : "No Rewards Available"}
+                    >
+                      <BoltIcon
+                        className={`w-3.5 h-3.5 ${!hasClaimableRewards
+                          ? 'text-gray-600'
+                          : 'text-yellow-400'
+                          }`}
+                      />
+                    </button>
+
                     {/* Deposit Button */}
                     <button
                       onClick={(e) => {
@@ -668,6 +694,37 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
             tokenX={vault.tokenX}
             tokenY={vault.tokenY}
             onClose={() => setWithdrawModalVault(null)}
+          />
+        );
+      })()}
+
+      {autocompoundModalVault && (() => {
+        const vaultIndex = vaults.findIndex(v => v.vaultAddress === autocompoundModalVault);
+        const vault = vaults[vaultIndex];
+        const metrics = vaultIndex >= 0 ? vaultMetrics[vaultIndex] : null;
+        if (!vault || !metrics) return null;
+
+        const formattedRewards = (metrics.pendingRewards || [])
+          .filter((r: any) => r.pendingRewards > 0n)
+          .map((r: any) => {
+            const addr = r.token.toLowerCase();
+            let symbol = 'Unknown';
+            if (addr === CONTRACTS.METRO.toLowerCase()) symbol = 'METRO';
+            else if (addr === CONTRACTS.SHADOW.toLowerCase()) symbol = 'SHADOW';
+            else if (addr === CONTRACTS.xSHADOW.toLowerCase()) symbol = 'xSHADOW';
+
+            return {
+              token: r.token,
+              amount: r.pendingRewards,
+              symbol
+            };
+          });
+
+        return (
+          <AutocompoundModal
+            vaultConfig={vault}
+            pendingRewards={formattedRewards}
+            onClose={() => setAutocompoundModalVault(null)}
           />
         );
       })()}
