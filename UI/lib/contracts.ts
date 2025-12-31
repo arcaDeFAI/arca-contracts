@@ -9,6 +9,7 @@ export const CONTRACTS = {
   SHADOW: '0x3333b97138D4b086720b5aE8A7844b1345a33333',
   SHADOW_REWARDS: '0xe879d0E44e6873cf4ab71686055a4f6817685f02', // Default Shadow rewards contract (fallback for S-USDC)
   SHADOW_VOTER: '0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D', // Shadow voter contract for claiming rewards
+  MULTICALL3: '0xcA11bde05977b3631167028862bE2a173976CA11',
 } as const;
 
 // Token decimals
@@ -72,4 +73,33 @@ export const ERC20_ABI = [
     outputs: [{ name: '', type: 'bool' }],
     type: 'function',
   }
+] as const;
+
+export const MULTICALL3_ABI = [
+  {
+    inputs: [
+      {
+        components: [
+          { name: 'target', type: 'address' },
+          { name: 'allowFailure', type: 'bool' },
+          { name: 'callData', type: 'bytes' },
+        ],
+        name: 'calls',
+        type: 'tuple[]',
+      },
+    ],
+    name: 'aggregate3',
+    outputs: [
+      {
+        components: [
+          { name: 'success', type: 'bool' },
+          { name: 'returnData', type: 'bytes' },
+        ],
+        name: 'returnData',
+        type: 'tuple[]',
+      },
+    ],
+    stateMutability: 'payable',
+    type: 'function',
+  },
 ] as const;

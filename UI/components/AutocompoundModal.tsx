@@ -1,733 +1,441 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAccount, usePublicClient, useWriteContract } from 'wagmi';
-import { XMarkIcon, ArrowPathIcon, CheckCircleIcon, ExclamationCircleIcon, BoltIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
+import { useAccount, usePublicClient, useWriteContract, useSendTransaction } from 'wagmi';
+import { XMarkIcon, CheckCircleIcon, ArrowPathIcon, ExclamationCircleIcon, BoltIcon } from '@heroicons/react/24/outline';
 import { type VaultConfig, isShadowVault as checkIsShadow } from '@/lib/vaultConfigs';
 import { AggregatorAPI } from '@/lib/aggregatorApi';
 import { ERC20_ABI } from '@/lib/contracts';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { getTokenAddress, getTokenDecimals } from '@/lib/tokenHelpers';
-import { encodeFunctionData } from 'viem';
+import { encodeFunctionData, formatUnits } from 'viem';
 
-const MULTICALL3_ADDRESS = '0xcA11bde05977b3631167028862bE2a173976CA11';
 const OPERATOR_ADDRESS = '0x60f3290Ce5011E67881771D1e23C38985F707a27';
 
-const MULTICALL3_ABI = [
-    {
-        inputs: [
-            {
-                components: [
-                    { name: 'target', type: 'address' },
-<<<<<<< Updated upstream
-                    { name: 'allowFailure', type: 'bool' },
-=======
->>>>>>> Stashed changes
-                    { name: 'callData', type: 'bytes' }
-                ],
-                name: 'calls',
-                type: 'tuple[]'
-            }
-        ],
-<<<<<<< Updated upstream
-        name: 'aggregate3',
-        outputs: [
-            {
-                components: [
-                    { name: 'success', type: 'bool' },
-                    { name: 'returnData', type: 'bytes' }
-                ],
-                name: 'returnData',
-                type: 'tuple[]'
-            }
-=======
-        name: 'aggregate',
-        outputs: [
-            { name: 'blockNumber', type: 'uint256' },
-            { name: 'returnData', type: 'bytes[]' }
->>>>>>> Stashed changes
-        ],
-        stateMutability: 'payable',
-        type: 'function'
-    }
-] as const;
-
-// ... (in component)
-
-const calls: { target: `0x${string}`; allowFailure: boolean; callData: `0x${string}` }[] = [];
-
-let totalEstimatedX = 0n;
-let totalEstimatedY = 0n;
-
-// ============================================
-// STEP 1: CLAIM from vault
-// ============================================
-addDebug('Adding claim call');
-// Based on confirmed tx data: 0x4e71d92d is 'claim()'
-calls.push({
-    target: vaultAddr,
-    allowFailure: false, // Claim MUST succeed
-    callData: encodeFunctionData({
-        abi: METRO_VAULT_ABI,
-        functionName: 'claim'
-    })
-});
-
-// ... (Swap loop)
-
-// Approve Router to spend Reward Token (from Multicall)
-calls.push({
-    target: reward.token as `0x${string}`,
-    allowFailure: true,
-    callData: encodeFunctionData({
-        abi: ERC20_ABI,
-        functionName: 'approve',
-        args: [routerAddress, totalAmount]
-    })
-});
-
-// Execute Swap X
-calls.push({
-    target: swapXData.data.to as `0x${string}`,
-    allowFailure: true,
-    callData: swapXData.data.data as `0x${string}`
-});
-
-// Execute Swap Y
-calls.push({
-    target: swapYData.data.to as `0x${string}`,
-    allowFailure: true,
-    callData: swapYData.data.data as `0x${string}`
-});
-            }
-
-// ... (set output)
-
-setTotalCalls(calls.length);
-
-setStep('signing');
-
-// No manual gas limit needed for aggregate3 usually, but keeping robust
-const tx = await writeContractAsync({
-    address: MULTICALL3_ADDRESS,
-    abi: MULTICALL3_ABI,
-    functionName: 'aggregate3',
-    args: [calls]
-});
-
-setTxHash(tx);
-setStep('executing');
-
-const receipt = await publicClient.waitForTransactionReceipt({ hash: tx });
-
-if (receipt.status !== 'success') {
-    throw new Error('Transaction failed');
+interface AutocompoundModalProps {
+    vaultConfig: VaultConfig;
+    pendingRewards: { token: string; amount: bigint; symbol: string }[];
+    onClose: () => void;
 }
 
-<<<<<<< Updated upstream
-setStep('complete');
-setTimeout(() => onClose(), 2000);
-=======
-type Step = 'preparing' | 'signing' | 'executing' | 'depositing' | 'complete' | 'error';
+type Step = 'idle' | 'claiming' | 'approving' | 'swapping' | 'depositing' | 'complete' | 'error';
 
 export function AutocompoundModal({ vaultConfig, pendingRewards, onClose }: AutocompoundModalProps) {
     const { address: userAddress } = useAccount();
     const publicClient = usePublicClient();
     const { writeContractAsync } = useWriteContract();
+    const { sendTransactionAsync } = useSendTransaction();
 
-    const [step, setStep] = useState<Step>('preparing');
-    const [error, setError] = useState<string>();
-    const [txHash, setTxHash] = useState<string>();
-    const [aggregatorUsed, setAggregatorUsed] = useState<'kyberswap' | 'openocean' | null>(null);
-    const [totalCalls, setTotalCalls] = useState(0);
-    const [estimatedOutput, setEstimatedOutput] = useState<{ tokenX: bigint; tokenY: bigint } | null>(null);
-    const [debugInfo, setDebugInfo] = useState<string[]>([]);
+    const [currentStep, setCurrentStep] = useState<Step>('idle');
+    const [statusData, setStatusData] = useState<{
+        txHash?: string;
+        error?: string;
+        currentOperation?: string;
+    }>({});
 
-    const isShadowVault = checkIsShadow(vaultConfig);
+    const [debugLogs, setDebugLogs] = useState<string[]>([]);
 
-    const addDebug = (msg: string) => {
-        console.log(msg);
-        setDebugInfo(prev => [...prev, msg]);
-    };
+    const addLog = (msg: string) => setDebugLogs(prev => [...prev, `${new Date().toLocaleTimeString()} - ${msg}`]);
 
-    const executeAtomicAutocompound = async () => {
-        if (!userAddress || !publicClient) return;
+    // Cleanup pending rewards data
+    const rewardsToProcess = pendingRewards.filter(r => r.amount > 0n);
+    const rewardToken = rewardsToProcess[0]; // Assuming single reward token for now (typical)
+    const vaultAddr = vaultConfig.vaultAddress as `0x${string}`;
+
+    const executeSequentialFlow = async () => {
+        if (!userAddress || !publicClient || !rewardToken) return;
 
         try {
-            setStep('preparing');
-            setDebugInfo([]);
+            // --------------------------------------------------------
+            // STEP 1: CLAIM REWARDS
+            // --------------------------------------------------------
+            setCurrentStep('claiming');
+            setStatusData({ currentOperation: 'Claiming Rewards...' });
+            addLog('1/5 Claiming from Vault...');
 
-            const rewardsWithBalance = pendingRewards.filter(r => r.amount > 0n);
-            if (rewardsWithBalance.length === 0) {
-                throw new Error('No rewards to compound');
-            }
+            // Standard claim function for all known vaults
+            const claimHash = await writeContractAsync({
+                address: vaultAddr,
+                abi: METRO_VAULT_ABI,
+                functionName: 'claim',
+            });
 
-            addDebug(`Processing ${rewardsWithBalance.length} reward tokens`);
+            setStatusData({ txHash: claimHash, currentOperation: 'Confirming Claim...' });
+            await publicClient.waitForTransactionReceipt({ hash: claimHash });
+            addLog('Claim Successful.');
 
+            // --------------------------------------------------------
+            // PREPARE FOR SWAPS
+            // --------------------------------------------------------
+            setCurrentStep('approving');
             const tokenXAddr = getTokenAddress(vaultConfig.tokenX) as `0x${string}`;
             const tokenYAddr = getTokenAddress(vaultConfig.tokenY) as `0x${string}`;
-            const vaultAddr = vaultConfig.vaultAddress as `0x${string}`;
+            const rewardAddr = rewardToken.token as `0x${string}`;
 
-            const calls: { target: `0x${string}`; callData: `0x${string}` }[] = [];
+            // Read actual balance after claim
+            const balance = await publicClient.readContract({
+                address: rewardAddr,
+                abi: ERC20_ABI,
+                functionName: 'balanceOf',
+                args: [userAddress]
+            }) as bigint;
 
-            let totalEstimatedX = 0n;
-            let totalEstimatedY = 0n;
+            if (balance === 0n) throw new Error('No rewards received after claim.');
+            addLog(`Balance: ${formatUnits(balance, 18)} ${rewardToken.symbol}`);
 
-            // ============================================
-            // STEP 1: CLAIM from vault
-            // ============================================
-            addDebug('Adding claim call');
+            const half = balance / 2n;
+            const remainder = balance - half;
 
-            if (isShadowVault) {
-                // Shadow vaults use a specific claim selector that likely sends to msg.sender (Multicall)
-                // Selector 0x4b2b20e7 with user address argument
-                const selector = '0x4b2b20e7';
-                const paddedAddress = userAddress.toLowerCase().replace('0x', '').padStart(64, '0');
-                const callData = `${selector}${paddedAddress}` as `0x${string}`;
+            addLog('Getting Swap Quotes...');
+            const [quoteX, quoteY] = await Promise.all([
+                AggregatorAPI.getSwapData({
+                    inTokenAddress: rewardAddr, outTokenAddress: tokenXAddr, amount: half.toString(),
+                    account: userAddress, slippage: 1, gasPrice: '1', referrer: OPERATOR_ADDRESS, referrerFee: 1
+                }, 'kyberswap'),
+                AggregatorAPI.getSwapData({
+                    inTokenAddress: rewardAddr, outTokenAddress: tokenYAddr, amount: remainder.toString(),
+                    account: userAddress, slippage: 1, gasPrice: '1', referrer: OPERATOR_ADDRESS, referrerFee: 1
+                }, 'kyberswap')
+            ]);
 
-                calls.push({
-                    target: vaultAddr,
-                    callData: callData
-                });
-            } else {
-                calls.push({
-                    target: vaultAddr,
-                    callData: encodeFunctionData({
-                        abi: METRO_VAULT_ABI,
-                        functionName: 'claim'
-                    })
-                });
-            }
+            const routerAddress = quoteX.data.to as `0x${string}`;
 
-            // ============================================
-            // STEP 2: Get current balances to verify claim will work
-            // ============================================
-            for (const reward of rewardsWithBalance) {
-                const currentBalance = await publicClient.readContract({
-                    address: reward.token as `0x${string}`,
+            // --------------------------------------------------------
+            // STEP 2: APPROVE ROUTER
+            // --------------------------------------------------------
+            const allowance = await publicClient.readContract({
+                address: rewardAddr,
+                abi: ERC20_ABI,
+                functionName: 'allowance',
+                args: [userAddress, routerAddress]
+            }) as bigint;
+
+            if (allowance < balance) {
+                setStatusData({ currentOperation: `Approving Router...` });
+                addLog('2/5 Approving Router...');
+                const approveHash = await writeContractAsync({
+                    address: rewardAddr,
                     abi: ERC20_ABI,
-                    functionName: 'balanceOf',
-                    args: [userAddress]
-                }) as bigint;
-
-                addDebug(`Current ${reward.symbol} balance: ${currentBalance.toString()}`);
-                addDebug(`Expected after claim: ${reward.amount.toString()}`);
+                    functionName: 'approve',
+                    args: [routerAddress, balance]
+                });
+                setStatusData({ txHash: approveHash, currentOperation: 'Confirming Approval...' });
+                await publicClient.waitForTransactionReceipt({ hash: approveHash });
+                addLog('Approval Confirmed.');
             }
 
-            // ============================================
-            // STEP 3: Get swap data and prepare calls
-            // ============================================
-            let routerAddress: `0x${string}` | null = null;
+            // --------------------------------------------------------
+            // CAPTURE BALANCES BEFORE SWAP (For Delta Depositing)
+            // --------------------------------------------------------
+            const wS_ADDRESS = '0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38' as `0x${string}`;
+            const isShadow = checkIsShadow(vaultConfig);
+            const isNativeToken = !isShadow && vaultConfig.tokenX === 'S';
 
-            for (const reward of rewardsWithBalance) {
-                const halfAmount = reward.amount / 2n;
-                const remainingAmount = reward.amount - halfAmount;
-
-                addDebug(`Swapping ${reward.symbol}: ${halfAmount} to ${vaultConfig.tokenX}, ${remainingAmount} to ${vaultConfig.tokenY}`);
-
-                // Get swap data for X
-                const swapXData = await AggregatorAPI.getSwapData({
-                    inTokenAddress: reward.token,
-                    outTokenAddress: tokenXAddr,
-                    amount: halfAmount.toString(),
-                    account: userAddress,
-                    slippage: 1,
-                    gasPrice: '1',
-                    referrer: OPERATOR_ADDRESS,
-                    referrerFee: 1,
-                }, 'kyberswap');
-
-                // Get swap data for Y
-                const swapYData = await AggregatorAPI.getSwapData({
-                    inTokenAddress: reward.token,
-                    outTokenAddress: tokenYAddr,
-                    amount: remainingAmount.toString(),
-                    account: userAddress,
-                    slippage: 1,
-                    gasPrice: '1',
-                    referrer: OPERATOR_ADDRESS,
-                    referrerFee: 1,
-                }, 'kyberswap');
-
-                if (!routerAddress) {
-                    routerAddress = swapXData.data.to as `0x${string}`;
-                    setAggregatorUsed('kyberswap');
-                    addDebug(`Using router: ${routerAddress}`);
-                }
-
-                // Extract estimated output amounts
-                const estimatedOutX = BigInt(swapXData.data.outAmount || '0');
-                const estimatedOutY = BigInt(swapYData.data.outAmount || '0');
-
-                addDebug(`Estimated output: ${estimatedOutX} ${vaultConfig.tokenX}, ${estimatedOutY} ${vaultConfig.tokenY}`);
-
-                totalEstimatedX += estimatedOutX;
-                totalEstimatedY += estimatedOutY;
-
-                // IMPORTANT: Approve TOTAL amount ONCE, then do both swaps
-                const totalAmount = reward.amount;
-                addDebug(`Approving ${totalAmount} ${reward.symbol} for both swaps`);
-                calls.push({
-                    target: reward.token as `0x${string}`,
-                    callData: encodeFunctionData({
-                        abi: ERC20_ABI,
-                        functionName: 'approve',
-                        args: [routerAddress, totalAmount]
-                    })
-                });
-
-                // Execute swap X
-                addDebug(`Adding swap X call (${halfAmount})`);
-                calls.push({
-                    target: swapXData.data.to as `0x${string}`,
-                    callData: swapXData.data.data as `0x${string}`
-                });
-
-                // Execute swap Y
-                addDebug(`Adding swap Y call (${remainingAmount})`);
-                calls.push({
-                    target: swapYData.data.to as `0x${string}`,
-                    callData: swapYData.data.data as `0x${string}`
-                });
-            }
-
-            // Apply conservative slippage (5% to be safe)
-            const slippageMultiplier = 95n; // 95% = 5% slippage tolerance
-            const estimatedXWithSlippage = (totalEstimatedX * slippageMultiplier) / 100n;
-            const estimatedYWithSlippage = (totalEstimatedY * slippageMultiplier) / 100n;
-
-            addDebug(`Total estimated with 5% slippage: ${estimatedXWithSlippage} ${vaultConfig.tokenX}, ${estimatedYWithSlippage} ${vaultConfig.tokenY}`);
-
-            setEstimatedOutput({
-                tokenX: estimatedXWithSlippage,
-                tokenY: estimatedYWithSlippage
-            });
-
-            // ============================================
-            // STEP 3.5: Transfer swapped tokens from Multicall to User
-            // ============================================
-            if (isShadowVault) {
-                addDebug(`Adding transfer calls to return tokens to user: ${estimatedXWithSlippage} ${vaultConfig.tokenX}, ${estimatedYWithSlippage} ${vaultConfig.tokenY}`);
-
-                // Transfer Token X
-                calls.push({
-                    target: tokenXAddr,
-                    callData: encodeFunctionData({
-                        abi: ERC20_ABI,
-                        functionName: 'transfer',
-                        args: [userAddress, estimatedXWithSlippage]
-                    })
-                });
-
-                // Transfer Token Y
-                calls.push({
-                    target: tokenYAddr,
-                    callData: encodeFunctionData({
-                        abi: ERC20_ABI,
-                        functionName: 'transfer',
-                        args: [userAddress, estimatedYWithSlippage]
-                    })
-                });
-            }
-
-            setTotalCalls(calls.length);
-            addDebug(`Total calls prepared: ${calls.length}`);
-
-            // Log all calls for debugging
-            calls.forEach((call, idx) => {
-                addDebug(`Call ${idx}: ${call.target.slice(0, 10)}...`);
-            });
-
-            setStep('signing');
-
-            // ============================================
-            // Execute multicall (Claim + Swaps)
-            // ============================================
-            addDebug('Executing claim + swap transaction...');
-
-            const tx1 = await writeContractAsync({
-                address: MULTICALL3_ADDRESS,
-                abi: MULTICALL3_ABI,
-                functionName: 'aggregate',
-                args: [calls]
-            });
-
-            setTxHash(tx1);
-            setStep('executing');
-            addDebug(`Transaction 1 sent: ${tx1}`);
-
-            const receipt1 = await publicClient.waitForTransactionReceipt({ hash: tx1 });
-
-            if (receipt1.status !== 'success') {
-                throw new Error('Claim + Swap transaction failed');
-            }
-
-            addDebug('Swaps complete! Reading actual balances...');
-            setStep('depositing');
-
-            // ============================================
-            // STEP 4: Read actual balances after swaps
-            // ============================================
-            const actualBalanceX = await publicClient.readContract({
+            const balanceXBefore = await publicClient.readContract({
                 address: tokenXAddr,
                 abi: ERC20_ABI,
                 functionName: 'balanceOf',
                 args: [userAddress]
             }) as bigint;
 
-            const actualBalanceY = await publicClient.readContract({
+            const balanceYBefore = await publicClient.readContract({
                 address: tokenYAddr,
                 abi: ERC20_ABI,
                 functionName: 'balanceOf',
                 args: [userAddress]
             }) as bigint;
 
-            addDebug(`Actual balance X: ${actualBalanceX}`);
-            addDebug(`Actual balance Y: ${actualBalanceY}`);
+            // Track wS balance BEFORE swap if we need Native S
+            let balanceWSBefore = 0n;
+            if (isNativeToken) {
+                balanceWSBefore = await publicClient.readContract({
+                    address: wS_ADDRESS,
+                    abi: ERC20_ABI,
+                    functionName: 'balanceOf',
+                    args: [userAddress]
+                }) as bigint;
+                addLog(`wS balance before swap: ${formatUnits(balanceWSBefore, 18)}`);
+            }
 
-            // ============================================
-            // STEP 5: Approve vault with actual amounts
-            // ============================================
-            const depositCalls: { target: `0x${string}`; callData: `0x${string}` }[] = [];
+            addLog(`Balances before swap: ${formatUnits(balanceXBefore, getTokenDecimals(vaultConfig.tokenX))} ${vaultConfig.tokenX}, ${formatUnits(balanceYBefore, getTokenDecimals(vaultConfig.tokenY))} ${vaultConfig.tokenY}`);
 
-            // Approve tokenX (if not native S)
-            if (!(!isShadowVault && vaultConfig.tokenX === 'S')) {
-                addDebug(`Approving vault for ${actualBalanceX} ${vaultConfig.tokenX}`);
-                depositCalls.push({
-                    target: tokenXAddr,
-                    callData: encodeFunctionData({
+            // --------------------------------------------------------
+            // STEP 3: SWAP X
+            // --------------------------------------------------------
+            setCurrentStep('swapping');
+            setStatusData({ currentOperation: `Swapping for ${vaultConfig.tokenX}...` });
+            addLog(`3/5 Swapping to ${vaultConfig.tokenX}...`);
+
+            const swapXHash = await sendTransactionAsync({
+                to: routerAddress,
+                data: quoteX.data.data as `0x${string}`,
+                value: BigInt(quoteX.data.value || 0)
+            });
+            setStatusData({ txHash: swapXHash, currentOperation: `Confirming ${vaultConfig.tokenX} Swap...` });
+            await publicClient.waitForTransactionReceipt({ hash: swapXHash });
+            addLog(`${vaultConfig.tokenX} Swap Complete.`);
+
+            // --------------------------------------------------------
+            // STEP 4: SWAP Y
+            // --------------------------------------------------------
+            setStatusData({ currentOperation: `Swapping for ${vaultConfig.tokenY}...` });
+            addLog(`4/5 Swapping to ${vaultConfig.tokenY}...`);
+
+            const swapYHash = await sendTransactionAsync({
+                to: routerAddress,
+                data: quoteY.data.data as `0x${string}`,
+                value: BigInt(quoteY.data.value || 0)
+            });
+            setStatusData({ txHash: swapYHash, currentOperation: `Confirming ${vaultConfig.tokenY} Swap...` });
+            await publicClient.waitForTransactionReceipt({ hash: swapYHash });
+            addLog(`${vaultConfig.tokenY} Swap Complete.`);
+
+            // --------------------------------------------------------
+            // STEP 5: DEPOSIT (Using Delta)
+            // --------------------------------------------------------
+            setCurrentStep('depositing');
+            setStatusData({ currentOperation: 'Reading actual balances...' });
+            addLog('5/5 Depositing to Vault...');
+
+            // Read actual balances after swaps
+            const balanceXAfter = await publicClient.readContract({
+                address: tokenXAddr,
+                abi: ERC20_ABI,
+                functionName: 'balanceOf',
+                args: [userAddress]
+            }) as bigint;
+
+            const balanceYAfter = await publicClient.readContract({
+                address: tokenYAddr,
+                abi: ERC20_ABI,
+                functionName: 'balanceOf',
+                args: [userAddress]
+            }) as bigint;
+
+            // Calculate delta (only what was swapped)
+            let swappedAmountX = balanceXAfter - balanceXBefore;
+            let swappedAmountY = balanceYAfter - balanceYBefore;
+
+            const vaultContractAddress = vaultAddr;
+
+            // --------------------------------------------------------
+            // UNWRAP wS IF NEEDED (For Metro Native S Vaults)
+            // --------------------------------------------------------
+            // Metro Vaults with 'S' require Native S.
+            // If we received wS from swap (common), we must unwrap it first.
+            if (isNativeToken) {
+                // Check if Native S balance increased as expected
+                if (swappedAmountX <= 0n) {
+                    addLog('Native S balance unchanged. Checking for wS delta...');
+
+                    const balanceWSAfter = await publicClient.readContract({
+                        address: wS_ADDRESS,
+                        abi: ERC20_ABI,
+                        functionName: 'balanceOf',
+                        args: [userAddress]
+                    }) as bigint;
+
+                    const wsGained = balanceWSAfter - balanceWSBefore;
+
+                    if (wsGained > 0n) {
+                        addLog(`Found ${formatUnits(wsGained, 18)} NEW wS (delta). Unwrapping to Native S...`);
+                        setStatusData({ currentOperation: 'Unwrapping wS to Native S...' });
+
+                        const WETH_ABI = [{
+                            inputs: [{ name: 'amount', type: 'uint256' }],
+                            name: 'withdraw',
+                            outputs: [],
+                            stateMutability: 'nonpayable',
+                            type: 'function'
+                        }] as const;
+
+                        const unwrapHash = await writeContractAsync({
+                            address: wS_ADDRESS,
+                            abi: WETH_ABI,
+                            functionName: 'withdraw',
+                            args: [wsGained]
+                        });
+
+                        addLog('Confirming Unwrap...');
+                        await publicClient.waitForTransactionReceipt({ hash: unwrapHash });
+                        addLog('Unwrap Complete.');
+
+                        // Use the exact delta amount we unwrapped
+                        swappedAmountX = wsGained;
+                    }
+                }
+            }
+
+            addLog(`Swapped X (${vaultConfig.tokenX}): ${formatUnits(swappedAmountX, getTokenDecimals(vaultConfig.tokenX))} (Expected: ~${formatUnits(BigInt(quoteX.data.outAmount || 0), getTokenDecimals(vaultConfig.tokenX))})`);
+            addLog(`Swapped Y (${vaultConfig.tokenY}): ${formatUnits(swappedAmountY, getTokenDecimals(vaultConfig.tokenY))} (Expected: ~${formatUnits(BigInt(quoteY.data.outAmount || 0), getTokenDecimals(vaultConfig.tokenY))})`);
+
+            if (swappedAmountX <= 0n) throw new Error(`Swap X failed: Balance (S or wS) did not increase.`);
+            if (swappedAmountY <= 0n) throw new Error(`Swap Y failed: Balance did not increase.`);
+
+
+            // Approve vault for Token X (if not native and amount > 0)
+            if (!isNativeToken && swappedAmountX > 0n) {
+                const allowanceX = await publicClient.readContract({
+                    address: tokenXAddr,
+                    abi: ERC20_ABI,
+                    functionName: 'allowance',
+                    args: [userAddress, vaultContractAddress]
+                }) as bigint;
+
+                if (allowanceX < swappedAmountX) {
+                    addLog(`Approving vault for ${vaultConfig.tokenX}...`);
+                    const approveXHash = await writeContractAsync({
+                        address: tokenXAddr,
                         abi: ERC20_ABI,
                         functionName: 'approve',
-                        args: [vaultAddr, actualBalanceX]
-                    })
-                });
+                        args: [vaultContractAddress, swappedAmountX]
+                    });
+                    await publicClient.waitForTransactionReceipt({ hash: approveXHash });
+                }
             }
 
-            // Approve tokenY
-            addDebug(`Approving vault for ${actualBalanceY} ${vaultConfig.tokenY}`);
-            depositCalls.push({
-                target: tokenYAddr,
-                callData: encodeFunctionData({
+            // Approve vault for Token Y (if amount > 0)
+            if (swappedAmountY > 0n) {
+                const allowanceY = await publicClient.readContract({
+                    address: tokenYAddr,
                     abi: ERC20_ABI,
-                    functionName: 'approve',
-                    args: [vaultAddr, actualBalanceY]
-                })
-            });
+                    functionName: 'allowance',
+                    args: [userAddress, vaultContractAddress]
+                }) as bigint;
 
-            // ============================================
-            // STEP 6: Deposit with actual balances
-            // ============================================
-            addDebug(`Adding deposit call: ${actualBalanceX}, ${actualBalanceY}`);
+                if (allowanceY < swappedAmountY) {
+                    addLog(`Approving vault for ${vaultConfig.tokenY}...`);
+                    const approveYHash = await writeContractAsync({
+                        address: tokenYAddr,
+                        abi: ERC20_ABI,
+                        functionName: 'approve',
+                        args: [vaultContractAddress, swappedAmountY]
+                    });
+                    await publicClient.waitForTransactionReceipt({ hash: approveYHash });
+                }
+            }
 
-            if (isShadowVault) {
-                depositCalls.push({
-                    target: vaultAddr,
-                    callData: encodeFunctionData({
-                        abi: METRO_VAULT_ABI,
-                        functionName: 'deposit',
-                        args: [actualBalanceX, actualBalanceY, 0n]
-                    })
+            // Verify Amounts
+            addLog(`Ready to Deposit:`);
+            addLog(`X (${vaultConfig.tokenX}): ${formatUnits(swappedAmountX, getTokenDecimals(vaultConfig.tokenX))}`);
+            addLog(`Y (${vaultConfig.tokenY}): ${formatUnits(swappedAmountY, getTokenDecimals(vaultConfig.tokenY))}`);
+
+            if (swappedAmountY === 0n) {
+                addLog('CRITICAL WARNING: Token Y amount is 0!');
+            }
+
+            // Deposit
+            setStatusData({ currentOperation: 'Depositing to vault...' });
+
+            let depositHash: `0x${string}`;
+            if (isNativeToken) {
+                depositHash = await writeContractAsync({
+                    address: vaultContractAddress,
+                    abi: METRO_VAULT_ABI,
+                    functionName: 'depositNative',
+                    args: [swappedAmountX, swappedAmountY, 0n],
+                    value: swappedAmountX
                 });
             } else {
-                depositCalls.push({
-                    target: vaultAddr,
-                    callData: encodeFunctionData({
-                        abi: METRO_VAULT_ABI,
-                        functionName: 'depositNative',
-                        args: [actualBalanceX, actualBalanceY, 0n]
-                    })
+                depositHash = await writeContractAsync({
+                    address: vaultContractAddress,
+                    abi: METRO_VAULT_ABI,
+                    functionName: 'deposit',
+                    args: [swappedAmountX, swappedAmountY, 0n]
                 });
             }
 
-            addDebug(`Executing deposit transaction with ${depositCalls.length} calls...`);
+            setStatusData({ txHash: depositHash, currentOperation: 'Confirming Deposit...' });
+            await publicClient.waitForTransactionReceipt({ hash: depositHash });
+            addLog('Deposit successful! Autocompound complete.');
 
-            const nativeValue = (!isShadowVault && vaultConfig.tokenX === 'S')
-                ? actualBalanceX
-                : 0n;
+            setCurrentStep('complete');
+            setTimeout(onClose, 2500);
 
-            const tx2 = await writeContractAsync({
-                address: MULTICALL3_ADDRESS,
-                abi: MULTICALL3_ABI,
-                functionName: 'aggregate',
-                args: [depositCalls],
-                value: nativeValue
-            });
-
-            addDebug(`Transaction 2 sent: ${tx2}`);
-
-            const receipt2 = await publicClient.waitForTransactionReceipt({ hash: tx2 });
-
-            if (receipt2.status === 'success') {
-                addDebug('Deposit successful!');
-                setStep('complete');
-                setTimeout(() => onClose(), 2000);
-            } else {
-                throw new Error('Deposit transaction failed');
-            }
->>>>>>> Stashed changes
-
-        } catch (e: any) {
-    console.error('Compound error:', e);
-    addDebug(`ERROR: ${e.message}`);
-    setError(e.message || 'Transaction failed');
-    setStep('error');
-}
+        } catch (err: any) {
+            console.error(err);
+            setCurrentStep('error');
+            setStatusData(prev => ({ ...prev, error: err.message || 'Transaction Failed' }));
+            addLog(`Error: ${err.message}`);
+        }
     };
 
-useEffect(() => {
-    executeCompound();
-}, []);
-
-return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-        <div className="bg-arca-gray border border-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
-            <div className="p-6 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-arca-gray to-arca-dark">
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    <BoltIcon className={`w-6 h-6 text-yellow-400 ${step !== 'complete' ? 'animate-pulse' : ''}`} />
-                    Autocompound (Claim & Swap)
-                </h2>
-                <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
-                    <XMarkIcon className="w-6 h-6" />
-                </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-                {/* Progress UI */}
-                <div className="space-y-3">
-                    <div className={`p-4 rounded-lg border flex items-center justify-between ${step === 'complete' ? 'bg-arca-green/10 border-arca-green' : 'bg-gray-800/30 border-gray-800'}`}>
-                        <div>
-                            <h3 className="text-sm font-medium text-white">Full Process</h3>
-                            <p className="text-xs text-gray-500">Claim Rewards → Swap to Tokens → Send to Wallet</p>
-                        </div>
-                        {step === 'preparing' && <div className="text-xs text-blue-400">Preparing...</div>}
-                        {step === 'signing' && <div className="text-xs text-yellow-400">Sign Wallet...</div>}
-                        {step === 'executing' && <div className="text-xs text-blue-400 animate-pulse">Executing...</div>}
-                        {step === 'complete' && <CheckCircleIcon className="w-6 h-6 text-arca-green" />}
-                        {step === 'error' && <ExclamationCircleIcon className="w-6 h-6 text-red-500" />}
-                    </div>
-
-                    {txHash && (
-                        <a href={`https://sonicscan.org/tx/${txHash}`} target="_blank" className="block text-center text-xs text-arca-green hover:underline">
-                            View Transaction
-                        </a>
-                    )}
-
-                    {error && (
-                        <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
-                            {error}
-                        </div>
-                    )}
-                </div>
-
-<<<<<<< Updated upstream
-                {/* Debug Log */}
-                <div className="bg-black/40 rounded-lg p-3 h-48 overflow-y-auto text-xs font-mono text-gray-400 custom-scrollbar">
-                    {debugInfo.map((msg, i) => <div key={i}>{msg}</div>)}
-                </div>
-            </div>
-        </div>
-    </div>
-);
-=======
-                <div className="p-6 space-y-4">
-                    <div className="p-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs text-blue-400 flex items-center gap-2">
-                                <span className="font-semibold">⚡ 2 Transactions</span>
-                                {totalCalls > 0 && (
-                                    <span className="bg-blue-500/20 px-2 py-0.5 rounded text-blue-300">
-                                        Claim+Swap → Deposit
-                                    </span>
-                                )}
-                            </p>
-                        </div>
-                        {aggregatorUsed && (
-                            <p className="text-xs text-gray-400">
-                                Powered by <span className="text-blue-400 font-semibold">KyberSwap</span> + <span className="text-purple-400 font-semibold">Multicall3</span>
-                            </p>
-                        )}
-                        {estimatedOutput && (
-                            <div className="mt-2 pt-2 border-t border-blue-500/20">
-                                <p className="text-xs text-gray-500 mb-1">Estimated deposit (with 5% slippage buffer):</p>
-                                <div className="flex gap-3 text-xs">
-                                    <span className="text-arca-green">
-                                        {vaultConfig.tokenX}: ~{(Number(estimatedOutput.tokenX) / Math.pow(10, getTokenDecimals(vaultConfig.tokenX))).toFixed(4)}
-                                    </span>
-                                    <span className="text-arca-green">
-                                        {vaultConfig.tokenY}: ~{(Number(estimatedOutput.tokenY) / Math.pow(10, getTokenDecimals(vaultConfig.tokenY))).toFixed(4)}
-                                    </span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-semibold text-gray-400">Progress</h3>
-                            {/* Preparing */}
-                            <StepIndicator
-                                label="Building transaction"
-                                sublabel="Fetching routes..."
-                                isActive={step === 'preparing'}
-                                isComplete={step !== 'preparing' && step !== 'error'}
-                                isError={false}
-                            />
-
-                            {/* Signing */}
-                            <StepIndicator
-                                label="Confirm signature"
-                                sublabel="Sign for claim + swaps"
-                                isActive={step === 'signing'}
-                                isComplete={['executing', 'depositing', 'complete'].includes(step)}
-                                isError={false}
-                            />
-
-                            {/* Executing */}
-                            <StepIndicator
-                                label="Claim & Swap"
-                                sublabel={`${totalCalls} operations`}
-                                isActive={step === 'executing'}
-                                isComplete={['depositing', 'complete'].includes(step)}
-                                isError={false}
-                                txHash={txHash}
-                            />
-
-                            {/* Depositing */}
-                            <StepIndicator
-                                label="Deposit to vault"
-                                sublabel="Using actual swap outputs"
-                                isActive={step === 'depositing'}
-                                isComplete={step === 'complete'}
-                                isError={false}
-                            />
-
-                            {/* Error */}
-                            {step === 'error' && (
-                                <div className="flex items-start gap-3 p-3 rounded-xl border bg-red-500/5 border-red-500/30">
-                                    <ExclamationCircleIcon className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-red-500">Failed</p>
-                                        {error && (
-                                            <p className="text-xs text-red-400 mt-1 leading-relaxed">{error}</p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {step === 'complete' && (
-                                <div className="p-3 bg-arca-green/10 border border-arca-green/30 rounded-lg">
-                                    <p className="text-sm text-arca-green flex items-center gap-2">
-                                        <CheckCircleIcon className="w-5 h-5" />
-                                        Complete!
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Debug Info */}
-                        <div className="space-y-2">
-                            <h3 className="text-sm font-semibold text-gray-400">Debug Log</h3>
-                            <div className="bg-black/40 rounded-lg p-3 h-64 overflow-y-auto text-xs font-mono text-gray-400 space-y-1 custom-scrollbar">
-                                {debugInfo.map((info, idx) => (
-                                    <div key={idx} className="text-gray-300">
-                                        <span className="text-gray-600">{idx}.</span> {info}
-                                    </div>
-                                ))}
-                                {debugInfo.length === 0 && (
-                                    <div className="text-gray-600">Initializing...</div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-6 bg-arca-dark/50 border-t border-gray-800 flex justify-between items-center">
-                    <div className="text-xs text-gray-500">
-                        {step === 'complete' ? '✓ All operations complete!' :
-                            step === 'depositing' ? '💰 Depositing to vault...' :
-                                step === 'executing' ? '⏳ Processing swaps...' :
-                                    step === 'signing' ? '✍️ Waiting for signature...' :
-                                        '🔄 Preparing...'}
-                    </div>
-                    <div className="flex gap-3">
-                        {step === 'error' && (
-                            <button
-                                onClick={() => {
-                                    setStep('preparing');
-                                    setError(undefined);
-                                    setTxHash(undefined);
-                                    setEstimatedOutput(null);
-                                    setDebugInfo([]);
-                                    executeAtomicAutocompound();
-                                }}
-                                className="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                            >
-                                Retry
-                            </button>
-                        )}
-                        <button
-                            onClick={onClose}
-                            disabled={step === 'signing' || step === 'executing'}
-                            className="bg-arca-green text-black px-6 py-2 rounded-lg text-sm font-bold hover:bg-arca-green/90 transition-all shadow-lg shadow-arca-green/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {step === 'complete' ? 'Done ✓' : 'Close'}
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function StepIndicator({
-    label,
-    sublabel,
-    isActive,
-    isComplete,
-    isError,
-    txHash
-}: {
-    label: string;
-    sublabel: string;
-    isActive: boolean;
-    isComplete: boolean;
-    isError: boolean;
-    txHash?: string;
-}) {
     return (
-        <div className={`flex items-start gap-2 p-2 rounded-lg border transition-all ${isActive ? 'bg-arca-green/5 border-arca-green' :
-            isComplete ? 'bg-gray-800/30 border-gray-800' :
-                'bg-transparent border-transparent'
-            }`}>
-            <div className="mt-0.5">
-                {isComplete ? (
-                    <CheckCircleIcon className="w-4 h-4 text-arca-green" />
-                ) : isActive ? (
-                    <ArrowPathIcon className="w-4 h-4 text-arca-green animate-spin" />
-                ) : (
-                    <div className="w-4 h-4 rounded-full border-2 border-gray-700" />
-                )}
-            </div>
-            <div className="flex-1">
-                <p className={`text-xs font-medium ${isComplete ? 'text-gray-400' :
-                    isActive ? 'text-white' :
-                        'text-gray-600'
-                    }`}>
-                    {label}
-                </p>
-                <p className="text-xs text-gray-500">{sublabel}</p>
-                {txHash && (
-                    <a
-                        href={`https://sonicscan.org/tx/${txHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-arca-green hover:underline block mt-1"
-                    >
-                        View TX ↗
-                    </a>
-                )}
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="bg-arca-gray border border-gray-800 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+                <div className="p-6 border-b border-gray-800 flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <BoltIcon className="w-6 h-6 text-yellow-400" />
+                        Autocompound (Sequential)
+                    </h2>
+                    <button onClick={onClose} className="text-gray-500 hover:text-white">
+                        <XMarkIcon className="w-6 h-6" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-6">
+                    {/* Status Display */}
+                    <div className="space-y-4">
+                        <div className={`p-4 rounded-xl border ${currentStep === 'error' ? 'bg-red-500/10 border-red-500/30' : 'bg-gray-800/30 border-gray-700'}`}>
+                            <div className="flex items-center gap-3">
+                                {currentStep === 'error' ? (
+                                    <ExclamationCircleIcon className="w-6 h-6 text-red-500" />
+                                ) : currentStep === 'complete' ? (
+                                    <CheckCircleIcon className="w-6 h-6 text-arca-green" />
+                                ) : currentStep === 'idle' ? (
+                                    <BoltIcon className="w-6 h-6 text-gray-400" />
+                                ) : (
+                                    <ArrowPathIcon className="w-6 h-6 text-arca-green animate-spin" />
+                                )}
+                                <div>
+                                    <h3 className={`font-semibold ${currentStep === 'error' ? 'text-red-400' : 'text-white'}`}>
+                                        {currentStep === 'idle' ? 'Ready to Compound' :
+                                            currentStep === 'complete' ? 'Compound Complete!' :
+                                                currentStep === 'error' ? 'Transaction Failed' :
+                                                    statusData.currentOperation}
+                                    </h3>
+                                    {statusData.txHash && (
+                                        <a href={`https://sonicscan.org/tx/${statusData.txHash}`} target="_blank" className="text-xs text-blue-400 hover:underline mt-1 block">
+                                            View Transaction ↗
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Step Progress */}
+                        <div className="flex justify-between px-2 text-xs text-gray-500">
+                            <span className={['claiming', 'approving', 'swapping', 'depositing', 'complete'].includes(currentStep) ? 'text-arca-green font-bold' : ''}>1. Claim</span>
+                            <span className="text-gray-700">→</span>
+                            <span className={['approving', 'swapping', 'depositing', 'complete'].includes(currentStep) ? 'text-arca-green font-bold' : ''}>2. Approve</span>
+                            <span className="text-gray-700">→</span>
+                            <span className={['swapping', 'depositing', 'complete'].includes(currentStep) ? 'text-arca-green font-bold' : ''}>3. Swap</span>
+                            <span className="text-gray-700">→</span>
+                            <span className={['depositing', 'complete'].includes(currentStep) ? 'text-arca-green font-bold' : ''}>4. Deposit</span>
+                        </div>
+                    </div>
+
+                    {/* Action Button */}
+                    {currentStep === 'idle' || currentStep === 'error' ? (
+                        <button
+                            onClick={executeSequentialFlow}
+                            className="w-full bg-arca-green text-black font-bold py-3 rounded-xl hover:bg-arca-green/90 transition-all flex items-center justify-center gap-2"
+                        >
+                            {currentStep === 'error' ? 'Retry Process' : 'Start Compound Process'}
+                        </button>
+                    ) : (
+                        <div className="h-12 flex items-center justify-center text-gray-500 text-sm animate-pulse">
+                            Please confirm transactions in your wallet...
+                        </div>
+                    )}
+
+                    {/* Logs */}
+                    <div className="bg-black/40 rounded-lg p-3 h-32 overflow-y-auto text-[10px] font-mono text-gray-500 custom-scrollbar border border-gray-800">
+                        {debugLogs.map((log, i) => <div key={i}>{log}</div>)}
+                        <div className="h-4" /> {/* spacer */}
+                    </div>
+                </div>
             </div>
         </div>
     );
->>>>>>> Stashed changes
 }
