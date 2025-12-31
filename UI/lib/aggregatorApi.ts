@@ -47,13 +47,13 @@ export const AggregatorAPI = {
 
             const routeUrl = `${KYBER_API_BASE}/routes?${routeQuery.toString()}`;
             const routeResponse = await fetch(routeUrl);
-            
+
             if (!routeResponse.ok) {
                 throw new Error(`KyberSwap route failed: ${routeResponse.statusText}`);
             }
 
             const routeData = await routeResponse.json();
-            
+
             if (!routeData.data?.routeSummary) {
                 throw new Error('No route found from KyberSwap');
             }
@@ -65,8 +65,8 @@ export const AggregatorAPI = {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     routeSummary: routeData.data.routeSummary,
-                    sender: params.account,
-                    recipient: params.account,
+                    sender: '0xcA11bde05977b3631167028862bE2a173976CA11', // Multicall3 address executes the swap
+                    recipient: params.account, // Send swapped tokens directly to user
                     slippageTolerance: params.slippage * 100, // KyberSwap uses basis points (100 = 1%)
                 }),
             });
@@ -144,8 +144,8 @@ export const AggregatorAPI = {
      * Tries KyberSwap first, falls back to OpenOcean if it fails
      */
     async getSwapData(params: SwapQuoteRequest, preferredProvider: AggregatorProvider = 'kyberswap'): Promise<SwapResponse> {
-        const providers: AggregatorProvider[] = preferredProvider === 'kyberswap' 
-            ? ['kyberswap', 'openocean'] 
+        const providers: AggregatorProvider[] = preferredProvider === 'kyberswap'
+            ? ['kyberswap', 'openocean']
             : ['openocean', 'kyberswap'];
 
         let lastError: Error | null = null;
