@@ -54,7 +54,7 @@ export function Header() {
                 className="md:hidden flex items-center gap-2 hover:opacity-80 transition-opacity"
               >
                 <ArcaLogo size={32} className="text-arca-green" />
-                <div className="text-xl font-extrabold tracking-tighter text-arca-green leading-none">arca</div>
+                <div className="text-lg sm:text-xl font-extrabold tracking-tighter text-arca-green leading-none">arca Finance</div>
                 <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {isMobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -65,7 +65,7 @@ export function Header() {
               </button>
               <div className="hidden md:flex items-center gap-2 -mt-0.5">
                 <ArcaLogo size={36} className="text-arca-green" />
-                <div className="text-xl font-extrabold tracking-tighter text-arca-green leading-none">arca</div>
+                <div className="text-xl font-extrabold tracking-tighter text-arca-green leading-none">arca Finance</div>
               </div>
             </div>
 
@@ -102,15 +102,15 @@ export function Header() {
           <div className="flex items-center gap-4 sm:gap-6">
             {/* Sonic Price */}
             {!isLoading && prices && (
-              <div className="hidden md:flex items-center gap-2 py-1">
-                <span className="text-[10px] font-bold text-white/30 uppercase tracking-[2px]">Sonic</span>
+              <div className="hidden md:flex items-center gap-2 py-1.5 px-3 bg-white/[0.03] border border-white/[0.05] rounded-full">
+                <span className="text-[14px] font-bold text-white/50 uppercase tracking-[2px]"> $S :</span>
                 <span className="text-sm font-semibold text-arca-green tabular-nums">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             {/* Sonic Price - Mobile */}
             {!isLoading && prices && (
-              <div className="md:hidden flex items-center gap-1.5 opacity-60">
-                <span className="text-xs font-bold text-arca-green tabular-nums">${prices.sonic.toFixed(4)}</span>
+              <div className="flex md:hidden items-center gap-1 opacity-80 bg-white/[0.03] border border-white/[0.05] px-1.5 py-0.5 rounded-full scale-90 sm:scale-100">
+                <span className="text-[10px] font-bold text-arca-green tabular-nums">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             <ConnectButton.Custom>
