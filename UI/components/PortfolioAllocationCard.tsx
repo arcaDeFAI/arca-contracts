@@ -124,9 +124,6 @@ export function PortfolioAllocationCard({
           {/* Pie Chart */}
           <div className="flex-shrink-0 w-40 h-40 sm:w-48 sm:h-48 lg:w-52 lg:h-52">
             <svg width="100%" height="100%" viewBox="0 0 200 200" className="drop-shadow-lg">
-              {/* Inner circle (donut hole) - Match bg-arca-gray (#1a1a1a) */}
-              <circle cx="100" cy="100" r="50" fill="#1a1a1a" />
-
               {/* Pie segments */}
               {pieSegments.map((segment, index) => (
                 <path
