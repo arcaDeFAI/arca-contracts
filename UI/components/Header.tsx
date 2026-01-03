@@ -55,12 +55,11 @@ export function Header() {
             <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={toggleMobileMenu}
-                className="md:hidden flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-opacity"
+                className="md:hidden flex items-center gap-3 hover:opacity-80 transition-opacity"
               >
-                <ArcaLogo size={32} className="sm:w-10 sm:h-10" />
-                <div className="text-2xl sm:text-3xl font-bold text-arca-green">ARCA</div>
+                <ArcaLogo width={120} height={40} />
                 <svg
-                  className="w-5 h-5 text-arca-green ml-1"
+                  className="w-5 h-5 text-arca-green"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -72,9 +71,8 @@ export function Header() {
                   )}
                 </svg>
               </button>
-              <div className="hidden md:flex items-center gap-2 sm:gap-3">
-                <ArcaLogo size={32} className="sm:w-10 sm:h-10" />
-                <div className="text-2xl sm:text-3xl font-bold text-arca-green">ARCA</div>
+              <div className="hidden md:flex items-center">
+                <ArcaLogo width={140} height={48} />
               </div>
             </div>
 
