@@ -44,11 +44,7 @@ export function Header() {
   }, [isMobileMenuOpen]);
 
   return (
-    <header className="relative border-b border-gray-800/50 bg-black/20 backdrop-blur-md sticky top-0 z-50">
-      {/* Background Image Removed to prevent layering issues */}
-      {/* Gradient Overlays */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/50 to-black/50 pointer-events-none"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,163,0.05),transparent_50%)] pointer-events-none"></div>
+    <header className="relative border-b border-gray-800/50 backdrop-blur-md sticky top-0 z-50">
       <div className="relative z-10 container mx-auto px-3 sm:px-6 lg:px-8" style={{ maxWidth: '100%' }}>
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4 sm:gap-8">
