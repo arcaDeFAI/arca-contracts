@@ -45,17 +45,19 @@ export function Header() {
 
   return (
     <header className="relative border-b border-white/[0.03] bg-black/40 backdrop-blur-xl sticky top-0 z-50">
-      <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8" style={{ maxWidth: '100%' }}>
-        <div className="flex items-center justify-between h-14">
+      <div className="relative z-10 container mx-auto px-3 sm:px-6 lg:px-8" style={{ maxWidth: '100%' }}>
+        <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-6 sm:gap-10">
             <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={toggleMobileMenu}
-                className="md:hidden flex items-center gap-2 hover:opacity-80 transition-opacity"
+                className="md:hidden flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               >
                 <ArcaLogo size={32} className="text-arca-green" />
-                <div className="text-lg sm:text-xl font-extrabold tracking-tighter text-arca-green leading-none">arca Finance</div>
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="text-base font-extrabold tracking-tight text-arca-green leading-none whitespace-nowrap">
+                  Arca Finance
+                </div>
+                <svg className="w-5 h-5 text-arca-green ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   {isMobileMenuOpen ? (
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   ) : (
@@ -64,15 +66,15 @@ export function Header() {
                 </svg>
               </button>
               <div className="hidden md:flex items-center gap-2 -mt-0.5">
-                <ArcaLogo size={36} className="text-arca-green" />
-                <div className="text-xl font-extrabold tracking-tighter text-arca-green leading-none">arca Finance</div>
+                <ArcaLogo size={40} className="text-arca-green" />
+                <div className="text-2xl font-extrabold tracking-tighter text-arca-green leading-none">Arca</div>
               </div>
             </div>
 
             <nav className="hidden md:flex items-center gap-6">
               <Link
                 href="/vaults"
-                className={`text-sm tracking-wide transition-all ${pathname === '/vaults' || pathname === '/vaults/'
+                className={`text-base tracking-wide transition-all ${pathname === '/vaults' || pathname === '/vaults/'
                   ? 'text-arca-green font-semibold'
                   : 'text-gray-400 hover:text-white'
                   }`}
@@ -81,7 +83,7 @@ export function Header() {
               </Link>
               <Link
                 href="/dashboard"
-                className={`text-sm tracking-wide transition-all ${pathname.startsWith('/dashboard')
+                className={`text-base tracking-wide transition-all ${pathname.startsWith('/dashboard')
                   ? 'text-arca-green font-semibold'
                   : 'text-gray-400 hover:text-white'
                   }`}
@@ -90,7 +92,7 @@ export function Header() {
               </Link>
               <Link
                 href="/staking"
-                className={`text-sm tracking-wide transition-all ${pathname.startsWith('/staking')
+                className={`text-base tracking-wide transition-all ${pathname.startsWith('/staking')
                   ? 'text-arca-green font-semibold'
                   : 'text-gray-400 hover:text-white'
                   }`}
@@ -99,18 +101,19 @@ export function Header() {
               </Link>
             </nav>
           </div>
-          <div className="flex items-center gap-4 sm:gap-6">
+          <div className="flex items-center gap-2 sm:gap-6">
             {/* Sonic Price */}
             {!isLoading && prices && (
-              <div className="hidden md:flex items-center gap-2 py-1.5 px-3 bg-white/[0.03] border border-white/[0.05] rounded-full">
-                <span className="text-[14px] font-bold text-white/50 uppercase tracking-[2px]"> $S :</span>
-                <span className="text-sm font-semibold text-arca-green tabular-nums">${prices.sonic.toFixed(4)}</span>
+              <div className="hidden md:flex items-center gap-2 py-1.5 px-3 bg-arca-green/10 border border-arca-green/30 rounded-xl">
+                <span className="text-sm font-semibold text-white/70 uppercase tracking-[2px]">$S:</span>
+                <span className="text-sm font-bold text-arca-green tabular-nums">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             {/* Sonic Price - Mobile */}
             {!isLoading && prices && (
-              <div className="flex md:hidden items-center gap-1 opacity-80 bg-white/[0.03] border border-white/[0.05] px-1.5 py-0.5 rounded-full scale-90 sm:scale-100">
-                <span className="text-[10px] font-bold text-arca-green tabular-nums">${prices.sonic.toFixed(4)}</span>
+              <div className="flex md:hidden items-baseline gap-1.5 bg-arca-green/10 border border-arca-green/30 px-2.5 py-1.5 rounded-lg">
+                <span className="text-xs text-white/70 uppercase leading-none">$S:</span>
+                <span className="text-sm font-bold text-arca-green tabular-nums leading-none">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             <ConnectButton.Custom>
@@ -135,7 +138,7 @@ export function Header() {
                           <button
                             onClick={openConnectModal}
                             type="button"
-                            className="bg-white/[0.03] hover:bg-white/[0.08] text-white border border-white/[0.05] font-medium py-1.5 px-4 rounded-full transition-all text-sm"
+                            className="bg-white/[0.03] hover:bg-white/[0.08] text-white border border-white/[0.05] font-medium py-2 px-5 rounded-xl transition-all text-base"
                           >
                             <span className="hidden sm:inline">Connect Wallet</span>
                             <span className="sm:hidden">Connect</span>
@@ -160,32 +163,34 @@ export function Header() {
                           {/* Chain button - hidden on mobile */}
                           <button
                             onClick={openChainModal}
-                            className="hidden sm:flex bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.08] text-white/60 hover:text-white transition-all py-1.5 px-3 rounded-full items-center gap-2"
+                            className="hidden sm:flex bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.08] text-white/60 hover:text-white transition-all py-2 px-4 rounded-xl items-center gap-2"
                             type="button"
                           >
                             {chain.hasIcon && chain.iconUrl ? (
                               <img
                                 alt={chain.name ?? 'Chain icon'}
                                 src={chain.iconUrl}
-                                className="w-4 h-4 rounded-full"
+                                className="w-5 h-5 rounded-full"
                               />
                             ) : (
                               <img
                                 src="/SonicLogoRound.png"
                                 alt="Sonic"
-                                className="w-4 h-4 rounded-full"
+                                className="w-5 h-5 rounded-full"
                               />
                             )}
-                            <span className="text-xs font-semibold tracking-wide uppercase">{chain.name}</span>
+                            <span className="text-sm font-semibold tracking-wide uppercase">{chain.name}</span>
                           </button>
 
                           <button
                             onClick={openAccountModal}
                             type="button"
-                            className="bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.08] text-arca-green font-semibold py-1.5 px-4 rounded-full transition-all flex items-center gap-2 text-sm"
+                            className="bg-arca-green hover:bg-arca-green/90 text-black font-bold py-1.5 px-2.5 sm:py-2 sm:px-5 rounded-lg sm:rounded-xl transition-all flex items-center gap-2 text-sm sm:text-base"
                           >
-                            <div className="w-1.5 h-1.5 rounded-full bg-arca-green animate-pulse" />
-                            <span>
+                            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                            </svg>
+                            <span className="hidden sm:inline">
                               {account.displayName}
                             </span>
                           </button>
