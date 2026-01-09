@@ -72,42 +72,37 @@ export function Header() {
               </div>
             </div>
 
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                href="/vaults"
-                className={`text-lg italic transition-colors ${pathname === '/vaults' || pathname === '/vaults/'
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
-                    : 'text-white hover:text-arca-green'
-                  }`}
-              >
-                Vaults
-              </Link>
-              <Link
-                href="/dashboard"
-                className={`text-lg italic transition-colors ${pathname.startsWith('/dashboard')
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
-                    : 'text-white hover:text-arca-green'
-                  }`}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/staking"
-                className={`text-lg italic transition-colors ${pathname.startsWith('/staking')
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
-                    : 'text-white hover:text-arca-green'
-                  }`}
-              >
-                Staking
-              </Link>
+            <nav className="hidden md:flex items-center gap-2">
+              {[
+                { name: 'Vaults', href: '/vaults' },
+                { name: 'Dashboard', href: '/dashboard' },
+                { name: 'Staking', href: '/staking' },
+              ].map((item) => {
+                const isActive = item.href === '/vaults'
+                  ? pathname === '/vaults' || pathname === '/vaults/'
+                  : pathname.startsWith(item.href);
+
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`relative flex items-center justify-center px-5 h-10 rounded-lg text-sm font-medium transition-all duration-300 ${isActive
+                      ? 'text-arca-green bg-arca-green/10 shadow-[0_0_20px_-5px_rgba(0,255,136,0.3)] border border-arca-green/20'
+                      : 'text-gray-400 hover:text-white hover:bg-white/5 border border-transparent'
+                      }`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Sonic Price */}
             {!isLoading && prices && (
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-arca-green/10 rounded-lg border border-arca-green/20">
-                <span className="text-base text-gray-300">S :</span>
-                <span className="text-xl font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
+              <div className="hidden md:flex items-center gap-2 px-4 bg-arca-green/10 rounded-lg border border-arca-green/20 h-10">
+                <span className="text-sm font-medium text-gray-300">S :</span>
+                <span className="text-sm font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             {/* Sonic Price - Mobile */}
@@ -168,7 +163,7 @@ export function Header() {
                           {/* Chain button - hidden on mobile */}
                           <button
                             onClick={openChainModal}
-                            className="hidden sm:flex bg-arca-light-gray text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600 transition-colors items-center gap-2"
+                            className="hidden sm:flex bg-arca-light-gray text-white font-semibold flex items-center justify-center px-3 h-10 rounded-lg hover:bg-gray-600 transition-colors gap-2"
                             type="button"
                           >
                             {/* Show chain icon from RainbowKit or fallback to Sonic logo */}
@@ -201,7 +196,7 @@ export function Header() {
                           <button
                             onClick={openAccountModal}
                             type="button"
-                            className="bg-arca-green text-black font-semibold py-2 px-2 sm:px-4 rounded-lg hover:bg-arca-green/90 transition-colors flex items-center gap-1 sm:gap-2 text-xs sm:text-base"
+                            className="bg-arca-green text-black font-semibold flex items-center justify-center px-2 sm:px-4 h-10 rounded-lg hover:bg-arca-green/90 transition-colors gap-1 sm:gap-2 text-xs sm:text-base"
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="sm:w-4 sm:h-4">
                               <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
@@ -228,36 +223,29 @@ export function Header() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-arca-light-gray" style={{ background: 'rgba(0, 0, 0, 0.95)' }}>
             <div className="px-3 py-4 space-y-3">
-              <Link
-                href="/vaults"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${pathname === '/vaults' || pathname === '/vaults/'
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
-                    : 'text-white hover:text-arca-green'
-                  }`}
-              >
-                Vaults
-              </Link>
-              <Link
-                href="/dashboard"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${pathname.startsWith('/dashboard')
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
-                    : 'text-white hover:text-arca-green'
-                  }`}
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/staking"
-                onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${pathname.startsWith('/staking')
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
-                    : 'text-white hover:text-arca-green'
-                  }`}
-              >
-                Staking
-              </Link>
+              {[
+                { name: 'Vaults', href: '/vaults' },
+                { name: 'Dashboard', href: '/dashboard' },
+                { name: 'Staking', href: '/staking' },
+              ].map((item) => {
+                const isActive = item.href === '/vaults'
+                  ? pathname === '/vaults' || pathname === '/vaults/'
+                  : pathname.startsWith(item.href);
+
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className={`block px-5 py-3 rounded-xl text-base font-medium transition-colors ${isActive
+                      ? 'text-arca-green bg-arca-green/10 border border-arca-green/20'
+                      : 'text-white hover:text-arca-green hover:bg-white/5'
+                      }`}
+                  >
+                    {item.name}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
