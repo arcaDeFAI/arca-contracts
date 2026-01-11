@@ -1,25 +1,29 @@
 # Arca Protocol
 
-Multi-protocol automated liquidity provision system for the Sonic blockchain, supporting both Metropolis DLMM and Shadow (Ramses V3) concentrated liquidity protocols.
+Multi-protocol automated liquidity provision system for the SEI blockchain, supporting [DragonSwap](https://dragonswap.app/) concentrated liquidity protocols.
 
 ## Overview
 
-Arca is a decentralized vault system that provides intelligent liquidity management across multiple DEX protocols on Sonic. The system automates complex DeFi operations including:
+Arca is a decentralized vault system that provides intelligent liquidity management across multiple DEX protocols.
+The system automates complex DeFi operations including:
 
 - Automated liquidity provision and rebalancing
 - Reward compounding and yield optimization
 - Multi-token vault deposits with oracle-based pricing
 - Queue-based deposit/withdrawal processing for gas efficiency
 
-Built on battle-tested code from audited Metropolis Maker Vaults, Arca extends support to Shadow's concentrated liquidity pools while maintaining a unified interface for users.
+Built on battle-tested code from audited [Metropolis Maker Vaults](https://app.metropolis.exchange/makervault/list/:146) (on Sonic), Arca extends support while maintaining a unified interface for users.
+
+Arca was originally built for the [Sonic blockchain](https://www.soniclabs.com/), which is why there are references to [Metropolis](https://metropolis.exchange/) and [Shadow](https://www.shadow.so/), which are products found on the Sonic chain.  
+
+However, the team is currently **in the process of migrating arca to [SEI](https://www.sei.io/)**, with the goal of becoming a SEI native.  
 
 ## Features
 
-- **Multi-Protocol Support**: Seamlessly manage liquidity across Metropolis DLMM and Shadow V3 pools
 - **Automated Rebalancing**: Python bots optimize positions based on market conditions
-- **Reward Compounding**: Automatically harvest and reinvest rewards (METRO, gauge rewards)
+- **Reward Compounding**: Automatically harvest and reinvest rewards
 - **Gas-Efficient Operations**: Queue-based processing batches user operations
-- **Oracle Integration**: Chainlink price feeds enable multi-token deposits
+- **Oracle Integration**: Price feeds enable multi-token deposits
 - **Upgradeable Architecture**: UUPS proxy pattern for future improvements
 - **Professional UI**: React-based dApp with comprehensive vault management
 
