@@ -12,6 +12,11 @@ This project includes and modifies third-party open source software, including:
 2. Code licensed under the GNU General Public License v3.0 or later, originally from:
    - SHADOW DEX (https://www.shadow.so/)
 
+3. Code licensed under the GNU General Public License v2.0 or later, originally from:
+   - DragonSwap DEX (https://dragonswap.app/)
+   - GitHub hyperlinks: [v2-core](https://github.com/dragonswap-app/dragonswap-core), [v2-periphery](https://github.com/dragonswap-app/v2-periphery)
+
+
 All original contributions to this project are licensed under the GPLv3. This project as a whole is therefore governed by the terms of the GNU General Public License v3.0 or later.
 
 For complete license terms, see the LICENSE file.

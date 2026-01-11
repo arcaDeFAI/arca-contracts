@@ -314,5 +314,6 @@ npm run compile  # Warns if contracts exceed size limits
 Built on the shoulders of giants:
 - Metropolis Exchange for DLMM infrastructure
 - Shadow/Ramses for concentrated liquidity
+- DragonSwap v2 periphery and core contracts
 - OpenZeppelin for security standards
 - Chainlink for price oracles
