@@ -10,28 +10,31 @@ import { subtask } from "hardhat/config";
 import * as glob from "glob";
 import * as path from "path";
 
+const SEI_MAINNET_CHAIN_ID = 1329;
+const SEI_TESTNET_CHAIN_ID = 1328;
+
 dotenv.config();
 
 // Override the compilation subtask to include multiple source directories
 subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, { config }, runSuper) => {
   // Get the default source paths (from the 'contracts' directory)
   const paths: string[] = await runSuper();
-  
+
   // Add Metropolis contracts directory
   const metropolisGlob = path.join(config.paths.root, "contracts-metropolis", "src", "**", "*.sol");
   const metropolisPaths = glob.sync(metropolisGlob);
-  
-  // Add Shadow contracts directory (only our files)
-  const shadowStrategyPath = path.join(config.paths.root, "contracts-shadow", "src", "*.sol");
-  const shadowInterfacesGlob = path.join(config.paths.root, "contracts-shadow", "src", "interfaces", "*.sol");
-  const shadowPaths = [...glob.sync(shadowStrategyPath), ...glob.sync(shadowInterfacesGlob)];
-  
+
+  // Add dragonswap contracts directory (only our files)
+  const dragonswapStrategyPath = path.join(config.paths.root, "contracts-dragonswap", "src", "*.sol");
+  const dragonswapInterfacesGlob = path.join(config.paths.root, "contracts-dragonswap", "src", "interfaces", "*.sol");
+  const dragonswapPaths = [...glob.sync(dragonswapStrategyPath), ...glob.sync(dragonswapInterfacesGlob)];
+
   // Add test mock contracts
   const testMocksGlob = path.join(config.paths.root, "test", "mocks", "*.sol");
   const testMocksPaths = glob.sync(testMocksGlob);
   
   // Combine all paths
-  return [...paths, ...metropolisPaths, ...shadowPaths, ...testMocksPaths];
+  return [...paths, ...metropolisPaths, ...dragonswapPaths, ...testMocksPaths];
 });
 
 const config: HardhatUserConfig = {
@@ -56,10 +59,25 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200
+            runs: 200,
           },
         }
-      }
+      },
+      {
+        version: "0.7.6",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 800,
+          }, 
+          metadata: {
+            // do not include the metadata hash, since this is machine dependent
+            // and we want all generated code to be deterministic
+            // https://docs.soliditylang.org/en/v0.7.6/metadata.html
+            bytecodeHash: 'none',
+          },
+        }
+      },
     ]
   },
   paths: {
@@ -73,43 +91,25 @@ const config: HardhatUserConfig = {
     localhost: {
       url: "http://127.0.0.1:8545",
       chainId: 31337,
+      allowUnlimitedContractSize: false,
       // Use default hardhat accounts for localhost
       accounts: "remote",
     },
-    "sonic-mainnet": {
-      url: process.env.SONIC_MAINNET_RPC_URL || "https://rpc.soniclabs.com",
-      chainId: 146,
+    "sei-mainnet": {
+      allowUnlimitedContractSize: false,
+      url: process.env.SEI_MAINNET_RPC_URL ? process.env.SEI_MAINNET_RPC_URL : "https://evm-rpc.sei-apis.com",
+      chainId: SEI_MAINNET_CHAIN_ID,
       accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length === 64) ? [process.env.PRIVATE_KEY] : [],
       gasPrice: "auto",
       timeout: 120000,
     },
-    "sonic-fork": {
-      url: "http://127.0.0.1:8545",
-      chainId: 31337,
-      forking: {
-        url: process.env.SONIC_MAINNET_RPC_URL || "https://rpc.soniclabs.com",
-        // Use a specific recent block instead of latest to avoid hardfork issues
-        blockNumber: 36000000,
-      },
-      accounts: "remote",
-      timeout: 120000,
-      // Override hardfork to handle Sonic's custom chain
-      hardfork: "cancun",
-    },
-    "sonic-mainnet-alchemy": {
-      url: process.env.ALCHEMY_API_KEY 
-        ? `https://sonic-mainnet.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`
-        : "https://rpc.soniclabs.com",
-      chainId: 146,
-      accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length === 64) ? [process.env.PRIVATE_KEY] : [],
-      gasPrice: "auto",
-      timeout: 120000,
-    },
-    "sonic-testnet": {
-      url: process.env.SONIC_TESTNET_RPC_URL 
-        ? process.env.SONIC_TESTNET_RPC_URL
-        : "https://rpc.blaze.soniclabs.com",
-      chainId: 57054,
+    "sei-testnet": {
+      allowUnlimitedContractSize: false,
+      loggingEnabled: true,
+      url: process.env.SEI_TESTNET_RPC_URL 
+        ? process.env.SEI_TESTNET_RPC_URL
+        : "https://evm-rpc-testnet.sei-apis.com",
+      chainId: SEI_TESTNET_CHAIN_ID,
       accounts: (process.env.PRIVATE_KEY && process.env.PRIVATE_KEY.length === 64) ? [process.env.PRIVATE_KEY] : [],
       gasPrice: "auto",
       timeout: 120000,
@@ -117,22 +117,22 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     // V2 API requires single apiKey (not network-specific)
-    apiKey: process.env.SONIC_SCAN_API_KEY || "placeholder",
+    apiKey: process.env.ETHERSCAN_API_KEY,
     customChains: [
       {
-        network: "sonic-mainnet",
-        chainId: 146,
+        network: "sei-mainnet",
+        chainId: SEI_MAINNET_CHAIN_ID,
         urls: {
-          apiURL: "https://api.etherscan.io/v2/api",
-          browserURL: "https://sonicscan.org"
-        }
+          apiURL: "https://seiscan.app/api",
+          browserURL: "https://seiscan.app",
+        },
       },
       {
-        network: "sonic-testnet",
-        chainId: 57054,
+        network: "sei-testnet",
+        chainId: SEI_TESTNET_CHAIN_ID,
         urls: {
-          apiURL: "https://api.etherscan.io/v2/api",
-          browserURL: "https://testnet.sonicscan.org"
+          apiURL: "https://seitrace.com/atlantic-2/api",
+          browserURL: "https://seitrace.com",
         },
       },
     ],

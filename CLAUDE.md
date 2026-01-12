@@ -39,7 +39,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Arca is a multi-protocol decentralized vault system for automated liquidity provision on the Sonic blockchain. Originally built for Metropolis DLMM (Dynamic Liquidity Market Maker) pools, the system is expanding to support multiple DEX protocols including Shadow (Ramses V3) concentrated liquidity pools. The project leverages battle-tested code from audited Metropolis Maker Vaults as its foundation, providing intelligent vault management with automated reward compounding and yield optimization through Python bot rebalancing.
+Arca is a multi-protocol decentralized vault system for automated liquidity provision on the SEI blockchain. Originally built for Metropolis DLMM (Dynamic Liquidity Market Maker) pools, the system is expanding to support multiple DEX protocols including Shadow (Ramses V3) concentrated liquidity pools. The project leverages battle-tested code from audited Metropolis Maker Vaults as its foundation, providing intelligent vault management with automated reward compounding and yield optimization through Python bot rebalancing.
 
 ## Repository Structure
 
@@ -146,9 +146,9 @@ npm run deploy --network <network>
 
 # Or use specific shortcuts:
 npm run deploy:local        # Local development with mocks
-npm run deploy:testnet      # Sonic Blaze Testnet deployment
+npm run deploy:testnet      # SEI Blaze Testnet deployment
 npm run deploy:fork         # Mainnet fork testing  
-npm run deploy:mainnet      # Sonic mainnet deployment
+npm run deploy:mainnet      # SEI mainnet deployment
 
 # Post-deployment
 npm run deploy:verify       # Verify deployment (requires --network flag)

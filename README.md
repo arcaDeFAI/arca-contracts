@@ -86,13 +86,13 @@ npm run test:ui
 # Deploy to local network (with mocks)
 npm run deploy:local
 
-# Deploy to Sonic Blaze Testnet
+# Deploy to  SEI Testnet
 npm run deploy:testnet
 
 # Deploy to mainnet fork (for testing)
 npm run deploy:fork
 
-# Deploy to Sonic mainnet
+# Deploy to SEI mainnet
 npm run deploy:mainnet
 
 # Verify contracts after deployment
@@ -215,12 +215,13 @@ npm run lint:fix
 
 ## Contract Addresses
 
-### Sonic Mainnet
+### SEI Mainnet
+TODO UPDATE ME
 Mainnet addresses available in `deployments/metropolis-sonic-mainnet.json`.
 
-View verified contracts on [SonicScan](https://sonicscan.org)
+View verified contracts on [SeiScan](https://seiscan.io)
 
-### Sonic Blaze Testnet
+### SEI Testnet
 Testnet addresses available in `deployments/metropolis-sonic-testnet.json`
 
 ## Configuration
@@ -235,7 +236,7 @@ Configure protocol addresses in `scripts/deploy-multi-dex.ts`:
 
 ```typescript
 const deploymentConfig = {
-  "sonic-mainnet": {
+  "sei-mainnet": {
     npm: "0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406",  // Shadow NPM
     voter: "0x9F59398D0a397b2EEB8a6123a6c7295cB0b0062D", // Shadow Voter
     whitelist: [...],  // Approved pools/pairs
