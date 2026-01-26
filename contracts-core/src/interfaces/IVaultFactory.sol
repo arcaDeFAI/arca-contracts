@@ -67,7 +67,6 @@ interface IVaultFactory {
         StrategyType indexed sType,
         address indexed strategy,
         address indexed vault,
-        ILBPair lbPair,
         uint256 strategyIndex
     );
 

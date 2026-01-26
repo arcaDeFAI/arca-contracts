@@ -7,7 +7,7 @@ import {IRamsesV3Pool} from "../../CL/core/interfaces/IRamsesV3Pool.sol";
 import {IMinimalVault} from "../../../contracts-core/src/interfaces/IMinimalVault.sol";
 import {IStrategyCommon} from "../../../contracts-core/src/interfaces/IStrategyCommon.sol";
 import {IVaultFactory} from "../../../contracts-core/src/interfaces/IVaultFactory.sol";
-import {IERC20} from "../../../contracts-core/src/interfaces/IHooksRewarder.sol";
+import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
 /**
  * @title Oracle Reward Dragonswap Vault Interface

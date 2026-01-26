@@ -5,25 +5,16 @@ pragma solidity 0.8.26;
 import {ImmutableClone} from "@arca/joe-v2/libraries/ImmutableClone.sol";
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IERC20MetadataUpgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
-import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {Ownable2StepUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Ownable2StepUpgradeable.sol";
 import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
 import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
-import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IDragonswapStrategy} from "../../contracts-dragonswap/src/interfaces/IDragonswapStrategy.sol";
 import {IMinimalVault} from "./interfaces/IMinimalVault.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
 import {IOracleRewardDragonswapVault} from "../../contracts-dragonswap/src/interfaces/IOracleRewardDragonswapVault.sol";
 import {IRamsesV3Pool} from "../../contracts-dragonswap/CL/core/interfaces/IRamsesV3Pool.sol";
-import {IOracleVault} from "./interfaces/IOracleVault.sol";
-import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
-import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
-import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
-import {IPriceLens} from "./interfaces/IPriceLens.sol";
-import {IOracleHelperFactory} from "./interfaces/IOracleHelperFactory.sol";
-import {OracleLensAggregator} from "./utils/OracleLensAggregator.sol";
 import {IERC20, TokenHelper} from "./libraries/TokenHelper.sol";
 
 /**
@@ -593,40 +584,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Sets the default sequencer uptime feed
-     * The sequencer update time feed is for L2 chains like arbitrum see also https://docs.chain.link/data-feeds/l2-sequencer-feeds
-     * @param defaultSequencerUptimeFeed The address of the default sequencer uptime feed.
-     */
-    function setDefaultSequencerUptimeFeed(
-        IAggregatorV3 defaultSequencerUptimeFeed
-    ) external override onlyOwner {
-        _defaultSequencerUptimeFeed = defaultSequencerUptimeFeed;
-    }
-
-    function setSequencerUptimeFeed(
-        address oracleVault,
-        IAggregatorV3 sequencerUptimeFeed
-    ) external override onlyOwner {
-        IOracleVault(oracleVault).getOracleHelper().setSequencerUptimeFeed(
-            sequencerUptimeFeed
-        );
-    }
-
-    /**
-     * @notice Sets the oracle parameters for the given oracle vault.
-     * @param oracleVault The address of the oracle vault.
-     * @param parameters The parameters to set.
-     */
-    function setOracleParameters(
-        address oracleVault,
-        IOracleHelper.OracleParameters calldata parameters
-    ) external override onlyOwner {
-        IOracleVault(oracleVault).getOracleHelper().setOracleParameters(
-            parameters
-        );
-    }
-
-    /**
      * @notice Sets the vault to emergency mode.
      * @param vault The address of the vault.
      */
@@ -746,8 +703,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     ) internal pure returns (string memory) {
         string memory vName;
 
-        if (vType == VaultType.Oracle) vName = "Oracle";
-        else if (vType == VaultType.DragonswapOracleReward)
+        if (vType == VaultType.DragonswapOracleReward)
             vName = "Dragonswap Oracle Reward";
         else revert VaultFactory__InvalidType();
 
@@ -844,12 +800,10 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
             tokenY
         );
 
-        // Note: Dragonswap strategies don't use LBPair, so we pass address(0)
         return
             _createStrategy(
                 StrategyType.Dragonswap,
                 address(vault),
-                ILBPair(address(0)),
                 strategyImmutableData
             );
     }
@@ -858,13 +812,11 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @dev Internal function to create a new strategy of the given type.
      * @param sType The type of the strategy.
      * @param vault The address of the vault.
-     * @param lbPair The address of the LBPair.
      * @param strategyImmutableData The immutable data to pass to the strategy.
      */
     function _createStrategy(
         StrategyType sType,
         address vault,
-        ILBPair lbPair,
         bytes memory strategyImmutableData
     ) internal isValidType(uint8(sType)) returns (address strategy) {
         address strategyImplementation = _strategyImplementation[sType];
@@ -885,7 +837,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
         IStrategyCommon(strategy).initialize();
 
-        emit StrategyCreated(sType, strategy, vault, lbPair, strategyId);
+        emit StrategyCreated(sType, strategy, vault, strategyId);
     }
 
     /**

@@ -34,7 +34,4 @@ interface IMinimalGauge {
         uint256 tokenId,
         address[] memory tokens
     ) external;
-
-    /// @notice get xDragonswap reward for an owner of an NFP
-    function getXDragonswapRewardForOwner(uint256 tokenId) external;
 }

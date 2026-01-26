@@ -14,7 +14,7 @@ import {IStrategyCommon} from "../../contracts-core/src/interfaces/IStrategyComm
 import {IDragonswapStrategy} from "./interfaces/IDragonswapStrategy.sol";
 import {IVaultFactory} from "../../contracts-core/src/interfaces/IVaultFactory.sol";
 import {IWNative} from "../../contracts-core/src/interfaces/IWNative.sol";
-import {IERC20} from "../../contracts-core/src/interfaces/IHooksRewarder.sol";
+import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {TokenHelper} from "../../contracts-core/src/libraries/TokenHelper.sol";
 import {Precision} from "../../contracts-core/src/libraries/Precision.sol";
 import {Math} from "../../contracts-core/src/libraries/Math.sol";
