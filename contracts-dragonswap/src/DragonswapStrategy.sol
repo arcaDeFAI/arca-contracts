@@ -25,8 +25,7 @@ import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 /**
  * @title Dragonswap Strategy Contract
  * @author Arca
- * @notice Strategy for managing Dragonswap (Ramses V3) concentrated liquidity positions
- * @dev Standalone implementation that doesn't inherit from Metropolis Strategy
+ * @notice Strategy for managing Dragonswap V2 concentrated liquidity positions
  *
  * The immutable data should be encoded as follows:
  * - 0x00: 20 bytes: The address of the Vault

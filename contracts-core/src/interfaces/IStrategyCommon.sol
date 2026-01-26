@@ -8,7 +8,7 @@ import {IVaultFactory} from "./IVaultFactory.sol";
 /**
  * @title Common Strategy Interface
  * @author Arca
- * @notice Common interface for all strategies (Metropolis, Shadow, etc.)
+ * @notice Common interface for all strategies
  */
 interface IStrategyCommon {
     // Common errors

@@ -955,7 +955,7 @@ contract OracleRewardDragonswapVault is
     }
 
     /**
-     * @dev Calculates total value in TokenY terms (following Metropolis pattern)
+     * @dev Calculates total value in TokenY terms
      * @param amountX Amount of tokenX
      * @param amountY Amount of tokenY
      * @return valueInY Total value expressed in tokenY's smallest units

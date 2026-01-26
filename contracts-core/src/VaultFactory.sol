@@ -880,25 +880,14 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         VaultType vaultType = minimalVault.getVaultType();
 
         // Based on vault and strategy types, perform appropriate linking
-        if (
-            vaultType == VaultType.Oracle || vaultType == VaultType.OracleReward
-        ) {
-            // Metropolis vaults expect IMetropolisStrategy
-            if (strategyType == StrategyType.Default) {
-                IBaseVault(address(minimalVault)).setStrategy(
-                    IMetropolisStrategy(strategy)
-                );
-            } else {
-                revert("Cannot link Dragonswap strategy to Metropolis vault");
-            }
-        } else if (vaultType == VaultType.DragonswapOracleReward) {
+        if (vaultType == VaultType.DragonswapOracleReward) {
             // Dragonswap vaults need different handling
             if (strategyType == StrategyType.Dragonswap) {
                 IOracleRewardDragonswapVault(address(minimalVault)).setStrategy(
                     IDragonswapStrategy(strategy)
                 );
             } else {
-                revert("Cannot link Metropolis strategy to Dragonswap vault");
+                revert("Cannot link non-Dragonswap strategy to Dragonswap vault");
             }
         } else {
             revert("Unknown or unsupported vault type");

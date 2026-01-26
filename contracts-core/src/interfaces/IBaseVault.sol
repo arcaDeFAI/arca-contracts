@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
-import {IMetropolisStrategy} from "./IMetropolisStrategy.sol";
+import {IStrategyCommon} from "./IStrategyCommon.sol";
 import {IVaultFactory} from "./IVaultFactory.sol";
 import {IMinimalVault} from "./IMinimalVault.sol";
 
@@ -87,7 +87,7 @@ interface IBaseVault is IMinimalVault, IERC20Upgradeable {
         uint256 amountY
     );
 
-    event StrategySet(IMetropolisStrategy strategy);
+    event StrategySet(IStrategyCommon strategy);
 
     event Recovered(address token, address recipient, uint256 amount);
 
@@ -207,7 +207,7 @@ interface IBaseVault is IMinimalVault, IERC20Upgradeable {
 
     function initialize(string memory name, string memory symbol) external;
 
-    function setStrategy(IMetropolisStrategy newStrategy) external;
+    function setStrategy(IStrategyCommon newStrategy) external;
 
     function pauseDeposits() external;
 

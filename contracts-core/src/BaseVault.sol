@@ -250,7 +250,7 @@ abstract contract BaseVault is
      * @return
      */
     function getAumAnnualFee() public view virtual override returns (uint256) {
-        IMetropolisStrategy strategy = _strategy;
+        IStrategyCommon strategy = _strategy;
 
         return address(strategy) == address(0) ? 0 : strategy.getAumAnnualFee();
     }
@@ -267,7 +267,7 @@ abstract contract BaseVault is
         override
         returns (uint24 low, uint24 upper)
     {
-        IMetropolisStrategy strategy = _strategy;
+        IStrategyCommon strategy = _strategy;
 
         return
             address(strategy) == address(0)
@@ -287,7 +287,7 @@ abstract contract BaseVault is
         override
         returns (address defaultOperator, address operator)
     {
-        IMetropolisStrategy strategy = _strategy;
+        IStrategyCommon strategy = _strategy;
 
         defaultOperator = _factory.getDefaultOperator();
         operator = address(strategy) == address(0)
@@ -496,7 +496,7 @@ abstract contract BaseVault is
         _updatePool();
 
         // Calculate the shares and effective amounts, also returns the strategy to save gas.
-        IMetropolisStrategy strategy;
+        IStrategyCommon strategy;
         (strategy, shares, effectiveX, effectiveY) = _deposit(amountX, amountY);
 
         if (shares < minShares) revert BaseVault__InsufficientShares();
@@ -559,7 +559,7 @@ abstract contract BaseVault is
         _updatePool();
 
         // Calculate the shares and effective amounts
-        IMetropolisStrategy strategy;
+        IStrategyCommon strategy;
         (strategy, shares, effectiveX, effectiveY) = _deposit(amountX, amountY);
 
         if (shares < minShares) revert BaseVault__InsufficientShares();
@@ -777,7 +777,7 @@ abstract contract BaseVault is
         // Get the balances of the vault and the total shares.
         // The balances of the vault will not contain the executed withdrawals.
         (uint256 balanceX, uint256 balanceY) = _getBalances(
-            IMetropolisStrategy(address(0))
+            IStrategyCommon(address(0))
         );
         uint256 totalShares = totalSupply();
 
@@ -852,9 +852,9 @@ abstract contract BaseVault is
      * @param newStrategy The address of the new strategy.
      */
     function setStrategy(
-        IMetropolisStrategy newStrategy
+        IStrategyCommon newStrategy
     ) public virtual override onlyFactory {
-        IMetropolisStrategy currentStrategy = _strategy;
+        IStrategyCommon currentStrategy = _strategy;
 
         // Verify that the strategy is not the same as the current strategy
         if (currentStrategy == newStrategy) revert BaseVault__SameStrategy();
@@ -874,7 +874,7 @@ abstract contract BaseVault is
 
         // Get the balances of the vault, this will not contain the executed withdrawals.
         (uint256 balanceX, uint256 balanceY) = _getBalances(
-            IMetropolisStrategy(address(0))
+            IStrategyCommon(address(0))
         );
 
         // Transfer all balances to the new strategy
@@ -937,7 +937,7 @@ abstract contract BaseVault is
         _beforeEmergencyMode();
 
         // Sets the strategy to the zero address, this will prevent any deposits.
-        _setStrategy(IMetropolisStrategy(address(0)));
+        _setStrategy(IStrategyCommon(address(0)));
 
         emit EmergencyMode();
     }
@@ -1062,7 +1062,7 @@ abstract contract BaseVault is
      * @return effectiveY The amount of token Y to be deposited.
      */
     function _previewShares(
-        IMetropolisStrategy strategy,
+        IStrategyCommon strategy,
         uint256 amountX,
         uint256 amountY
     ) internal view virtual returns (uint256 shares, uint256, uint256);
@@ -1076,7 +1076,7 @@ abstract contract BaseVault is
      * @return amountY The amount of token Y to be withdrawn.
      */
     function _previewAmounts(
-        IMetropolisStrategy strategy,
+        IStrategyCommon strategy,
         uint256 shares,
         uint256 totalShares
     ) internal view virtual returns (uint256 amountX, uint256 amountY) {
@@ -1101,7 +1101,7 @@ abstract contract BaseVault is
      * @return amountY The amount of token Y held in the strategy.
      */
     function _getBalances(
-        IMetropolisStrategy strategy
+        IStrategyCommon strategy
     ) internal view virtual returns (uint256 amountX, uint256 amountY) {
         return
             address(strategy) == address(0)
@@ -1120,7 +1120,7 @@ abstract contract BaseVault is
      * @dev Sets the address of the strategy.
      * @param strategy The address of the strategy.
      */
-    function _setStrategy(IMetropolisStrategy strategy) internal virtual {
+    function _setStrategy(IStrategyCommon strategy) internal virtual {
         _strategy = strategy;
 
         emit StrategySet(strategy);
@@ -1144,7 +1144,7 @@ abstract contract BaseVault is
         virtual
         depositsAllowed
         returns (
-            IMetropolisStrategy strategy,
+            IStrategyCommon strategy,
             uint256 shares,
             uint256 effectiveX,
             uint256 effectiveY
