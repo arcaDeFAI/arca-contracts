@@ -12,7 +12,7 @@ import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {IVaultFactory} from "../../contracts-core/src/interfaces/IVaultFactory.sol";
 import {IDragonswapStrategy} from "./interfaces/IDragonswapStrategy.sol";
 import {INonfungiblePositionManager} from "../v2-periphery/interfaces/INonfungiblePositionManager.sol";
-import {IRamsesV3Pool} from "../CL/core/interfaces/IRamsesV3Pool.sol";
+import {IDragonswapV2Pool} from "../v2-core/interfaces/IDragonswapV2Pool.sol";
 import {IMinimalGauge} from "./interfaces/IMinimalGauge.sol";
 import {IMinimalVoter} from "./interfaces/IMinimalVoter.sol";
 import {LiquidityAmounts} from "../CL/periphery/libraries/LiquidityAmounts.sol";

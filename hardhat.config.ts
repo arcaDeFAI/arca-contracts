@@ -20,9 +20,9 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, { config }, 
   // Get the default source paths (from the 'contracts' directory)
   const paths: string[] = await runSuper();
 
-  // Add Metropolis contracts directory
-  const metropolisGlob = path.join(config.paths.root, "contracts-core", "src", "**", "*.sol");
-  const metropolisPaths = glob.sync(metropolisGlob);
+  // Add core contracts directory
+  const coreGlob = path.join(config.paths.root, "contracts-core", "src", "**", "*.sol");
+  const corePaths = glob.sync(coreGlob);
 
   // Add dragonswap contracts directory (only our files)
   const dragonswapStrategyPath = path.join(config.paths.root, "contracts-dragonswap", "src", "*.sol");
@@ -34,7 +34,7 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, { config }, 
   const testMocksPaths = glob.sync(testMocksGlob);
   
   // Combine all paths
-  return [...paths, ...metropolisPaths, ...dragonswapPaths, ...testMocksPaths];
+  return [...paths, ...corePaths, ...dragonswapPaths, ...testMocksPaths];
 });
 
 const config: HardhatUserConfig = {

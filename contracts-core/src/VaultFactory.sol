@@ -13,7 +13,7 @@ import {IDragonswapStrategy} from "../../contracts-dragonswap/src/interfaces/IDr
 import {IMinimalVault} from "./interfaces/IMinimalVault.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
 import {IOracleRewardDragonswapVault} from "../../contracts-dragonswap/src/interfaces/IOracleRewardDragonswapVault.sol";
-import {IRamsesV3Pool} from "../../contracts-dragonswap/CL/core/interfaces/IRamsesV3Pool.sol";
+import {IDragonswapV2Pool} from "../../contracts-dragonswap/v2-core/interfaces/IDragonswapV2Pool.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IERC20, TokenHelper} from "./libraries/TokenHelper.sol";
 
@@ -34,7 +34,7 @@ import {IERC20, TokenHelper} from "./libraries/TokenHelper.sol";
 contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     using StringsUpgradeable for uint256;
 
-    uint256 private constant MAX_AUM_FEE = 0.3e4; // 30% fee is the AUM maximum
+    uint256 private constant MAX_AUM_FEE = 0.3e4; // 30% is the maximum AUM fee
 
     address private immutable _wnative;
     mapping(VaultType => address[]) private _vaults;
@@ -463,13 +463,13 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         if (aumFee > MAX_AUM_FEE) revert VaultFactory__InvalidAumFee();
 
         // Get tokens from the pool
-        IRamsesV3Pool ramsesPool = IRamsesV3Pool(pool);
-        address tokenX = ramsesPool.token0();
-        address tokenY = ramsesPool.token1();
+        IDragonswapV2Pool dragonswapPool = IDragonswapV2Pool(pool);
+        address tokenX = dragonswapPool.token0();
+        address tokenY = dragonswapPool.token1();
 
         // Validate pool has sufficient observation cardinality for TWAP
         if (twapInterval > 0) {
-            (, , uint16 observationCardinality, , , , ) = ramsesPool.slot0();
+            (, , ,uint16 observationCardinality, , , ) = dragonswapPool.slot0();
 
             // Require at least 10 observation slots for TWAP
             if (observationCardinality < 10)

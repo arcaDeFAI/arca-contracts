@@ -5,7 +5,7 @@ pragma solidity 0.8.26;
 import {Clone} from "@arca/joe-v2/libraries/Clone.sol";
 import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IRamsesV3Pool} from "../CL/core/interfaces/IRamsesV3Pool.sol";
+import {IDragonswapV2Pool} from "../v2-core/interfaces/IDragonswapV2Pool.sol";
 import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
