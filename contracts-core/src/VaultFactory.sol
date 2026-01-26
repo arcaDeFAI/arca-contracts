@@ -11,11 +11,11 @@ import {StringsUpgradeable} from "@openzeppelin/contracts-upgradeable/utils/Stri
 
 import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
-import {IShadowStrategy} from "../../contracts-shadow/src/interfaces/IShadowStrategy.sol";
+import {IDragonswapStrategy} from "../../contracts-dragonswap/src/interfaces/IDragonswapStrategy.sol";
 import {IMinimalVault} from "./interfaces/IMinimalVault.sol";
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
-import {IOracleRewardShadowVault} from "../../contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol";
-import {IRamsesV3Pool} from "../../contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol";
+import {IOracleRewardDragonswapVault} from "../../contracts-dragonswap/src/interfaces/IOracleRewardDragonswapVault.sol";
+import {IRamsesV3Pool} from "../../contracts-dragonswap/CL/core/interfaces/IRamsesV3Pool.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
@@ -43,7 +43,7 @@ import {IERC20, TokenHelper} from "./libraries/TokenHelper.sol";
 contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     using StringsUpgradeable for uint256;
 
-    uint256 private constant MAX_AUM_FEE = 0.3e4; // 30% fee
+    uint256 private constant MAX_AUM_FEE = 0.3e4; // 30% fee is the AUM maximum
 
     address private immutable _wnative;
     mapping(VaultType => address[]) private _vaults;
@@ -90,12 +90,9 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     /// @dev cooldown time between deposit and withdrawal
     uint16 private _depositToWithdrawCooldown;
 
-    /// @dev Shadow protocol addresses
-    address private _shadowNonfungiblePositionManager;
-    address private _shadowVoter;
-
-    /// @dev Oracle Helper Factory, to create oracle helpers for Oracle Vaults
-    address private _oracleHelperFactory;
+    /// @dev Dragonswap protocol addresses
+    address private _dragonswapNonfungiblePositionManager;
+    address private _dragonswapVoter;
 
     /**
      * @dev Modifier to check if the type id is valid.
@@ -111,14 +108,13 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @dev Constructor of the contract.
      * @param wnative The address of the wrapped native token.
      */
-    constructor(address wnative, address oracleHelperFactory) {
+    constructor(address wnative) {
         _disableInitializers();
 
         // safety check
         IERC20Upgradeable(wnative).balanceOf(address(this));
 
         _wnative = wnative;
-        _oracleHelperFactory = oracleHelperFactory;
     }
 
     /// @custom:oz-upgrades-validate-as-initializer
@@ -273,13 +269,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         return _vaultImplementation[vType];
     }
 
-    /// @dev Register my contract on Sonic FeeM
-    function registerMe() external {
-        (bool _success, ) = address(0xDC2B0D2Dd2b7759D97D50db4eabDC36973110830) // solhint-disable-line avoid-low-level-calls
-            .call(abi.encodeWithSignature("selfRegister(uint256)", 236));
-        require(_success, "FeeM registration failed");
-    }
-
     /**
      * @notice Returns the address of the strategy implementation of the given type.
      * @param sType The type of the strategy. (0: DefaultStrategy)
@@ -305,24 +294,24 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Returns the address of the Shadow Nonfungible Position Manager.
-     * @return The address of the Shadow NPM.
+     * @notice Returns the address of the Dragonswap Nonfungible Position Manager.
+     * @return The address of the Dragonswap NPM.
      */
-    function getShadowNonfungiblePositionManager()
+    function getDragonswapNonfungiblePositionManager()
         external
         view
         override
         returns (address)
     {
-        return _shadowNonfungiblePositionManager;
+        return _dragonswapNonfungiblePositionManager;
     }
 
     /**
-     * @notice Returns the address of the Shadow Voter.
-     * @return The address of the Shadow Voter.
+     * @notice Returns the address of the Dragonswap Voter.
+     * @return The address of the Dragonswap Voter.
      */
-    function getShadowVoter() external view override returns (address) {
-        return _shadowVoter;
+    function getDragonswapVoter() external view override returns (address) {
+        return _dragonswapVoter;
     }
 
     /**
@@ -408,16 +397,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         strategy.setOperator(operator);
     }
 
-    function getOracleHelperFactory() external view returns (address) {
-        return _oracleHelperFactory;
-    }
-
-    function setOracleHelperFactory(
-        address oracleHelperFactory
-    ) external onlyOwner {
-        _oracleHelperFactory = oracleHelperFactory;
-    }
-
     /**
      * @notice Sets the pending AUM annual fee of the given vault's strategy.
      * @param vault The address of the vault.
@@ -473,7 +452,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Creates a new Shadow oracle reward vault and strategy for market makers.
+     * @notice Creates a new Dragonswap oracle reward vault and strategy for market makers.
      * @dev Pool must be whitelisted. Uses pool-based TWAP oracle.
      * @param pool The address of the Ramses V3 Pool.
      * @param aumFee The AUM annual fee.
@@ -481,7 +460,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @return vault The address of the new vault.
      * @return strategy The address of the new strategy.
      */
-    function createMarketMakerShadowOracleRewardVault(
+    function createMarketMakerDragonswapOracleRewardVault(
         address pool,
         uint16 aumFee,
         uint32 twapInterval
@@ -507,8 +486,8 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         }
 
         // Create vault and strategy
-        vault = _createShadowOracleRewardVault(pool, tokenX, tokenY);
-        strategy = _createShadowStrategy(vault, pool, tokenX, tokenY);
+        vault = _createDragonswapOracleRewardVault(pool, tokenX, tokenY);
+        strategy = _createDragonswapStrategy(vault, pool, tokenX, tokenY);
 
         _linkVaultToStrategy(IMinimalVault(vault), strategy);
 
@@ -516,7 +495,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         IStrategyCommon(strategy).setOperator(msg.sender);
 
         // Set TWAP interval
-        IOracleRewardShadowVault(vault).setTwapInterval(twapInterval);
+        IOracleRewardDragonswapVault(vault).setTwapInterval(twapInterval);
 
         // Set pending aum fee
         IStrategyCommon(strategy).setPendingAumAnnualFee(aumFee);
@@ -525,82 +504,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _marketMakerByVaults[vault] = msg.sender;
 
         _makerVaults.push(vault);
-
-        TokenHelper.safeTransfer(
-            IERC20(address(0)),
-            payable(_feeRecipient),
-            msg.value
-        );
-    }
-
-    /**
-     * @notice Creates a new oracle vault and a default strategy for the given LBPair.
-     * @dev LBPair must be whitelisted.
-     * @param lbPair The address of the LBPair.
-     * @param aumFee The AUM annual fee.
-     * @return vault The address of the new vault.
-     * @return strategy The address of the new strategy.
-     */
-    function createMarketMakerOracleVault(
-        ILBPair lbPair,
-        uint16 aumFee
-    ) external payable onlyOwner returns (address vault, address strategy) {
-        if (!_pairWhitelist[address(lbPair)])
-            revert VaultFactory__VaultNotWhitelisted();
-        // charge creation fee
-        if (msg.value != _creationFee)
-            revert VaultFactory__InvalidCreationFee();
-        if (aumFee > MAX_AUM_FEE) revert VaultFactory__InvalidAumFee();
-
-        address tokenX = address(lbPair.getTokenX());
-        address tokenY = address(lbPair.getTokenY());
-
-        // create data feeds
-        OracleLensAggregator dataFeedX = new OracleLensAggregator(
-            _priceLens,
-            tokenX
-        );
-        OracleLensAggregator dataFeedY = new OracleLensAggregator(
-            _priceLens,
-            tokenY
-        );
-
-        // sanity check
-        if (dataFeedX.decimals() != dataFeedY.decimals())
-            revert VaultFactory__InvalidDecimals();
-
-        // create oracle vault, we use 24 hours as default
-        // as we do not use the standard chainlink heartbeat mechanism here
-        vault = _createOracleVault(
-            lbPair,
-            tokenX,
-            tokenY,
-            dataFeedX,
-            dataFeedY,
-            24 hours,
-            24 hours
-        );
-        strategy = _createDefaultStrategy(vault, lbPair, tokenX, tokenY);
-
-        _linkVaultToStrategy(IMinimalVault(vault), strategy);
-
-        // set operator
-        IStrategyCommon(strategy).setOperator(msg.sender);
-
-        // set twap interval to 120 seconds and deviation threshold to 5%
-        IOracleVault(vault).getOracleHelper().setTwapParams(true, 120, 5);
-
-        // sanity check for twap price
-        (, uint16 size, , , ) = ILBPair(lbPair).getOracleParameters();
-        if (size == 0) revert VaultFactory__TwapInvalidOracleSize();
-
-        // set pending aum fee
-        IOracleVault(vault).getStrategy().setPendingAumAnnualFee(aumFee);
-
-        _vaultsByMarketMaker[msg.sender].push(address(vault));
-        _marketMakerByVaults[address(vault)] = msg.sender;
-
-        _makerVaults.push(address(vault));
 
         TokenHelper.safeTransfer(
             IERC20(address(0)),
@@ -663,21 +566,21 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _linkVaultToStrategy(vault, strategy);
     }
 
-    /// @notice Creates and links a new Shadow Strategy to an existing vault.
+    /// @notice Creates and links a new Dragonswap Strategy to an existing vault.
     /// @dev Deploys strategy, links it to vault, and sets operator.
     /// @param vault The address of the vault to link.
     /// @param pool The address of the liquidity pool.
     /// @param tokenX The address of token X.
     /// @param tokenY The address of token Y.
-    /// @return strategy The address of the deployed Shadow Strategy.
-    function createAndLinkShadowStrategy(
+    /// @return strategy The address of the deployed Dragonswap Strategy.
+    function createAndLinkDragonswapStrategy(
         address vault,
         address pool,
         address tokenX,
         address tokenY
     ) external onlyOwner returns (address strategy) {
-        // Deploy Shadow Strategy
-        strategy = _createShadowStrategy(vault, pool, tokenX, tokenY);
+        // Deploy Dragonswap Strategy
+        strategy = _createDragonswapStrategy(vault, pool, tokenX, tokenY);
 
         // Link the vault and strategy
         _linkVaultToStrategy(IMinimalVault(vault), strategy);
@@ -686,26 +589,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         IStrategyCommon(strategy).setOperator(msg.sender);
 
         // Emit event for transparency
-        emit ShadowStrategyCreatedAndLinked(vault, strategy, msg.sender);
-    }
-
-    function createAndLinkMetropolisStrategy(
-        address vault,
-        ILBPair lbpair,
-        address tokenX,
-        address tokenY
-    ) external onlyOwner returns (address strategy) {
-        // Deploy Shadow Strategy
-        strategy = _createDefaultStrategy(vault, lbpair, tokenX, tokenY);
-
-        // Link the vault and strategy
-        _linkVaultToStrategy(IMinimalVault(vault), strategy);
-
-        // Set the strategy operator to the caller
-        IStrategyCommon(strategy).setOperator(msg.sender);
-
-        // Emit event for transparency
-        emit MetropolisStrategyCreatedAndLinked(vault, strategy, msg.sender);
+        emit DragonswapStrategyCreatedAndLinked(vault, strategy, msg.sender);
     }
 
     /**
@@ -805,21 +689,21 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
-     * @notice Sets the Shadow Nonfungible Position Manager address.
-     * @param nonfungiblePositionManager The address of the Shadow NPM.
+     * @notice Sets the Dragonswap Nonfungible Position Manager address.
+     * @param nonfungiblePositionManager The address of the Dragonswap NPM.
      */
-    function setShadowNonfungiblePositionManager(
+    function setDragonswapNonfungiblePositionManager(
         address nonfungiblePositionManager
     ) external override onlyOwner {
-        _shadowNonfungiblePositionManager = nonfungiblePositionManager;
+        _dragonswapNonfungiblePositionManager = nonfungiblePositionManager;
     }
 
     /**
-     * @notice Sets the Shadow Voter address.
-     * @param voter The address of the Shadow Voter.
+     * @notice Sets the Dragonswap Voter address.
+     * @param voter The address of the Dragonswap Voter.
      */
-    function setShadowVoter(address voter) external override onlyOwner {
-        _shadowVoter = voter;
+    function setDragonswapVoter(address voter) external override onlyOwner {
+        _dragonswapVoter = voter;
     }
 
     /**
@@ -862,10 +746,9 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     ) internal pure returns (string memory) {
         string memory vName;
 
-        if (vType == VaultType.Simple) vName = "Simple";
-        else if (vType == VaultType.Oracle) vName = "Oracle";
-        else if (vType == VaultType.ShadowOracleReward)
-            vName = "Shadow Oracle Reward";
+        if (vType == VaultType.Oracle) vName = "Oracle";
+        else if (vType == VaultType.DragonswapOracleReward)
+            vName = "Dragonswap Oracle Reward";
         else revert VaultFactory__InvalidType();
 
         return
@@ -880,128 +763,17 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
-     * @dev Internal function to create a new oracle vault.
-     * @param lbPair The address of the LBPair.
-     * @param tokenX The address of token X.
-     * @param tokenY The address of token Y.
-     * @param dataFeedX The address of the data feed for token X.
-     * @param dataFeedY The address of the data feed for token Y.
-     */
-    function _createOracleVault(
-        ILBPair lbPair,
-        address tokenX,
-        address tokenY,
-        IAggregatorV3 dataFeedX,
-        IAggregatorV3 dataFeedY,
-        uint24 heartbeatX,
-        uint24 heartbeatY
-    ) internal returns (address vault) {
-        uint8 decimalsX = IERC20MetadataUpgradeable(tokenX).decimals();
-        uint8 decimalsY = IERC20MetadataUpgradeable(tokenY).decimals();
-
-        // Create the helper first
-        IOracleHelper helper = IOracleHelperFactory(_oracleHelperFactory)
-            .createOracleHelper(
-                address(this),
-                lbPair,
-                dataFeedX,
-                dataFeedY,
-                decimalsX,
-                decimalsY
-            );
-
-        bytes memory vaultImmutableData = abi.encodePacked(
-            lbPair,
-            tokenX,
-            tokenY,
-            decimalsX,
-            decimalsY,
-            dataFeedX,
-            dataFeedY,
-            address(helper)
-        );
-
-        vault = _createMetropolisVault(
-            VaultType.Oracle,
-            lbPair,
-            tokenX,
-            tokenY,
-            vaultImmutableData
-        );
-
-        // Initialize the helper with the vault address
-        helper.initialize(
-            vault,
-            heartbeatX,
-            heartbeatY,
-            0,
-            type(uint256).max,
-            _defaultSequencerUptimeFeed
-        );
-
-        // Safety check to ensure the oracles are set correctly
-        if (IOracleVault(vault).getPrice() == 0)
-            revert VaultFactory__InvalidOraclePrice();
-    }
-
-    /**
-     * @dev Internal function to create a new Metropolis vault of the given type.
-     * @param vType The type of the vault (must be a Metropolis vault type).
-     * @param lbPair The address of the LBPair.
-     * @param tokenX The address of token X.
-     * @param tokenY The address of token Y.
-     * @param vaultImmutableData The immutable data to pass to the vault.
-     */
-    function _createMetropolisVault(
-        VaultType vType,
-        ILBPair lbPair,
-        address tokenX,
-        address tokenY,
-        bytes memory vaultImmutableData
-    ) private isValidType(uint8(vType)) returns (address vault) {
-        // Ensure this is only used for Metropolis vaults
-        if (
-            vType != VaultType.Simple &&
-            vType != VaultType.Oracle &&
-            vType != VaultType.OracleReward
-        ) {
-            revert VaultFactory__InvalidType();
-        }
-
-        address vaultImplementation = _vaultImplementation[vType];
-        if (vaultImplementation == address(0))
-            revert VaultFactory__VaultImplementationNotSet(vType);
-
-        uint256 vaultId = _vaults[vType].length;
-
-        bytes32 salt = keccak256(abi.encodePacked(vType, vaultId));
-        vault = ImmutableClone.cloneDeterministic(
-            vaultImplementation,
-            vaultImmutableData,
-            salt
-        );
-
-        _vaults[vType].push(vault);
-        _vaultType[vault] = vType;
-
-        // Metropolis vaults use name and symbol parameters
-        IBaseVault(vault).initialize(_getName(vType, vaultId), "MVT");
-
-        emit VaultCreated(vType, vault, lbPair, vaultId, tokenX, tokenY);
-    }
-
-    /**
-     * @dev Internal function to create a new Shadow oracle reward vault.
+     * @dev Internal function to create a new Dragonswap oracle reward vault.
      * @param pool The address of the Ramses V3 Pool.
      * @param tokenX The address of token X.
      * @param tokenY The address of token Y.
      */
-    function _createShadowOracleRewardVault(
+    function _createDragonswapOracleRewardVault(
         address pool,
         address tokenX,
         address tokenY
     ) internal returns (address vault) {
-        VaultType vType = VaultType.ShadowOracleReward;
+        VaultType vType = VaultType.DragonswapOracleReward;
 
         address vaultImplementation = _vaultImplementation[vType];
         if (vaultImplementation == address(0))
@@ -1009,8 +781,8 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
         uint256 vaultId = _vaults[vType].length;
 
-        // Shadow vault immutable data layout (simplified - no external oracles):
-        // - 0x00: 20 bytes: The address of the Shadow pool
+        // Dragonswap vault immutable data layout (simplified - no external oracles):
+        // - 0x00: 20 bytes: The address of the Dragonswap pool
         // - 0x14: 20 bytes: The address of token 0
         // - 0x28: 20 bytes: The address of token 1
         // - 0x3C: 1 byte: The decimals of token 0
@@ -1032,17 +804,15 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         _vaults[vType].push(vault);
         _vaultType[vault] = vType;
 
-        // Shadow vaults use different initialization
-        IOracleRewardShadowVault(vault).initialize(
+        // Dragonswap vaults use different initialization
+        IOracleRewardDragonswapVault(vault).initialize(
             _getName(vType, vaultId),
             "MVT"
         );
 
-        // Note: For event consistency, we pass address(0) for lbPair since Shadow vaults don't use LBPairs
         emit VaultCreated(
             vType,
             vault,
-            ILBPair(address(0)),
             vaultId,
             tokenX,
             tokenY
@@ -1050,48 +820,19 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
-     * @dev Internal function to create a new default strategy for the given vault.
-     * @param vault The address of the vault.
-     * @param lbPair The address of the LBPair.
-     * @param tokenX The address of token X.
-     * @param tokenY The address of token Y.
-     */
-    function _createDefaultStrategy(
-        address vault,
-        ILBPair lbPair,
-        address tokenX,
-        address tokenY
-    ) internal returns (address strategy) {
-        bytes memory strategyImmutableData = abi.encodePacked(
-            vault,
-            lbPair,
-            tokenX,
-            tokenY
-        );
-
-        return
-            _createStrategy(
-                StrategyType.Default,
-                address(vault),
-                lbPair,
-                strategyImmutableData
-            );
-    }
-
-    /**
-     * @dev Internal function to create a new Shadow strategy for the given vault.
+     * @dev Internal function to create a new Dragonswap strategy for the given vault.
      * @param vault The address of the vault.
      * @param pool The address of the Ramses V3 Pool.
      * @param tokenX The address of token X.
      * @param tokenY The address of token Y.
      */
-    function _createShadowStrategy(
+    function _createDragonswapStrategy(
         address vault,
         address pool,
         address tokenX,
         address tokenY
     ) internal returns (address strategy) {
-        // Shadow strategy immutable data layout:
+        // Dragonswap strategy immutable data layout:
         // - 0x00: 20 bytes: The address of the Vault
         // - 0x14: 20 bytes: The address of the Ramses V3 Pool
         // - 0x28: 20 bytes: The address of token X
@@ -1103,11 +844,10 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
             tokenY
         );
 
-        // Note: Shadow strategies don't use LBPair, so we pass address(0)
-
+        // Note: Dragonswap strategies don't use LBPair, so we pass address(0)
         return
             _createStrategy(
-                StrategyType.Shadow,
+                StrategyType.Dragonswap,
                 address(vault),
                 ILBPair(address(0)),
                 strategyImmutableData
@@ -1197,16 +937,16 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
                     IMetropolisStrategy(strategy)
                 );
             } else {
-                revert("Cannot link Shadow strategy to Metropolis vault");
+                revert("Cannot link Dragonswap strategy to Metropolis vault");
             }
-        } else if (vaultType == VaultType.ShadowOracleReward) {
-            // Shadow vaults need different handling
-            if (strategyType == StrategyType.Shadow) {
-                IOracleRewardShadowVault(address(minimalVault)).setStrategy(
-                    IShadowStrategy(strategy)
+        } else if (vaultType == VaultType.DragonswapOracleReward) {
+            // Dragonswap vaults need different handling
+            if (strategyType == StrategyType.Dragonswap) {
+                IOracleRewardDragonswapVault(address(minimalVault)).setStrategy(
+                    IDragonswapStrategy(strategy)
                 );
             } else {
-                revert("Cannot link Metropolis strategy to Shadow vault");
+                revert("Cannot link Metropolis strategy to Dragonswap vault");
             }
         } else {
             revert("Unknown or unsupported vault type");

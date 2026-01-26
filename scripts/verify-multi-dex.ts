@@ -149,7 +149,7 @@ async function main() {
     name: "HybridPriceLens Implementation",
     address: hybridPriceLensAddress,
     constructorArguments: [addresses.wnative],
-    contract: "contracts-metropolis/src/HybridPriceLens.sol:HybridPriceLens"
+    contract: "contracts-core/src/HybridPriceLens.sol:HybridPriceLens"
   });
 
   // Add OracleHelperFactory if present
@@ -158,7 +158,7 @@ async function main() {
       name: "OracleHelperFactory",
       address: addresses.oracleHelperFactory,
       constructorArguments: [],
-      contract: "contracts-metropolis/src/OracleHelperFactory.sol:OracleHelperFactory"
+      contract: "contracts-core/src/OracleHelperFactory.sol:OracleHelperFactory"
     });
   }
 
@@ -216,7 +216,7 @@ async function main() {
       name: "OracleVault Implementation",
       address: addresses.oracleVaultImpl,
       constructorArguments: [addresses.vaultFactory],
-      contract: "contracts-metropolis/src/OracleVault.sol:OracleVault"
+      contract: "contracts-core/src/OracleVault.sol:OracleVault"
     });
   }
 
@@ -224,7 +224,7 @@ async function main() {
     name: "OracleRewardVault Implementation",
     address: addresses.oracleRewardVaultImpl,
     constructorArguments: [addresses.vaultFactory],
-    contract: "contracts-metropolis/src/OracleRewardVault.sol:OracleRewardVault"
+    contract: "contracts-core/src/OracleRewardVault.sol:OracleRewardVault"
   });
 
   // Add OracleRewardShadowVault with library linking
@@ -251,7 +251,7 @@ async function main() {
     name: "Strategy Implementation",
     address: addresses.strategyImpl,
     constructorArguments: [addresses.vaultFactory, 51], // maxRange = 51
-    contract: "contracts-metropolis/src/MetropolisStrategy.sol:MetropolisStrategy"
+    contract: "contracts-core/src/MetropolisStrategy.sol:MetropolisStrategy"
   });
 
   verifications.push({
@@ -452,7 +452,7 @@ async function main() {
   if (failCount > 0 || process.env.SHOW_ALL_COMMANDS) {
     console.log(`\n📝 Manual Verification Commands:`);
     console.log(`\n1. For VaultFactory Implementation:`);
-    console.log(`npx hardhat verify --network ${network.name} --contract contracts-metropolis/src/VaultFactory.sol:VaultFactory ${addresses.vaultFactoryImpl} ${addresses.wnative} ${addresses.oracleHelperFactory || "0x0000000000000000000000000000000000000000"}`);
+    console.log(`npx hardhat verify --network ${network.name} --contract contracts-core/src/VaultFactory.sol:VaultFactory ${addresses.vaultFactoryImpl} ${addresses.wnative} ${addresses.oracleHelperFactory || "0x0000000000000000000000000000000000000000"}`);
     
     if (addresses.oracleRewardShadowVaultImpl && librariesJsonPath) {
       console.log(`\n2. For OracleRewardShadowVault (with libraries):`);

@@ -53,7 +53,7 @@ npm run compile -- --force
 
 ### Build Configuration Note
 
-The project uses `@arca/joe-v2` imports for the Joe V2 library dependencies. These are resolved via symlinks in `node_modules/@arca/` that point to the actual library locations in `contracts-metropolis/lib/`. This approach ensures both IDE support and compilation work correctly across all development environments.
+The project uses `@arca/joe-v2` imports for the Joe V2 library dependencies. These are resolved via symlinks in `node_modules/@arca/` that point to the actual library locations in `contracts-core/lib/`. This approach ensures both IDE support and compilation work correctly across all development environments.
 
 ### Compile Contracts
 
@@ -105,7 +105,7 @@ To test the GitHub pipeline locally, you can use the `act` command (see [this re
 
 ```
 arca-contracts/
-├── contracts-metropolis/    # Metropolis DLMM vault implementation
+├── contracts-core/    # Metropolis DLMM vault implementation
 │   ├── src/
 │   │   ├── BaseVault.sol           # Core vault logic
 │   │   ├── OracleRewardVault.sol   # Vault with reward compounding

@@ -9,16 +9,16 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/se
 import {SafeCast} from "@arca/joe-v2/libraries/math/SafeCast.sol";
 import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
-import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
+import {IVaultFactory} from "../../contracts-core/src/interfaces/IVaultFactory.sol";
 import {IDragonswapStrategy} from "./interfaces/IDragonswapStrategy.sol";
-import {INonfungiblePositionManager} from "../CL/periphery/interfaces/INonfungiblePositionManager.sol";
+import {INonfungiblePositionManager} from "../v2-periphery/interfaces/INonfungiblePositionManager.sol";
 import {IRamsesV3Pool} from "../CL/core/interfaces/IRamsesV3Pool.sol";
 import {IMinimalGauge} from "./interfaces/IMinimalGauge.sol";
 import {IMinimalVoter} from "./interfaces/IMinimalVoter.sol";
 import {LiquidityAmounts} from "../CL/periphery/libraries/LiquidityAmounts.sol";
 import {TickMath} from "../CL/core/libraries/TickMath.sol";
-import {IOracleRewardVault} from "../../contracts-metropolis/src/interfaces/IOracleRewardVault.sol";
-import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
+import {IOracleRewardVault} from "../../contracts-core/src/interfaces/IOracleRewardVault.sol";
+import {Math} from "../../contracts-core/src/libraries/Math.sol";
 import {IOracleRewardDragonswapVault} from "./interfaces/IOracleRewardDragonswapVault.sol";
 import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 
@@ -209,18 +209,6 @@ contract DragonswapStrategy is Clone, ReentrancyGuardUpgradeable, IDragonswapStr
     function initialize() external initializer {
         __ReentrancyGuard_init();
         _rebalanceCoolDown = 5 seconds;
-    }
-
-    /// @dev Register my contract on Sonic FeeM
-    function registerMe() external {
-        (bool _success, ) = address(0xDC2B0D2Dd2b7759D97D50db4eabDC36973110830) // solhint-disable-line avoid-low-level-calls
-            .call(
-                abi.encodeWithSignature(
-                    "selfRegister(uint256)",
-                    _FEEM_AFFILIATE_ID
-                )
-            );
-        require(_success, "FeeM registration failed");
     }
 
     // ============ Immutable Data Getters ============
@@ -754,7 +742,7 @@ contract DragonswapStrategy is Clone, ReentrancyGuardUpgradeable, IDragonswapStr
         if (_positionTokenId == 0) return true;
 
         INonfungiblePositionManager npm = INonfungiblePositionManager(
-            _factory.getDragonswapNonfungiblePositionManager() // Returns 0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406 implementation of npm
+            _factory.getDragonswapNonfungiblePositionManager() // Returns 0x12E66C8F215DdD5d48d150c8f46aD0c6fB0F4406 implementation of npm TODO UPDATE ADDRESS
         );
 
         // Get position details
@@ -1196,7 +1184,7 @@ contract DragonswapStrategy is Clone, ReentrancyGuardUpgradeable, IDragonswapStr
             emit RewardForwarded(address(token), vault, 0);
         }
         // Update vault accounting (defensive)
-        if (_factory.getVaultType(vault) != IVaultFactory.VaultType.Simple) {
+        if (_factory.getVaultType(vault) == IVaultFactory.VaultType.DragonswapOracleReward) {
             try IOracleRewardVault(vault).updateAccRewardsPerShare() {
                 // Success
             } catch {

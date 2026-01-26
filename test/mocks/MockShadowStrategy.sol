@@ -2,8 +2,8 @@
 pragma solidity 0.8.26;
 
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
-import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
+import {IVaultFactory} from "../../contracts-core/src/interfaces/IVaultFactory.sol";
+import {IStrategyCommon} from "../../contracts-core/src/interfaces/IStrategyCommon.sol";
 
 /**
  * @title MockShadowStrategy
@@ -34,9 +34,6 @@ contract MockShadowStrategy is IStrategyCommon {
     function initialize() external override {
         _vault = msg.sender;
     }
-
-    /// @dev Register my contract on Sonic FeeM
-    function registerMe() external {}
 
     function getFactory() external view override returns (IVaultFactory) {
         return _factory;

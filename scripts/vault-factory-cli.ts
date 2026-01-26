@@ -8,8 +8,8 @@ import type {
     ILBPair,
     IRamsesV3Pool,
     OracleRewardVault,
-    OracleRewardShadowVault,
-    ShadowStrategy
+    OracleRewardDragonswapVault,
+    DragonswapStrategy
 } from "../typechain-types";
 import type { IERC20MetadataUpgradeable } from "../typechain-types/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
@@ -34,26 +34,14 @@ interface GasTransaction {
     category: "deployment" | "configuration" | "admin";
 }
 
-interface DeploymentResult {
-    vault: string;
-    strategy: string;
-    txHash: string;
-    gasUsed: bigint;
-    cost: string;
-}
-
 enum VaultType {
     None = 0,
-    Simple = 1,
-    Oracle = 2,
-    OracleReward = 3,
-    ShadowOracleReward = 4
+    DragonswapOracleReward = 1
 }
 
 enum StrategyType {
     None = 0,
-    Default = 1, // Default for Metropolis Maker Vaults
-    Shadow = 2
+    DragonswapDefault = 1
 }
 
 // ================================
@@ -221,31 +209,6 @@ class VaultFactoryCLI {
         }
     }
 
-    async registerContract(displayName: string, contract: Contract): Promise<void> {
-        // Only register on sonic-mainnet
-        if (network.name !== "sonic-mainnet") {
-            console.log(chalk.gray(`⏭️  Skipping registerMe for ${displayName} (not on mainnet)`));
-            return;
-        }
-
-        if (this.config.dryRun) {
-            console.log(chalk.yellow(`\n🔍 DRY RUN: Would register ${displayName} on Sonic FeeM`));
-            return;
-        }
-
-        try {
-            console.log(chalk.blue(`\n📝 Registering ${displayName} on Sonic FeeM...`));
-            const tx = await contract.registerMe();
-            console.log(chalk.gray(`  Transaction hash: ${tx.hash}`));
-
-            await this.gasTracker.trackTransaction(`Register ${displayName}`, tx, "configuration");
-            console.log(chalk.green(`✅ ${displayName} registered successfully`));
-        } catch (error) {
-            console.warn(chalk.yellow(`⚠️  Failed to register ${displayName}:`), error);
-            // Don't throw - registration failure shouldn't halt deployment
-        }
-    }
-
     async showFactoryInfo() {
         console.log(chalk.blue("\n🏭 Vault Factory Information\n"));
 
@@ -265,45 +228,38 @@ class VaultFactoryCLI {
             console.log(chalk.gray(`  Creation Fee: ${ethers.formatEther(creationFee)} S`));
             console.log(chalk.gray(`  Wrapped Native: ${wnative}`));
 
-            // Shadow protocol addresses
-            const shadowNPM = await this.factory!.getShadowNonfungiblePositionManager();
-            const shadowVoter = await this.factory!.getShadowVoter();
+            // Dragonswap protocol addresses
+            const dragonswapNPM = await this.factory!.getDragonswapNonfungiblePositionManager();
+            const dragonswapVoter = await this.factory!.getDragonswapVoter();
 
-            console.log(chalk.white("\nShadow Protocol:"));
-            console.log(chalk.gray(`  Shadow NPM: ${shadowNPM}`));
-            console.log(chalk.gray(`  Shadow Voter: ${shadowVoter}`));
+            console.log(chalk.white("\nDragonswap Protocol:"));
+            console.log(chalk.gray(`  Dragonswap NPM: ${dragonswapNPM}`));
+            console.log(chalk.gray(`  Dragonswap Voter: ${dragonswapVoter}`));
 
             // Vault counts
-            const simpleVaults = await this.factory!.getNumberOfVaults(VaultType.Simple);
-            const oracleVaults = await this.factory!.getNumberOfVaults(VaultType.Oracle);
-            const oracleRewardVaults = await this.factory!.getNumberOfVaults(VaultType.OracleReward);
-            const shadowVaults = await this.factory!.getNumberOfVaults(VaultType.ShadowOracleReward);
+            const dragonswapVaults = await this.factory!.getNumberOfVaults(VaultType.DragonswapOracleReward);
 
             console.log(chalk.white("\nVault Statistics:"));
-            console.log(chalk.gray(`  Simple Vaults: ${simpleVaults}`));
-            console.log(chalk.gray(`  Oracle Vaults: ${oracleVaults}`));
-            console.log(chalk.gray(`  Oracle Reward Vaults: ${oracleRewardVaults}`));
-            console.log(chalk.gray(`  Shadow Oracle Reward Vaults: ${shadowVaults}`));
+            console.log(chalk.gray(`  Dragonswap Oracle Reward Vaults: ${dragonswapVaults}`));
 
             // Strategy counts
             const defaultStrategies = await this.factory!.getNumberOfStrategies(StrategyType.Default);
-            const shadowStrategies = await this.factory!.getNumberOfStrategies(StrategyType.Shadow);
+            const dragonswapStrategies = await this.factory!.getNumberOfStrategies(StrategyType.Dragonswap);
 
             console.log(chalk.white("\nStrategy Statistics:"));
             console.log(chalk.gray(`  Default Strategies: ${defaultStrategies}`));
-            console.log(chalk.gray(`  Shadow Strategies: ${shadowStrategies}`));
+            console.log(chalk.gray(`  Dragonswap Strategies: ${dragonswapStrategies}`));
 
             // Implementation addresses
-            const oracleVaultImpl = await this.factory!.getVaultImplementation(VaultType.Oracle);
-            const shadowVaultImpl = await this.factory!.getVaultImplementation(VaultType.ShadowOracleReward);
+            const dragonswapVaultImpl = await this.factory!.getVaultImplementation(VaultType.DragonswapOracleReward);
             const defaultStrategyImpl = await this.factory!.getStrategyImplementation(StrategyType.Default);
-            const shadowStrategyImpl = await this.factory!.getStrategyImplementation(StrategyType.Shadow);
+            const dragonswapStrategyImpl = await this.factory!.getStrategyImplementation(StrategyType.Dragonswap);
 
             console.log(chalk.white("\nImplementation Addresses:"));
             console.log(chalk.gray(`  Oracle Vault Implementation: ${oracleVaultImpl}`));
-            console.log(chalk.gray(`  Shadow Vault Implementation: ${shadowVaultImpl}`));
+            console.log(chalk.gray(`  Dragonswap Vault Implementation: ${dragonswapVaultImpl}`));
             console.log(chalk.gray(`  Default Strategy Implementation: ${defaultStrategyImpl}`));
-            console.log(chalk.gray(`  Shadow Strategy Implementation: ${shadowStrategyImpl}`));
+            console.log(chalk.gray(`  Dragonswap Strategy Implementation: ${dragonswapStrategyImpl}`));
 
         } catch (error) {
             console.error(chalk.red("Error fetching factory info:"), error);
@@ -319,7 +275,7 @@ class VaultFactoryCLI {
         console.log(chalk.gray("  3. List Strategies"));
 
         console.log(chalk.gray("\n🚀 Vault Deployment"));
-        console.log(chalk.gray("  4. Deploy Shadow Vault"));
+        console.log(chalk.gray("  4. Deploy Dragonswap Vault"));
         console.log(chalk.gray("  5. Deploy Metropolis Vault"));
 
         console.log(chalk.gray("\n🔧 Admin Functions"));
@@ -360,7 +316,7 @@ class VaultFactoryCLI {
                         await this.listStrategies();
                         break;
                     case '4':
-                        await this.deployShadowVault();
+                        await this.deployDragonswapVault();
                         break;
                     case '5':
                         await this.deployMetropolisVault();
@@ -420,9 +376,9 @@ class VaultFactoryCLI {
             const oracleRewardCount = await this.factory!.getNumberOfVaults(VaultType.OracleReward);
             await this.displayVaultList(VaultType.OracleReward, Number(oracleRewardCount));
 
-            console.log(chalk.white("\nShadow Oracle Reward Vaults:"));
-            const shadowCount = await this.factory!.getNumberOfVaults(VaultType.ShadowOracleReward);
-            await this.displayVaultList(VaultType.ShadowOracleReward, Number(shadowCount));
+            console.log(chalk.white("\nDragonswap Oracle Reward Vaults:"));
+            const dragonswapCount = await this.factory!.getNumberOfVaults(VaultType.DragonswapOracleReward);
+            await this.displayVaultList(VaultType.DragonswapOracleReward, Number(dragonswapCount));
 
         } catch (error) {
             console.error(chalk.red("Error listing vaults:"), error);
@@ -457,9 +413,9 @@ class VaultFactoryCLI {
             const defaultCount = await this.factory!.getNumberOfStrategies(StrategyType.Default);
             await this.displayStrategyList(StrategyType.Default, Number(defaultCount));
 
-            console.log(chalk.white("\nShadow Strategies:"));
-            const shadowCount = await this.factory!.getNumberOfStrategies(StrategyType.Shadow);
-            await this.displayStrategyList(StrategyType.Shadow, Number(shadowCount));
+            console.log(chalk.white("\nDragonswap Strategies:"));
+            const dragonswapCount = await this.factory!.getNumberOfStrategies(StrategyType.Dragonswap);
+            await this.displayStrategyList(StrategyType.Dragonswap, Number(dragonswapCount));
 
         } catch (error) {
             console.error(chalk.red("Error listing strategies:"), error);
@@ -486,8 +442,8 @@ class VaultFactoryCLI {
         }
     }
 
-    async deployShadowVault() {
-        console.log(chalk.blue("\n🚀 Deploy Shadow Oracle Reward Vault\n"));
+    async deployDragonswapVault() {
+        console.log(chalk.blue("\n🚀 Deploy Dragonswap Oracle Reward Vault\n"));
 
         try {
             // Get pool address
@@ -583,9 +539,9 @@ class VaultFactoryCLI {
 
             // Execute deployment
             const receipt = await this.executeWithGasTracking(
-                "Deploy Shadow Oracle Reward Vault",
+                "Deploy Dragonswap Oracle Reward Vault",
                 async () => {
-                    return this.factory!.createMarketMakerShadowOracleRewardVault(
+                    return this.factory!.createMarketMakerDragonswapOracleRewardVault(
                         poolAddress,
                         aumFee,
                         twapInterval,
@@ -627,11 +583,8 @@ class VaultFactoryCLI {
                 console.log(chalk.gray(`  Strategy Address: ${strategyAddress}`));
 
                 // Register vault and strategy on Sonic FeeM
-                const vault = await ethers.getContractAt("OracleRewardShadowVault", vaultAddress, this.config.signer);
-                const strategy = await ethers.getContractAt("ShadowStrategy", strategyAddress, this.config.signer);
-
-                await this.registerContract("Shadow Vault", vault);
-                await this.registerContract("Shadow Strategy", strategy);
+                const vault = await ethers.getContractAt("OracleRewardDragonswapVault", vaultAddress, this.config.signer);
+                const strategy = await ethers.getContractAt("DragonswapStrategy", strategyAddress, this.config.signer);
 
                 // Save to cache for easy access
                 const cacheDir = path.join(__dirname, "../cache");
@@ -652,17 +605,17 @@ class VaultFactoryCLI {
                 };
 
                 fs.writeFileSync(
-                    path.join(cacheDir, "latest-shadow-vault.json"),
+                    path.join(cacheDir, "latest-dragonswap-vault.json"),
                     JSON.stringify(deploymentInfo, null, 2)
                 );
 
-                console.log(chalk.green(`💾 Deployment info saved to cache/latest-shadow-vault.json`));
+                console.log(chalk.green(`💾 Deployment info saved to cache/latest-dragonswap-vault.json`));
             } else {
                 console.log(chalk.yellow("⚠️ Deployment completed but couldn't parse addresses from events"));
             }
 
         } catch (error) {
-            console.error(chalk.red("❌ Shadow vault deployment failed:"), error);
+            console.error(chalk.red("❌ Dragonswap vault deployment failed:"), error);
         }
     }
 
@@ -791,9 +744,6 @@ class VaultFactoryCLI {
                 // Register vault and strategy on Sonic FeeM
                 const vault = await ethers.getContractAt("OracleRewardVault", vaultAddress, this.config.signer);
                 const strategy = await ethers.getContractAt("MetropolisStrategy", strategyAddress, this.config.signer);
-
-                await this.registerContract("Metropolis Vault", vault);
-                await this.registerContract("Metropolis Strategy", strategy);
 
                 // Save to cache for easy access
                 const cacheDir = path.join(__dirname, "../cache");

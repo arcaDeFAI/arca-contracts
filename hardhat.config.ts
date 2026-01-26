@@ -21,7 +21,7 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS).setAction(async (_, { config }, 
   const paths: string[] = await runSuper();
 
   // Add Metropolis contracts directory
-  const metropolisGlob = path.join(config.paths.root, "contracts-metropolis", "src", "**", "*.sol");
+  const metropolisGlob = path.join(config.paths.root, "contracts-core", "src", "**", "*.sol");
   const metropolisPaths = glob.sync(metropolisGlob);
 
   // Add dragonswap contracts directory (only our files)

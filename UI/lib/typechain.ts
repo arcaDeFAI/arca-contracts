@@ -10,12 +10,12 @@ export { OracleRewardShadowVault__factory } from '@typechain/factories/contracts
 export type { OracleRewardShadowVault } from '@typechain/contracts-shadow/src/OracleRewardShadowVault'
 
 // Metropolis Vault exports
-export { OracleRewardVault__factory } from '@typechain/factories/contracts-metropolis/src/OracleRewardVault__factory'
-export type { OracleRewardVault } from '@typechain/contracts-metropolis/src/OracleRewardVault'
+export { OracleRewardVault__factory } from '@typechain/factories/contracts-core/src/OracleRewardVault__factory'
+export type { OracleRewardVault } from '@typechain/contracts-core/src/OracleRewardVault'
 
 // Metropolis Strategy exports
-export { MetropolisStrategy__factory } from '@typechain/factories/contracts-metropolis/src/MetropolisStrategy__factory'
-export type { MetropolisStrategy } from '@typechain/contracts-metropolis/src/MetropolisStrategy'
+export { MetropolisStrategy__factory } from '@typechain/factories/contracts-core/src/MetropolisStrategy__factory'
+export type { MetropolisStrategy } from '@typechain/contracts-core/src/MetropolisStrategy'
 
 // Shadow CL Pool exports
 export { IRamsesV3Pool__factory } from '@typechain/factories/contracts-shadow/CL/core/interfaces/IRamsesV3Pool__factory'
@@ -34,8 +34,8 @@ export type { IMinimalVoter } from '@typechain/contracts-shadow/src/interfaces/I
 
 // Extract ABIs for compatibility with existing wagmi usage patterns
 import { ShadowStrategy__factory } from '@typechain/factories/contracts-shadow/src/ShadowStrategy__factory'
-import { OracleRewardVault__factory } from '@typechain/factories/contracts-metropolis/src/OracleRewardVault__factory'
-import { MetropolisStrategy__factory } from '@typechain/factories/contracts-metropolis/src/MetropolisStrategy__factory'
+import { OracleRewardVault__factory } from '@typechain/factories/contracts-core/src/OracleRewardVault__factory'
+import { MetropolisStrategy__factory } from '@typechain/factories/contracts-core/src/MetropolisStrategy__factory'
 import { OracleRewardShadowVault__factory } from '@typechain/factories/contracts-shadow/src/OracleRewardShadowVault__factory'
 import { IRamsesV3Pool__factory } from '@typechain/factories/contracts-shadow/CL/core/interfaces/IRamsesV3Pool__factory'
 import { ILBPair__factory } from '@typechain/factories/@arca/joe-v2/interfaces/ILBPair__factory'

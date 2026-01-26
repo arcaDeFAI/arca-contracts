@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.26;
 
-import {IStrategyCommon} from "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
+import {IStrategyCommon} from "../../../contracts-core/src/interfaces/IStrategyCommon.sol";
 import {INonfungiblePositionManager} from "../../CL/periphery/interfaces/INonfungiblePositionManager.sol";
 
 /**

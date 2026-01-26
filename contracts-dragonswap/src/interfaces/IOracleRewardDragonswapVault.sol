@@ -4,10 +4,10 @@ pragma solidity 0.8.26;
 
 import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {IRamsesV3Pool} from "../../CL/core/interfaces/IRamsesV3Pool.sol";
-import {IMinimalVault} from "../../../contracts-metropolis/src/interfaces/IMinimalVault.sol";
-import {IStrategyCommon} from "../../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
-import {IVaultFactory} from "../../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
-import {IERC20} from "../../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
+import {IMinimalVault} from "../../../contracts-core/src/interfaces/IMinimalVault.sol";
+import {IStrategyCommon} from "../../../contracts-core/src/interfaces/IStrategyCommon.sol";
+import {IVaultFactory} from "../../../contracts-core/src/interfaces/IVaultFactory.sol";
+import {IERC20} from "../../../contracts-core/src/interfaces/IHooksRewarder.sol";
 
 /**
  * @title Oracle Reward Dragonswap Vault Interface
@@ -236,10 +236,7 @@ interface IOracleRewardDragonswapVault is IMinimalVault, IERC20Upgradeable {
     function claim() external;
     function notifyRewardToken(IERC20 token) external;
     function updateAccRewardsPerShare() external;
-
-    /// @dev Register my contract on Sonic FeeM
-    function registerMe() external;
-
+    
     // Admin functions
     function setStrategy(IStrategyCommon newStrategy) external;
     function pauseDeposits() external;

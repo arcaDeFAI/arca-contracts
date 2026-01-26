@@ -32,16 +32,12 @@ interface IVaultFactory {
 
     enum VaultType {
         None,
-        Simple,
-        Oracle,
-        OracleReward,
-        ShadowOracleReward
+        DragonswapOracleReward
     }
 
     enum StrategyType {
         None,
-        Default, // Default for Metropolis Maker Vaults
-        Shadow
+        DragonswapDefault
     }
 
     struct RebalanceSetting {
@@ -62,7 +58,6 @@ interface IVaultFactory {
     event VaultCreated(
         VaultType indexed vType,
         address indexed vault,
-        ILBPair indexed lbPair,
         uint256 vaultIndex,
         address tokenX,
         address tokenY
@@ -123,15 +118,10 @@ interface IVaultFactory {
         uint256 index
     ) external view returns (address);
 
-    function createMarketMakerShadowOracleRewardVault(
+    function createMarketMakerDragonswapOracleRewardVault(
         address pool,
         uint16 aumFee,
         uint32 twapInterval
-    ) external payable returns (address vault, address strategy);
-
-    function createMarketMakerOracleVault(
-        ILBPair lbPair,
-        uint16 aumFee
     ) external payable returns (address vault, address strategy);
 
     function getVaultType(address vault) external view returns (VaultType);
@@ -237,19 +227,16 @@ interface IVaultFactory {
 
     function setRebalanceCoolDown(address strategy, uint256 coolDown) external;
 
-    function getShadowNonfungiblePositionManager()
+    function getDragonswapNonfungiblePositionManager()
         external
         view
         returns (address);
 
     function getShadowVoter() external view returns (address);
 
-    function setShadowNonfungiblePositionManager(
+    function setDragonswapNonfungiblePositionManager(
         address nonfungiblePositionManager
     ) external;
 
-    function setShadowVoter(address voter) external;
-
-    /// @dev Register my contract on Sonic FeeM
-    function registerMe() external;
+    function setDragonswapVoter(address voter) external;
 }

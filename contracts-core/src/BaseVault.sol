@@ -12,7 +12,6 @@ import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ER
 import {SafeCast} from "@arca/joe-v2/libraries/math/SafeCast.sol";
 
 import {IBaseVault} from "./interfaces/IBaseVault.sol";
-import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IStrategyCommon} from "./interfaces/IStrategyCommon.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IWNative} from "./interfaces/IWNative.sol";
@@ -45,7 +44,7 @@ abstract contract BaseVault is
     IVaultFactory internal immutable _factory;
     address private immutable _wnative;
 
-    IMetropolisStrategy private _strategy;
+    IStrategyCommon private _strategy;
     bool private _depositsPaused;
 
     QueuedWithdrawal[] private _queuedWithdrawalsByRound;
@@ -171,13 +170,6 @@ abstract contract BaseVault is
 
         // Initialize the first round of queued withdrawals.
         _queuedWithdrawalsByRound.push();
-    }
-
-    /// @dev Register my contract on Sonic FeeM
-    function registerMe() external {
-        (bool _success, ) = address(0xDC2B0D2Dd2b7759D97D50db4eabDC36973110830) // solhint-disable-line avoid-low-level-calls
-            .call(abi.encodeWithSignature("selfRegister(uint256)", 236));
-        require(_success, "FeeM registration failed");
     }
 
     /**

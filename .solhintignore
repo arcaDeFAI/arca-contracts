@@ -2,5 +2,5 @@ node_modules/
 contracts-shadow/CL/
 contracts-shadow/libraries/
 contracts-shadow/interfaces/
-contracts-metropolis/lib/
-contracts-metropolis/src/libraries/
+contracts-core/lib/
+contracts-core/src/libraries/

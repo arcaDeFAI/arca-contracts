@@ -1329,20 +1329,7 @@ class ShadowVaultTester {
             console.error(chalk.red("❌ Error initializing recovery:"), error);
         }
     }
-
-    async registerVaultForFeeM() {
-        console.log(chalk.gray("\nRegistering Vault for FeeM...\n"));
-        try {
-            await this.executeAction("Update Rewards", async () => {
-            return await this.vault!.registerMe();
-        });
-            
-        } catch (error) {
-            console.error(chalk.red("❌ Error:"), error);
-            return;
-        }
-    }
-
+    
     async discoverAndRecoverTokens(vaultFactory: IVaultFactory) {
         console.log(chalk.blue("\n🔍 Discover & Recover Tokens\n"));
 

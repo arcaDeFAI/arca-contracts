@@ -10,14 +10,14 @@ import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import {SafeCast} from "@arca/joe-v2/libraries/math/SafeCast.sol";
-import {IStrategyCommon} from "../../contracts-metropolis/src/interfaces/IStrategyCommon.sol";
+import {IStrategyCommon} from "../../contracts-core/src/interfaces/IStrategyCommon.sol";
 import {IDragonswapStrategy} from "./interfaces/IDragonswapStrategy.sol";
-import {IVaultFactory} from "../../contracts-metropolis/src/interfaces/IVaultFactory.sol";
-import {IWNative} from "../../contracts-metropolis/src/interfaces/IWNative.sol";
-import {IERC20} from "../../contracts-metropolis/src/interfaces/IHooksRewarder.sol";
-import {TokenHelper} from "../../contracts-metropolis/src/libraries/TokenHelper.sol";
-import {Precision} from "../../contracts-metropolis/src/libraries/Precision.sol";
-import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
+import {IVaultFactory} from "../../contracts-core/src/interfaces/IVaultFactory.sol";
+import {IWNative} from "../../contracts-core/src/interfaces/IWNative.sol";
+import {IERC20} from "../../contracts-core/src/interfaces/IHooksRewarder.sol";
+import {TokenHelper} from "../../contracts-core/src/libraries/TokenHelper.sol";
+import {Precision} from "../../contracts-core/src/libraries/Precision.sol";
+import {Math} from "../../contracts-core/src/libraries/Math.sol";
 import {IOracleRewardDragonswapVault} from "./interfaces/IOracleRewardDragonswapVault.sol";
 import {DragonswapPriceHelper} from "./libraries/DragonswapPriceHelper.sol";
 
@@ -157,14 +157,7 @@ contract OracleRewardDragonswapVault is
         // Initialize the first round of queued withdrawals
         _queuedWithdrawalsByRound.push();
     }
-
-    /// @dev Register my contract on Sonic FeeM
-    function registerMe() external {
-        (bool _success, ) = address(0xDC2B0D2Dd2b7759D97D50db4eabDC36973110830) // solhint-disable-line avoid-low-level-calls
-            .call(abi.encodeWithSignature("selfRegister(uint256)", 236));
-        require(_success, "FeeM registration failed");
-    }
-
+    
     // ============ Public View Functions ============
     function version() external pure returns (uint8) {
         return 1;

@@ -44,7 +44,7 @@ Arca is a multi-protocol decentralized vault system for automated liquidity prov
 ## Repository Structure
 
 This is a full-stack DeFi project with:
-- **Metropolis Contracts** (`/contracts-metropolis/`) - Core vault system for DLMM pools
+- **Contracts Core** (`/contracts-core/`) - Core vault system for DLMM pools
 - **Shadow Contracts** (`/contracts-shadow/`) - Shadow/Ramses V3 integration (GPL-3.0 licensed)
 - **Frontend dApp** (`/UI/`) - React-based user interface  
 - **Testing Suite** (`/test/`) - Comprehensive test coverage
