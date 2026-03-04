@@ -1,25 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import {IOracleHelper} from "../../contracts-metropolis/src/interfaces/IOracleHelper.sol";
+import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
+import {MetropolisPriceHelper} from "../../contracts-metropolis/src/libraries/MetropolisPriceHelper.sol";
 
 /**
  * @title TestOracleVault
  * @dev Simplified test contract that exposes OracleVault previewShares logic
+ * using MetropolisPriceHelper (reads price from LB pair directly).
  */
 contract TestOracleVault {
-    IOracleHelper private _oracleHelper;
+    ILBPair private _pair;
+    uint32 private _twapInterval;
+    uint256 private _deviationThreshold;
     uint256 private _totalSupply;
     uint256 private _totalBalanceX;
     uint256 private _totalBalanceY;
 
     uint256 internal constant _SHARES_PRECISION = 10 ** 6;
 
-    constructor(address oracleHelper) {
-        _oracleHelper = IOracleHelper(oracleHelper);
+    constructor(address pair) {
+        _pair = ILBPair(pair);
     }
 
-    // Mock functions to set vault state for testing
     function setTotalSupply(uint256 totalSupply) external {
         _totalSupply = totalSupply;
     }
@@ -32,9 +35,16 @@ contract TestOracleVault {
         _totalBalanceY = totalBalanceY;
     }
 
+    function setTwapInterval(uint32 twapInterval) external {
+        _twapInterval = twapInterval;
+    }
+
+    function setDeviationThreshold(uint256 threshold) external {
+        _deviationThreshold = threshold;
+    }
+
     /**
-     * @dev Implementation of previewShares logic from OracleVault
-     * This follows the same logic as the actual _previewShares function
+     * @dev Implementation of previewShares logic matching OracleVault._previewShares
      */
     function previewShares(
         uint256 amountX,
@@ -44,28 +54,28 @@ contract TestOracleVault {
         view
         returns (uint256 shares, uint256 effectiveX, uint256 effectiveY)
     {
-        // Return zero if no amounts
         if (amountX == 0 && amountY == 0) {
             return (0, 0, 0);
         }
 
-        // Check price deviation first (this would revert in real contract if out of bounds)
-        if (!_oracleHelper.checkPriceInDeviation()) {
-            revert("Price out of deviation");
-        }
+        uint256 price = MetropolisPriceHelper.getPrice(_pair, _twapInterval);
 
-        // Get current price from oracle
-        uint256 price = _oracleHelper.getPrice();
+        MetropolisPriceHelper.checkPriceDeviation(
+            _pair,
+            _twapInterval,
+            _deviationThreshold
+        );
 
-        // Calculate total value in Y using oracle helper
-        uint256 valueInY = _oracleHelper.getValueInY(price, amountX, amountY);
+        uint256 valueInY = MetropolisPriceHelper.getValueInY(
+            price,
+            amountX,
+            amountY
+        );
 
         if (_totalSupply == 0) {
-            // First deposit formula: shares = valueInY * SHARES_PRECISION
             shares = valueInY * _SHARES_PRECISION;
         } else {
-            // Get current total value of the vault
-            uint256 totalValueInY = _oracleHelper.getValueInY(
+            uint256 totalValueInY = MetropolisPriceHelper.getValueInY(
                 price,
                 _totalBalanceX,
                 _totalBalanceY
@@ -75,25 +85,34 @@ contract TestOracleVault {
                 revert("Division by zero: total value is zero");
             }
 
-            // Subsequent deposits: shares = valueInY * totalShares / totalValueInY
             shares = (valueInY * _totalSupply) / totalValueInY;
         }
 
-        // For this test, we assume full amounts are effective
         effectiveX = amountX;
         effectiveY = amountY;
     }
 
-    // Getter functions for testing
+    function getPrice() external view returns (uint256) {
+        return MetropolisPriceHelper.getPrice(_pair, _twapInterval);
+    }
+
+    function getSpotPrice() external view returns (uint256) {
+        return MetropolisPriceHelper.getSpotPrice(_pair);
+    }
+
+    function getValueInY(
+        uint256 amountX,
+        uint256 amountY
+    ) external view returns (uint256) {
+        uint256 price = MetropolisPriceHelper.getPrice(_pair, _twapInterval);
+        return MetropolisPriceHelper.getValueInY(price, amountX, amountY);
+    }
+
     function getTotalSupply() external view returns (uint256) {
         return _totalSupply;
     }
 
     function getTotalBalances() external view returns (uint256, uint256) {
         return (_totalBalanceX, _totalBalanceY);
-    }
-
-    function getOracleHelper() external view returns (IOracleHelper) {
-        return _oracleHelper;
     }
 }

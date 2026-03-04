@@ -7,7 +7,6 @@ import {IERC20} from "@arca/joe-v2/interfaces/ILBPair.sol";
 
 /**
  * @title Oracle Reard Vault Interface
- * @author BlueLabs
  * @notice Interface used to interact with Liquidity Book Oracle Vaults
  */
 interface IOracleRewardVault is IOracleVault {

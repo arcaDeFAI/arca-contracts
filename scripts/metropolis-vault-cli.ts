@@ -7,8 +7,6 @@ import type {
     OracleRewardVault,
     MetropolisStrategy,
     ILBPair,
-    OracleHelper,
-    HybridPriceLens,
     IVaultFactory
 } from "../typechain-types";
 import type { IERC20MetadataUpgradeable } from "../typechain-types/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
@@ -62,8 +60,6 @@ class MetropolisVaultTester {
     private vaultFactory?: IVaultFactory;
     private strategy?: MetropolisStrategy;
     private pair?: ILBPair;
-    private oracleHelper?: OracleHelper;
-    private priceLens?: HybridPriceLens;
     private tokenX?: IERC20MetadataUpgradeable;
     private tokenY?: IERC20MetadataUpgradeable;
     private signer: SignerWithAddress;
@@ -126,25 +122,7 @@ class MetropolisVaultTester {
             // Load oracle helper if available
             console.log(chalk.gray("Loading oracle helper..."));
             const deploymentPath = path.join(__dirname, "../deployments", `metropolis-${network.name}.json`);
-            if (fs.existsSync(deploymentPath)) {
-                const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
-                const oracleHelperAddress = await this.vault.getOracleHelper();
-                const priceLensAddress = deployment.addresses?.priceLens;
-                
-                if (oracleHelperAddress && oracleHelperAddress !== ethers.ZeroAddress) {
-                    this.oracleHelper = await ethers.getContractAt("OracleHelper", oracleHelperAddress, this.signer);
-                    console.log(chalk.gray(`✓ Oracle Helper loaded at: ${oracleHelperAddress}`));
-                } else {
-                    console.log(chalk.yellow(`⚠️  Oracle Helper not found in deployment file`));
-                }
-                
-                if (priceLensAddress && priceLensAddress !== ethers.ZeroAddress) {
-                    this.priceLens = await ethers.getContractAt("HybridPriceLens", priceLensAddress, this.signer);
-                    console.log(chalk.gray(`✓ Price Lens loaded at: ${priceLensAddress}`));
-                } else {
-                    console.log(chalk.yellow(`⚠️  Price Lens not found in deployment file`));
-                }
-            } else {
+            if (!fs.existsSync(deploymentPath)) {
                 console.log(chalk.yellow(`⚠️  Deployment file not found for network: ${network.name}`));
             }
             
@@ -270,92 +248,38 @@ class MetropolisVaultTester {
             console.log(chalk.gray(`  Bin Step: ${binStep.toString()}`));
             
             
-            // Price information
-            if (this.oracleHelper) {
-                try {
-                    const price = await this.oracleHelper.getPrice();
-                    const tokenXDecimals = await getTokenDecimals(this.tokenX!);
-                    const tokenYDecimals = await getTokenDecimals(this.tokenY!);
-                    const tokenXSymbol = await getTokenSymbol(this.tokenX!);
-                    const tokenYSymbol = await getTokenSymbol(this.tokenY!);
-                    
-                    console.log(chalk.white("\nPrice Information:"));
-                    // Oracle price is in 128.128 fixed-point format
-                    // The price represents how many units of tokenY per unit of tokenX
-                    // To get the price of 1 full tokenX in tokenY:
-                    // (price * 10^tokenXDecimals) >> 128, then format with tokenY decimals
-                    
-                    const SCALE_OFFSET = 128n;
-                    const oneTokenX = 10n ** BigInt(tokenXDecimals);
-                    
-                    // Calculate how many units of Y for 1 full token of X
-                    const amountYForOneX = (price * oneTokenX) >> SCALE_OFFSET;
-                    const priceFormatted = ethers.formatUnits(amountYForOneX, tokenYDecimals);
-                    console.log(chalk.gray(`  Oracle Price: 1 ${tokenXSymbol} = ${priceFormatted} ${tokenYSymbol}`));
-                    
-                    // Show current bin price for comparison
-                    if (this.priceLens) {
-                        try {
-                            const tokenXAddress = await this.tokenX!.getAddress();
-                            const tokenYAddress = await this.tokenY!.getAddress();
-                            
-                            const tokenXPriceNative = await this.priceLens.getTokenPriceNative(tokenXAddress);
-                            const tokenXPriceNativeFormatted = ethers.formatUnits(tokenXPriceNative, 18); // Native price is in 18 decimals (wS)
-                            console.log(chalk.gray(`  PriceLens: 1 ${tokenXSymbol} = ${tokenXPriceNativeFormatted} wS`));
-                            
-                            const tokenYPriceNative = await this.priceLens.getTokenPriceNative(tokenYAddress);
-                            const tokenYPriceNativeFormatted = ethers.formatUnits(tokenYPriceNative, 18); // Native price is in 18 decimals (wS)
-                            console.log(chalk.gray(`  PriceLens: 1 ${tokenYSymbol} = ${tokenYPriceNativeFormatted} wS`));
-                            
-                            // Calculate cross price
-                            // If tokenX = 1 wS and tokenY = 3.28 wS, then tokenX/tokenY = 1/3.28 = 0.3048 tokenY per tokenX
-                            if (tokenYPriceNative > 0n) {
-                                const scaleFactor = 10n ** BigInt(tokenYDecimals);
-                                const tokenXPerY = (tokenXPriceNative * scaleFactor) / tokenYPriceNative;
-                                const tokenXPerYFormatted = ethers.formatUnits(tokenXPerY, tokenYDecimals);
-                                console.log(chalk.gray(`  PriceLens Cross: 1 ${tokenXSymbol} = ${tokenXPerYFormatted} ${tokenYSymbol}`));
-                            }
-                        } catch (e) {
-                            if (e instanceof Error) {
-                                console.log(chalk.yellow(`  Could not fetch spot price from price lens: ${e.message || e}`));
-                            } else {
-                                console.error("Unknown error", e);
-                            }
-                            
-                        }
-                    } else {
-                        console.log(chalk.yellow(`Price lens not set`));
-                    }
+            // Price information (uses MetropolisPriceHelper via vault's getPrice/getTwapInterval/etc.)
+            try {
+                const oracleVault = await ethers.getContractAt("IOracleVault", await this.vault!.getAddress(), this.signer);
+                const price = await oracleVault.getPrice();
+                const tokenXDecimals = await getTokenDecimals(this.tokenX!);
+                const tokenYDecimals = await getTokenDecimals(this.tokenY!);
+                const tokenXSymbol = await getTokenSymbol(this.tokenX!);
+                const tokenYSymbol = await getTokenSymbol(this.tokenY!);
 
-                    // Oracle Helper detailed parameters
-                    try {
-                        const oracleParams = await this.oracleHelper.getOracleParameters();
-                        console.log(chalk.white("\nOracle Helper Parameters:"));
-                        console.log(chalk.gray(`  Min Price: ${ethers.formatUnits(oracleParams.minPrice, tokenYDecimals)}`));
-                        console.log(chalk.gray(`  Max Price: ${ethers.formatUnits(oracleParams.maxPrice, tokenYDecimals)}`));
-                        console.log(chalk.gray(`  Heartbeat X: ${oracleParams.heartbeatX} seconds`));
-                        console.log(chalk.gray(`  Heartbeat Y: ${oracleParams.heartbeatY} seconds`));
-                        console.log(chalk.gray(`  Deviation Threshold: ${ethers.formatUnits(oracleParams.deviationThreshold, 16)}%`));
-                        console.log(chalk.gray(`  TWAP Check Enabled: ${oracleParams.twapPriceCheckEnabled}`));
-                        console.log(chalk.gray(`  TWAP Interval: ${oracleParams.twapInterval} seconds`));
-                        
-                        // Check if price is in deviation
-                        const priceInDeviation = await this.oracleHelper.checkPriceInDeviation();
-                        console.log(chalk.gray(`  Price In Deviation: ${priceInDeviation ? chalk.green("Yes") : chalk.red("No")}`));
-                        
-                        // Get data feeds
-                        const dataFeedX = await this.oracleHelper.getDataFeedX();
-                        const dataFeedY = await this.oracleHelper.getDataFeedY();
-                        console.log(chalk.gray(`  Data Feed X: ${dataFeedX}`));
-                        console.log(chalk.gray(`  Data Feed Y: ${dataFeedY}`));
-                    } catch (e) {
-                        console.log(chalk.yellow(`  Could not fetch oracle helper parameters`));
-                    }
-                } catch (e) {
-                    console.log(chalk.yellow(`  Could not fetch price: ${e}`));
+                console.log(chalk.white("\nPrice Information:"));
+                const SCALE_OFFSET = 128n;
+                const oneTokenX = 10n ** BigInt(tokenXDecimals);
+                const amountYForOneX = (price * oneTokenX) >> SCALE_OFFSET;
+                const priceFormatted = ethers.formatUnits(amountYForOneX, tokenYDecimals);
+                console.log(chalk.gray(`  Price: 1 ${tokenXSymbol} = ${priceFormatted} ${tokenYSymbol}`));
+
+                // TWAP and deviation parameters
+                const twapInterval = await oracleVault.getTwapInterval();
+                const deviationThreshold = await oracleVault.getDeviationThreshold();
+                console.log(chalk.white("\nOracle Parameters:"));
+                console.log(chalk.gray(`  TWAP Interval: ${twapInterval} seconds${twapInterval === 0n ? " (spot price)" : ""}`));
+                console.log(chalk.gray(`  Deviation Threshold: ${deviationThreshold}%`));
+
+                // Check price deviation
+                try {
+                    const inDeviation = await oracleVault.checkPriceInDeviation();
+                    console.log(chalk.gray(`  Price In Deviation: ${inDeviation ? chalk.green("Yes") : chalk.red("No")}`));
+                } catch {
+                    console.log(chalk.gray(`  Price In Deviation: N/A (TWAP disabled or no oracle data)`));
                 }
-                
-                
+            } catch (e) {
+                console.log(chalk.yellow(`  Could not fetch price: ${e}`));
             }
             
             // Strategy info

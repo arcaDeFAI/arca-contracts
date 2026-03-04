@@ -1,42 +1,34 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { formatUnits, parseUnits } from "viem"
-import { DECIMALS } from "./contracts"
-// COmment 
+import { getToken } from "./tokenRegistry"
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 // Format token amounts for display
-export function formatTokenAmount(amount: bigint, token: 'SONIC' | 'WS' | 'USDC' | 'S' | 'WETH' | 'ETH' | string): string {
+export function formatTokenAmount(amount: bigint, token: string): string {
   // Handle undefined/null amounts
   if (amount === undefined || amount === null) {
     return '0.00'
   }
-  
-  // Normalize token name
-  const normalizedToken = token.toUpperCase();
-  let decimals = 18; // Default for most tokens
-  
-  if (normalizedToken === 'USDC') {
-    decimals = 6;
-  } else if (normalizedToken === 'SONIC' || normalizedToken === 'S' || normalizedToken === 'WS' || normalizedToken === 'WETH' || normalizedToken === 'ETH') {
-    decimals = 18;
-  }
-  
+
+  const decimals = getToken(token)?.decimals ?? 18;
+
   const formatted = formatUnits(amount, decimals)
   const num = parseFloat(formatted)
-  
+
   // For very small numbers, show more decimal places
   if (num > 0 && num < 0.0001) {
     return num.toFixed(12) // Show 12 decimal places for very small amounts
   }
-  
+
   // For small numbers, show 6 decimal places
   if (num > 0 && num < 1) {
     return num.toFixed(6)
   }
-  
+
   return num.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
@@ -44,17 +36,8 @@ export function formatTokenAmount(amount: bigint, token: 'SONIC' | 'WS' | 'USDC'
 }
 
 // Parse token amounts from user input
-export function parseTokenAmount(amount: string, token: 'SONIC' | 'WS' | 'USDC' | 'S' | 'WETH' | 'ETH' | string): bigint {
-  // Normalize token name
-  const normalizedToken = token.toUpperCase();
-  let decimals = 18; // Default for most tokens
-  
-  if (normalizedToken === 'USDC') {
-    decimals = 6;
-  } else if (normalizedToken === 'SONIC' || normalizedToken === 'S' || normalizedToken === 'WS' || normalizedToken === 'WETH' || normalizedToken === 'ETH') {
-    decimals = 18;
-  }
-  
+export function parseTokenAmount(amount: string, token: string): bigint {
+  const decimals = getToken(token)?.decimals ?? 18;
   return parseUnits(amount, decimals)
 }
 
@@ -73,13 +56,13 @@ export function formatPercentage(value: number): string {
 
 // Format shares with vault-specific decimals
 export function formatShares(shares: bigint, tokenX?: string, tokenY?: string): string {
-  // WETH vaults use 18 decimals, others use 12
-  const isWETHVault = tokenX === 'WETH' || tokenY === 'WETH';
-  const decimals = isWETHVault ? 18 : 12;
-  
+  const xShareDec = tokenX ? (getToken(tokenX)?.shareDecimals ?? 12) : 12;
+  const yShareDec = tokenY ? (getToken(tokenY)?.shareDecimals ?? 12) : 12;
+  const decimals = Math.max(xShareDec, yShareDec);
+
   const formatted = formatUnits(shares, decimals)
   const num = parseFloat(formatted)
-  
+
   return num.toLocaleString(undefined, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 4,
@@ -88,10 +71,10 @@ export function formatShares(shares: bigint, tokenX?: string, tokenY?: string): 
 
 // Parse shares from user input with vault-specific decimals
 export function parseShares(amount: string, tokenX?: string, tokenY?: string): bigint {
-  // WETH vaults use 18 decimals, others use 12
-  const isWETHVault = tokenX === 'WETH' || tokenY === 'WETH';
-  const decimals = isWETHVault ? 18 : 12;
-  
+  const xShareDec = tokenX ? (getToken(tokenX)?.shareDecimals ?? 12) : 12;
+  const yShareDec = tokenY ? (getToken(tokenY)?.shareDecimals ?? 12) : 12;
+  const decimals = Math.max(xShareDec, yShareDec);
+
   return parseUnits(amount, decimals)
 }
 
