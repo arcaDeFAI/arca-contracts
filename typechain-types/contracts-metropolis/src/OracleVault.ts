@@ -23,36 +23,6 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
-export declare namespace IOracleHelper {
-  export type OracleParametersStruct = {
-    minPrice: BigNumberish;
-    maxPrice: BigNumberish;
-    heartbeatX: BigNumberish;
-    heartbeatY: BigNumberish;
-    deviationThreshold: BigNumberish;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: BigNumberish;
-  };
-
-  export type OracleParametersStructOutput = [
-    minPrice: bigint,
-    maxPrice: bigint,
-    heartbeatX: bigint,
-    heartbeatY: bigint,
-    deviationThreshold: bigint,
-    twapPriceCheckEnabled: boolean,
-    twapInterval: bigint
-  ] & {
-    minPrice: bigint;
-    maxPrice: bigint;
-    heartbeatX: bigint;
-    heartbeatY: bigint;
-    deviationThreshold: bigint;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: bigint;
-  };
-}
-
 export interface OracleVaultInterface extends Interface {
   getFunction(
     nameOrSignature:
@@ -72,10 +42,9 @@ export interface OracleVaultInterface extends Interface {
       | "getBalances"
       | "getCurrentRound"
       | "getCurrentTotalQueuedWithdrawal"
+      | "getDeviationThreshold"
       | "getFactory"
       | "getOperators"
-      | "getOracleHelper"
-      | "getOracleParameters"
       | "getPair"
       | "getPrice"
       | "getQueuedWithdrawal"
@@ -85,6 +54,7 @@ export interface OracleVaultInterface extends Interface {
       | "getTokenX"
       | "getTokenY"
       | "getTotalQueuedWithdrawal"
+      | "getTwapInterval"
       | "getVaultType"
       | "increaseAllowance"
       | "initialize"
@@ -100,8 +70,10 @@ export interface OracleVaultInterface extends Interface {
       | "redeemQueuedWithdrawalNative"
       | "registerMe"
       | "resumeDeposits"
+      | "setDeviationThreshold"
       | "setEmergencyMode"
       | "setStrategy"
+      | "setTwapInterval"
       | "submitShutdown"
       | "symbol"
       | "totalSupply"
@@ -192,19 +164,15 @@ export interface OracleVaultInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "getDeviationThreshold",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "getFactory",
     values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getOperators",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getOracleHelper",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getOracleParameters",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "getPair", values?: undefined): string;
@@ -227,6 +195,10 @@ export interface OracleVaultInterface extends Interface {
   encodeFunctionData(
     functionFragment: "getTotalQueuedWithdrawal",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getTwapInterval",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getVaultType",
@@ -286,12 +258,20 @@ export interface OracleVaultInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "setDeviationThreshold",
+    values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setEmergencyMode",
     values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "setStrategy",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setTwapInterval",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "submitShutdown",
@@ -361,17 +341,13 @@ export interface OracleVaultInterface extends Interface {
     functionFragment: "getCurrentTotalQueuedWithdrawal",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "getDeviationThreshold",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "getFactory", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getOperators",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getOracleHelper",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getOracleParameters",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getPair", data: BytesLike): Result;
@@ -393,6 +369,10 @@ export interface OracleVaultInterface extends Interface {
   decodeFunctionResult(functionFragment: "getTokenY", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getTotalQueuedWithdrawal",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getTwapInterval",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -447,11 +427,19 @@ export interface OracleVaultInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setDeviationThreshold",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setEmergencyMode",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
     functionFragment: "setStrategy",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setTwapInterval",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -870,19 +858,13 @@ export interface OracleVault extends BaseContract {
 
   getCurrentTotalQueuedWithdrawal: TypedContractMethod<[], [bigint], "view">;
 
+  getDeviationThreshold: TypedContractMethod<[], [bigint], "view">;
+
   getFactory: TypedContractMethod<[], [string], "view">;
 
   getOperators: TypedContractMethod<
     [],
     [[string, string] & { defaultOperator: string; operator: string }],
-    "view"
-  >;
-
-  getOracleHelper: TypedContractMethod<[], [string], "view">;
-
-  getOracleParameters: TypedContractMethod<
-    [],
-    [IOracleHelper.OracleParametersStructOutput],
     "view"
   >;
 
@@ -919,6 +901,8 @@ export interface OracleVault extends BaseContract {
     [bigint],
     "view"
   >;
+
+  getTwapInterval: TypedContractMethod<[], [bigint], "view">;
 
   getVaultType: TypedContractMethod<[], [bigint], "view">;
 
@@ -988,10 +972,22 @@ export interface OracleVault extends BaseContract {
 
   resumeDeposits: TypedContractMethod<[], [void], "nonpayable">;
 
+  setDeviationThreshold: TypedContractMethod<
+    [threshold: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   setEmergencyMode: TypedContractMethod<[], [void], "nonpayable">;
 
   setStrategy: TypedContractMethod<
     [newStrategy: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  setTwapInterval: TypedContractMethod<
+    [twapInterval: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -1105,6 +1101,9 @@ export interface OracleVault extends BaseContract {
     nameOrSignature: "getCurrentTotalQueuedWithdrawal"
   ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
+    nameOrSignature: "getDeviationThreshold"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
     nameOrSignature: "getFactory"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
@@ -1112,16 +1111,6 @@ export interface OracleVault extends BaseContract {
   ): TypedContractMethod<
     [],
     [[string, string] & { defaultOperator: string; operator: string }],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getOracleHelper"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "getOracleParameters"
-  ): TypedContractMethod<
-    [],
-    [IOracleHelper.OracleParametersStructOutput],
     "view"
   >;
   getFunction(
@@ -1163,6 +1152,9 @@ export interface OracleVault extends BaseContract {
   getFunction(
     nameOrSignature: "getTotalQueuedWithdrawal"
   ): TypedContractMethod<[round: BigNumberish], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "getTwapInterval"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "getVaultType"
   ): TypedContractMethod<[], [bigint], "view">;
@@ -1243,11 +1235,17 @@ export interface OracleVault extends BaseContract {
     nameOrSignature: "resumeDeposits"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setDeviationThreshold"
+  ): TypedContractMethod<[threshold: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "setEmergencyMode"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "setStrategy"
   ): TypedContractMethod<[newStrategy: AddressLike], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setTwapInterval"
+  ): TypedContractMethod<[twapInterval: BigNumberish], [void], "nonpayable">;
   getFunction(
     nameOrSignature: "submitShutdown"
   ): TypedContractMethod<[], [void], "nonpayable">;

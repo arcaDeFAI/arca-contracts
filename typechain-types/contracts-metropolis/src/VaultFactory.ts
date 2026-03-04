@@ -23,36 +23,6 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
-export declare namespace IOracleHelper {
-  export type OracleParametersStruct = {
-    minPrice: BigNumberish;
-    maxPrice: BigNumberish;
-    heartbeatX: BigNumberish;
-    heartbeatY: BigNumberish;
-    deviationThreshold: BigNumberish;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: BigNumberish;
-  };
-
-  export type OracleParametersStructOutput = [
-    minPrice: bigint,
-    maxPrice: bigint,
-    heartbeatX: bigint,
-    heartbeatY: bigint,
-    deviationThreshold: bigint,
-    twapPriceCheckEnabled: boolean,
-    twapInterval: bigint
-  ] & {
-    minPrice: bigint;
-    maxPrice: bigint;
-    heartbeatX: bigint;
-    heartbeatY: bigint;
-    deviationThreshold: bigint;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: bigint;
-  };
-}
-
 export interface VaultFactoryInterface extends Interface {
   getFunction(
     nameOrSignature:
@@ -82,6 +52,7 @@ export interface VaultFactoryInterface extends Interface {
       | "getVaultImplementation"
       | "getVaultType"
       | "getVaultsByMarketMaker"
+      | "getVersion"
       | "getWNative"
       | "initialize4"
       | "isPairWhitelisted"
@@ -101,17 +72,17 @@ export interface VaultFactoryInterface extends Interface {
       | "setFeeRecipient"
       | "setOperator"
       | "setOracleHelperFactory"
-      | "setOracleParameters"
       | "setPairWhitelist"
       | "setPendingAumAnnualFee"
       | "setPriceLens"
       | "setRebalanceCoolDown"
-      | "setSequencerUptimeFeed"
       | "setShadowNonfungiblePositionManager"
       | "setShadowVoter"
       | "setStrategyImplementation"
       | "setTransferIgnoreList"
+      | "setVaultDeviationThreshold"
       | "setVaultImplementation"
+      | "setVaultTwapInterval"
       | "transferOwnership"
   ): FunctionFragment;
 
@@ -241,6 +212,10 @@ export interface VaultFactoryInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "getVersion",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "getWNative",
     values?: undefined
   ): string;
@@ -314,10 +289,6 @@ export interface VaultFactoryInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "setOracleParameters",
-    values: [AddressLike, IOracleHelper.OracleParametersStruct]
-  ): string;
-  encodeFunctionData(
     functionFragment: "setPairWhitelist",
     values: [AddressLike[], boolean]
   ): string;
@@ -332,10 +303,6 @@ export interface VaultFactoryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "setRebalanceCoolDown",
     values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setSequencerUptimeFeed",
-    values: [AddressLike, AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "setShadowNonfungiblePositionManager",
@@ -354,8 +321,16 @@ export interface VaultFactoryInterface extends Interface {
     values: [AddressLike[]]
   ): string;
   encodeFunctionData(
+    functionFragment: "setVaultDeviationThreshold",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setVaultImplementation",
     values: [BigNumberish, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setVaultTwapInterval",
+    values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "transferOwnership",
@@ -463,6 +438,7 @@ export interface VaultFactoryInterface extends Interface {
     functionFragment: "getVaultsByMarketMaker",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "getVersion", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "getWNative", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "initialize4",
@@ -531,10 +507,6 @@ export interface VaultFactoryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setOracleParameters",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "setPairWhitelist",
     data: BytesLike
   ): Result;
@@ -548,10 +520,6 @@ export interface VaultFactoryInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setRebalanceCoolDown",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setSequencerUptimeFeed",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -571,7 +539,15 @@ export interface VaultFactoryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setVaultDeviationThreshold",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setVaultImplementation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setVaultTwapInterval",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -1012,6 +988,8 @@ export interface VaultFactory extends BaseContract {
     "view"
   >;
 
+  getVersion: TypedContractMethod<[], [string], "view">;
+
   getWNative: TypedContractMethod<[], [string], "view">;
 
   initialize4: TypedContractMethod<
@@ -1111,15 +1089,6 @@ export interface VaultFactory extends BaseContract {
     "nonpayable"
   >;
 
-  setOracleParameters: TypedContractMethod<
-    [
-      oracleVault: AddressLike,
-      parameters: IOracleHelper.OracleParametersStruct
-    ],
-    [void],
-    "nonpayable"
-  >;
-
   setPairWhitelist: TypedContractMethod<
     [pairs: AddressLike[], isWhitelisted: boolean],
     [void],
@@ -1136,12 +1105,6 @@ export interface VaultFactory extends BaseContract {
 
   setRebalanceCoolDown: TypedContractMethod<
     [strategy: AddressLike, coolDown: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  setSequencerUptimeFeed: TypedContractMethod<
-    [oracleVault: AddressLike, sequencerUptimeFeed: AddressLike],
     [void],
     "nonpayable"
   >;
@@ -1170,8 +1133,20 @@ export interface VaultFactory extends BaseContract {
     "nonpayable"
   >;
 
+  setVaultDeviationThreshold: TypedContractMethod<
+    [oracleVault: AddressLike, threshold: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   setVaultImplementation: TypedContractMethod<
     [vType: BigNumberish, vaultImplementation: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  setVaultTwapInterval: TypedContractMethod<
+    [oracleVault: AddressLike, twapInterval: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -1299,6 +1274,9 @@ export interface VaultFactory extends BaseContract {
     nameOrSignature: "getVaultsByMarketMaker"
   ): TypedContractMethod<[marketMaker: AddressLike], [string[]], "view">;
   getFunction(
+    nameOrSignature: "getVersion"
+  ): TypedContractMethod<[], [string], "view">;
+  getFunction(
     nameOrSignature: "getWNative"
   ): TypedContractMethod<[], [string], "view">;
   getFunction(
@@ -1385,16 +1363,6 @@ export interface VaultFactory extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "setOracleParameters"
-  ): TypedContractMethod<
-    [
-      oracleVault: AddressLike,
-      parameters: IOracleHelper.OracleParametersStruct
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
     nameOrSignature: "setPairWhitelist"
   ): TypedContractMethod<
     [pairs: AddressLike[], isWhitelisted: boolean],
@@ -1419,13 +1387,6 @@ export interface VaultFactory extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "setSequencerUptimeFeed"
-  ): TypedContractMethod<
-    [oracleVault: AddressLike, sequencerUptimeFeed: AddressLike],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
     nameOrSignature: "setShadowNonfungiblePositionManager"
   ): TypedContractMethod<
     [nonfungiblePositionManager: AddressLike],
@@ -1446,9 +1407,23 @@ export interface VaultFactory extends BaseContract {
     nameOrSignature: "setTransferIgnoreList"
   ): TypedContractMethod<[addresses: AddressLike[]], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setVaultDeviationThreshold"
+  ): TypedContractMethod<
+    [oracleVault: AddressLike, threshold: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "setVaultImplementation"
   ): TypedContractMethod<
     [vType: BigNumberish, vaultImplementation: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "setVaultTwapInterval"
+  ): TypedContractMethod<
+    [oracleVault: AddressLike, twapInterval: BigNumberish],
     [void],
     "nonpayable"
   >;
