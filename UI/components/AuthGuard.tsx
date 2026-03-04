@@ -82,11 +82,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return <ConnectWallet />;
   }
 
-  // Check if the connected address is in the whitelist
-  const whitelistedAddresses = process.env.NEXT_PUBLIC_WHITELISTED_ADDRESSES?.split(',') || [];
-  const isAuthorized = whitelistedAddresses.some(
-    whitelistedAddress => whitelistedAddress.toLowerCase().trim() === address.toLowerCase()
-  );
+  const isAuthorized = true;
 
   // If wallet is connected but not authorized, show access denied
   if (!isAuthorized) {
