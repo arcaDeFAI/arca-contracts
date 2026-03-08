@@ -232,13 +232,13 @@ export function DepositModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-      <div className="bg-arca-gray rounded-lg p-6 w-full max-w-md border border-arca-light-gray">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+      <div className="bg-arca-card rounded-lg p-6 w-full max-w-md border border-arca-border shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">Deposit to {vaultName}</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-arca-text-secondary hover:text-white transition-colors"
           >
             <XMarkIcon className="w-6 h-6" />
           </button>
@@ -248,10 +248,10 @@ export function DepositModal({
           {/* Token Input - Dynamic based on tokenX */}
           <div>
             <div className="flex justify-between mb-2">
-              <label className="text-sm text-gray-400">
+              <label className="text-sm text-arca-text-secondary">
                 {currentTokenType} Amount
               </label>
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-arca-text-secondary">
                 Balance: {formatTokenAmount(currentTokenBalance, currentTokenType as any)}
               </span>
             </div>
@@ -261,7 +261,7 @@ export function DepositModal({
                 value={tokenAmount}
                 onChange={(e) => setTokenAmount(e.target.value)}
                 placeholder="0.0"
-                className="w-full bg-arca-dark border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-arca-green focus:outline-none"
+                className="w-full bg-arca-dark border border-arca-border rounded-lg px-4 py-3 text-white placeholder-arca-text-muted focus:border-arca-green focus:outline-none transition-colors"
               />
               <button
                 onClick={handleMaxToken}
@@ -275,8 +275,8 @@ export function DepositModal({
           {/* Token 2 Input */}
           <div>
             <div className="flex justify-between mb-2">
-              <label className="text-sm text-gray-400">{currentToken2Type} Amount</label>
-              <span className="text-sm text-gray-400">
+              <label className="text-sm text-arca-text-secondary">{currentToken2Type} Amount</label>
+              <span className="text-sm text-arca-text-secondary">
                 Balance: {formatTokenAmount(currentToken2Balance, currentToken2Type as any)}
               </span>
             </div>
@@ -286,7 +286,7 @@ export function DepositModal({
                 value={token2Amount}
                 onChange={(e) => setToken2Amount(e.target.value)}
                 placeholder="0.0"
-                className="w-full bg-arca-dark border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-arca-green focus:outline-none"
+                className="w-full bg-arca-dark border border-arca-border rounded-lg px-4 py-3 text-white placeholder-arca-text-muted focus:border-arca-green focus:outline-none transition-colors"
               />
               <button
                 onClick={handleMaxToken2}
@@ -304,19 +304,19 @@ export function DepositModal({
               {steps.map((step, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-arca-dark border border-gray-700"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-arca-dark border border-arca-border"
                 >
                   {step.status === 'complete' ? (
                     <div className="text-arca-green text-xl">✓</div>
                   ) : step.status === 'processing' ? (
                     <div className="text-orange-400 text-xl animate-spin">⟳</div>
                   ) : (
-                    <div className="text-gray-500 text-xl">○</div>
+                    <div className="text-arca-text-muted text-xl">○</div>
                   )}
                   <span className={`flex-1 ${
-                    step.status === 'complete' ? 'text-gray-400' :
+                    step.status === 'complete' ? 'text-arca-text-secondary' :
                     step.status === 'processing' ? 'text-white' :
-                    'text-gray-500'
+                    'text-arca-text-muted'
                   }`}>
                     {step.label}
                   </span>

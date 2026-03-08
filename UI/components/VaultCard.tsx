@@ -1,17 +1,27 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useAccount } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { CONTRACTS } from '@/lib/contracts';
 import { formatUSD, formatPercentage } from '@/lib/utils';
 import { getTokenLogo } from '@/lib/tokenUtils';
-import { DepositModal } from './DepositModal';
-import { WithdrawModal } from './WithdrawModal';
 import { TokenPairLogos } from './TokenPairLogos';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { Skeleton } from './Skeleton';
+
+// Lazy load modals for better initial page load performance
+const DepositModal = dynamic(
+  () => import('./DepositModal').then(mod => ({ default: mod.DepositModal })),
+  { ssr: false }
+);
+
+const WithdrawModal = dynamic(
+  () => import('./WithdrawModal').then(mod => ({ default: mod.WithdrawModal })),
+  { ssr: false }
+);
 
 interface VaultCardProps {
   config: VaultConfig;
@@ -63,16 +73,16 @@ export function VaultCard({ config }: VaultCardProps) {
 
   if (!mounted) {
     return (
-      <div className="bg-arca-gray/90 backdrop-blur-sm rounded-xl p-5 border border-gray-800/60 h-[320px] animate-pulse flex flex-col justify-between">
+      <div className="bg-arca-card backdrop-blur-sm rounded-xl p-5 border border-arca-border h-[320px] flex flex-col justify-between shimmer">
         <div className="flex gap-3">
-          <div className="h-10 w-10 bg-gray-800 rounded-full" />
-          <div className="h-10 w-10 bg-gray-800 rounded-full" />
+          <div className="h-10 w-10 bg-arca-border rounded-full" />
+          <div className="h-10 w-10 bg-arca-border rounded-full" />
         </div>
         <div className="space-y-4">
-          <div className="h-4 w-1/2 bg-gray-800 rounded" />
-          <div className="h-4 w-3/4 bg-gray-800 rounded" />
+          <div className="h-4 w-1/2 bg-arca-border rounded" />
+          <div className="h-4 w-3/4 bg-arca-border rounded" />
         </div>
-        <div className="h-10 w-full bg-gray-800 rounded" />
+        <div className="h-10 w-full bg-arca-border rounded" />
       </div>
     );
   }
@@ -80,21 +90,21 @@ export function VaultCard({ config }: VaultCardProps) {
   return (
     <>
       <div
-        className="group relative bg-arca-gray/95 backdrop-blur-sm rounded-xl p-5 border border-gray-800/60 transition-all duration-300 hover:border-arca-green/40 hover:shadow-[0_0_20px_rgba(0,255,163,0.1)] w-full flex flex-col h-full"
+        className="group relative bg-arca-card backdrop-blur-sm rounded-xl p-5 border border-arca-border transition-all duration-300 hover:border-arca-green/50 hover:bg-arca-card-hover hover:shadow-[0_0_25px_rgba(0,255,136,0.12)] w-full flex flex-col h-full hover-lift card-glow animate-fadeIn"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
         {/* DEX Badge */}
-        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/40 border border-gray-700/50 rounded-full pl-1.5 pr-2.5 py-1 pointer-events-none">
+        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-arca-dark/80 border border-arca-border rounded-full pl-1.5 pr-2.5 py-1 pointer-events-none">
           {name.includes('Metropolis') ? (
             <>
               <img src="/MetropolisLogo.png" alt="Metro" className="w-4 h-4 object-contain" />
-              <span className="text-[10px] font-semibold text-gray-300 tracking-wide uppercase">Metropolis</span>
+              <span className="text-[10px] font-semibold text-arca-text-secondary tracking-wide uppercase">Metropolis</span>
             </>
           ) : (
             <>
               <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full object-contain" />
-              <span className="text-[10px] font-semibold text-gray-300 tracking-wide uppercase">Shadow</span>
+              <span className="text-[10px] font-semibold text-arca-text-secondary tracking-wide uppercase">Shadow</span>
             </>
           )}
         </div>
@@ -111,7 +121,7 @@ export function VaultCard({ config }: VaultCardProps) {
           <h3 className="text-white font-bold text-lg tracking-tight group-hover:text-arca-green transition-colors">
             {name.replace(' | Metropolis', '').replace(' | Shadow', '')}
           </h3>
-          <p className="text-xs text-gray-500 font-medium">
+          <p className="text-xs text-arca-text-muted font-medium">
             {name.includes('Metropolis') ? 'Algorithmic Rebalancing' : 'Algorithmic Rebalancing'}
           </p>
         </div>
@@ -122,19 +132,19 @@ export function VaultCard({ config }: VaultCardProps) {
           {/* Main Stats */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">APY</span>
+              <span className="text-arca-text-muted text-xs font-semibold uppercase tracking-wider">APY</span>
               <div className="text-2xl font-bold text-arca-green tracking-tight">
                 {isLoading || aprLoading ? <Skeleton width={60} height={24} className="mt-1" /> : formatPercentage(apy)}
               </div>
               {apy30dMean !== null && (
-                <div className="text-[10px] text-gray-500 mt-0.5">
+                <div className="text-[10px] text-arca-text-muted mt-0.5">
                   30d Avg: {formatPercentage(apy30dMean)}
                 </div>
               )}
             </div>
 
             <div>
-              <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">TVL</span>
+              <span className="text-arca-text-muted text-xs font-semibold uppercase tracking-wider">TVL</span>
               <div className="text-xl font-bold text-white">
                 {isLoading ? <Skeleton width={60} height={24} className="mt-1" /> : formatUSD(vaultTVL)}
               </div>
@@ -142,17 +152,17 @@ export function VaultCard({ config }: VaultCardProps) {
           </div>
 
           {/* Secondary Stats */}
-          <div className="pt-4 border-t border-gray-800/50 space-y-2">
+          <div className="pt-4 border-t border-arca-border space-y-2">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 font-medium">Your Deposit</span>
+              <span className="text-arca-text-secondary font-medium">Your Deposit</span>
               <span className="text-white font-semibold">
                 {isLoading ? <Skeleton width={50} height={20} /> : formatUSD(depositedValueUSD)}
               </span>
             </div>
 
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 font-medium">Share of Pool</span>
-              <span className="text-gray-300">
+              <span className="text-arca-text-secondary font-medium">Share of Pool</span>
+              <span className="text-arca-text-secondary">
                 {isLoading ? <Skeleton width={40} height={20} /> : `${sharePercentage.toFixed(2)}%`}
               </span>
             </div>
@@ -165,14 +175,14 @@ export function VaultCard({ config }: VaultCardProps) {
           <button
             onClick={() => setShowDepositModal(true)}
             disabled={!address}
-            className="bg-arca-green text-black font-extrabold py-3 px-4 rounded-lg hover:bg-white hover:scale-[1.02] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_10px_rgba(0,255,163,0.15)]"
+            className="bg-arca-green text-black font-extrabold py-3 px-4 rounded-lg hover:bg-white hover:scale-[1.02] transition-all btn-press disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_12px_rgba(0,255,136,0.2)] hover:shadow-[0_6px_20px_rgba(0,255,136,0.3)]"
           >
             Deposit
           </button>
           <button
             onClick={() => setShowWithdrawModal(true)}
             disabled={!address || !userShares || userShares === 0n}
-            className="bg-transparent border border-gray-700 text-gray-300 font-semibold py-3 px-4 rounded-lg hover:border-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="bg-transparent border border-arca-border text-arca-text-secondary font-semibold py-3 px-4 rounded-lg hover:border-arca-border-light hover:text-white hover:bg-arca-card-hover transition-all btn-press disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Withdraw
           </button>

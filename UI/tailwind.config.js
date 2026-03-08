@@ -12,9 +12,24 @@ module.exports = {
         'arca-dark': '#050505',
         'arca-gray': '#0a0a0a',
         'arca-light-gray': '#141414',
+        // Enhanced contrast colors
+        'arca-card': '#121218',
+        'arca-card-hover': '#1a1a22',
+        'arca-border': '#2a2a35',
+        'arca-border-light': '#3a3a45',
+        'arca-text-secondary': '#a0a0b0',
+        'arca-text-muted': '#7a7a8a',
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['var(--font-inter)', 'Inter', 'sans-serif'],
+      },
+      keyframes: {
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 1.5s infinite',
       },
     },
   },

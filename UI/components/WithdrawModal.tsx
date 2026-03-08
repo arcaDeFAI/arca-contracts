@@ -95,15 +95,15 @@ export function WithdrawModal({
   const estimatedUsdc = previewData ? previewData[1] : 0n;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-      <div className="bg-arca-gray rounded-lg p-6 w-full max-w-md border border-arca-light-gray">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
+      <div className="bg-arca-card rounded-lg p-6 w-full max-w-md border border-arca-border shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
             {showClaim ? 'Claim Withdrawal' : `Withdraw from ${vaultName}`}
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-arca-text-secondary hover:text-white transition-colors"
           >
             <XMarkIcon className="w-6 h-6" />
           </button>
@@ -114,8 +114,8 @@ export function WithdrawModal({
             {/* Shares Input */}
             <div>
               <div className="flex justify-between mb-2">
-                <label className="text-sm text-gray-400">Shares to Withdraw</label>
-                <span className="text-sm text-gray-400">
+                <label className="text-sm text-arca-text-secondary">Shares to Withdraw</label>
+                <span className="text-sm text-arca-text-secondary">
                   Available: {formatShares(userShares, tokenX, tokenY)}
                 </span>
               </div>
@@ -125,7 +125,7 @@ export function WithdrawModal({
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   placeholder="0.0"
-                  className="w-full bg-arca-dark border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:border-arca-green focus:outline-none"
+                  className="w-full bg-arca-dark border border-arca-border rounded-lg px-4 py-3 text-white placeholder-arca-text-muted focus:border-arca-green focus:outline-none transition-colors"
                 />
                 <button
                   onClick={handleMaxWithdraw}
@@ -137,16 +137,16 @@ export function WithdrawModal({
             </div>
 
             {/* Estimated Withdrawal */}
-            <div className="bg-arca-dark rounded-lg p-4 space-y-2">
-              <div className="text-sm text-gray-400 mb-2">You will receive approximately:</div>
+            <div className="bg-arca-dark border border-arca-border rounded-lg p-4 space-y-2">
+              <div className="text-sm text-arca-text-secondary mb-2">You will receive approximately:</div>
               <div className="flex justify-between">
-                <span className="text-gray-400">{tokenX}:</span>
+                <span className="text-arca-text-secondary">{tokenX}:</span>
                 <span className="text-white font-semibold">
                   {formatTokenAmount(estimatedS, tokenX.toUpperCase() as any)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">{tokenY}:</span>
+                <span className="text-arca-text-secondary">{tokenY}:</span>
                 <span className="text-white font-semibold">
                   {formatTokenAmount(estimatedUsdc, tokenY.toUpperCase() as any)}
                 </span>
@@ -172,25 +172,25 @@ export function WithdrawModal({
         ) : (
           <div className="space-y-4">
             {/* Claim Status */}
-            <div className="bg-arca-dark rounded-lg p-4 text-center">
+            <div className="bg-arca-dark border border-arca-border rounded-lg p-4 text-center">
               <div className="text-arca-green text-2xl mb-2">✓</div>
               <p className="text-white font-semibold mb-2">Withdrawal Ready!</p>
-              <p className="text-gray-400 text-sm">
+              <p className="text-arca-text-secondary text-sm">
                 Your withdrawal has been processed and is ready to claim.
               </p>
             </div>
 
             {/* Claim Details */}
-            <div className="bg-arca-dark rounded-lg p-4 space-y-2">
-              <div className="text-sm text-gray-400 mb-2">You can claim:</div>
+            <div className="bg-arca-dark border border-arca-border rounded-lg p-4 space-y-2">
+              <div className="text-sm text-arca-text-secondary mb-2">You can claim:</div>
               <div className="flex justify-between">
-                <span className="text-gray-400">SONIC:</span>
+                <span className="text-arca-text-secondary">SONIC:</span>
                 <span className="text-white font-semibold">
                   {formatTokenAmount(estimatedS, 'SONIC')}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-400">USDC:</span>
+                <span className="text-arca-text-secondary">USDC:</span>
                 <span className="text-white font-semibold">
                   {formatTokenAmount(estimatedUsdc, 'USDC')}
                 </span>

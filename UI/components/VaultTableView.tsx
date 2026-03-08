@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useAccount, useBalance } from 'wagmi';
 import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
@@ -8,10 +9,19 @@ import { useUserHarvestedForVault } from '@/hooks/useUserHarvestedForVault';
 import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain';
 import { TokenPairLogos } from './TokenPairLogos';
 import { getTokenLogo } from '@/lib/tokenHelpers';
-import { DepositModal } from './DepositModal';
-import { WithdrawModal } from './WithdrawModal';
 import { Tooltip } from './Tooltip';
 import { CONTRACTS } from '@/lib/contracts';
+
+// Lazy load modals for better initial page load performance
+const DepositModal = dynamic(
+  () => import('./DepositModal').then(mod => ({ default: mod.DepositModal })),
+  { ssr: false }
+);
+
+const WithdrawModal = dynamic(
+  () => import('./WithdrawModal').then(mod => ({ default: mod.WithdrawModal })),
+  { ssr: false }
+);
 
 interface VaultTableViewProps {
   vaults: any[];
@@ -163,7 +173,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
         <div className="flex flex-col gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
           {/* Up Arrow = Descending (largest to smallest) */}
           <svg
-            className={`w-2.5 h-2.5 transition-all ${isDesc ? 'text-arca-green opacity-100' : 'text-gray-500'}`}
+            className={`w-2.5 h-2.5 transition-all ${isDesc ? 'text-arca-green opacity-100' : 'text-arca-text-muted'}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
@@ -173,7 +183,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
           </svg>
           {/* Down Arrow = Ascending (smallest to largest) */}
           <svg
-            className={`w-2.5 h-2.5 transition-all ${isAsc ? 'text-arca-green opacity-100' : 'text-gray-500'}`}
+            className={`w-2.5 h-2.5 transition-all ${isAsc ? 'text-arca-green opacity-100' : 'text-arca-text-muted'}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
@@ -237,9 +247,9 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
 
   return (
     <>
-      <div className="bg-arca-gray border-2 border-gray-700/50 rounded-xl overflow-hidden backdrop-blur-sm">
+      <div className="bg-arca-card border border-arca-border rounded-xl overflow-hidden backdrop-blur-sm">
         {/* Table Header - Responsive */}
-        <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-arca-gray border-b-2 border-gray-700/50 text-sm font-semibold text-white uppercase tracking-wider">
+        <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-arca-dark border-b border-arca-border text-sm font-semibold text-arca-text-secondary uppercase tracking-wider">
           <div className="flex items-center justify-start pl-4 gap-2">
             <span>Vaults</span>
           </div>
@@ -256,7 +266,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
         </div>
 
         {/* Mobile Header */}
-        <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3 bg-arca-gray border-b-2 border-gray-700/50 text-xs font-semibold text-white uppercase tracking-wider">
+        <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3 bg-arca-dark border-b border-arca-border text-xs font-semibold text-arca-text-secondary uppercase tracking-wider">
           <div>Vault</div>
           <div className="text-center flex items-center justify-center gap-1">
             <span>Withdraw</span>
@@ -329,10 +339,10 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
               <div
                 key={vault.vaultAddress}
                 onClick={() => onVaultClick(vault)}
-                className={`w-full transition-all duration-200 cursor-pointer relative ${sortIndex > 0 ? 'border-t border-gray-700/40' : ''
+                className={`w-full transition-all duration-200 cursor-pointer relative ${sortIndex > 0 ? 'border-t border-arca-border' : ''
                   } ${isSelected
-                    ? 'bg-arca-green/5 border-l-4'
-                    : 'hover:bg-gray-900/30 hover:border-l-4'
+                    ? 'bg-arca-green/8 border-l-4'
+                    : 'hover:bg-arca-card-hover hover:border-l-4'
                   }`}
                 style={{
                   borderLeftColor: isSelected || undefined ? '#00ff88' : undefined
@@ -362,7 +372,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                           alt={dexName}
                           className="w-4 h-4 rounded-full"
                         />
-                        <span className="text-sm text-white/70 font-medium">
+                        <span className="text-sm text-arca-text-secondary font-medium">
                           {dexName}
                         </span>
                       </div>
@@ -404,7 +414,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         </div>
                       </div>
                     ) : (
-                      <span className="text-xs text-arca-green/40">-</span>
+                      <span className="text-xs text-arca-text-muted">-</span>
                     )}
                   </div>
 
@@ -450,7 +460,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         }}
                         disabled={metrics.isRedeemingWithdrawal}
                         className={`px-3 py-1 border rounded text-xs font-semibold transition-all ${metrics.isRedeemingWithdrawal
-                          ? 'bg-gray-700/20 border-gray-600/50 text-gray-500 cursor-not-allowed'
+                          ? 'bg-gray-700/20 border-gray-600/50 text-arca-text-muted cursor-not-allowed'
                           : 'bg-arca-green/10 border-arca-green/50 text-arca-green hover:bg-arca-green/20 animate-pulse'
                           }`}
                         title={metrics.claimableWithdrawals.length > 1 ? `${metrics.claimableWithdrawals.length} withdrawals available` : undefined}
@@ -461,7 +471,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                       /* Show queued status if withdrawal is queued in current round */
                       <span className="text-xs text-orange-400 font-medium">Queued</span>
                     ) : (
-                      <span className="text-xs text-gray-500">-</span>
+                      <span className="text-xs text-arca-text-muted">-</span>
                     )}
                   </div>
 
@@ -476,15 +486,15 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         }
                       }}
                       disabled={metrics.isClaimingRewards || !hasClaimableRewards}
-                      className={`w-7 h-7 flex items-center justify-center bg-gray-900/50 border border-gray-700/50 rounded transition-all ${metrics.isClaimingRewards || !hasClaimableRewards
-                        ? 'opacity-30 cursor-not-allowed'
+                      className={`w-7 h-7 flex items-center justify-center bg-arca-dark border border-arca-border rounded transition-all ${metrics.isClaimingRewards || !hasClaimableRewards
+                        ? 'opacity-40 cursor-not-allowed'
                         : 'hover:bg-arca-green/10 hover:border-arca-green/50'
                         }`}
                       title={hasClaimableRewards ? "Claim Rewards" : "No Rewards Available"}
                     >
                       <svg
                         className={`w-3.5 h-3.5 ${metrics.isClaimingRewards || !hasClaimableRewards
-                          ? 'text-gray-600'
+                          ? 'text-arca-text-muted'
                           : 'text-arca-green'
                           }`}
                         fill="none"
@@ -502,7 +512,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         setDepositModalVault(vault.vaultAddress);
                       }}
                       disabled={!userAddress}
-                      className="w-7 h-7 flex items-center justify-center bg-gray-900/50 border border-gray-700/50 rounded hover:bg-arca-green/10 hover:border-arca-green/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="w-7 h-7 flex items-center justify-center bg-arca-dark border border-arca-border rounded hover:bg-arca-green/10 hover:border-arca-green/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Deposit"
                     >
                       <svg className="w-3.5 h-3.5 text-arca-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -522,7 +532,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         }
                       }}
                       disabled={!hasPosition && !hasQueuedWithdrawal}
-                      className={`w-7 h-7 flex items-center justify-center bg-gray-900/50 border border-gray-700/50 rounded transition-all disabled:opacity-30 disabled:cursor-not-allowed ${hasQueuedWithdrawal
+                      className={`w-7 h-7 flex items-center justify-center bg-arca-dark border border-arca-border rounded transition-all disabled:opacity-30 disabled:cursor-not-allowed ${hasQueuedWithdrawal
                         ? 'hover:bg-red-600/20 hover:border-red-600/50'
                         : 'hover:bg-red-500/10 hover:border-red-500/50'
                         }`}
@@ -558,7 +568,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                           alt={dexName}
                           className="w-3 h-3 rounded-full"
                         />
-                        <span className="text-xs text-white/70">{dexName}</span>
+                        <span className="text-xs text-arca-text-secondary">{dexName}</span>
                       </div>
                     </div>
                   </div>
@@ -575,7 +585,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         }}
                         disabled={metrics.isRedeemingWithdrawal}
                         className={`px-2 py-1 border rounded text-xs font-semibold transition-all ${metrics.isRedeemingWithdrawal
-                          ? 'bg-gray-700/20 border-gray-600/50 text-gray-500 cursor-not-allowed'
+                          ? 'bg-gray-700/20 border-gray-600/50 text-arca-text-muted cursor-not-allowed'
                           : 'bg-arca-green/10 border-arca-green/50 text-arca-green hover:bg-arca-green/20 animate-pulse'
                           }`}
                         title={metrics.claimableWithdrawals.length > 1 ? `${metrics.claimableWithdrawals.length} withdrawals available` : undefined}
@@ -585,7 +595,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                     ) : metrics.queuedWithdrawal && metrics.queuedWithdrawal > 0n ? (
                       <span className="text-xs text-orange-400 font-medium">Queued</span>
                     ) : (
-                      <span className="text-xs text-gray-500">-</span>
+                      <span className="text-xs text-arca-text-muted">-</span>
                     )}
                   </div>
 
@@ -618,7 +628,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         </div>
                       </div>
                     ) : (
-                      <span className="text-xs text-arca-green/40">-</span>
+                      <span className="text-xs text-arca-text-muted">-</span>
                     )}
                   </div>
 

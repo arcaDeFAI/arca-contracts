@@ -106,12 +106,12 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   // Right Element for Reward Card
   const RewardDropdown = (
     <div className="relative z-[300]">
-      <button onClick={() => setShowRewardDropdown(!showRewardDropdown)} className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+      <button onClick={() => setShowRewardDropdown(!showRewardDropdown)} className="text-xs text-arca-text-secondary hover:text-white flex items-center gap-1 transition-colors">
         <span className="capitalize">{rewardPeriod}</span>
         <span>▼</span>
       </button>
       {showRewardDropdown && (
-        <div className="absolute top-full right-0 mt-1 w-32 bg-black border border-gray-700 rounded-lg shadow-xl z-[300]">
+        <div className="absolute top-full right-0 mt-1 w-32 bg-arca-card border border-arca-border rounded-lg shadow-xl z-[300]">
           {(['hourly', 'daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => (
             <button
               key={period}
@@ -119,7 +119,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
                 setRewardPeriod(period)
                 setShowRewardDropdown(false)
               }}
-              className="w-full px-3 py-2 text-left text-white text-sm hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg flex items-center justify-between"
+              className="w-full px-3 py-2 text-left text-white text-sm hover:bg-arca-card-hover first:rounded-t-lg last:rounded-b-lg flex items-center justify-between transition-colors"
             >
               <span className="capitalize">{period}</span>
               {rewardPeriod === period && <span className="text-arca-green text-xs">✓</span>}
@@ -133,12 +133,12 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   // Right Element for Rate Card
   const RateDropdown = (
     <div className="relative z-[300]">
-      <button onClick={() => setShowRateDropdown(!showRateDropdown)} className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
+      <button onClick={() => setShowRateDropdown(!showRateDropdown)} className="text-xs text-arca-text-secondary hover:text-white flex items-center gap-1 transition-colors">
         <span>{ratePeriod}</span>
         <span>▼</span>
       </button>
       {showRateDropdown && (
-        <div className="absolute top-full right-0 mt-1 w-32 bg-black border border-gray-700 rounded-lg shadow-xl z-[300]">
+        <div className="absolute top-full right-0 mt-1 w-32 bg-arca-card border border-arca-border rounded-lg shadow-xl z-[300]">
           {(['DPR', 'WPR', 'APR'] as const).map((period) => (
             <button
               key={period}
@@ -146,7 +146,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
                 setRatePeriod(period)
                 setShowRateDropdown(false)
               }}
-              className="w-full px-3 py-2 text-left text-white text-sm hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg flex items-center justify-between"
+              className="w-full px-3 py-2 text-left text-white text-sm hover:bg-arca-card-hover first:rounded-t-lg last:rounded-b-lg flex items-center justify-between transition-colors"
             >
               <span>{period}</span>
               {ratePeriod === period && <span className="text-arca-green text-xs">✓</span>}
@@ -198,7 +198,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   }
 
   return (
-    <div className="space-y-5 mb-6">
+    <div className="space-y-5 mb-6 animate-fadeIn">
       {/* Top Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 overflow-visible">
         <StatsCard
@@ -258,7 +258,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       {/* Main Content Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Left Column: Claimable Rewards */}
-        <div className={`bg-arca-gray border border-gray-800/60 rounded-xl transition-all ${showSections ? 'p-5' : 'p-3'}`}>
+        <div className={`bg-arca-card border border-arca-border rounded-xl transition-all ${showSections ? 'p-5' : 'p-3'}`}>
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
                   className="hover:opacity-80 transition-opacity p-1 -ml-1"
                 >
                   <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${showSections ? 'rotate-180' : ''}`}
+                    className={`w-5 h-5 text-arca-text-secondary transition-transform ${showSections ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -284,7 +284,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             <button
               onClick={handleClaimAll}
               disabled={aggregatedData.totalClaimableUSD === 0}
-              className="bg-arca-green text-black font-semibold px-4 py-2 md:px-6 rounded-lg text-sm md:text-base hover:bg-arca-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="bg-arca-green text-black font-semibold px-4 py-2 md:px-6 rounded-lg text-sm md:text-base hover:bg-white hover:scale-[1.02] transition-all btn-press disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-[0_4px_12px_rgba(0,255,136,0.2)] hover:shadow-[0_6px_20px_rgba(0,255,136,0.3)]"
             >
               Claim Rewards
             </button>
@@ -292,7 +292,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
           {showSections && (
             <>
-              <div className="border-t border-gray-800/50 pt-4 mt-4"></div>
+              <div className="border-t border-arca-border pt-4 mt-4"></div>
 
               {/* Metropolis Rewards */}
               <div>
@@ -304,17 +304,17 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-2">
                       <img src="/MetropolisLogo.png" alt="Metro" className="w-4 h-4" />
-                      <span className="text-gray-300 text-sm">Metro</span>
+                      <span className="text-arca-text-secondary text-sm">Metro</span>
                     </div>
                     <div className="text-right">
                       <div className="text-white font-semibold">
                         {aggregatedData.metroRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
                       </div>
-                      <div className="text-gray-400 text-xs">${aggregatedData.totalMetroRewardsUSD.toFixed(2)}</div>
+                      <div className="text-arca-text-muted text-xs">${aggregatedData.totalMetroRewardsUSD.toFixed(2)}</div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-gray-500 text-sm py-2">No Metropolis rewards</div>
+                  <div className="text-arca-text-muted text-sm py-2">No Metropolis rewards</div>
                 )}
               </div>
 
@@ -328,17 +328,17 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
                   <div className="flex items-center justify-between py-2">
                     <div className="flex items-center gap-2">
                       <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full" />
-                      <span className="text-gray-300 text-sm">Shadow</span>
+                      <span className="text-arca-text-secondary text-sm">Shadow</span>
                     </div>
                     <div className="text-right">
                       <div className="text-white font-semibold">
                         {aggregatedData.shadowRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
                       </div>
-                      <div className="text-gray-400 text-xs">${aggregatedData.totalShadowRewardsUSD.toFixed(2)}</div>
+                      <div className="text-arca-text-muted text-xs">${aggregatedData.totalShadowRewardsUSD.toFixed(2)}</div>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-gray-500 text-sm py-2">No Shadow rewards</div>
+                  <div className="text-arca-text-muted text-sm py-2">No Shadow rewards</div>
                 )}
               </div>
             </>

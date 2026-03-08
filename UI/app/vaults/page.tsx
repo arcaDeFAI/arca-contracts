@@ -25,7 +25,7 @@ const FilterTab = ({
     onClick={onClick}
     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${isActive
       ? 'bg-arca-green text-black shadow-lg shadow-arca-green/20'
-      : 'bg-black/40 text-gray-400 hover:text-white hover:bg-black/60 border border-transparent'
+      : 'bg-arca-dark text-arca-text-secondary hover:text-white hover:bg-arca-card-hover border border-transparent'
       }`}
   >
     {label}
@@ -68,7 +68,7 @@ export default function Home() {
     <div className="min-h-screen bg-black relative selection:bg-arca-green/30">
       {/* Background Image */}
       <div
-        className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-20 pointer-events-none"
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat opacity-20 pointer-events-none bg-optimized"
         style={{ backgroundImage: 'url(/backgroundarca.png)' }}
       />
       {/* Gradient Overlay - Subtle */}
@@ -85,7 +85,7 @@ export default function Home() {
               <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
                 Yield Vault Strategies
               </h1>
-              <p className="text-gray-400 text-base max-w-2xl leading-relaxed">
+              <p className="text-arca-text-secondary text-base max-w-2xl leading-relaxed">
                 Deposit and earn high-yield APY on your crypto assets across our automated Metropolis & Shadow strategies.
               </p>
             </div>
@@ -137,15 +137,15 @@ export default function Home() {
           )}
 
           {/* Controls: Tabs & Search (Placeholder) */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 sticky top-4 z-20 py-2 bg-black/50 backdrop-blur-md rounded-xl sm:bg-transparent sm:backdrop-blur-none sm:static">
-            <div className="flex bg-arca-gray p-1 rounded-xl border border-gray-800/50">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8 sticky top-4 z-20 py-2 bg-arca-dark/80 backdrop-blur-md rounded-xl sm:bg-transparent sm:backdrop-blur-none sm:static">
+            <div className="flex bg-arca-card p-1 rounded-xl border border-arca-border">
               <FilterTab label="All Strategies" isActive={activeTab === 'All'} onClick={() => setActiveTab('All')} />
               <FilterTab label="Metropolis" isActive={activeTab === 'Metropolis'} onClick={() => setActiveTab('Metropolis')} />
               <FilterTab label="Shadow" isActive={activeTab === 'Shadow'} onClick={() => setActiveTab('Shadow')} />
             </div>
 
             {/* Could add a search bar or sort dropdown here */}
-            <div className="text-sm text-gray-500 hidden sm:block">
+            <div className="text-sm text-arca-text-muted hidden sm:block">
               Showing {displayedVaults.length} vaults
             </div>
           </div>
@@ -153,14 +153,14 @@ export default function Home() {
           {/* Vault Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
             {displayedVaults.map((vault, index) => (
-              <div key={index} className="animate-fadeUp" style={{ animationDelay: `${index * 50}ms` }}>
+              <div key={index} className="animate-slideUp" style={{ animationDelay: `${index * 50}ms` }}>
                 <VaultCard config={vault} />
               </div>
             ))}
           </div>
 
           {/* Footer Area */}
-          <div className="mt-20 border-t border-gray-800/50 pt-10">
+          <div className="mt-20 border-t border-arca-border pt-10">
             <SocialLinks />
           </div>
 

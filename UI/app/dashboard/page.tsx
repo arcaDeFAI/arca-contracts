@@ -26,7 +26,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-black relative">
       {/* Background Image */}
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-5 pointer-events-none bg-optimized"
         style={{ backgroundImage: 'url(/backgroundarca.jpg)' }}
       />
       {/* Gradient Overlay */}
@@ -40,7 +40,7 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-white mb-2">
               Dashboard
             </h1>
-            <p className="text-gray-400 text-sm">
+            <p className="text-arca-text-secondary text-sm">
               Manage your vault positions, claim rewards, and handle withdrawals
             </p>
           </div>
@@ -77,7 +77,7 @@ export default function Dashboard() {
                   <div className="w-1 h-6 bg-arca-green rounded-full"></div>
                   <h2 className="text-xl font-bold text-white">Active Vaults</h2>
                 </div>
-                <p className="text-gray-400 text-xs ml-5">Click on a vault to view details</p>
+                <p className="text-arca-text-muted text-xs ml-5">Click on a vault to view details</p>
               </div>
 
               {/* Table View with Slide-out Panel */}

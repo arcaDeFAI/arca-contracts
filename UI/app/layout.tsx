@@ -1,8 +1,17 @@
 import './globals.css'
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import { Providers } from './providers'
 import { BackgroundPattern } from '@/components/BackgroundPattern'
-import { AuthGuard } from '@/components/AuthGuard'
+
+
+// Optimized font loading - prevents FOIT (Flash of Invisible Text)
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+  weight: ['300', '400', '500', '600', '700'],
+})
 
 export const metadata: Metadata = {
   title: 'Arca DeFi - Vault Management',
@@ -37,13 +46,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="en" className={inter.variable}>
+      <body className="font-sans">
         <BackgroundPattern />
         <Providers>
-          <AuthGuard>
+          
             {children}
-          </AuthGuard>
+          
         </Providers>
       </body>
     </html>

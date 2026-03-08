@@ -27,29 +27,28 @@ export function StatsCard({
     className = "",
     children
 }: StatsCardProps) {
-    // Glassmorphism: bg-arca-gray with slight opacity and blur
     const CardContent = (
-        <div className={`relative bg-arca-gray/95 backdrop-blur-sm border border-gray-800/60 rounded-xl p-4 md:p-5 h-full flex flex-col gap-3 transition-all hover:border-gray-700/80 ${className}`}>
+        <div className={`relative bg-arca-card backdrop-blur-sm border border-arca-border rounded-xl p-4 md:p-5 h-full flex flex-col gap-3 transition-all hover:border-arca-border-light hover:bg-arca-card-hover hover-lift animate-fadeIn ${className}`}>
             <div className="flex justify-between items-start mb-2">
-                <div className="text-gray-400 text-sm font-medium flex items-center gap-2">
+                <div className="text-arca-text-secondary text-sm font-medium flex items-center gap-2">
                     {title}
                 </div>
                 <div className="flex items-center gap-2">
                     {rightElement}
-                    {icon && <div className="text-gray-500 opacity-80">{icon}</div>}
+                    {icon && <div className="text-arca-text-muted">{icon}</div>}
                 </div>
             </div>
 
             <div>
                 <div className="text-2xl md:text-3xl font-bold text-arca-green tracking-tight">
                     {loading ? (
-                        <div className="h-8 w-32 bg-gray-800/50 animate-pulse rounded" />
+                        <div className="h-8 w-32 bg-arca-border rounded shimmer" />
                     ) : (
                         value
                     )}
                 </div>
                 {subtitle && (
-                    <div className="text-xs text-gray-500 mt-1">{subtitle}</div>
+                    <div className="text-xs text-arca-text-muted mt-1">{subtitle}</div>
                 )}
             </div>
 
@@ -58,11 +57,11 @@ export function StatsCard({
                     <span className="font-semibold">
                         {trend.positive ? '↑' : '↓'} {Math.abs(trend.value)}%
                     </span>
-                    <span className="text-gray-500 text-xs">{trend.label}</span>
+                    <span className="text-arca-text-muted text-xs">{trend.label}</span>
                 </div>
             )}
 
-            {children && <div className="mt-4 pt-3 border-t border-gray-800/50">{children}</div>}
+            {children && <div className="mt-4 pt-3 border-t border-arca-border">{children}</div>}
         </div>
     );
 

@@ -44,7 +44,7 @@ export function Header() {
   }, [isMobileMenuOpen]);
 
   return (
-    <header className="relative border-b border-gray-800/50 backdrop-blur-md sticky top-0 z-50">
+    <header className="relative border-b border-arca-border backdrop-blur-md sticky top-0 z-50 bg-arca-dark/80">
       <div className="relative z-10 container mx-auto px-3 sm:px-6 lg:px-8" style={{ maxWidth: '100%' }}>
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-4 sm:gap-8">
@@ -105,15 +105,15 @@ export function Header() {
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Sonic Price */}
             {!isLoading && prices && (
-              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-arca-green/10 rounded-lg border border-arca-green/20">
-                <span className="text-base text-gray-300">S :</span>
+              <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-arca-green/10 rounded-lg border border-arca-green/30">
+                <span className="text-base text-arca-text-secondary">S :</span>
                 <span className="text-xl font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             {/* Sonic Price - Mobile */}
             {!isLoading && prices && (
-              <div className="md:hidden flex items-center gap-1 px-2 py-1 bg-arca-green/10 rounded-lg border border-arca-green/20">
-                <span className="text-xs text-gray-300">S:</span>
+              <div className="md:hidden flex items-center gap-1 px-2 py-1 bg-arca-green/10 rounded-lg border border-arca-green/30">
+                <span className="text-xs text-arca-text-secondary">S:</span>
                 <span className="text-sm font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
@@ -168,7 +168,7 @@ export function Header() {
                           {/* Chain button - hidden on mobile */}
                           <button
                             onClick={openChainModal}
-                            className="hidden sm:flex bg-arca-light-gray text-white font-semibold py-2 px-3 rounded-lg hover:bg-gray-600 transition-colors items-center gap-2"
+                            className="hidden sm:flex bg-arca-card text-white font-semibold py-2 px-3 rounded-lg hover:bg-arca-card-hover border border-arca-border transition-colors items-center gap-2"
                             type="button"
                           >
                             {/* Show chain icon from RainbowKit or fallback to Sonic logo */}
@@ -226,7 +226,7 @@ export function Header() {
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden border-t border-arca-light-gray" style={{ background: 'rgba(0, 0, 0, 0.95)' }}>
+          <div className="md:hidden border-t border-arca-border bg-arca-dark/98">
             <div className="px-3 py-4 space-y-3">
               <Link
                 href="/vaults"
