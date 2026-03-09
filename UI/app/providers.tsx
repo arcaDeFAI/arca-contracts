@@ -9,12 +9,20 @@ import { WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PriceProvider } from '@/contexts/PriceContext';
 
-// Define the Sonic blockchain network
+// Define the Sonic blockchain network with fallback RPCs
 const sonic = {
   id: 146,
   name: 'Sonic',
   nativeCurrency: { decimals: 18, name: 'S', symbol: 'S' },
-  rpcUrls: { default: { http: ['https://rpc.soniclabs.com'] } },
+  rpcUrls: {
+    default: {
+      http: [
+        'https://rpc.soniclabs.com',
+        'https://sonic.drpc.org',
+        'https://rpc.sonic.fantom.network',
+      ]
+    }
+  },
   blockExplorers: { default: { name: 'Sonic Explorer', url: 'https://sonicscan.org' } },
   iconUrl: '/SonicLogoRound.png',
   iconBackground: '#0066FF',

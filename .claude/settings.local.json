@@ -10,7 +10,14 @@
       "Bash(npm run lint:fix:*)",
       "Bash(npm run build:*)",
       "Bash(dir /b \"C:\\\\Users\\\\Emeri\\\\OneDrive\\\\Documents\\\\GitHub\\\\arca-contracts\\\\UI\\\\components\")",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)",
+      "WebSearch",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:yields.llama.fi)",
+      "WebFetch(domain:api.goldsky.com)",
+      "WebFetch(domain:api.coingecko.com)"
     ]
   }
 }

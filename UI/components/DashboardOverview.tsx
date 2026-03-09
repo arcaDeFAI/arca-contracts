@@ -15,6 +15,7 @@ import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
 import { Tooltip } from './Tooltip'
 import { StatsCard } from './StatsCard'
+import { PriceStalenessIndicator } from './PriceStalenessIndicator'
 import { useDashboardAggregatedData } from '@/hooks/useDashboardAggregatedData'
 import { getAPYCalculationExplanation } from '@/hooks/useShadowAPYAdjusted'
 
@@ -199,6 +200,11 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
   return (
     <div className="space-y-5 mb-6 animate-fadeIn">
+      {/* Price staleness indicator */}
+      <div className="flex justify-end">
+        <PriceStalenessIndicator />
+      </div>
+
       {/* Top Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 overflow-visible">
         <StatsCard

@@ -7,6 +7,8 @@ import { DashboardVaultCard } from '@/components/DashboardVaultCard';
 import { DashboardOverview } from '@/components/DashboardOverview';
 import { SocialLinks } from '@/components/SocialLinks';
 import { VaultTableView } from '@/components/VaultTableView';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { VaultPerformanceCard } from '@/components/VaultPerformanceCard';
 import { VAULT_CONFIGS, type VaultConfig, isShadowVault } from '@/lib/vaultConfigs';
 
 export default function Dashboard() {
@@ -62,11 +64,26 @@ export default function Dashboard() {
 
           {/* Dashboard Overview - Portfolio, Balance, Rewards */}
           {isConnected && (
-            <DashboardOverview
-              vaultConfigs={VAULT_CONFIGS}
-              userAddress={address}
-            />
+            <ErrorBoundary>
+              <DashboardOverview
+                vaultConfigs={VAULT_CONFIGS}
+                userAddress={address}
+              />
+            </ErrorBoundary>
           )}
+
+          {/* Vault Performance Tracking */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-1 h-6 bg-arca-green rounded-full"></div>
+              <h2 className="text-xl font-bold text-white">Vault Performance</h2>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              <ErrorBoundary>
+                <VaultPerformanceCard />
+              </ErrorBoundary>
+            </div>
+          </div>
 
           {/* Active Vaults Section */}
           {isConnected && (
@@ -84,12 +101,14 @@ export default function Dashboard() {
               <div className="flex flex-col lg:flex-row gap-5">
                 {/* Vault Table */}
                 <div className={`transition-all duration-300 ${selectedVault ? 'lg:w-2/3' : 'w-full'}`}>
-                  <VaultTableView
-                    vaults={VAULT_CONFIGS}
-                    userAddress={address}
-                    onVaultClick={(vault) => setSelectedVault(vault)}
-                    selectedVault={selectedVault || undefined}
-                  />
+                  <ErrorBoundary>
+                    <VaultTableView
+                      vaults={VAULT_CONFIGS}
+                      userAddress={address}
+                      onVaultClick={(vault) => setSelectedVault(vault)}
+                      selectedVault={selectedVault || undefined}
+                    />
+                  </ErrorBoundary>
                 </div>
 
                 {/* Detail Panel - Side on desktop, below on mobile */}
@@ -105,10 +124,12 @@ export default function Dashboard() {
                           ✕
                         </button>
                       </div>
-                      <DashboardVaultCard
-                        config={selectedVault}
-                        userAddress={address}
-                      />
+                      <ErrorBoundary>
+                        <DashboardVaultCard
+                          config={selectedVault}
+                          userAddress={address}
+                        />
+                      </ErrorBoundary>
                     </div>
                   </div>
                 )}

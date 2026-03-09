@@ -5,23 +5,14 @@ import { useEffect, useState, useMemo } from 'react';
 import {
   METRO_VAULT_ABI,
   SHADOW_VAULT_ABI,
-  SHADOW_STRAT_ABI
+  SHADOW_STRAT_ABI,
+  type ShadowRewardStatus,
+  type UserRewardStructOutput
 } from '@/lib/typechain';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 
 export function useDashboardData(config: VaultConfig, userAddress?: string, sharePercentage?: number) {
   const isShadowVault = config.name.includes('Shadow');
-
-  // Simple contract calls - exactly like VaultCard
-  const { data: userShares } = useReadContract({
-    address: config.vaultAddress as `0x${string}`,
-    abi: METRO_VAULT_ABI,
-    functionName: 'balanceOf',
-    args: userAddress ? [userAddress as `0x${string}`] : undefined,
-    query: {
-      enabled: !!userAddress && !!config.vaultAddress,
-    },
-  });
 
   // Pending rewards from vault (already harvested)
   const { data: vaultPendingRewards } = useReadContract({
@@ -51,14 +42,26 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
       return vaultPendingRewards;
     }
 
-    const earned = (strategyRewardStatus as any)[1] as readonly bigint[];
+    // Type the contract returns properly
+    const rewardStatus = strategyRewardStatus as unknown as ShadowRewardStatus;
+    const vaultRewards = vaultPendingRewards as unknown as UserRewardStructOutput[];
+    const earned = rewardStatus?.earned;
     const userShareRatio = sharePercentage / 100;
 
+    // If no earned array, return vault rewards as-is
+    if (!earned || !Array.isArray(earned)) {
+      return vaultRewards;
+    }
+
     // Add user's share of gauge rewards to vault pending rewards
-    return (vaultPendingRewards as any[]).map((vaultReward: any, i: number) => ({
-      ...vaultReward,
-      pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(earned[i] || 0n) * userShareRatio))
-    }));
+    return vaultRewards.map((vaultReward, i) => {
+      const earnedAmount = i < earned.length ? earned[i] : 0n;
+      const additionalReward = BigInt(Math.floor(Number(earnedAmount ?? 0n) * userShareRatio));
+      return {
+        ...vaultReward,
+        pendingRewards: vaultReward.pendingRewards + additionalReward
+      };
+    });
   }, [vaultPendingRewards, strategyRewardStatus, sharePercentage, isShadowVault]);
 
 
@@ -198,7 +201,6 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
   const totalClaimableAmount = claimableWithdrawals.reduce((sum, w) => sum + w.amount, 0n);
 
   return {
-    userShares,
     pendingRewards,
     currentRound,
     queuedWithdrawal,

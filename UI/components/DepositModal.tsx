@@ -22,20 +22,20 @@ interface DepositModalProps {
   onClose: () => void;
 }
 
-export function DepositModal({ 
-  vaultAddress, 
-  stratAddress, 
-  vaultName, 
+export function DepositModal({
+  vaultAddress,
+  stratAddress,
+  vaultName,
   sonicBalance,
   wsBalance,
   usdcBalance,
   wethBalance = 0n,
   tokenX = 'S',
   tokenY = 'USDC',
-  onClose 
+  onClose
 }: DepositModalProps) {
   const isShadowVault = vaultName.includes('Shadow');
-  
+
   const [tokenAmount, setTokenAmount] = useState('');
   const [token2Amount, setToken2Amount] = useState('');
   const [tokenApproved, setTokenApproved] = useState(false);
@@ -44,7 +44,7 @@ export function DepositModal({
   const [showProgress, setShowProgress] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [processedTxHash, setProcessedTxHash] = useState<string | null>(null);
-  
+
   type Step = { label: string; status: 'pending' | 'processing' | 'complete' | 'error' };
   const [steps, setSteps] = useState<Step[]>([]);
 
@@ -186,7 +186,7 @@ export function DepositModal({
   // Execute a specific step (status is already set to 'processing' before calling this)
   const executeStep = (stepIndex: number) => {
     if (!steps || stepIndex >= steps.length) return;
-    
+
     // Determine which transaction to execute based on step label
     const stepLabel = steps[stepIndex].label;
     if (stepLabel.includes(`Approve ${currentTokenType}`)) {
@@ -197,11 +197,11 @@ export function DepositModal({
       handleDeposit();
     }
   };
-  
+
   // Initialize deposit flow - show all steps that will happen
   const handleInitiateDeposit = () => {
     const depositSteps: Step[] = [];
-    
+
     if (needsTokenApproval) {
       depositSteps.push({ label: `Approve ${currentTokenType}`, status: 'pending' });
     }
@@ -209,16 +209,16 @@ export function DepositModal({
       depositSteps.push({ label: `Approve ${currentToken2Type}`, status: 'pending' });
     }
     depositSteps.push({ label: `Add liquidity to ${tokenX}/${tokenY}`, status: 'pending' });
-    
+
     setSteps(depositSteps);
     setShowProgress(true);
     setCurrentStep(0);
-    
+
     // Start executing first step immediately
     // Mark first step as processing
     depositSteps[0].status = 'processing';
     setSteps([...depositSteps]);
-    
+
     // Execute the first transaction
     setTimeout(() => {
       if (needsTokenApproval) {

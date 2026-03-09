@@ -5,6 +5,7 @@ import { useAccount } from 'wagmi';
 import { Header } from '@/components/Header';
 import { VaultCard } from '@/components/VaultCard';
 import { SocialLinks } from '@/components/SocialLinks';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { formatUSD } from '@/lib/utils';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { VAULT_CONFIGS } from '@/lib/vaultConfigs';
@@ -154,7 +155,9 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
             {displayedVaults.map((vault, index) => (
               <div key={index} className="animate-slideUp" style={{ animationDelay: `${index * 50}ms` }}>
-                <VaultCard config={vault} />
+                <ErrorBoundary>
+                  <VaultCard config={vault} />
+                </ErrorBoundary>
               </div>
             ))}
           </div>
