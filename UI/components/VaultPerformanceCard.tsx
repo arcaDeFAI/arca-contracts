@@ -1,14 +1,54 @@
 'use client';
 
 import { useVaultPerformance } from '@/hooks/useVaultPerformance';
+import { useReadContract } from 'wagmi';
+import { formatUnits } from 'viem';
+import { METRO_VAULT_ABI } from '@/lib/typechain';
 
 // WS/USDC Shadow vault addresses
 const VAULT_ADDRESS = '0x727e6D1FF1f1836Bb7Cdfad30e89EdBbef878ab5';
 const STRAT_ADDRESS = '0x64efeA2531f2b1A3569555084B88bb5714f5286c';
 const POOL_ADDRESS = '0x324963c267C354c7660Ce8CA3F5f167E05649970';
 
-export function VaultPerformanceCard() {
+// Admin wallet sees full vault data
+const ADMIN_WALLET = '0x60f3290Ce5011E67881771D1e23C38985F707a27'.toLowerCase();
+
+interface VaultPerformanceCardProps {
+  userAddress?: string;
+}
+
+export function VaultPerformanceCard({ userAddress }: VaultPerformanceCardProps) {
   const perf = useVaultPerformance(VAULT_ADDRESS, STRAT_ADDRESS, POOL_ADDRESS);
+  const isAdmin = userAddress?.toLowerCase() === ADMIN_WALLET;
+
+  // Get user's share balance
+  const { data: userShares } = useReadContract({
+    address: VAULT_ADDRESS as `0x${string}`,
+    abi: METRO_VAULT_ABI,
+    functionName: 'balanceOf',
+    args: userAddress ? [userAddress as `0x${string}`] : undefined,
+    query: { enabled: !!userAddress },
+  });
+
+  // Get total supply for share calculation
+  const { data: totalSupply } = useReadContract({
+    address: VAULT_ADDRESS as `0x${string}`,
+    abi: METRO_VAULT_ABI,
+    functionName: 'totalSupply',
+    query: { enabled: !!userAddress },
+  });
+
+  // Calculate user's share percentage
+  const sharePercentage = userShares && totalSupply && totalSupply > 0n
+    ? Number(formatUnits(userShares, 12)) / Number(formatUnits(totalSupply as bigint, 12))
+    : 0;
+
+  // For non-admin users, scale values by their share percentage
+  const displayTVL = isAdmin ? perf.tvl : perf.tvl * sharePercentage;
+  const displayHodlValue = isAdmin ? perf.hodlValue : (perf.hodlValue ? perf.hodlValue * sharePercentage : null);
+  const displayHodlS = isAdmin ? perf.hodlS : (perf.hodlS ? perf.hodlS * sharePercentage : null);
+  const displayHodlUSDC = isAdmin ? perf.hodlUSDC : (perf.hodlUSDC ? perf.hodlUSDC * sharePercentage : null);
+  const displayRewardsUSD = isAdmin ? perf.totalRewardsUSD : perf.totalRewardsUSD * sharePercentage;
 
   const formatUSD = (value: number) =>
     `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -26,13 +66,32 @@ export function VaultPerformanceCard() {
     });
   };
 
+  // Don't show if user has no shares (unless admin)
+  if (!isAdmin && sharePercentage === 0) {
+    return (
+      <div className="bg-arca-card border border-arca-border rounded-xl p-5">
+        <div className="text-center text-gray-400 py-8">
+          <p className="text-lg mb-2">No Position</p>
+          <p className="text-sm">Deposit into the WS/USDC vault to see your performance metrics.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-arca-card border border-arca-border rounded-xl p-5">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-white font-semibold">WS/USDC Vault Performance</h3>
-          <p className="text-gray-500 text-xs">Real APR from share value growth</p>
+          <div className="flex items-center gap-2">
+            <h3 className="text-white font-semibold">WS/USDC Vault Performance</h3>
+            {isAdmin && (
+              <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">Admin</span>
+            )}
+          </div>
+          <p className="text-gray-500 text-xs">
+            {isAdmin ? 'Full vault APR from share value growth' : `Your share: ${(sharePercentage * 100).toFixed(4)}%`}
+          </p>
         </div>
         <span className={`text-xs px-2 py-1 rounded ${perf.inRange ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
           {perf.inRange ? 'In Range' : 'Out of Range'}
@@ -60,10 +119,10 @@ export function VaultPerformanceCard() {
             {formatPct(perf.vsHodl)}
           </p>
           <p className="text-gray-500 text-xs mt-1">
-            HODL: {perf.hodlS?.toFixed(2) || '?'} S + {perf.hodlUSDC?.toFixed(2) || '?'} USDC
+            HODL: {displayHodlS?.toFixed(2) || '?'} S + {displayHodlUSDC?.toFixed(2) || '?'} USDC
           </p>
           <p className="text-gray-500 text-xs">
-            = {perf.hodlValue ? formatUSD(perf.hodlValue) : '?'}
+            = {displayHodlValue ? formatUSD(displayHodlValue) : '?'}
           </p>
         </div>
       </div>
@@ -87,7 +146,7 @@ export function VaultPerformanceCard() {
         </div>
       </div>
 
-      {/* Share Value & SHADOW */}
+      {/* Share Value & TVL */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div>
           <p className="text-arca-text-muted text-xs mb-1">Share Value</p>
@@ -99,8 +158,8 @@ export function VaultPerformanceCard() {
           )}
         </div>
         <div>
-          <p className="text-arca-text-muted text-xs mb-1">Vault TVL</p>
-          <p className="text-white text-lg font-semibold">{formatUSD(perf.tvl)}</p>
+          <p className="text-arca-text-muted text-xs mb-1">{isAdmin ? 'Vault TVL' : 'Your TVL'}</p>
+          <p className="text-white text-lg font-semibold">{formatUSD(displayTVL)}</p>
           <p className="text-gray-500 text-xs">
             SHADOW: {formatUSD(perf.shadowPrice)}
           </p>
@@ -110,10 +169,13 @@ export function VaultPerformanceCard() {
       {/* Rewards Summary */}
       {perf.rewardEventCount > 0 && (
         <div className="border-t border-arca-border pt-3 mb-3">
-          <p className="text-arca-text-muted text-xs mb-2">SHADOW Rewards ({perf.rewardPeriodDays}d period)</p>
+          <p className="text-arca-text-muted text-xs mb-2">
+            SHADOW Rewards ({perf.rewardPeriodDays}d period)
+            {!isAdmin && <span className="text-gray-500"> - Your share</span>}
+          </p>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-400">{perf.rewardEventCount} harvests</span>
-            <span className="text-green-400 font-medium">{formatUSD(perf.totalRewardsUSD)}</span>
+            <span className="text-green-400 font-medium">{formatUSD(displayRewardsUSD)}</span>
           </div>
         </div>
       )}
@@ -142,7 +204,9 @@ export function VaultPerformanceCard() {
       <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-arca-border">
         <span>{perf.snapshotCount} snapshots</span>
         <span>Last: {formatTime(perf.lastUpdate)}</span>
-        <button onClick={perf.reset} className="text-red-400 hover:text-red-300">Reset</button>
+        {isAdmin && (
+          <button onClick={perf.reset} className="text-red-400 hover:text-red-300">Reset</button>
+        )}
       </div>
     </div>
   );

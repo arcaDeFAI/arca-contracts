@@ -11,8 +11,13 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { VaultPerformanceCard } from '@/components/VaultPerformanceCard';
 import { VAULT_CONFIGS, type VaultConfig, isShadowVault } from '@/lib/vaultConfigs';
 
+// Admin wallet for vault performance tracking
+const ADMIN_WALLET = '0x60f3290Ce5011E67881771D1e23C38985F707a27'.toLowerCase();
+
 export default function Dashboard() {
   const { address, isConnected } = useAccount();
+  const isAdmin = address?.toLowerCase() === ADMIN_WALLET;
+  const [showPerformance, setShowPerformance] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [selectedVault, setSelectedVault] = useState<VaultConfig | null>(null);
 
@@ -72,18 +77,31 @@ export default function Dashboard() {
             </ErrorBoundary>
           )}
 
-          {/* Vault Performance Tracking */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-1 h-6 bg-arca-green rounded-full"></div>
-              <h2 className="text-xl font-bold text-white">Vault Performance</h2>
+          {/* Vault Performance Tracking - Collapsible */}
+          {isConnected && (
+            <div className="mb-6">
+              <button
+                onClick={() => setShowPerformance(!showPerformance)}
+                className="flex items-center gap-2 mb-3 w-full text-left hover:opacity-80 transition-opacity"
+              >
+                <div className="w-1 h-6 bg-arca-green rounded-full"></div>
+                <h2 className="text-xl font-bold text-white">Vault Performance</h2>
+                {isAdmin && (
+                  <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">Admin</span>
+                )}
+                <span className="text-gray-400 text-sm ml-auto">
+                  {showPerformance ? '▼' : '▶'}
+                </span>
+              </button>
+              {showPerformance && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  <ErrorBoundary>
+                    <VaultPerformanceCard userAddress={address} />
+                  </ErrorBoundary>
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              <ErrorBoundary>
-                <VaultPerformanceCard />
-              </ErrorBoundary>
-            </div>
-          </div>
+          )}
 
           {/* Active Vaults Section */}
           {isConnected && (

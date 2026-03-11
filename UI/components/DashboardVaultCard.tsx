@@ -223,7 +223,7 @@ export function DashboardVaultCard({
   if (!hasShares && !hasPendingRewards && isWithdrawalDataLoading) {
     // Show loading state while withdrawal data loads
     return (
-      <div className="bg-black rounded-lg border border-arca-green/20 p-4">
+      <div className="bg-arca-card rounded-lg border border-arca-border p-4">
         <div className="text-gray-400 text-sm text-center animate-pulse">
           Loading withdrawal data...
         </div>
@@ -246,7 +246,7 @@ export function DashboardVaultCard({
   };
 
   return (
-    <div className="bg-arca-gray/95 backdrop-blur-sm border border-gray-800/60 rounded-xl hover:border-gray-700/80 transition-all shadow-lg overflow-hidden">
+    <div className="bg-arca-card backdrop-blur-sm border border-arca-border rounded-xl hover:border-arca-green/30 transition-all shadow-lg overflow-hidden">
       {/* Position Visualization */}
       <PositionVisualizationCard
         vaultAddress={vaultAddress}
@@ -261,10 +261,10 @@ export function DashboardVaultCard({
       />
 
       {/* Dashboard Card */}
-      <div className="p-4 border-t border-gray-800/60">
+      <div className="bg-arca-card p-4 border-t border-arca-border">
         <div className="space-y-3">
           {/* User Shares & APY */}
-          <div className="bg-black/50 rounded-lg p-3 border border-gray-700/50">
+          <div className="bg-arca-dark rounded-lg p-3 border border-arca-border">
             {/* APR Display - Vault-wide 24h */}
             <div className="mb-3 pb-3 border-b border-gray-700/30">
               <div className="text-gray-400 text-xs uppercase tracking-wider mb-1 text-center group relative">
@@ -478,7 +478,7 @@ export function DashboardVaultCard({
 
           {/* Rewards Section - Shows only non-zero rewards (works for both Metro and Shadow) */}
           {hasPendingRewards && (
-            <div className="bg-black/50 rounded-lg p-3 border border-gray-700/50">
+            <div className="bg-arca-dark rounded-lg p-3 border border-arca-border">
               <div className="space-y-2 mb-2">
                 {nonZeroRewards.map((reward: UserRewardStructOutput, index: number) => {
                   const tokenName = getTokenName(reward.token);
@@ -532,7 +532,7 @@ export function DashboardVaultCard({
 
           {/* Queued Withdrawal Section - Shows withdrawal in current round (not claimable yet) */}
           {hasQueuedWithdrawal && (
-            <div className="bg-black/50 rounded-lg p-3 border border-gray-700/50">
+            <div className="bg-arca-dark rounded-lg p-3 border border-arca-border">
               <div className="flex justify-between items-center mb-2 text-sm">
                 <span className="text-gray-400">Queued Withdrawal:</span>
                 <span className="text-yellow-400 font-semibold">
@@ -542,7 +542,7 @@ export function DashboardVaultCard({
 
               {/* Preview amounts */}
               {queuedPreviewAmounts && (
-                <div className="bg-arca-dark/50 rounded-lg p-2 mb-2 space-y-1">
+                <div className="bg-arca-dark rounded-lg p-2 mb-2 space-y-1 border border-arca-border">
                   <div className="text-xs text-gray-400 mb-2">Estimated withdrawal:</div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-400">{tokenX}:</span>
@@ -583,7 +583,7 @@ export function DashboardVaultCard({
 
           {/* Claimable Withdrawal Section - Shows all withdrawals from past rounds (can claim now) */}
           {hasClaimableWithdrawal && (
-            <div className="bg-black/50 rounded-lg p-4 border border-gray-700/50">
+            <div className="bg-arca-dark rounded-lg p-4 border border-arca-border">
               <div className="flex justify-between items-center mb-3">
                 <span className="text-gray-400">Claimable Withdrawal{claimableWithdrawals && claimableWithdrawals.length > 1 ? 's' : ''}:</span>
                 <span className="text-arca-green font-semibold">

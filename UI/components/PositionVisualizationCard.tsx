@@ -259,7 +259,7 @@ export default function PositionVisualizationCard({
   if (!rangeData || activeId === null) {
     return (
       <>
-        <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-6 mb-4">
+        <div className="bg-arca-card border border-arca-border rounded-xl p-6 mb-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-white">Position Range</h3>
             <span className={`px-2 py-1 rounded text-xs font-medium border ${getTierColor(tier)}`}>
@@ -279,7 +279,7 @@ export default function PositionVisualizationCard({
         
         {/* Last Rebalance */}
         {lastRebalance && (
-          <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3 mb-4">
+          <div className="bg-arca-dark border border-arca-border rounded-lg p-3 mb-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-400">Last Rebalance:</span>
               <span className="text-white font-semibold">
@@ -315,7 +315,7 @@ export default function PositionVisualizationCard({
   // Enhanced view for Shadow vaults
   if (isShadow) {
     return (
-      <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-4">
+      <div className="bg-arca-card border border-arca-border rounded-xl p-4">
         {/* Header */}
         <div className="flex justify-between items-center mb-4">
           <div>
@@ -359,7 +359,7 @@ export default function PositionVisualizationCard({
         </div>
 
         {/* Active Range Display */}
-        <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
+        <div className="bg-arca-dark border border-arca-border rounded-lg p-4 mb-4">
           <div className="flex justify-between items-center mb-4">
             <span className="text-sm font-semibold text-white">Liquidity Distribution</span>
             <span className={`text-xs px-3 py-1.5 rounded font-medium whitespace-nowrap ${
@@ -423,7 +423,7 @@ export default function PositionVisualizationCard({
 
         {/* Last Rebalance for Shadow */}
         {shadowLastRebalance && (
-          <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3">
+          <div className="bg-arca-dark border border-arca-border rounded-lg p-3">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-400">Last Rebalance:</span>
               <span className="text-white font-semibold">
@@ -439,7 +439,7 @@ export default function PositionVisualizationCard({
 
   // Enhanced view for Metro vaults
   return (
-    <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-4">
+    <div className="bg-arca-card border border-arca-border rounded-xl p-4">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <div>
@@ -483,7 +483,7 @@ export default function PositionVisualizationCard({
       </div>
 
       {/* Active Range Display */}
-      <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
+      <div className="bg-arca-dark border border-arca-border rounded-lg p-4 mb-4">
         <div className="flex justify-between items-center mb-4">
           <span className="text-sm font-semibold text-white">Liquidity Distribution</span>
           <span className={`text-xs px-3 py-1.5 rounded font-medium whitespace-nowrap ${
@@ -492,7 +492,7 @@ export default function PositionVisualizationCard({
             {isInRange ? 'Earning' : 'Position Inactive'}
           </span>
         </div>
-        
+
         <div className="space-y-3">
           {/* Legend */}
           <div className="flex items-center justify-center gap-4 text-xs mb-2">
@@ -509,7 +509,7 @@ export default function PositionVisualizationCard({
           {/* Range Bar - Full width for active position */}
           <div className="relative h-2 bg-gray-800/50 rounded-full overflow-hidden">
             {/* Active range takes full width */}
-            <div 
+            <div
               className="absolute top-0 h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60"
               style={{
                 left: '0%',
@@ -517,7 +517,7 @@ export default function PositionVisualizationCard({
               }}
             />
             {/* Current price indicator - positioned relative to range */}
-            <div 
+            <div
               className="absolute top-0 w-1 h-full bg-red-400"
               style={{
                 left: `${((activeIdNum - lowRangeNum) / (upperRangeNum - lowRangeNum)) * 100}%`,
@@ -534,7 +534,7 @@ export default function PositionVisualizationCard({
                 {lowerPrice ? `$${lowerPrice.toFixed(4)}` : '...'}
               </span>
             </div>
-            
+
             <div className="flex flex-col items-end">
               <span className="text-gray-500 mb-0.5">Upper Price</span>
               <span className="text-white font-semibold">
@@ -547,7 +547,7 @@ export default function PositionVisualizationCard({
 
       {/* Last Rebalance */}
       {lastRebalance && (
-        <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3">
+        <div className="bg-arca-dark border border-arca-border rounded-lg p-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-400">Last Rebalance:</span>
             <span className="text-white font-semibold">

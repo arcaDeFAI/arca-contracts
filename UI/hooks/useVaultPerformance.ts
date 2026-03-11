@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useReadContract, usePublicClient } from 'wagmi';
 import { formatUnits, parseAbiItem } from 'viem';
 import { SHADOW_STRAT_ABI, CL_POOL_ABI, METRO_VAULT_ABI } from '@/lib/typechain';
 import { usePrices } from '@/contexts/PriceContext';
+import { supabase, VaultSnapshot, VaultReward } from '@/lib/supabase';
 
-const STORAGE_KEY = 'vault_perf_wsusdc_v7';
 const SNAPSHOT_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
 // SHADOW token for reward tracking
@@ -17,18 +17,12 @@ const REWARD_FORWARDED_EVENT = parseAbiItem(
   'event RewardForwarded(address indexed token, address indexed vault, uint256 amount)'
 );
 
-// PoolUpdated event from Vault - emitted when rewards are distributed
-const POOL_UPDATED_EVENT = parseAbiItem(
-  'event PoolUpdated(uint256 timestamp, uint256 accRewardsPerShare)'
-);
-
 interface Snapshot {
   ts: number;
   pricePerShare: number;
   tick: number;
   tvl: number;
   pX: number;
-  accRewardsPerShare?: string; // Track reward accumulator
 }
 
 interface RewardEvent {
@@ -49,9 +43,9 @@ interface StoredData {
 /**
  * WS/USDC Shadow Vault Performance Tracker
  *
- * Uses blockchain events for accurate tracking:
+ * Uses Supabase for persistent storage across sessions.
+ * Tracks blockchain events for accurate performance metrics:
  * - RewardForwarded: SHADOW tokens sent from strategy to vault
- * - PoolUpdated: Vault updates accRewardsPerShare
  *
  * Components:
  * - Fee APR: From LP trading fees (in price-per-share growth)
@@ -73,6 +67,11 @@ export function useVaultPerformance(
     lastTs: 0,
     lastRewardFetch: 0,
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const initialLoadDone = useRef(false);
+
+  // Vault ID for Supabase (normalized address)
+  const vaultId = vaultAddress.toLowerCase();
 
   // Use SHADOW price from PriceContext (already fetched globally)
   const shadowPrice = prices?.shadow || 0;
@@ -123,19 +122,69 @@ export function useVaultPerformance(
     return shares === 0 ? 0 : tvl / shares;
   }, [totalSupply, tvl]);
 
-  // Load stored data
+  // Load stored data from Supabase on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
+    if (initialLoadDone.current) return;
+
+    const loadFromSupabase = async () => {
       try {
-        setData(JSON.parse(stored));
-      } catch { /* ignore */ }
-    }
-  }, []);
+        // Load snapshots
+        const { data: snapshotsData, error: snapshotsError } = await supabase
+          .from('vault_snapshots')
+          .select('*')
+          .eq('vault_id', vaultId)
+          .order('ts', { ascending: true });
+
+        if (snapshotsError) {
+          console.error('Error loading snapshots:', snapshotsError);
+        }
+
+        // Load rewards
+        const { data: rewardsData, error: rewardsError } = await supabase
+          .from('vault_rewards')
+          .select('*')
+          .eq('vault_id', vaultId)
+          .order('ts', { ascending: true });
+
+        if (rewardsError) {
+          console.error('Error loading rewards:', rewardsError);
+        }
+
+        // Convert Supabase format to internal format
+        const snapshots: Snapshot[] = (snapshotsData || []).map((s: VaultSnapshot) => ({
+          ts: s.ts,
+          pricePerShare: s.price_per_share,
+          tick: s.tick,
+          tvl: s.tvl,
+          pX: s.price_x,
+        }));
+
+        const rewards: RewardEvent[] = (rewardsData || []).map((r: VaultReward) => ({
+          ts: r.ts,
+          amount: r.amount,
+          shadowPrice: r.shadow_price,
+          valueUSD: r.value_usd,
+          txHash: r.tx_hash,
+        }));
+
+        const lastTs = snapshots.length > 0 ? snapshots[snapshots.length - 1].ts : 0;
+        const lastRewardFetch = rewards.length > 0 ? Date.now() : 0;
+
+        setData({ snapshots, rewards, lastTs, lastRewardFetch });
+        initialLoadDone.current = true;
+      } catch (error) {
+        console.error('Failed to load from Supabase:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadFromSupabase();
+  }, [vaultId]);
 
   // Fetch SHADOW reward events from RewardForwarded
   useEffect(() => {
-    if (!publicClient || !stratAddress || shadowPrice === 0) return;
+    if (!publicClient || !stratAddress || shadowPrice === 0 || isLoading) return;
 
     const now = Date.now();
     // Only fetch every 30 min
@@ -154,6 +203,8 @@ export function useVaultPerformance(
         });
 
         const newRewards: RewardEvent[] = [];
+        const rewardsToInsert: VaultReward[] = [];
+
         for (const log of logs) {
           const token = (log.args.token as string).toLowerCase();
           const amount = log.args.amount as bigint;
@@ -163,51 +214,91 @@ export function useVaultPerformance(
 
           const block = await publicClient.getBlock({ blockNumber: log.blockNumber });
           const ts = Number(block.timestamp) * 1000;
+          const txHash = log.transactionHash;
 
-          newRewards.push({
+          // Check if this reward already exists
+          const exists = data.rewards.some(r => r.txHash === txHash);
+          if (exists) continue;
+
+          const reward: RewardEvent = {
             ts,
             amount: amount.toString(),
             shadowPrice,
             valueUSD: Number(formatUnits(amount, 18)) * shadowPrice,
-            txHash: log.transactionHash, // Use txHash for deduplication
+            txHash,
+          };
+
+          newRewards.push(reward);
+          rewardsToInsert.push({
+            vault_id: vaultId,
+            ts,
+            amount: amount.toString(),
+            shadow_price: shadowPrice,
+            value_usd: reward.valueUSD,
+            tx_hash: txHash,
           });
         }
 
-        // Merge avoiding duplicates by txHash
-        const existingHashes = new Set(data.rewards.map(r => r.txHash).filter(Boolean));
-        const unique = newRewards.filter(r => !existingHashes.has(r.txHash));
+        if (rewardsToInsert.length > 0) {
+          // Insert new rewards to Supabase
+          const { error } = await supabase
+            .from('vault_rewards')
+            .upsert(rewardsToInsert, { onConflict: 'tx_hash' });
 
-        const updated: StoredData = {
-          ...data,
-          rewards: [...data.rewards, ...unique].slice(-500),
+          if (error) {
+            console.error('Error inserting rewards:', error);
+          }
+        }
+
+        setData(prev => ({
+          ...prev,
+          rewards: [...prev.rewards, ...newRewards],
           lastRewardFetch: now,
-        };
-        setData(updated);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        }));
       } catch (e) {
         console.error('Failed to fetch rewards:', e);
       }
     };
 
     fetchRewards();
-  }, [publicClient, stratAddress, shadowPrice, data]);
+  }, [publicClient, stratAddress, shadowPrice, data.lastRewardFetch, data.rewards, isLoading, vaultId]);
 
-  // Take snapshot every 2h
+  // Take snapshot every 30 min and save to Supabase
   useEffect(() => {
-    if (pricePerShare === 0 || currentTick === null || priceWS === 0 || tvl === 0) return;
+    if (pricePerShare === 0 || currentTick === null || priceWS === 0 || tvl === 0 || isLoading) return;
 
     const now = Date.now();
     if (now - data.lastTs < SNAPSHOT_INTERVAL_MS) return;
 
-    const snapshot: Snapshot = { ts: now, pricePerShare, tick: currentTick, tvl, pX: priceWS };
-    const updated: StoredData = {
-      ...data,
-      snapshots: [...data.snapshots, snapshot].slice(-336),
-      lastTs: now,
+    const saveSnapshot = async () => {
+      const snapshot: Snapshot = { ts: now, pricePerShare, tick: currentTick, tvl, pX: priceWS };
+
+      // Save to Supabase
+      const { error } = await supabase
+        .from('vault_snapshots')
+        .insert({
+          vault_id: vaultId,
+          ts: now,
+          price_per_share: pricePerShare,
+          tick: currentTick,
+          tvl,
+          price_x: priceWS,
+        });
+
+      if (error) {
+        console.error('Error saving snapshot:', error);
+        return;
+      }
+
+      setData(prev => ({
+        ...prev,
+        snapshots: [...prev.snapshots, snapshot].slice(-336), // Keep last 336 (7 days at 30min intervals)
+        lastTs: now,
+      }));
     };
-    setData(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  }, [pricePerShare, currentTick, priceWS, tvl, data]);
+
+    saveSnapshot();
+  }, [pricePerShare, currentTick, priceWS, tvl, data.lastTs, isLoading, vaultId]);
 
   // Calculate reward period from actual harvest events
   const rewardMetrics = useMemo(() => {
@@ -231,10 +322,10 @@ export function useVaultPerformance(
       feeAPR: null as number | null,
       rewardAPR: null as number | null,
       il: null as number | null,
-      vsHodl: null as number | null, // Vault vs 50/50 HODL comparison
+      vsHodl: null as number | null,
       hodlValue: null as number | null,
-      hodlS: null as number | null, // S tokens in HODL portfolio
-      hodlUSDC: null as number | null, // USDC in HODL portfolio
+      hodlS: null as number | null,
+      hodlUSDC: null as number | null,
       periodDays: 0,
     };
 
@@ -268,26 +359,19 @@ export function useVaultPerformance(
     const firstWithPrice = data.snapshots.find(s => s.pX > 0);
     if (firstWithPrice && priceWS > 0) {
       const k = priceWS / firstWithPrice.pX;
-      // Standard IL formula: 2*sqrt(k)/(1+k) - 1
-      // This gives negative values when price diverges (which is IL)
       result.il = (2 * Math.sqrt(k) / (1 + k) - 1) * 100;
 
-      // HODL comparison: What if we just held 50/50 instead of LPing?
-      // At first snapshot: split TVL 50/50 into S and USDC
+      // HODL comparison
       const initialTVL = firstWithPrice.tvl;
       const initialSPrice = firstWithPrice.pX;
-      const hodlUSDC = initialTVL / 2; // Half stays as USDC
-      const hodlS = (initialTVL / 2) / initialSPrice; // Half buys S tokens
+      const hodlUSDC = initialTVL / 2;
+      const hodlS = (initialTVL / 2) / initialSPrice;
 
-      // Store token amounts
       result.hodlS = hodlS;
       result.hodlUSDC = hodlUSDC;
 
-      // Current value of HODL portfolio
       const currentHodlValue = hodlUSDC + (hodlS * priceWS);
       result.hodlValue = currentHodlValue;
-
-      // Compare: positive = vault beating HODL, negative = HODL winning
       result.vsHodl = ((tvl - currentHodlValue) / currentHodlValue) * 100;
     }
 
@@ -297,10 +381,13 @@ export function useVaultPerformance(
   const daysTracked = data.snapshots.length > 0 ? (Date.now() - data.snapshots[0].ts) / (1000 * 60 * 60 * 24) : 0;
   const inRange = currentTick !== null && currentTick >= tickLower && currentTick <= tickUpper;
 
-  const reset = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+  const reset = useCallback(async () => {
+    // Delete from Supabase
+    await supabase.from('vault_snapshots').delete().eq('vault_id', vaultId);
+    await supabase.from('vault_rewards').delete().eq('vault_id', vaultId);
+
     setData({ snapshots: [], rewards: [], lastTs: 0, lastRewardFetch: 0 });
-  }, []);
+  }, [vaultId]);
 
   return {
     totalAPR: metrics.totalAPR,
@@ -328,5 +415,6 @@ export function useVaultPerformance(
     lastUpdate: data.lastTs || null,
     firstSnapshot: data.snapshots[0] || null,
     reset,
+    isLoading,
   };
 }

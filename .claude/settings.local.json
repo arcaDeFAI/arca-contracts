@@ -17,7 +17,10 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:yields.llama.fi)",
       "WebFetch(domain:api.goldsky.com)",
-      "WebFetch(domain:api.coingecko.com)"
+      "WebFetch(domain:api.coingecko.com)",
+      "Bash(npx supabase:*)",
+      "Bash(PGPASSWORD='k&G5Q%u/cT/SMRJ' psql:*)",
+      "Bash(node:*)"
     ]
   }
 }
