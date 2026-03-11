@@ -85,7 +85,7 @@ export function PortfolioAllocationCard({
 
   if (allocations.length === 0) {
     return (
-      <div className="bg-arca-gray border border-gray-800/60 rounded-xl p-6">
+      <div className="bg-arca-card border border-arca-border rounded-xl p-6">
         <h3 className="text-lg font-semibold text-white mb-4">Capital Allocation</h3>
         <div className="text-center text-gray-400 py-8">
           No positions yet
@@ -95,7 +95,7 @@ export function PortfolioAllocationCard({
   }
 
   return (
-    <div className={`bg-arca-gray border border-gray-800/60 rounded-xl transition-all h-full ${isExpanded ? 'p-5' : 'p-3'}`}>
+    <div className={`bg-arca-card border border-arca-border rounded-xl transition-all h-full ${isExpanded ? 'p-5' : 'p-3'}`}>
       <div className={`flex items-center justify-between ${isExpanded ? 'mb-6' : 'mb-0'}`}>
         {isCollapsible ? (
           <div className="flex items-center gap-2">

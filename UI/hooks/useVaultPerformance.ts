@@ -6,8 +6,8 @@ import { formatUnits, parseAbiItem } from 'viem';
 import { SHADOW_STRAT_ABI, CL_POOL_ABI, METRO_VAULT_ABI } from '@/lib/typechain';
 import { usePrices } from '@/contexts/PriceContext';
 
-const STORAGE_KEY = 'vault_perf_wsusdc_v6';
-const SNAPSHOT_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const STORAGE_KEY = 'vault_perf_wsusdc_v7';
+const SNAPSHOT_INTERVAL_MS = 30 * 60 * 1000; // 30 minutes
 
 // SHADOW token for reward tracking
 const SHADOW_TOKEN = '0x3333b97138D4b086720b5aE8A7844b1345a33333';
@@ -209,6 +209,21 @@ export function useVaultPerformance(
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   }, [pricePerShare, currentTick, priceWS, tvl, data]);
 
+  // Calculate reward period from actual harvest events
+  const rewardMetrics = useMemo(() => {
+    if (data.rewards.length === 0) {
+      return { totalRewardsUSD: 0, rewardPeriodDays: 0 };
+    }
+
+    const sortedRewards = [...data.rewards].sort((a, b) => a.ts - b.ts);
+    const firstReward = sortedRewards[0];
+    const lastReward = sortedRewards[sortedRewards.length - 1];
+    const rewardPeriodDays = (lastReward.ts - firstReward.ts) / (1000 * 60 * 60 * 24);
+    const totalRewardsUSD = sortedRewards.reduce((sum, r) => sum + r.valueUSD, 0);
+
+    return { totalRewardsUSD, rewardPeriodDays };
+  }, [data.rewards]);
+
   // Calculate metrics
   const metrics = useMemo(() => {
     const result = {
@@ -216,7 +231,10 @@ export function useVaultPerformance(
       feeAPR: null as number | null,
       rewardAPR: null as number | null,
       il: null as number | null,
-      totalRewardsUSD: 0,
+      vsHodl: null as number | null, // Vault vs 50/50 HODL comparison
+      hodlValue: null as number | null,
+      hodlS: null as number | null, // S tokens in HODL portfolio
+      hodlUSDC: null as number | null, // USDC in HODL portfolio
       periodDays: 0,
     };
 
@@ -226,7 +244,8 @@ export function useVaultPerformance(
     const last = data.snapshots[data.snapshots.length - 1];
     const days = (last.ts - first.ts) / (1000 * 60 * 60 * 24);
 
-    if (days < 0.1 || first.pricePerShare === 0 || first.tvl === 0) return result;
+    // Minimum 15 minutes of data (0.01 days) to calculate APR
+    if (days < 0.01 || first.pricePerShare === 0 || first.tvl === 0) return result;
 
     result.periodDays = days;
 
@@ -234,24 +253,46 @@ export function useVaultPerformance(
     const shareGrowth = (last.pricePerShare - first.pricePerShare) / first.pricePerShare;
     result.feeAPR = (shareGrowth / days) * 365 * 100;
 
-    // Reward APR from SHADOW harvests
-    const periodRewards = data.rewards.filter(r => r.ts >= first.ts && r.ts <= last.ts);
-    result.totalRewardsUSD = periodRewards.reduce((sum, r) => sum + r.valueUSD, 0);
-
+    // Reward APR from SHADOW harvests (use reward period if available)
     const avgTVL = data.snapshots.reduce((sum, s) => sum + s.tvl, 0) / data.snapshots.length;
-    result.rewardAPR = avgTVL > 0 ? (result.totalRewardsUSD / avgTVL) * (365 / days) * 100 : 0;
+    if (rewardMetrics.rewardPeriodDays > 0 && avgTVL > 0) {
+      result.rewardAPR = (rewardMetrics.totalRewardsUSD / avgTVL) * (365 / rewardMetrics.rewardPeriodDays) * 100;
+    } else {
+      result.rewardAPR = 0;
+    }
 
     // Total APR
     result.totalAPR = (result.feeAPR || 0) + (result.rewardAPR || 0);
 
-    // IL
-    if (first.pX > 0 && priceWS > 0) {
-      const k = priceWS / first.pX;
+    // IL - find first snapshot with valid price
+    const firstWithPrice = data.snapshots.find(s => s.pX > 0);
+    if (firstWithPrice && priceWS > 0) {
+      const k = priceWS / firstWithPrice.pX;
+      // Standard IL formula: 2*sqrt(k)/(1+k) - 1
+      // This gives negative values when price diverges (which is IL)
       result.il = (2 * Math.sqrt(k) / (1 + k) - 1) * 100;
+
+      // HODL comparison: What if we just held 50/50 instead of LPing?
+      // At first snapshot: split TVL 50/50 into S and USDC
+      const initialTVL = firstWithPrice.tvl;
+      const initialSPrice = firstWithPrice.pX;
+      const hodlUSDC = initialTVL / 2; // Half stays as USDC
+      const hodlS = (initialTVL / 2) / initialSPrice; // Half buys S tokens
+
+      // Store token amounts
+      result.hodlS = hodlS;
+      result.hodlUSDC = hodlUSDC;
+
+      // Current value of HODL portfolio
+      const currentHodlValue = hodlUSDC + (hodlS * priceWS);
+      result.hodlValue = currentHodlValue;
+
+      // Compare: positive = vault beating HODL, negative = HODL winning
+      result.vsHodl = ((tvl - currentHodlValue) / currentHodlValue) * 100;
     }
 
     return result;
-  }, [data.snapshots, data.rewards, priceWS]);
+  }, [data.snapshots, rewardMetrics, priceWS, tvl]);
 
   const daysTracked = data.snapshots.length > 0 ? (Date.now() - data.snapshots[0].ts) / (1000 * 60 * 60 * 24) : 0;
   const inRange = currentTick !== null && currentTick >= tickLower && currentTick <= tickUpper;
@@ -266,7 +307,11 @@ export function useVaultPerformance(
     feeAPR: metrics.feeAPR,
     rewardAPR: metrics.rewardAPR,
     il: metrics.il,
-    totalRewardsUSD: metrics.totalRewardsUSD,
+    vsHodl: metrics.vsHodl,
+    hodlValue: metrics.hodlValue,
+    hodlS: metrics.hodlS,
+    hodlUSDC: metrics.hodlUSDC,
+    totalRewardsUSD: rewardMetrics.totalRewardsUSD,
     shadowPrice,
     pricePerShare,
     tvl,
@@ -277,6 +322,7 @@ export function useVaultPerformance(
     priceWS,
     daysTracked: Math.round(daysTracked * 10) / 10,
     periodDays: Math.round(metrics.periodDays * 10) / 10,
+    rewardPeriodDays: Math.round(rewardMetrics.rewardPeriodDays * 10) / 10,
     snapshotCount: data.snapshots.length,
     rewardEventCount: data.rewards.length,
     lastUpdate: data.lastTs || null,

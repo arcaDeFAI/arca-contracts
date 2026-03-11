@@ -249,7 +249,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
     <>
       <div className="bg-arca-card border border-arca-border rounded-xl overflow-hidden backdrop-blur-sm">
         {/* Table Header - Responsive */}
-        <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-arca-dark border-b border-arca-border text-sm font-semibold text-arca-text-secondary uppercase tracking-wider">
+        <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 border-b border-arca-border text-sm font-semibold text-arca-text-secondary uppercase tracking-wider">
           <div className="flex items-center justify-start pl-4 gap-2">
             <span>Vaults</span>
           </div>
@@ -266,7 +266,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
         </div>
 
         {/* Mobile Header */}
-        <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3 bg-arca-dark border-b border-arca-border text-xs font-semibold text-arca-text-secondary uppercase tracking-wider">
+        <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3 border-b border-arca-border text-xs font-semibold text-arca-text-secondary uppercase tracking-wider">
           <div>Vault</div>
           <div className="text-center flex items-center justify-center gap-1">
             <span>Withdraw</span>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { ERC20_ABI } from '@/lib/contracts';
@@ -231,9 +232,12 @@ export function DepositModal({
     }, 300);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 backdrop-blur-sm">
-      <div className="bg-arca-card rounded-lg p-6 w-full max-w-md border border-arca-border shadow-2xl">
+  // Use portal to render modal at document body level (escapes stacking context issues)
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+      <div className="bg-arca-card rounded-lg p-6 w-full max-w-md border border-arca-border">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">Deposit to {vaultName}</h2>
           <button
@@ -334,6 +338,7 @@ export function DepositModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

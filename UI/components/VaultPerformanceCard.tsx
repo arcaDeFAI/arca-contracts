@@ -42,22 +42,47 @@ export function VaultPerformanceCard() {
       {/* Main Metrics */}
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div className="bg-arca-dark rounded-lg p-3">
-          <p className="text-arca-text-muted text-xs mb-1">Total APR</p>
-          <p className={`text-2xl font-bold ${(perf.totalAPR ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {formatPct(perf.totalAPR)}
+          <p className="text-arca-text-muted text-xs mb-1">
+            Period Return ({perf.periodDays}d)
+            {perf.periodDays < 7 && <span className="text-yellow-400 ml-1">⚠</span>}
+          </p>
+          <p className={`text-2xl font-bold ${(perf.feeAPR ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {perf.feeAPR !== null ? `${((perf.feeAPR / 365) * perf.periodDays).toFixed(2)}%` : 'Collecting...'}
           </p>
           <p className="text-gray-500 text-xs mt-1">
-            Fee: {formatPct(perf.feeAPR)} + Rewards: {formatPct(perf.rewardAPR)}
+            Annualized: {formatPct(perf.totalAPR)}
           </p>
         </div>
 
         <div className="bg-arca-dark rounded-lg p-3">
-          <p className="text-arca-text-muted text-xs mb-1">Impermanent Loss</p>
-          <p className={`text-2xl font-bold ${(perf.il ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-            {formatPct(perf.il)}
+          <p className="text-arca-text-muted text-xs mb-1">vs 50/50 HODL</p>
+          <p className={`text-2xl font-bold ${(perf.vsHodl ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {formatPct(perf.vsHodl)}
           </p>
           <p className="text-gray-500 text-xs mt-1">
-            Since {perf.daysTracked}d tracking
+            HODL: {perf.hodlS?.toFixed(2) || '?'} S + {perf.hodlUSDC?.toFixed(2) || '?'} USDC
+          </p>
+          <p className="text-gray-500 text-xs">
+            = {perf.hodlValue ? formatUSD(perf.hodlValue) : '?'}
+          </p>
+        </div>
+      </div>
+
+      {/* IL & Price Change */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="bg-arca-dark rounded-lg p-3">
+          <p className="text-arca-text-muted text-xs mb-1">Impermanent Loss</p>
+          <p className={`text-lg font-bold ${(perf.il ?? 0) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            {formatPct(perf.il)}
+          </p>
+        </div>
+        <div className="bg-arca-dark rounded-lg p-3">
+          <p className="text-arca-text-muted text-xs mb-1">WS Price</p>
+          <p className="text-lg font-bold text-white">
+            ${perf.priceWS?.toFixed(4) || '?'}
+          </p>
+          <p className="text-gray-500 text-xs">
+            Start: ${perf.firstSnapshot?.pX?.toFixed(4) || '?'}
           </p>
         </div>
       </div>
@@ -83,9 +108,9 @@ export function VaultPerformanceCard() {
       </div>
 
       {/* Rewards Summary */}
-      {perf.totalRewardsUSD > 0 && (
+      {perf.rewardEventCount > 0 && (
         <div className="border-t border-arca-border pt-3 mb-3">
-          <p className="text-arca-text-muted text-xs mb-2">SHADOW Rewards ({perf.periodDays}d period)</p>
+          <p className="text-arca-text-muted text-xs mb-2">SHADOW Rewards ({perf.rewardPeriodDays}d period)</p>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-400">{perf.rewardEventCount} harvests</span>
             <span className="text-green-400 font-medium">{formatUSD(perf.totalRewardsUSD)}</span>
