@@ -22,12 +22,22 @@ interface IOracleVault is IBaseVault {
 
     function getPrice() external view returns (uint256 price);
 
+    function getTwapInterval() external view returns (uint32);
+
+    function setTwapInterval(uint32 twapInterval) external;
+
+    function getDeviationThreshold() external view returns (uint256);
+
+    function setDeviationThreshold(uint256 threshold) external;
+
+    function checkPriceInDeviation() external view returns (bool);
+
+    // Legacy: kept for backward compatibility with existing deployed vaults
+    function getOracleHelper() external view returns (IOracleHelper);
+
+    // Legacy: kept for backward compatibility
     function getOracleParameters()
         external
         view
         returns (IOracleHelper.OracleParameters memory parameters);
-
-    function checkPriceInDeviation() external view returns (bool);
-
-    function getOracleHelper() external view returns (IOracleHelper);
 }

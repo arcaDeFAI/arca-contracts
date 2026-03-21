@@ -5,6 +5,7 @@ pragma solidity 0.8.26;
 import {Uint256x256Math} from "@arca/joe-v2/libraries/math/Uint256x256Math.sol";
 
 import {BaseVault} from "./BaseVault.sol";
+import {MetropolisPriceHelper} from "./libraries/MetropolisPriceHelper.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
@@ -13,22 +14,23 @@ import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 /**
  * @title Liquidity Book Oracle Vault contract
  * @author Trader Joe
- * @notice This contract is used to interact with the Liquidity Book Pair contract.
- * The two tokens of the pair has to have an oracle.
- * The oracle is used to get the price of the token X in token Y.
- * The price is used to value the balance of the strategy and mint shares accordingly.
+ * @notice Oracle vault that reads price directly from the LB pair.
+ * Works with any token pair regardless of decimals.
  * The immutable data should be encoded as follow:
  * - 0x00: 20 bytes: The address of the LB pair.
  * - 0x14: 20 bytes: The address of the token X.
  * - 0x28: 20 bytes: The address of the token Y.
  * - 0x3C: 1 bytes: The decimals of the token X.
  * - 0x3D: 1 bytes: The decimals of the token Y.
- * - 0x3E: 20 bytes: The address of the oracle of the token X.
- * - 0x52: 20 bytes: The address of the oracle of the token Y.
- * - 0x66: 20 bytes: The address of the oracle helper.
  */
 contract OracleVault is BaseVault, IOracleVault {
     using Uint256x256Math for uint256;
+
+    /// @notice TWAP interval in seconds (0 = use spot price)
+    uint32 internal _twapInterval;
+
+    /// @notice Max allowed deviation between spot and TWAP (percentage, e.g. 5 = 5%)
+    uint256 internal _deviationThreshold;
 
     /**
      * @dev Constructor of the contract.
@@ -36,36 +38,46 @@ contract OracleVault is BaseVault, IOracleVault {
      */
     constructor(IVaultFactory factory) BaseVault(factory) {}
 
-    function _getOracleHelper() internal pure returns (IOracleHelper) {
-        return IOracleHelper(_getArgAddress(102)); // Adjust offset based on your data layout
-    }
-
     /**
      * @dev Returns the price of token X in token Y, in 128.128 binary fixed point format.
      * @return price The price of token X in token Y in 128.128 binary fixed point format.
      */
     function getPrice() external view override returns (uint256 price) {
-        return _getOracleHelper().getPrice();
+        return MetropolisPriceHelper.getPrice(_pair(), _twapInterval);
     }
 
     /**
-     * @dev Returns the oracle parameters.
-     * @return parameters The oracle parameters.
+     * @dev Returns the TWAP interval.
      */
-    function getOracleParameters()
-        external
-        view
-        returns (IOracleHelper.OracleParameters memory)
-    {
-        return _getOracleHelper().getOracleParameters();
+    function getTwapInterval() external view override returns (uint32) {
+        return _twapInterval;
     }
 
     /**
-     * @dev Returns the oracle helper.
-     * @return oracleHelper The oracle helper.
+     * @dev Sets the TWAP interval. Only callable by the factory.
+     * @param twapInterval The new TWAP interval in seconds (0 = spot price only).
      */
-    function getOracleHelper() external pure override returns (IOracleHelper) {
-        return _getOracleHelper();
+    function setTwapInterval(
+        uint32 twapInterval
+    ) external override onlyFactory {
+        _twapInterval = twapInterval;
+    }
+
+    /**
+     * @dev Returns the deviation threshold.
+     */
+    function getDeviationThreshold() external view override returns (uint256) {
+        return _deviationThreshold;
+    }
+
+    /**
+     * @dev Sets the deviation threshold. Only callable by the factory.
+     * @param threshold The maximum deviation percentage (e.g. 5 = 5%).
+     */
+    function setDeviationThreshold(
+        uint256 threshold
+    ) external override onlyFactory {
+        _deviationThreshold = threshold;
     }
 
     /**
@@ -80,6 +92,19 @@ contract OracleVault is BaseVault, IOracleVault {
         returns (IVaultFactory.VaultType)
     {
         return IVaultFactory.VaultType.Oracle;
+    }
+
+    /**
+     * @dev Checks if the current spot price is within deviation of the TWAP.
+     * @return True if price is within deviation (or if TWAP check is disabled).
+     */
+    function checkPriceInDeviation() external view returns (bool) {
+        MetropolisPriceHelper.checkPriceDeviation(
+            _pair(),
+            _twapInterval,
+            _deviationThreshold
+        );
+        return true;
     }
 
     /**
@@ -104,15 +129,18 @@ contract OracleVault is BaseVault, IOracleVault {
     {
         if (amountX == 0 && amountY == 0) return (0, 0, 0);
 
-        // the price is in quoteToken
-        uint256 price = _getOracleHelper().getPrice();
+        uint256 price = MetropolisPriceHelper.getPrice(_pair(), _twapInterval);
 
-        // check if the price is within the allowed deviation
-        _getOracleHelper().checkPriceInDeviation(); // will revert if not within deviation
+        // Check spot vs TWAP deviation (reverts if outside bounds)
+        MetropolisPriceHelper.checkPriceDeviation(
+            _pair(),
+            _twapInterval,
+            _deviationThreshold
+        );
 
         uint256 totalShares = totalSupply();
 
-        uint256 valueInY = _getOracleHelper().getValueInY(
+        uint256 valueInY = MetropolisPriceHelper.getValueInY(
             price,
             amountX,
             amountY
@@ -123,7 +151,7 @@ contract OracleVault is BaseVault, IOracleVault {
         }
 
         (uint256 totalX, uint256 totalY) = _getBalances(strategy);
-        uint256 totalValueInY = _getOracleHelper().getValueInY(
+        uint256 totalValueInY = MetropolisPriceHelper.getValueInY(
             price,
             totalX,
             totalY
@@ -134,8 +162,27 @@ contract OracleVault is BaseVault, IOracleVault {
         return (shares, amountX, amountY);
     }
 
-    function checkPriceInDeviation() external view returns (bool) {
-        return _getOracleHelper().checkPriceInDeviation();
+    // ========== Legacy methods (backward compatibility) ==========
+
+    /**
+     * @dev Legacy: Returns the oracle helper address from immutable data.
+     * Only works for vaults deployed with the old immutable data layout.
+     * New vaults do not pack an oracle helper address.
+     */
+    function getOracleHelper() external pure override returns (IOracleHelper) {
+        return IOracleHelper(_getArgAddress(102));
+    }
+
+    /**
+     * @dev Legacy: Returns oracle parameters from the oracle helper.
+     * Only works for vaults deployed with the old immutable data layout.
+     */
+    function getOracleParameters()
+        external
+        view
+        returns (IOracleHelper.OracleParameters memory)
+    {
+        return IOracleHelper(_getArgAddress(102)).getOracleParameters();
     }
 
     function _updatePool() internal virtual override {}

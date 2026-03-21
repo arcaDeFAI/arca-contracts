@@ -111,7 +111,9 @@ export interface VaultFactoryInterface extends Interface {
       | "setShadowVoter"
       | "setStrategyImplementation"
       | "setTransferIgnoreList"
+      | "setVaultDeviationThreshold"
       | "setVaultImplementation"
+      | "setVaultTwapInterval"
       | "transferOwnership"
   ): FunctionFragment;
 
@@ -354,8 +356,16 @@ export interface VaultFactoryInterface extends Interface {
     values: [AddressLike[]]
   ): string;
   encodeFunctionData(
+    functionFragment: "setVaultDeviationThreshold",
+    values: [AddressLike, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "setVaultImplementation",
     values: [BigNumberish, AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setVaultTwapInterval",
+    values: [AddressLike, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "transferOwnership",
@@ -571,7 +581,15 @@ export interface VaultFactoryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "setVaultDeviationThreshold",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "setVaultImplementation",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setVaultTwapInterval",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -1170,8 +1188,20 @@ export interface VaultFactory extends BaseContract {
     "nonpayable"
   >;
 
+  setVaultDeviationThreshold: TypedContractMethod<
+    [oracleVault: AddressLike, threshold: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   setVaultImplementation: TypedContractMethod<
     [vType: BigNumberish, vaultImplementation: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+
+  setVaultTwapInterval: TypedContractMethod<
+    [oracleVault: AddressLike, twapInterval: BigNumberish],
     [void],
     "nonpayable"
   >;
@@ -1446,9 +1476,23 @@ export interface VaultFactory extends BaseContract {
     nameOrSignature: "setTransferIgnoreList"
   ): TypedContractMethod<[addresses: AddressLike[]], [void], "nonpayable">;
   getFunction(
+    nameOrSignature: "setVaultDeviationThreshold"
+  ): TypedContractMethod<
+    [oracleVault: AddressLike, threshold: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "setVaultImplementation"
   ): TypedContractMethod<
     [vType: BigNumberish, vaultImplementation: AddressLike],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "setVaultTwapInterval"
+  ): TypedContractMethod<
+    [oracleVault: AddressLike, twapInterval: BigNumberish],
     [void],
     "nonpayable"
   >;

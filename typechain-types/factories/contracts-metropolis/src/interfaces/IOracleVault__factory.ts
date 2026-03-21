@@ -764,6 +764,19 @@ const _abi = [
   },
   {
     inputs: [],
+    name: "getDeviationThreshold",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "getFactory",
     outputs: [
       {
@@ -1013,6 +1026,19 @@ const _abi = [
   },
   {
     inputs: [],
+    name: "getTwapInterval",
+    outputs: [
+      {
+        internalType: "uint32",
+        name: "",
+        type: "uint32",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "getVaultType",
     outputs: [
       {
@@ -1253,6 +1279,19 @@ const _abi = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "threshold",
+        type: "uint256",
+      },
+    ],
+    name: "setDeviationThreshold",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "setEmergencyMode",
     outputs: [],
@@ -1268,6 +1307,19 @@ const _abi = [
       },
     ],
     name: "setStrategy",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint32",
+        name: "twapInterval",
+        type: "uint32",
+      },
+    ],
+    name: "setTwapInterval",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

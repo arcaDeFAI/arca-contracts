@@ -242,6 +242,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.Hooks__factory>;
     getContractFactory(
+      name: "MetropolisPriceHelper",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MetropolisPriceHelper__factory>;
+    getContractFactory(
       name: "TokenHelper",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TokenHelper__factory>;
@@ -369,6 +373,10 @@ declare module "hardhat/types/runtime" {
       name: "ShadowStrategy",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.ShadowStrategy__factory>;
+    getContractFactory(
+      name: "MockLBPair",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockLBPair__factory>;
     getContractFactory(
       name: "MockMetropolisStrategy",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -684,6 +692,11 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.Hooks>;
     getContractAt(
+      name: "MetropolisPriceHelper",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MetropolisPriceHelper>;
+    getContractAt(
       name: "TokenHelper",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
@@ -843,6 +856,11 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.ShadowStrategy>;
+    getContractAt(
+      name: "MockLBPair",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockLBPair>;
     getContractAt(
       name: "MockMetropolisStrategy",
       address: string | ethers.Addressable,
@@ -1108,6 +1126,10 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Hooks>;
     deployContract(
+      name: "MetropolisPriceHelper",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MetropolisPriceHelper>;
+    deployContract(
       name: "TokenHelper",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TokenHelper>;
@@ -1235,6 +1257,10 @@ declare module "hardhat/types/runtime" {
       name: "ShadowStrategy",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ShadowStrategy>;
+    deployContract(
+      name: "MockLBPair",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockLBPair>;
     deployContract(
       name: "MockMetropolisStrategy",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1550,6 +1576,11 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.Hooks>;
     deployContract(
+      name: "MetropolisPriceHelper",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MetropolisPriceHelper>;
+    deployContract(
       name: "TokenHelper",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1709,6 +1740,11 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.ShadowStrategy>;
+    deployContract(
+      name: "MockLBPair",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockLBPair>;
     deployContract(
       name: "MockMetropolisStrategy",
       args: any[],
