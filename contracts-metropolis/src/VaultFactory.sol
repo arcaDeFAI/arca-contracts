@@ -17,7 +17,6 @@ import {IBaseVault} from "./interfaces/IBaseVault.sol";
 import {IOracleRewardShadowVault} from "../../contracts-shadow/src/interfaces/IOracleRewardShadowVault.sol";
 import {IRamsesV3Pool} from "../../contracts-shadow/CL/core/interfaces/IRamsesV3Pool.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
-import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
@@ -692,32 +691,6 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         IAggregatorV3 defaultSequencerUptimeFeed
     ) external override onlyOwner {
         _defaultSequencerUptimeFeed = defaultSequencerUptimeFeed;
-    }
-
-    function setSequencerUptimeFeed(
-        address oracleVault,
-        IAggregatorV3 sequencerUptimeFeed
-    ) external override onlyOwner {
-        // Legacy: only works for vaults deployed with old OracleHelper layout
-        IOracleVault(oracleVault).getOracleHelper().setSequencerUptimeFeed(
-            sequencerUptimeFeed
-        );
-    }
-
-    /**
-     * @notice Sets the oracle parameters for the given oracle vault.
-     * @dev Legacy: only works for vaults deployed with old OracleHelper layout.
-     * For new vaults, use setVaultTwapInterval() and setVaultDeviationThreshold().
-     * @param oracleVault The address of the oracle vault.
-     * @param parameters The parameters to set.
-     */
-    function setOracleParameters(
-        address oracleVault,
-        IOracleHelper.OracleParameters calldata parameters
-    ) external override onlyOwner {
-        IOracleVault(oracleVault).getOracleHelper().setOracleParameters(
-            parameters
-        );
     }
 
     /**

@@ -808,69 +808,6 @@ const _abi = [
   },
   {
     inputs: [],
-    name: "getOracleHelper",
-    outputs: [
-      {
-        internalType: "contract IOracleHelper",
-        name: "",
-        type: "address",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getOracleParameters",
-    outputs: [
-      {
-        components: [
-          {
-            internalType: "uint256",
-            name: "minPrice",
-            type: "uint256",
-          },
-          {
-            internalType: "uint256",
-            name: "maxPrice",
-            type: "uint256",
-          },
-          {
-            internalType: "uint24",
-            name: "heartbeatX",
-            type: "uint24",
-          },
-          {
-            internalType: "uint24",
-            name: "heartbeatY",
-            type: "uint24",
-          },
-          {
-            internalType: "uint256",
-            name: "deviationThreshold",
-            type: "uint256",
-          },
-          {
-            internalType: "bool",
-            name: "twapPriceCheckEnabled",
-            type: "bool",
-          },
-          {
-            internalType: "uint40",
-            name: "twapInterval",
-            type: "uint40",
-          },
-        ],
-        internalType: "struct IOracleHelper.OracleParameters",
-        name: "parameters",
-        type: "tuple",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "getPair",
     outputs: [
       {
