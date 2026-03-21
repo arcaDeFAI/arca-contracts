@@ -22,8 +22,6 @@ import {IOracleRewardVault} from "./interfaces/IOracleRewardVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
 import {IAggregatorV3} from "./interfaces/IAggregatorV3.sol";
 import {IPriceLens} from "./interfaces/IPriceLens.sol";
-import {IOracleHelperFactory} from "./interfaces/IOracleHelperFactory.sol";
-import {OracleLensAggregator} from "./utils/OracleLensAggregator.sol";
 import {IERC20, TokenHelper} from "./libraries/TokenHelper.sol";
 
 /**
@@ -555,31 +553,11 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         address tokenX = address(lbPair.getTokenX());
         address tokenY = address(lbPair.getTokenY());
 
-        // create data feeds
-        OracleLensAggregator dataFeedX = new OracleLensAggregator(
-            _priceLens,
-            tokenX
-        );
-        OracleLensAggregator dataFeedY = new OracleLensAggregator(
-            _priceLens,
-            tokenY
-        );
+        // sanity check for TWAP oracle
+        (, uint16 size, , , ) = ILBPair(lbPair).getOracleParameters();
+        if (size == 0) revert VaultFactory__TwapInvalidOracleSize();
 
-        // sanity check
-        if (dataFeedX.decimals() != dataFeedY.decimals())
-            revert VaultFactory__InvalidDecimals();
-
-        // create oracle vault, we use 24 hours as default
-        // as we do not use the standard chainlink heartbeat mechanism here
-        vault = _createOracleVault(
-            lbPair,
-            tokenX,
-            tokenY,
-            dataFeedX,
-            dataFeedY,
-            24 hours,
-            24 hours
-        );
+        vault = _createOracleVault(lbPair, tokenX, tokenY);
         strategy = _createDefaultStrategy(vault, lbPair, tokenX, tokenY);
 
         _linkVaultToStrategy(IMinimalVault(vault), strategy);
@@ -588,11 +566,8 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         IStrategyCommon(strategy).setOperator(msg.sender);
 
         // set twap interval to 120 seconds and deviation threshold to 5%
-        IOracleVault(vault).getOracleHelper().setTwapParams(true, 120, 5);
-
-        // sanity check for twap price
-        (, uint16 size, , , ) = ILBPair(lbPair).getOracleParameters();
-        if (size == 0) revert VaultFactory__TwapInvalidOracleSize();
+        IOracleVault(vault).setTwapInterval(120);
+        IOracleVault(vault).setDeviationThreshold(5);
 
         // set pending aum fee
         IOracleVault(vault).getStrategy().setPendingAumAnnualFee(aumFee);
@@ -723,6 +698,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         address oracleVault,
         IAggregatorV3 sequencerUptimeFeed
     ) external override onlyOwner {
+        // Legacy: only works for vaults deployed with old OracleHelper layout
         IOracleVault(oracleVault).getOracleHelper().setSequencerUptimeFeed(
             sequencerUptimeFeed
         );
@@ -730,6 +706,8 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
     /**
      * @notice Sets the oracle parameters for the given oracle vault.
+     * @dev Legacy: only works for vaults deployed with old OracleHelper layout.
+     * For new vaults, use setVaultTwapInterval() and setVaultDeviationThreshold().
      * @param oracleVault The address of the oracle vault.
      * @param parameters The parameters to set.
      */
@@ -740,6 +718,30 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         IOracleVault(oracleVault).getOracleHelper().setOracleParameters(
             parameters
         );
+    }
+
+    /**
+     * @notice Sets the TWAP interval for an oracle vault.
+     * @param oracleVault The address of the oracle vault.
+     * @param twapInterval The TWAP interval in seconds (0 = spot price only).
+     */
+    function setVaultTwapInterval(
+        address oracleVault,
+        uint32 twapInterval
+    ) external onlyOwner {
+        IOracleVault(oracleVault).setTwapInterval(twapInterval);
+    }
+
+    /**
+     * @notice Sets the deviation threshold for an oracle vault.
+     * @param oracleVault The address of the oracle vault.
+     * @param threshold The maximum deviation percentage (e.g. 5 = 5%).
+     */
+    function setVaultDeviationThreshold(
+        address oracleVault,
+        uint256 threshold
+    ) external onlyOwner {
+        IOracleVault(oracleVault).setDeviationThreshold(threshold);
     }
 
     /**
@@ -881,44 +883,25 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
     /**
      * @dev Internal function to create a new oracle vault.
+     * Price is read directly from the LB pair (no external oracle needed).
      * @param lbPair The address of the LBPair.
      * @param tokenX The address of token X.
      * @param tokenY The address of token Y.
-     * @param dataFeedX The address of the data feed for token X.
-     * @param dataFeedY The address of the data feed for token Y.
      */
     function _createOracleVault(
         ILBPair lbPair,
         address tokenX,
-        address tokenY,
-        IAggregatorV3 dataFeedX,
-        IAggregatorV3 dataFeedY,
-        uint24 heartbeatX,
-        uint24 heartbeatY
+        address tokenY
     ) internal returns (address vault) {
         uint8 decimalsX = IERC20MetadataUpgradeable(tokenX).decimals();
         uint8 decimalsY = IERC20MetadataUpgradeable(tokenY).decimals();
-
-        // Create the helper first
-        IOracleHelper helper = IOracleHelperFactory(_oracleHelperFactory)
-            .createOracleHelper(
-                address(this),
-                lbPair,
-                dataFeedX,
-                dataFeedY,
-                decimalsX,
-                decimalsY
-            );
 
         bytes memory vaultImmutableData = abi.encodePacked(
             lbPair,
             tokenX,
             tokenY,
             decimalsX,
-            decimalsY,
-            dataFeedX,
-            dataFeedY,
-            address(helper)
+            decimalsY
         );
 
         vault = _createMetropolisVault(
@@ -929,17 +912,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
             vaultImmutableData
         );
 
-        // Initialize the helper with the vault address
-        helper.initialize(
-            vault,
-            heartbeatX,
-            heartbeatY,
-            0,
-            type(uint256).max,
-            _defaultSequencerUptimeFeed
-        );
-
-        // Safety check to ensure the oracles are set correctly
+        // Safety check: LB pair has a valid spot price
         if (IOracleVault(vault).getPrice() == 0)
             revert VaultFactory__InvalidOraclePrice();
     }
