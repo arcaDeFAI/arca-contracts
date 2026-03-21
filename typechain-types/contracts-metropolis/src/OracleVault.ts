@@ -23,36 +23,6 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
-export declare namespace IOracleHelper {
-  export type OracleParametersStruct = {
-    minPrice: BigNumberish;
-    maxPrice: BigNumberish;
-    heartbeatX: BigNumberish;
-    heartbeatY: BigNumberish;
-    deviationThreshold: BigNumberish;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: BigNumberish;
-  };
-
-  export type OracleParametersStructOutput = [
-    minPrice: bigint,
-    maxPrice: bigint,
-    heartbeatX: bigint,
-    heartbeatY: bigint,
-    deviationThreshold: bigint,
-    twapPriceCheckEnabled: boolean,
-    twapInterval: bigint
-  ] & {
-    minPrice: bigint;
-    maxPrice: bigint;
-    heartbeatX: bigint;
-    heartbeatY: bigint;
-    deviationThreshold: bigint;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: bigint;
-  };
-}
-
 export interface OracleVaultInterface extends Interface {
   getFunction(
     nameOrSignature:
@@ -75,8 +45,6 @@ export interface OracleVaultInterface extends Interface {
       | "getDeviationThreshold"
       | "getFactory"
       | "getOperators"
-      | "getOracleHelper"
-      | "getOracleParameters"
       | "getPair"
       | "getPrice"
       | "getQueuedWithdrawal"
@@ -205,14 +173,6 @@ export interface OracleVaultInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getOperators",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getOracleHelper",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getOracleParameters",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "getPair", values?: undefined): string;
@@ -388,14 +348,6 @@ export interface OracleVaultInterface extends Interface {
   decodeFunctionResult(functionFragment: "getFactory", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getOperators",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getOracleHelper",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getOracleParameters",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getPair", data: BytesLike): Result;
@@ -916,14 +868,6 @@ export interface OracleVault extends BaseContract {
     "view"
   >;
 
-  getOracleHelper: TypedContractMethod<[], [string], "view">;
-
-  getOracleParameters: TypedContractMethod<
-    [],
-    [IOracleHelper.OracleParametersStructOutput],
-    "view"
-  >;
-
   getPair: TypedContractMethod<[], [string], "view">;
 
   getPrice: TypedContractMethod<[], [bigint], "view">;
@@ -1167,16 +1111,6 @@ export interface OracleVault extends BaseContract {
   ): TypedContractMethod<
     [],
     [[string, string] & { defaultOperator: string; operator: string }],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getOracleHelper"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "getOracleParameters"
-  ): TypedContractMethod<
-    [],
-    [IOracleHelper.OracleParametersStructOutput],
     "view"
   >;
   getFunction(

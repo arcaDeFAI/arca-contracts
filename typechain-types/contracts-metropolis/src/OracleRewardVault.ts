@@ -23,36 +23,6 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
-export declare namespace IOracleHelper {
-  export type OracleParametersStruct = {
-    minPrice: BigNumberish;
-    maxPrice: BigNumberish;
-    heartbeatX: BigNumberish;
-    heartbeatY: BigNumberish;
-    deviationThreshold: BigNumberish;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: BigNumberish;
-  };
-
-  export type OracleParametersStructOutput = [
-    minPrice: bigint,
-    maxPrice: bigint,
-    heartbeatX: bigint,
-    heartbeatY: bigint,
-    deviationThreshold: bigint,
-    twapPriceCheckEnabled: boolean,
-    twapInterval: bigint
-  ] & {
-    minPrice: bigint;
-    maxPrice: bigint;
-    heartbeatX: bigint;
-    heartbeatY: bigint;
-    deviationThreshold: bigint;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: bigint;
-  };
-}
-
 export declare namespace IOracleRewardVault {
   export type UserRewardStruct = {
     token: AddressLike;
@@ -111,8 +81,6 @@ export interface OracleRewardVaultInterface extends Interface {
       | "getDeviationThreshold"
       | "getFactory"
       | "getOperators"
-      | "getOracleHelper"
-      | "getOracleParameters"
       | "getPair"
       | "getPendingRewards"
       | "getPrice"
@@ -248,14 +216,6 @@ export interface OracleRewardVaultInterface extends Interface {
   ): string;
   encodeFunctionData(
     functionFragment: "getOperators",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getOracleHelper",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "getOracleParameters",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "getPair", values?: undefined): string;
@@ -448,14 +408,6 @@ export interface OracleRewardVaultInterface extends Interface {
   decodeFunctionResult(functionFragment: "getFactory", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "getOperators",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getOracleHelper",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "getOracleParameters",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "getPair", data: BytesLike): Result;
@@ -1028,14 +980,6 @@ export interface OracleRewardVault extends BaseContract {
     "view"
   >;
 
-  getOracleHelper: TypedContractMethod<[], [string], "view">;
-
-  getOracleParameters: TypedContractMethod<
-    [],
-    [IOracleHelper.OracleParametersStructOutput],
-    "view"
-  >;
-
   getPair: TypedContractMethod<[], [string], "view">;
 
   getPendingRewards: TypedContractMethod<
@@ -1302,16 +1246,6 @@ export interface OracleRewardVault extends BaseContract {
   ): TypedContractMethod<
     [],
     [[string, string] & { defaultOperator: string; operator: string }],
-    "view"
-  >;
-  getFunction(
-    nameOrSignature: "getOracleHelper"
-  ): TypedContractMethod<[], [string], "view">;
-  getFunction(
-    nameOrSignature: "getOracleParameters"
-  ): TypedContractMethod<
-    [],
-    [IOracleHelper.OracleParametersStructOutput],
     "view"
   >;
   getFunction(

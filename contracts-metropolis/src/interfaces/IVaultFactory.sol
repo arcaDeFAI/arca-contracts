@@ -8,7 +8,6 @@ import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {IAggregatorV3} from "./IAggregatorV3.sol";
 import {IStrategyCommon} from "./IStrategyCommon.sol";
 import {IMinimalVault} from "./IMinimalVault.sol";
-import {IOracleHelper} from "./IOracleHelper.sol";
 
 /**
  * @title Vault Factory Interface
@@ -200,16 +199,6 @@ interface IVaultFactory {
 
     function setDefaultSequencerUptimeFeed(
         IAggregatorV3 sequencerUptimeFeed
-    ) external;
-
-    function setSequencerUptimeFeed(
-        address oracleVault,
-        IAggregatorV3 sequencerUptimeFeed
-    ) external;
-
-    function setOracleParameters(
-        address oracleVault,
-        IOracleHelper.OracleParameters calldata parameters
     ) external;
 
     function setPairWhitelist(

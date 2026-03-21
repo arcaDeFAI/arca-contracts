@@ -23,36 +23,6 @@ import type {
   TypedContractMethod,
 } from "../../common";
 
-export declare namespace IOracleHelper {
-  export type OracleParametersStruct = {
-    minPrice: BigNumberish;
-    maxPrice: BigNumberish;
-    heartbeatX: BigNumberish;
-    heartbeatY: BigNumberish;
-    deviationThreshold: BigNumberish;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: BigNumberish;
-  };
-
-  export type OracleParametersStructOutput = [
-    minPrice: bigint,
-    maxPrice: bigint,
-    heartbeatX: bigint,
-    heartbeatY: bigint,
-    deviationThreshold: bigint,
-    twapPriceCheckEnabled: boolean,
-    twapInterval: bigint
-  ] & {
-    minPrice: bigint;
-    maxPrice: bigint;
-    heartbeatX: bigint;
-    heartbeatY: bigint;
-    deviationThreshold: bigint;
-    twapPriceCheckEnabled: boolean;
-    twapInterval: bigint;
-  };
-}
-
 export interface VaultFactoryInterface extends Interface {
   getFunction(
     nameOrSignature:
@@ -101,12 +71,10 @@ export interface VaultFactoryInterface extends Interface {
       | "setFeeRecipient"
       | "setOperator"
       | "setOracleHelperFactory"
-      | "setOracleParameters"
       | "setPairWhitelist"
       | "setPendingAumAnnualFee"
       | "setPriceLens"
       | "setRebalanceCoolDown"
-      | "setSequencerUptimeFeed"
       | "setShadowNonfungiblePositionManager"
       | "setShadowVoter"
       | "setStrategyImplementation"
@@ -316,10 +284,6 @@ export interface VaultFactoryInterface extends Interface {
     values: [AddressLike]
   ): string;
   encodeFunctionData(
-    functionFragment: "setOracleParameters",
-    values: [AddressLike, IOracleHelper.OracleParametersStruct]
-  ): string;
-  encodeFunctionData(
     functionFragment: "setPairWhitelist",
     values: [AddressLike[], boolean]
   ): string;
@@ -334,10 +298,6 @@ export interface VaultFactoryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "setRebalanceCoolDown",
     values: [AddressLike, BigNumberish]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "setSequencerUptimeFeed",
-    values: [AddressLike, AddressLike]
   ): string;
   encodeFunctionData(
     functionFragment: "setShadowNonfungiblePositionManager",
@@ -541,10 +501,6 @@ export interface VaultFactoryInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
-    functionFragment: "setOracleParameters",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "setPairWhitelist",
     data: BytesLike
   ): Result;
@@ -558,10 +514,6 @@ export interface VaultFactoryInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setRebalanceCoolDown",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "setSequencerUptimeFeed",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -1129,15 +1081,6 @@ export interface VaultFactory extends BaseContract {
     "nonpayable"
   >;
 
-  setOracleParameters: TypedContractMethod<
-    [
-      oracleVault: AddressLike,
-      parameters: IOracleHelper.OracleParametersStruct
-    ],
-    [void],
-    "nonpayable"
-  >;
-
   setPairWhitelist: TypedContractMethod<
     [pairs: AddressLike[], isWhitelisted: boolean],
     [void],
@@ -1154,12 +1097,6 @@ export interface VaultFactory extends BaseContract {
 
   setRebalanceCoolDown: TypedContractMethod<
     [strategy: AddressLike, coolDown: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-
-  setSequencerUptimeFeed: TypedContractMethod<
-    [oracleVault: AddressLike, sequencerUptimeFeed: AddressLike],
     [void],
     "nonpayable"
   >;
@@ -1415,16 +1352,6 @@ export interface VaultFactory extends BaseContract {
     "nonpayable"
   >;
   getFunction(
-    nameOrSignature: "setOracleParameters"
-  ): TypedContractMethod<
-    [
-      oracleVault: AddressLike,
-      parameters: IOracleHelper.OracleParametersStruct
-    ],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
     nameOrSignature: "setPairWhitelist"
   ): TypedContractMethod<
     [pairs: AddressLike[], isWhitelisted: boolean],
@@ -1445,13 +1372,6 @@ export interface VaultFactory extends BaseContract {
     nameOrSignature: "setRebalanceCoolDown"
   ): TypedContractMethod<
     [strategy: AddressLike, coolDown: BigNumberish],
-    [void],
-    "nonpayable"
-  >;
-  getFunction(
-    nameOrSignature: "setSequencerUptimeFeed"
-  ): TypedContractMethod<
-    [oracleVault: AddressLike, sequencerUptimeFeed: AddressLike],
     [void],
     "nonpayable"
   >;

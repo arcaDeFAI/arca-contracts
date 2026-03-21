@@ -9,11 +9,9 @@ import {MetropolisPriceHelper} from "./libraries/MetropolisPriceHelper.sol";
 import {IMetropolisStrategy} from "./interfaces/IMetropolisStrategy.sol";
 import {IOracleVault} from "./interfaces/IOracleVault.sol";
 import {IVaultFactory} from "./interfaces/IVaultFactory.sol";
-import {IOracleHelper} from "./interfaces/IOracleHelper.sol";
 
 /**
  * @title Liquidity Book Oracle Vault contract
- * @author Trader Joe
  * @notice Oracle vault that reads price directly from the LB pair.
  * Works with any token pair regardless of decimals.
  * The immutable data should be encoded as follow:
@@ -43,7 +41,7 @@ contract OracleVault is BaseVault, IOracleVault {
      * @return price The price of token X in token Y in 128.128 binary fixed point format.
      */
     function getPrice() external view override returns (uint256 price) {
-        return MetropolisPriceHelper.getPrice(_pair(), _twapInterval);
+        return _getPrice();
     }
 
     /**
@@ -99,12 +97,29 @@ contract OracleVault is BaseVault, IOracleVault {
      * @return True if price is within deviation (or if TWAP check is disabled).
      */
     function checkPriceInDeviation() external view returns (bool) {
+        _checkPriceDeviation();
+        return true;
+    }
+
+    /**
+     * @dev Returns the 128.128 price of token X in token Y.
+     * Virtual so subclasses can override to use an external oracle.
+     */
+    function _getPrice() internal view virtual returns (uint256) {
+        return MetropolisPriceHelper.getPrice(_pair(), _twapInterval);
+    }
+
+    /**
+     * @dev Validates that spot price is within deviation of TWAP.
+     * Virtual so subclasses can override with cross-source validation
+     * (e.g. external oracle vs LB pair).
+     */
+    function _checkPriceDeviation() internal view virtual {
         MetropolisPriceHelper.checkPriceDeviation(
             _pair(),
             _twapInterval,
             _deviationThreshold
         );
-        return true;
     }
 
     /**
@@ -129,14 +144,9 @@ contract OracleVault is BaseVault, IOracleVault {
     {
         if (amountX == 0 && amountY == 0) return (0, 0, 0);
 
-        uint256 price = MetropolisPriceHelper.getPrice(_pair(), _twapInterval);
+        uint256 price = _getPrice();
 
-        // Check spot vs TWAP deviation (reverts if outside bounds)
-        MetropolisPriceHelper.checkPriceDeviation(
-            _pair(),
-            _twapInterval,
-            _deviationThreshold
-        );
+        _checkPriceDeviation();
 
         uint256 totalShares = totalSupply();
 
@@ -160,29 +170,6 @@ contract OracleVault is BaseVault, IOracleVault {
         shares = valueInY.mulDivRoundDown(totalShares, totalValueInY);
 
         return (shares, amountX, amountY);
-    }
-
-    // ========== Legacy methods (backward compatibility) ==========
-
-    /**
-     * @dev Legacy: Returns the oracle helper address from immutable data.
-     * Only works for vaults deployed with the old immutable data layout.
-     * New vaults do not pack an oracle helper address.
-     */
-    function getOracleHelper() external pure override returns (IOracleHelper) {
-        return IOracleHelper(_getArgAddress(102));
-    }
-
-    /**
-     * @dev Legacy: Returns oracle parameters from the oracle helper.
-     * Only works for vaults deployed with the old immutable data layout.
-     */
-    function getOracleParameters()
-        external
-        view
-        returns (IOracleHelper.OracleParameters memory)
-    {
-        return IOracleHelper(_getArgAddress(102)).getOracleParameters();
     }
 
     function _updatePool() internal virtual override {}
