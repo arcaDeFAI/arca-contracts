@@ -14,6 +14,7 @@ export function getTokenLogo(tokenSymbol: string): string {
     'ETH': '/WETH-logo.png', // ETH uses WETH logo
     'METRO': '/MetropolisLogo.png',
     'SHADOW': '/SHadowLogo.jpg',
+    'USSD': '/UssdLogo.svg',
   };
 
   return logoMap[symbol] || '/SonicLogoRound.png'; // Default fallback
@@ -33,6 +34,7 @@ export function getTokenDisplayName(tokenSymbol: string): string {
     'ETH': 'ETH',
     'METRO': 'Metro',
     'SHADOW': 'Shadow',
+    'USSD': 'USSD',
   };
 
   return nameMap[symbol] || symbol;
