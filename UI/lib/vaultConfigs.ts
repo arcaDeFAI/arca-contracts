@@ -52,6 +52,17 @@ export const VAULT_CONFIGS: VaultConfig[] = [
     tokenY: 'USDC',
   },
 
+  {
+    protocol: 'metropolis',
+    vaultAddress: '0x34331E66a634D69D64edC3e21E52A53899e12640',
+    stratAddress: '0x38FdF9a12Ac2e2aD95dd5bE3d271cC6EA23C5c2C',
+    lbBookAddress: '0x9eDE606c7168bb09fF73EbdE7bFD6FcfaBDA9Bc3',
+    name: 'WETH • wS | Metropolis',
+    tier: 'Premium',
+    tokenX: 'WETH',
+    tokenY: 'WS',
+  },
+
   // Shadow Vaults
   {
     protocol: 'shadow',
