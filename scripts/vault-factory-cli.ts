@@ -1,4 +1,4 @@
-import { ethers, network } from "hardhat";
+import { ethers, network, upgrades } from "hardhat";
 import readline from "readline";
 import chalk from "chalk";
 import fs from "fs";
@@ -9,7 +9,8 @@ import type {
     IRamsesV3Pool,
     OracleRewardVault,
     OracleRewardShadowVault,
-    ShadowStrategy
+    ShadowStrategy,
+    ProxyAdmin
 } from "../typechain-types";
 import type { IERC20MetadataUpgradeable } from "../typechain-types/@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable";
 import type { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
@@ -20,9 +21,13 @@ import type { Contract, ContractTransactionResponse, TransactionResponse, Transa
 // ================================
 interface VaultFactoryConfig {
     factoryAddress: string;
+    proxyAdminAddress: string;
+    wnative: string;
+    oracleHelperFactory: string;
     signer: SignerWithAddress;
     dryRun: boolean;
     exportPath: string;
+    deploymentPath: string;
 }
 
 interface GasTransaction {
@@ -257,13 +262,30 @@ class VaultFactoryCLI {
             const creationFee = await this.factory!.getCreationFee();
             const wnative = await this.factory!.getWNative();
 
+            // Get implementation address via ProxyAdmin
+            let implAddress = "N/A";
+            try {
+                const proxyAdmin = await ethers.getContractAt(
+                    "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+                    this.config.proxyAdminAddress,
+                    this.config.signer
+                ) as unknown as ProxyAdmin;
+                implAddress = await proxyAdmin.getProxyImplementation(factoryAddress);
+            } catch { /* ProxyAdmin unavailable */ }
+
+            // getVersion() is only present on implementations >= 2.0.0
+            let version = "N/A (pre-versioning)";
+            try { version = await this.factory!.getVersion(); } catch { /* old implementation */ }
+
             console.log(chalk.white("Basic Information:"));
-            console.log(chalk.gray(`  Factory Address: ${factoryAddress}`));
-            console.log(chalk.gray(`  Owner: ${owner}`));
+            console.log(chalk.gray(`  Proxy Address:   ${factoryAddress}`));
+            console.log(chalk.gray(`  Implementation:  ${implAddress}`));
+            console.log(chalk.gray(`  Version:         ${version}`));
+            console.log(chalk.gray(`  Owner:           ${owner}`));
             console.log(chalk.gray(`  Default Operator: ${defaultOperator}`));
-            console.log(chalk.gray(`  Fee Recipient: ${feeRecipient}`));
-            console.log(chalk.gray(`  Creation Fee: ${ethers.formatEther(creationFee)} S`));
-            console.log(chalk.gray(`  Wrapped Native: ${wnative}`));
+            console.log(chalk.gray(`  Fee Recipient:   ${feeRecipient}`));
+            console.log(chalk.gray(`  Creation Fee:    ${ethers.formatEther(creationFee)} S`));
+            console.log(chalk.gray(`  Wrapped Native:  ${wnative}`));
 
             // Shadow protocol addresses
             const shadowNPM = await this.factory!.getShadowNonfungiblePositionManager();
@@ -328,8 +350,11 @@ class VaultFactoryCLI {
         console.log(chalk.gray("  8. Manage Whitelist"));
         console.log(chalk.gray("  9. Emergency Operations"));
 
+        console.log(chalk.gray("\n⬆️  Upgrades"));
+        console.log(chalk.gray("  10. Upgrade VaultFactory Implementation"));
+
         console.log(chalk.gray("\n📊 Utilities"));
-        console.log(chalk.gray("  10. Export Gas Report"));
+        console.log(chalk.gray("  11. Export Gas Report"));
         console.log(chalk.gray("  0. Exit"));
 
         return await this.question("\nSelect option: ");
@@ -378,6 +403,9 @@ class VaultFactoryCLI {
                         await this.emergencyOperations();
                         break;
                     case '10':
+                        await this.upgradeFactory();
+                        break;
+                    case '11':
                         await this.exportGasReport();
                         break;
                     case '0':
@@ -1363,6 +1391,219 @@ class VaultFactoryCLI {
         }
     }
 
+    async upgradeFactory() {
+        console.log(chalk.blue("\n⬆️  Upgrade VaultFactory Implementation\n"));
+
+        try {
+            const { proxyAdminAddress, factoryAddress, wnative, oracleHelperFactory } = this.config;
+
+            // ── Step 1: Connect to ProxyAdmin and verify ownership ──
+            const proxyAdmin = await ethers.getContractAt(
+                "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
+                proxyAdminAddress,
+                this.config.signer
+            ) as unknown as ProxyAdmin;
+
+            const currentImpl = await proxyAdmin.getProxyImplementation(factoryAddress);
+            const proxyAdminOwner = await proxyAdmin.owner();
+
+            console.log(chalk.white("Current State:"));
+            console.log(chalk.gray(`  Proxy Address:          ${factoryAddress}`));
+            console.log(chalk.gray(`  ProxyAdmin Address:     ${proxyAdminAddress}`));
+            console.log(chalk.gray(`  Current Implementation: ${currentImpl}`));
+            console.log(chalk.gray(`  ProxyAdmin Owner:       ${proxyAdminOwner}`));
+            console.log(chalk.gray(`  Your Address:           ${this.config.signer.address}`));
+
+            if (proxyAdminOwner.toLowerCase() !== this.config.signer.address.toLowerCase()) {
+                console.error(chalk.red("\n❌ You are not the ProxyAdmin owner. Cannot upgrade."));
+                return;
+            }
+            console.log(chalk.green("  ✓ You are the ProxyAdmin owner"));
+
+            // ── Step 2: Snapshot current proxy state for post-upgrade verification ──
+            console.log(chalk.blue("\n📸 Capturing pre-upgrade state..."));
+            const preOwner = await this.factory!.owner();
+            const preDefaultOperator = await this.factory!.getDefaultOperator();
+            const preFeeRecipient = await this.factory!.getFeeRecipient();
+            const preCreationFee = await this.factory!.getCreationFee();
+            const preWnative = await this.factory!.getWNative();
+            const preOracleRewardVaultImpl = await this.factory!.getVaultImplementation(VaultType.OracleReward);
+            const preShadowVaultImpl = await this.factory!.getVaultImplementation(VaultType.ShadowOracleReward);
+            const preDefaultStrategyImpl = await this.factory!.getStrategyImplementation(StrategyType.Default);
+            const preShadowStrategyImpl = await this.factory!.getStrategyImplementation(StrategyType.Shadow);
+            const preVaultCount = await this.factory!.getNumberOfVaults(VaultType.OracleReward);
+            const preShadowVaultCount = await this.factory!.getNumberOfVaults(VaultType.ShadowOracleReward);
+            let preVersion = "N/A (pre-versioning)";
+            try { preVersion = await this.factory!.getVersion(); } catch { /* old implementation */ }
+
+            console.log(chalk.gray(`  Version:                ${preVersion}`));
+            console.log(chalk.gray(`  Owner:                  ${preOwner}`));
+            console.log(chalk.gray(`  Default Operator:       ${preDefaultOperator}`));
+            console.log(chalk.gray(`  Fee Recipient:          ${preFeeRecipient}`));
+            console.log(chalk.gray(`  Creation Fee:           ${ethers.formatEther(preCreationFee)} S`));
+            console.log(chalk.gray(`  WNative:                ${preWnative}`));
+            console.log(chalk.gray(`  OracleRewardVault Impl: ${preOracleRewardVaultImpl}`));
+            console.log(chalk.gray(`  ShadowVault Impl:       ${preShadowVaultImpl}`));
+            console.log(chalk.gray(`  Default Strategy Impl:  ${preDefaultStrategyImpl}`));
+            console.log(chalk.gray(`  Shadow Strategy Impl:   ${preShadowStrategyImpl}`));
+            console.log(chalk.gray(`  OracleReward Vaults:    ${preVaultCount}`));
+            console.log(chalk.gray(`  Shadow Vaults:          ${preShadowVaultCount}`));
+
+
+            if (!await this.confirm(`\nPlease make sure you bumped the hardcoded version string in the VaultFactory getVersion() function
+to something greater than ${preVersion}. Did you do it?`)) {
+                console.log(chalk.yellow("Operation cancelled"));
+                return;
+            }
+
+            // ── Step 3: Validate storage layout compatibility via OpenZeppelin ──
+            console.log(chalk.blue("\n🔍 Validating upgrade safety (storage layout)..."));
+            const VaultFactoryContract = await ethers.getContractFactory("VaultFactory");
+            try {
+                // validateImplementation checks the new impl is upgrade-safe.
+                // validateUpgrade (address, ...) requires the proxy to be in the OZ manifest,
+                // which only applies to proxies deployed via upgrades.deployProxy(). Ours was
+                // deployed manually (raw TransparentUpgradeableProxy), so we use validateImplementation.
+                // Constructor + immutable are intentional: constructor calls _disableInitializers()
+                // and _wnative is immutable (bytecode, not storage — no slot collision risk).
+                await upgrades.validateImplementation(VaultFactoryContract, {
+                    constructorArgs: [wnative, oracleHelperFactory],
+                    unsafeAllow: ["constructor", "state-variable-immutable"]
+                });
+                console.log(chalk.green("  ✓ OpenZeppelin storage layout validation passed"));
+            } catch (validationError) {
+                console.error(chalk.red("  ✗ Storage layout validation FAILED:"), validationError);
+                console.error(chalk.red("\n❌ ABORTING: Upgrade is NOT safe. Storage layout incompatible."));
+                return;
+            }
+
+            // ── Step 4: Deploy new implementation ──
+            console.log(chalk.white("\nConstructor Arguments:"));
+            console.log(chalk.gray(`  wnative:              ${wnative}`));
+            console.log(chalk.gray(`  oracleHelperFactory:  ${oracleHelperFactory}`));
+
+            if (!await this.confirm("\nDeploy new VaultFactory implementation?")) {
+                console.log(chalk.yellow("Operation cancelled"));
+                return;
+            }
+
+            console.log(chalk.blue("\n📦 Deploying new VaultFactory implementation..."));
+            const newImpl = await VaultFactoryContract.deploy(wnative, oracleHelperFactory);
+            await newImpl.waitForDeployment();
+            const newImplAddress = await newImpl.getAddress();
+            console.log(chalk.green(`  ✓ New implementation deployed at: ${newImplAddress}`));
+
+            // ── Step 5: Ask about re-initialization ──
+            const needsReinit = await this.confirm("Does this upgrade require re-initialization (new reinitializer function)?");
+
+            if (needsReinit) {
+                const initFnName = await this.question("Enter initializer function name (e.g. initialize5): ");
+                const initArgs = await this.question("Enter initializer arguments as comma-separated values: ");
+
+                const parsedArgs = initArgs.split(",").map(a => a.trim());
+                const initData = VaultFactoryContract.interface.encodeFunctionData(
+                    initFnName,
+                    parsedArgs
+                );
+
+                console.log(chalk.gray(`  Init data: ${initData}`));
+
+                if (!await this.confirm("Execute upgradeAndCall with the above parameters?")) {
+                    console.log(chalk.yellow("Operation cancelled"));
+                    return;
+                }
+
+                await this.executeWithGasTracking(
+                    "Upgrade VaultFactory (with reinitializer)",
+                    async () => {
+                        return proxyAdmin.upgradeAndCall(factoryAddress, newImplAddress, initData) as Promise<ContractTransactionResponse>;
+                    },
+                    "admin"
+                );
+            } else {
+                if (!await this.confirm("Execute upgrade (no re-initialization)?")) {
+                    console.log(chalk.yellow("Operation cancelled"));
+                    return;
+                }
+
+                await this.executeWithGasTracking(
+                    "Upgrade VaultFactory",
+                    async () => {
+                        return proxyAdmin.upgrade(factoryAddress, newImplAddress) as Promise<ContractTransactionResponse>;
+                    },
+                    "admin"
+                );
+            }
+
+            // ── Step 6: Verify implementation pointer ──
+            const updatedImpl = await proxyAdmin.getProxyImplementation(factoryAddress);
+            console.log(chalk.white("\n🔎 Post-Upgrade Verification:"));
+            console.log(chalk.gray(`  New Implementation: ${updatedImpl}`));
+
+            if (updatedImpl.toLowerCase() !== newImplAddress.toLowerCase()) {
+                console.error(chalk.red("  ✗ Implementation address mismatch! Upgrade may have failed."));
+                return;
+            }
+            console.log(chalk.green("  ✓ Implementation pointer updated correctly"));
+
+            // ── Step 7: Verify ALL state preserved through upgrade ──
+            console.log(chalk.blue("\n📋 Verifying state preservation..."));
+            let allPassed = true;
+
+            let postVersion = "N/A (pre-versioning)";
+            try { postVersion = await this.factory!.getVersion(); } catch { /* unexpected */ }
+
+            // Version is expected to change — print it separately before the state-preservation checks
+            console.log(chalk.green(`  ✓ Version: ${preVersion} → ${postVersion}`));
+
+            const checks: Array<{ name: string; pre: string | bigint; post: string | bigint }> = [
+                { name: "Owner", pre: preOwner, post: await this.factory!.owner() },
+                { name: "Default Operator", pre: preDefaultOperator, post: await this.factory!.getDefaultOperator() },
+                { name: "Fee Recipient", pre: preFeeRecipient, post: await this.factory!.getFeeRecipient() },
+                { name: "Creation Fee", pre: preCreationFee, post: await this.factory!.getCreationFee() },
+                { name: "WNative", pre: preWnative, post: await this.factory!.getWNative() },
+                { name: "OracleRewardVault Impl", pre: preOracleRewardVaultImpl, post: await this.factory!.getVaultImplementation(VaultType.OracleReward) },
+                { name: "ShadowVault Impl", pre: preShadowVaultImpl, post: await this.factory!.getVaultImplementation(VaultType.ShadowOracleReward) },
+                { name: "Default Strategy Impl", pre: preDefaultStrategyImpl, post: await this.factory!.getStrategyImplementation(StrategyType.Default) },
+                { name: "Shadow Strategy Impl", pre: preShadowStrategyImpl, post: await this.factory!.getStrategyImplementation(StrategyType.Shadow) },
+                { name: "OracleReward Vault Count", pre: preVaultCount, post: await this.factory!.getNumberOfVaults(VaultType.OracleReward) },
+                { name: "Shadow Vault Count", pre: preShadowVaultCount, post: await this.factory!.getNumberOfVaults(VaultType.ShadowOracleReward) },
+            ];
+
+            for (const check of checks) {
+                const match = check.pre.toString().toLowerCase() === check.post.toString().toLowerCase();
+                if (match) {
+                    console.log(chalk.green(`  ✓ ${check.name}: ${check.post}`));
+                } else {
+                    console.error(chalk.red(`  ✗ ${check.name}: was ${check.pre}, now ${check.post}`));
+                    allPassed = false;
+                }
+            }
+
+            if (!allPassed) {
+                console.error(chalk.red("\n⚠️  WARNING: Some state values changed after upgrade! Review carefully."));
+            } else {
+                console.log(chalk.green("\n  ✓ All state preserved correctly"));
+            }
+
+            // ── Step 8: Update deployment file ──
+            try {
+                const deployment = JSON.parse(fs.readFileSync(this.config.deploymentPath, 'utf8'));
+                deployment.addresses.vaultFactoryImpl = newImplAddress;
+                deployment.timestamp = new Date().toISOString();
+                fs.writeFileSync(this.config.deploymentPath, JSON.stringify(deployment, null, 2));
+                console.log(chalk.green(`  ✓ Deployment file updated: ${this.config.deploymentPath}`));
+            } catch (err) {
+                console.warn(chalk.yellow(`  ⚠️  Could not update deployment file: ${err}`));
+            }
+
+            console.log(chalk.green("\n✅ VaultFactory upgrade complete!"));
+
+        } catch (error) {
+            console.error(chalk.red("Error upgrading VaultFactory:"), error);
+        }
+    }
+
     async exportGasReport() {
         const timestamp = new Date().toISOString().replace(/:/g, '-');
         const filename = `vault-factory-gas-report-${timestamp}.json`;
@@ -1386,30 +1627,41 @@ async function main() {
     const [signer] = await ethers.getSigners();
     console.log(chalk.gray(`Signer: ${signer.address}\n`));
 
-    // Load factory address from deployment file
-    let factoryAddress: string;
+    // Load addresses from deployment file
     const deploymentPath = path.join(__dirname, "../deployments", `metropolis-${network.name}.json`);
 
-    if (fs.existsSync(deploymentPath)) {
-        const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
-        factoryAddress = deployment.addresses?.vaultFactory;
-
-        if (!factoryAddress || factoryAddress === ethers.ZeroAddress) {
-            console.error(chalk.red("\n❌ VaultFactory address not found in deployment file"));
-            process.exit(1);
-        }
-
-        console.log(chalk.gray(`✓ VaultFactory address loaded: ${factoryAddress}`));
-    } else {
+    if (!fs.existsSync(deploymentPath)) {
         console.error(chalk.red(`\n❌ Deployment file not found: ${deploymentPath}`));
         process.exit(1);
     }
 
+    const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
+    const factoryAddress: string = deployment.addresses?.vaultFactory;
+    const proxyAdminAddress: string = deployment.addresses?.proxyAdmin;
+    const wnative: string = deployment.addresses?.wnative;
+    const oracleHelperFactory: string = deployment.addresses?.oracleHelperFactory;
+
+    if (!factoryAddress || factoryAddress === ethers.ZeroAddress) {
+        console.error(chalk.red("\n❌ VaultFactory address not found in deployment file"));
+        process.exit(1);
+    }
+    if (!proxyAdminAddress || proxyAdminAddress === ethers.ZeroAddress) {
+        console.error(chalk.red("\n❌ ProxyAdmin address not found in deployment file"));
+        process.exit(1);
+    }
+
+    console.log(chalk.gray(`✓ VaultFactory address loaded: ${factoryAddress}`));
+    console.log(chalk.gray(`✓ ProxyAdmin address loaded: ${proxyAdminAddress}`));
+
     // Configuration
     const config: VaultFactoryConfig = {
         factoryAddress,
+        proxyAdminAddress,
+        wnative,
+        oracleHelperFactory,
         signer,
         dryRun: false,
+        deploymentPath,
         exportPath: path.join(__dirname, "../gas-reports")
     };
 

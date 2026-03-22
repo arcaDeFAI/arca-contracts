@@ -241,4 +241,26 @@ interface IVaultFactory {
 
     /// @dev Register my contract on Sonic FeeM
     function registerMe() external;
+
+    /**
+     * @notice Sets the TWAP interval for an oracle vault.
+     * @param oracleVault The address of the oracle vault.
+     * @param twapInterval The TWAP interval in seconds (0 = spot price only).
+     */
+    function setVaultTwapInterval(
+        address oracleVault,
+        uint32 twapInterval
+    ) external;
+
+    /**
+     * @notice Sets the deviation threshold for an oracle vault.
+     * @param oracleVault The address of the oracle vault.
+     * @param threshold The maximum deviation percentage (e.g. 5 = 5%).
+     */
+    function setVaultDeviationThreshold(
+        address oracleVault,
+        uint256 threshold
+    ) external;
+
+    function getVersion() external view returns (string memory);
 }

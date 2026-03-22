@@ -731,6 +731,19 @@ const _abi = [
   },
   {
     inputs: [],
+    name: "getVersion",
+    outputs: [
+      {
+        internalType: "string",
+        name: "",
+        type: "string",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "getWNative",
     outputs: [
       {
@@ -1030,6 +1043,24 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: "address",
+        name: "oracleVault",
+        type: "address",
+      },
+      {
+        internalType: "uint256",
+        name: "threshold",
+        type: "uint256",
+      },
+    ],
+    name: "setVaultDeviationThreshold",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "enum IVaultFactory.VaultType",
         name: "vType",
         type: "uint8",
@@ -1041,6 +1072,24 @@ const _abi = [
       },
     ],
     name: "setVaultImplementation",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "oracleVault",
+        type: "address",
+      },
+      {
+        internalType: "uint32",
+        name: "twapInterval",
+        type: "uint32",
+      },
+    ],
+    name: "setVaultTwapInterval",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

@@ -138,6 +138,15 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
     }
 
     /**
+     * @notice Returns the implementation version string.
+     * @dev Hardcoded in bytecode — changes with each new implementation, proving the upgrade executed.
+     * @return The version string.
+     */
+    function getVersion() external pure override returns (string memory) {
+        return "2.0.1";
+    }
+
+    /**
      * @notice Returns the address of the wrapped native token.
      * @return The address of the wrapped native token.
      */

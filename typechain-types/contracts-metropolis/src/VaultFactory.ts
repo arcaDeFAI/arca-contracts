@@ -52,6 +52,7 @@ export interface VaultFactoryInterface extends Interface {
       | "getVaultImplementation"
       | "getVaultType"
       | "getVaultsByMarketMaker"
+      | "getVersion"
       | "getWNative"
       | "initialize4"
       | "isPairWhitelisted"
@@ -209,6 +210,10 @@ export interface VaultFactoryInterface extends Interface {
   encodeFunctionData(
     functionFragment: "getVaultsByMarketMaker",
     values: [AddressLike]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getVersion",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "getWNative",
@@ -433,6 +438,7 @@ export interface VaultFactoryInterface extends Interface {
     functionFragment: "getVaultsByMarketMaker",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "getVersion", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "getWNative", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "initialize4",
@@ -982,6 +988,8 @@ export interface VaultFactory extends BaseContract {
     "view"
   >;
 
+  getVersion: TypedContractMethod<[], [string], "view">;
+
   getWNative: TypedContractMethod<[], [string], "view">;
 
   initialize4: TypedContractMethod<
@@ -1265,6 +1273,9 @@ export interface VaultFactory extends BaseContract {
   getFunction(
     nameOrSignature: "getVaultsByMarketMaker"
   ): TypedContractMethod<[marketMaker: AddressLike], [string[]], "view">;
+  getFunction(
+    nameOrSignature: "getVersion"
+  ): TypedContractMethod<[], [string], "view">;
   getFunction(
     nameOrSignature: "getWNative"
   ): TypedContractMethod<[], [string], "view">;
