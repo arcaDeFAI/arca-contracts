@@ -54,6 +54,28 @@ export const VAULT_CONFIGS: VaultConfig[] = [
 
   {
     protocol: 'metropolis',
+    vaultAddress: '0xBaef4Da824f554c35035211cb997db4ecB75F45f',
+    stratAddress: '0x7069B87c64ee8DA6bF928B4Af0693bC7a4f9D7e6',
+    lbBookAddress: '0x12f1cacda05242ccfe4c7139a46b8545bd2b2537',
+    name: 'USSD • USDC | Metropolis',
+    tier: 'Premium',
+    tokenX: 'USSD',
+    tokenY: 'USDC',
+  },
+
+  {
+    protocol: 'metropolis',
+    vaultAddress: '0x1C0C5A4197b7Fa25a180E6e08eA19A91EBBe5fD2',
+    stratAddress: '0xeca4AE2D4778b1417d6cB47B9C7769e9f5fC4A3f',
+    lbBookAddress: '0x361f55337074ae43957204cb30ffbabbce4fb837',
+    name: 'wS • USSD | Metropolis',
+    tier: 'Premium',
+    tokenX: 'wS',
+    tokenY: 'USSD',
+  },
+
+  {
+    protocol: 'metropolis',
     vaultAddress: '0x34331E66a634D69D64edC3e21E52A53899e12640',
     stratAddress: '0x38FdF9a12Ac2e2aD95dd5bE3d271cC6EA23C5c2C',
     lbBookAddress: '0x9eDE606c7168bb09fF73EbdE7bFD6FcfaBDA9Bc3',
