@@ -2,7 +2,7 @@
 import { VAULT_CONFIGS, type VaultConfig } from '@/lib/vaultConfigs';
 
 import { formatUnits } from 'viem';
-import { CONTRACTS } from '@/lib/contracts';
+import { getTokenByAddress } from '@/lib/tokenRegistry';
 
 import { useMemo, useState } from 'react'
 import { useVaultMetrics } from '@/hooks/useVaultMetrics'
@@ -174,17 +174,9 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         let vaultTotalUSD = 0;
         metrics.pendingRewards.forEach((reward: any) => {
           const amount = Number(formatUnits(reward.pendingRewards, 18));
-          const tokenAddress = reward.token.toLowerCase();
-          let price = 0;
-
-          if (tokenAddress === CONTRACTS.METRO.toLowerCase()) {
-            price = metrics.prices?.metro || 0;
-          } else if (tokenAddress === CONTRACTS.SHADOW.toLowerCase()) {
-            price = metrics.prices?.shadow || 0;
-          } else if (tokenAddress === CONTRACTS.xSHADOW.toLowerCase()) {
-            price = metrics.prices?.xShadow || 0;
-          }
-
+          const tokenDef = getTokenByAddress(reward.token);
+          const priceKey = tokenDef?.canonicalName.toLowerCase();
+          const price = priceKey && metrics.prices ? (metrics.prices[priceKey] || 0) : 0;
           vaultTotalUSD += amount * price;
         });
 
