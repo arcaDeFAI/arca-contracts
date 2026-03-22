@@ -29,7 +29,7 @@ async function main() {
 
   if (!fs.existsSync(metropolisPath)) {
     console.log("❌ Metropolis deployment not found:", metropolisPath);
-    console.log("Please run: npx hardhat run scripts/deploy-multi-dex.ts --network!", network.name);
+    console.log("Please run: npx hardhat run scripts/deploy-multi-dex.ts --network", network.name);
     return;
   }
 
