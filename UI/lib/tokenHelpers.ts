@@ -1,62 +1,35 @@
-import { CONTRACTS, DECIMALS } from './contracts';
+import { getToken, getTokenOrThrow } from './tokenRegistry';
 
 /**
- * Get token contract address by token symbol
- * Note: SONIC is native token and has no contract address
+ * Get token contract address by token symbol.
+ * Returns WS address as fallback for native token (S/SONIC).
  */
 export function getTokenAddress(token: string): `0x${string}` {
-  const upperToken = token.toUpperCase();
-  if (upperToken === 'WS') return CONTRACTS.WS as `0x${string}`;
-  if (upperToken === 'USDC') return CONTRACTS.USDC as `0x${string}`;
-  if (upperToken === 'WETH' || upperToken === 'ETH') return CONTRACTS.WETH as `0x${string}`;
-  // SONIC is native token, fallback to WS
-  return CONTRACTS.WS as `0x${string}`;
+  const def = getToken(token);
+  if (!def || !def.address) {
+    // Native token has no contract address — fall back to WS
+    return getTokenOrThrow('WS').address!;
+  }
+  return def.address;
 }
 
 /**
- * Get token decimals by token symbol
+ * Get token decimals by token symbol.
  */
 export function getTokenDecimals(token: string): number {
-  const upperToken = token.toUpperCase();
-  if (upperToken === 'USDC') return DECIMALS.USDC;
-  if (upperToken === 'WETH' || upperToken === 'ETH') return DECIMALS.WETH;
-  return 18; // Default for S, WS, SONIC
+  return getToken(token)?.decimals ?? 18;
 }
 
 /**
- * Get token balance from available balances
- */
-export function getTokenBalance(
-  token: string,
-  balances: {
-    sonicBalance: bigint;
-    wsBalance: bigint;
-    usdcBalance: bigint;
-    wethBalance: bigint;
-  }
-): bigint {
-  const upperToken = token.toUpperCase();
-  if (upperToken === 'S' || upperToken === 'SONIC') return balances.sonicBalance;
-  if (upperToken === 'WS') return balances.wsBalance;
-  if (upperToken === 'USDC') return balances.usdcBalance;
-  if (upperToken === 'WETH' || upperToken === 'ETH') return balances.wethBalance;
-  return 0n;
-}
-
-/**
- * Get token logo path by token symbol
+ * Get token logo path by token symbol.
  */
 export function getTokenLogo(token: string): string {
-  const upperToken = token.toUpperCase();
-  if (upperToken === 'USDC') return '/USDCLogo.png';
-  if (upperToken === 'WETH' || upperToken === 'ETH') return '/WETH-logo.png';
-  if (upperToken === 'WS' || upperToken === 'S' || upperToken === 'SONIC') return '/SonicLogoRound.png';
-  return '/SonicLogoRound.png'; // Default to Sonic logo
+  return getToken(token)?.logo ?? '/SonicLogoRound.png';
 }
 
 /**
- * Token price utilities - re-exported from tokenPriceHelpers
- * Provides centralized token price calculation with support for aliases
+ * Token price utilities - re-exported from tokenPriceHelpers.
+ * Provides centralized token price calculation with support for aliases.
  */
 export {
   getTokenPrice,

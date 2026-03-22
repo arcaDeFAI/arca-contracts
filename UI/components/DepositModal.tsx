@@ -6,36 +6,35 @@ import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { ERC20_ABI } from '@/lib/contracts';
 import { formatTokenAmount, parseTokenAmount } from '@/lib/utils';
 import { formatUnits } from 'viem';
-import { getTokenAddress, getTokenDecimals, getTokenBalance } from '@/lib/tokenHelpers';
+import { getTokenAddress, getTokenDecimals } from '@/lib/tokenHelpers';
+import { getToken } from '@/lib/tokenRegistry';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
 interface DepositModalProps {
   vaultAddress: string;
   stratAddress: string;
   vaultName: string;
-  sonicBalance: bigint;
-  wsBalance: bigint;
-  usdcBalance: bigint;
-  wethBalance?: bigint;
-  tokenX?: string;
-  tokenY?: string;
+  tokenXBalance: bigint;
+  tokenYBalance: bigint;
+  tokenX: string;
+  tokenY: string;
   onClose: () => void;
 }
 
-export function DepositModal({ 
-  vaultAddress, 
-  stratAddress, 
-  vaultName, 
-  sonicBalance,
-  wsBalance,
-  usdcBalance,
-  wethBalance = 0n,
-  tokenX = 'S',
-  tokenY = 'USDC',
-  onClose 
+export function DepositModal({
+  vaultAddress,
+  stratAddress,
+  vaultName,
+  tokenXBalance,
+  tokenYBalance,
+  tokenX,
+  tokenY,
+  onClose
 }: DepositModalProps) {
-  const isShadowVault = vaultName.includes('Shadow');
-  
+  // Determine deposit method from token properties, not vault name
+  const tokenXDef = getToken(tokenX);
+  const useNativeDeposit = tokenXDef?.isNative ?? false;
+
   const [tokenAmount, setTokenAmount] = useState('');
   const [token2Amount, setToken2Amount] = useState('');
   const [tokenApproved, setTokenApproved] = useState(false);
@@ -44,7 +43,7 @@ export function DepositModal({
   const [showProgress, setShowProgress] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [processedTxHash, setProcessedTxHash] = useState<string | null>(null);
-  
+
   type Step = { label: string; status: 'pending' | 'processing' | 'complete' | 'error' };
   const [steps, setSteps] = useState<Step[]>([]);
 
@@ -55,10 +54,9 @@ export function DepositModal({
     hash: txHash,
   });
 
-  // Get balances using shared helper
-  const balances = { sonicBalance, wsBalance, usdcBalance, wethBalance };
-  const currentTokenBalance = getTokenBalance(tokenX, balances);
-  const currentToken2Balance = getTokenBalance(tokenY, balances);
+  // Use balances directly from props
+  const currentTokenBalance = tokenXBalance;
+  const currentToken2Balance = tokenYBalance;
   const currentTokenType = tokenX.toUpperCase();
   const currentToken2Type = tokenY.toUpperCase();
 
@@ -80,30 +78,30 @@ export function DepositModal({
     if (txSuccess && showProgress && currentStep < steps.length && currentTx && txHash && txHash !== processedTxHash) {
       // Mark this transaction as processed
       setProcessedTxHash(txHash);
-      
+
       // Mark current step as complete and next step as processing in one update
       const updatedSteps = [...steps];
       updatedSteps[currentStep] = { ...updatedSteps[currentStep], status: 'complete' };
-      
+
       // Update approval states
       if (currentTx === 'approve-token') {
         setTokenApproved(true);
       } else if (currentTx === 'approve-token2') {
         setToken2Approved(true);
       }
-      
+
       // Move to next step
       const nextStep = currentStep + 1;
       setCurrentTx(null); // Clear current tx
-      
+
       if (nextStep < steps.length) {
         // Mark next step as processing in the same update
         updatedSteps[nextStep] = { ...updatedSteps[nextStep], status: 'processing' };
-        
+
         // Update steps once with both changes
         setSteps(updatedSteps);
         setCurrentStep(nextStep);
-        
+
         // Execute next step after a brief delay
         setTimeout(() => executeStep(nextStep), 500);
       } else {
@@ -120,7 +118,7 @@ export function DepositModal({
       address: getTokenAddress(tokenX),
       abi: ERC20_ABI,
       functionName: 'approve',
-      args: [vaultAddress, parseTokenAmount(tokenAmount, tokenX.toUpperCase() as any)],
+      args: [vaultAddress, parseTokenAmount(tokenAmount, tokenX)],
     });
   };
 
@@ -130,42 +128,37 @@ export function DepositModal({
       address: getTokenAddress(tokenY),
       abi: ERC20_ABI,
       functionName: 'approve',
-      args: [vaultAddress, parseTokenAmount(token2Amount, tokenY.toUpperCase() as any)],
+      args: [vaultAddress, parseTokenAmount(token2Amount, tokenY)],
     });
   };
 
   const handleDeposit = () => {
     setCurrentTx('deposit');
-    
-    if (isShadowVault) {
-      // Shadow vault uses deposit function with wS tokens
-      writeContract({
-        address: vaultAddress as `0x${string}`,
-        abi: METRO_VAULT_ABI,
-        functionName: 'deposit',
-        args: [
-          tokenAmount ? parseTokenAmount(tokenAmount, tokenX.toUpperCase() as any) : BigInt(0),
-          token2Amount ? parseTokenAmount(token2Amount, tokenY.toUpperCase() as any) : BigInt(0),
-          BigInt(0),
-        ],
-      });
-    } else {
-      // Metro vault uses depositNative with S tokens
+
+    const parsedX = tokenAmount ? parseTokenAmount(tokenAmount, tokenX) : BigInt(0);
+    const parsedY = token2Amount ? parseTokenAmount(token2Amount, tokenY) : BigInt(0);
+
+    if (useNativeDeposit) {
+      // Native token deposit — send value with the transaction
       writeContract({
         address: vaultAddress as `0x${string}`,
         abi: METRO_VAULT_ABI,
         functionName: 'depositNative',
-        args: [
-          tokenAmount ? parseTokenAmount(tokenAmount, tokenX.toUpperCase() as any) : BigInt(0),
-          token2Amount ? parseTokenAmount(token2Amount, tokenY.toUpperCase() as any) : BigInt(0),
-          BigInt(0),
-        ],
-        value: tokenAmount ? parseTokenAmount(tokenAmount, tokenX.toUpperCase() as any) : BigInt(0),
+        args: [parsedX, parsedY, BigInt(0)],
+        value: parsedX,
+      });
+    } else {
+      // ERC-20 only deposit
+      writeContract({
+        address: vaultAddress as `0x${string}`,
+        abi: METRO_VAULT_ABI,
+        functionName: 'deposit',
+        args: [parsedX, parsedY, BigInt(0)],
       });
     }
   };
 
-  const isValidAmount = (amount: string, balance: bigint, token: 'SONIC' | 'WS' | 'USDC') => {
+  const isValidAmount = (amount: string, balance: bigint, token: string) => {
     if (!amount || parseFloat(amount) <= 0) return false;
     try {
       const parsed = parseTokenAmount(amount, token);
@@ -175,18 +168,18 @@ export function DepositModal({
     }
   };
 
-  const canProceed = 
-    (tokenAmount && isValidAmount(tokenAmount, currentTokenBalance, currentTokenType as any)) ||
-    (token2Amount && isValidAmount(token2Amount, currentToken2Balance, currentToken2Type as any));
+  const canProceed =
+    (tokenAmount && isValidAmount(tokenAmount, currentTokenBalance, tokenX)) ||
+    (token2Amount && isValidAmount(token2Amount, currentToken2Balance, tokenY));
 
-  // Check if approvals are needed
-  const needsTokenApproval = isShadowVault && tokenAmount && parseFloat(tokenAmount) > 0 && !tokenApproved;
+  // Native tokens don't need ERC-20 approval
+  const needsTokenApproval = !useNativeDeposit && tokenAmount && parseFloat(tokenAmount) > 0 && !tokenApproved;
   const needsToken2Approval = token2Amount && parseFloat(token2Amount) > 0 && !token2Approved;
-  
+
   // Execute a specific step (status is already set to 'processing' before calling this)
   const executeStep = (stepIndex: number) => {
     if (!steps || stepIndex >= steps.length) return;
-    
+
     // Determine which transaction to execute based on step label
     const stepLabel = steps[stepIndex].label;
     if (stepLabel.includes(`Approve ${currentTokenType}`)) {
@@ -197,11 +190,11 @@ export function DepositModal({
       handleDeposit();
     }
   };
-  
+
   // Initialize deposit flow - show all steps that will happen
   const handleInitiateDeposit = () => {
     const depositSteps: Step[] = [];
-    
+
     if (needsTokenApproval) {
       depositSteps.push({ label: `Approve ${currentTokenType}`, status: 'pending' });
     }
@@ -209,16 +202,16 @@ export function DepositModal({
       depositSteps.push({ label: `Approve ${currentToken2Type}`, status: 'pending' });
     }
     depositSteps.push({ label: `Add liquidity to ${tokenX}/${tokenY}`, status: 'pending' });
-    
+
     setSteps(depositSteps);
     setShowProgress(true);
     setCurrentStep(0);
-    
+
     // Start executing first step immediately
     // Mark first step as processing
     depositSteps[0].status = 'processing';
     setSteps([...depositSteps]);
-    
+
     // Execute the first transaction
     setTimeout(() => {
       if (needsTokenApproval) {
@@ -252,7 +245,7 @@ export function DepositModal({
                 {currentTokenType} Amount
               </label>
               <span className="text-sm text-gray-400">
-                Balance: {formatTokenAmount(currentTokenBalance, currentTokenType as any)}
+                Balance: {formatTokenAmount(currentTokenBalance, tokenX)}
               </span>
             </div>
             <div className="relative">
@@ -277,7 +270,7 @@ export function DepositModal({
             <div className="flex justify-between mb-2">
               <label className="text-sm text-gray-400">{currentToken2Type} Amount</label>
               <span className="text-sm text-gray-400">
-                Balance: {formatTokenAmount(currentToken2Balance, currentToken2Type as any)}
+                Balance: {formatTokenAmount(currentToken2Balance, tokenY)}
               </span>
             </div>
             <div className="relative">

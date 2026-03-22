@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
-import { CONTRACTS } from '@/lib/contracts';
+import { getToken } from '@/lib/tokenRegistry';
 import { formatUSD, formatPercentage } from '@/lib/utils';
 import { getTokenLogo } from '@/lib/tokenUtils';
 import { DepositModal } from './DepositModal';
@@ -41,11 +41,11 @@ export function VaultCard({ config }: VaultCardProps) {
     isShadowVault,
   } = metrics;
 
-  // Fetch token balances for deposit/withdraw
-  const sonicBalance = useTokenBalance(CONTRACTS.SONIC, isShadowVault ? undefined : address);
-  const wsBalance = useTokenBalance(CONTRACTS.WS, isShadowVault ? address : undefined);
-  const usdcBalance = useTokenBalance(CONTRACTS.USDC, address);
-  const wethBalance = useTokenBalance(CONTRACTS.WETH, address);
+  // Fetch token balances dynamically based on vault tokens
+  const tokenXDef = getToken(tokenX);
+  const tokenYDef = getToken(tokenY);
+  const tokenXBalance = useTokenBalance(tokenXDef?.address ?? null, address);
+  const tokenYBalance = useTokenBalance(tokenYDef?.address ?? null, address);
 
   // Prevent hydration mismatch
   useEffect(() => {
@@ -184,10 +184,8 @@ export function VaultCard({ config }: VaultCardProps) {
           vaultAddress={vaultAddress}
           stratAddress={stratAddress}
           vaultName={name}
-          sonicBalance={(sonicBalance?.data as bigint) || 0n}
-          wsBalance={(wsBalance?.data as bigint) || 0n}
-          usdcBalance={(usdcBalance?.data as bigint) || 0n}
-          wethBalance={(wethBalance?.data as bigint) || 0n}
+          tokenXBalance={(tokenXBalance?.data as bigint) || 0n}
+          tokenYBalance={(tokenYBalance?.data as bigint) || 0n}
           tokenX={tokenX}
           tokenY={tokenY}
           onClose={() => setShowDepositModal(false)}
