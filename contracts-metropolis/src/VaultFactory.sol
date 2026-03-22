@@ -143,7 +143,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
      * @return The version string.
      */
     function getVersion() external pure override returns (string memory) {
-        return "2.0.1";
+        return "2.1.0";
     }
 
     /**
@@ -848,6 +848,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
 
         if (vType == VaultType.Simple) vName = "Simple";
         else if (vType == VaultType.Oracle) vName = "Oracle";
+        else if (vType == VaultType.OracleReward) vName = "Oracle Reward";
         else if (vType == VaultType.ShadowOracleReward)
             vName = "Shadow Oracle Reward";
         else revert VaultFactory__InvalidType();
@@ -887,7 +888,7 @@ contract VaultFactory is IVaultFactory, Ownable2StepUpgradeable {
         );
 
         vault = _createMetropolisVault(
-            VaultType.Oracle,
+            VaultType.OracleReward,
             lbPair,
             tokenX,
             tokenY,
