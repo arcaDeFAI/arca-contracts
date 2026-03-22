@@ -31,6 +31,14 @@ The Vault Factory CLI provides an interactive menu-driven interface for:
 - **Cancel shutdown**: Cancel pending vault shutdowns
 - **Token recovery**: Recover stuck ERC20 tokens from vaults
 
+### ⬆️ VaultFactory Upgrades
+- **Deploy new implementation**: Compiles and deploys a new VaultFactory implementation with the same constructor args
+- **OpenZeppelin validation**: Verifies the new implementation is upgrade-safe before deploying
+- **Pre/post state snapshot**: Captures 11 key state values before the upgrade and verifies all are preserved afterward
+- **Version tracking**: `getVersion()` is hardcoded in implementation bytecode — changes across upgrades as on-chain proof the new code is running
+- **ProxyAdmin ownership check**: Aborts immediately if the signer is not the ProxyAdmin owner
+- **Deployment file update**: Writes the new implementation address back to `deployments/metropolis-<network>.json`
+
 ### 📊 Gas Tracking & Reporting
 - **Real-time gas tracking** for all transactions
 - **Comprehensive reports** with total gas usage and costs
@@ -85,8 +93,11 @@ If the deployment file doesn't exist or doesn't contain the factory address, the
   8. Manage Whitelist
   9. Emergency Operations
 
+⬆️  Upgrades
+  10. Upgrade VaultFactory Implementation
+
 📊 Utilities
-  10. Export Gas Report
+  11. Export Gas Report
   0. Exit
 ```
 
@@ -251,6 +262,7 @@ The CLI is designed for easy extension:
 - **Irreversible operations**: Emergency mode cannot be undone
 - **Token recovery**: Only recover tokens that are actually stuck
 - **Fee validation**: AUM fees are capped at 30% (3000 basis points)
+- **Upgrade safety**: Always test upgrades on localhost before mainnet — option 10 validates storage layout, state preservation, and version bump before considering the upgrade complete
 
 ## Support
 
