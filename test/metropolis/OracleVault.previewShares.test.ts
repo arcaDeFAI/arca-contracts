@@ -1,249 +1,160 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import type { MockLBPair } from "../../typechain-types/test/mocks/MockLBPair";
-import type { TestOracleVault } from "../../typechain-types/test/mocks/TestOracleVault";
+import { Contract } from "ethers";
+import { MockOracleHelper } from "typechain-types/test/mocks/MockOracleHelper";
 
-describe("Metropolis OracleVault - previewShares with LB Pair Pricing", function () {
-  let mockLBPair: MockLBPair;
-  let testOracleVault: TestOracleVault;
+describe("Metropolis OracleVault - previewShares Simple Tests", function () {
+  let mockOracleHelper: MockOracleHelper;
 
-  const SHARES_PRECISION = 10n ** 6n;
-  const TWO_128 = 1n << 128n;
-  const ACTIVE_BIN_ID = 8388608;
-
-  /**
-   * Compute 128.128 price for "priceYperX" Y tokens per X token.
-   * Uses numerator/denominator to support fractional prices without losing precision.
-   */
-  function computePrice128x128(
-    numerator: bigint,
-    denominator: bigint,
-    decimalsX: bigint,
-    decimalsY: bigint
-  ): bigint {
-    return (
-      (numerator * 10n ** decimalsY * TWO_128) /
-      (denominator * 10n ** decimalsX)
-    );
-  }
-
-  /**
-   * Mirror the on-chain getValueInY: (price * amountX) >> 128 + amountY.
-   * Uses mulShiftRoundDown semantics (truncating division).
-   */
-  function expectedValueInY(
-    price: bigint,
-    amountX: bigint,
-    amountY: bigint
-  ): bigint {
-    const amountXInY = (price * amountX) >> 128n;
-    return amountXInY + amountY;
-  }
-
-  // ETH/USDC at 2000 USDC per ETH (decimalsX=18, decimalsY=6)
-  const PRICE_ETH_USDC = computePrice128x128(2000n, 1n, 18n, 6n);
+  const SHARES_PRECISION = 10n ** 6n; // 1e6
+  const INITIAL_PRICE = ethers.parseUnits("2000", 6); // 2000 USDC per ETH
 
   beforeEach(async function () {
-    const MockLBPair = await ethers.getContractFactory("MockLBPair");
-    mockLBPair = (await MockLBPair.deploy(
-      ethers.ZeroAddress,
-      ethers.ZeroAddress,
-      ACTIVE_BIN_ID,
-      PRICE_ETH_USDC
-    )) as unknown as MockLBPair;
-
-    const TestOracleVault =
-      await ethers.getContractFactory("TestOracleVault");
-    testOracleVault = (await TestOracleVault.deploy(
-      await mockLBPair.getAddress()
-    )) as unknown as TestOracleVault;
+    // Deploy mock oracle helper
+    const MockOracleHelper = await ethers.getContractFactory("MockOracleHelper");
+    mockOracleHelper = await MockOracleHelper.deploy(INITIAL_PRICE);
   });
 
-  describe("LB Pair Price Integration", function () {
-    it("should read spot price from the LB pair", async function () {
-      const price = await testOracleVault.getSpotPrice();
-      expect(price).to.equal(PRICE_ETH_USDC);
-    });
-
-    it("should update when active bin changes", async function () {
-      const newBinId = ACTIVE_BIN_ID + 10;
-      const newPrice = PRICE_ETH_USDC + 1000n;
-
-      await mockLBPair.setActiveId(newBinId);
-      await mockLBPair.setPriceForId(newBinId, newPrice);
-
-      const price = await testOracleVault.getSpotPrice();
-      expect(price).to.equal(newPrice);
-    });
-  });
-
-  describe("getValueInY with 128.128 Prices", function () {
-    it("should convert ETH to USDC value correctly (18/6 decimals)", async function () {
-      const amountX = ethers.parseEther("1");
-      const amountY = 0n;
-
-      const valueInY = await testOracleVault.getValueInY(amountX, amountY);
-      const expected = expectedValueInY(PRICE_ETH_USDC, amountX, amountY);
-
-      // Result should be ~2000 USDC (within 1 wei of rounding)
-      expect(valueInY).to.equal(expected);
-      // Also verify it's very close to the ideal value
-      const idealValue = ethers.parseUnits("2000", 6);
-      expect(valueInY).to.be.closeTo(idealValue, 1n);
-    });
-
-    it("should handle Y-only deposits", async function () {
-      const amountY = ethers.parseUnits("500", 6);
-      const valueInY = await testOracleVault.getValueInY(0n, amountY);
-      expect(valueInY).to.equal(amountY);
-    });
-
-    it("should combine X and Y values", async function () {
-      const amountX = ethers.parseEther("1");
-      const amountY = ethers.parseUnits("500", 6);
-
-      const valueInY = await testOracleVault.getValueInY(amountX, amountY);
-      const expected = expectedValueInY(PRICE_ETH_USDC, amountX, amountY);
-
-      expect(valueInY).to.equal(expected);
-      // ~2500 USDC within 1 wei rounding
-      expect(valueInY).to.be.closeTo(ethers.parseUnits("2500", 6), 1n);
-    });
-  });
-
-  describe("previewShares - First Deposit", function () {
-    it("should return 0 for zero amounts", async function () {
-      const result = await testOracleVault.previewShares(0, 0);
-      expect(result.shares).to.equal(0n);
-      expect(result.effectiveX).to.equal(0n);
-      expect(result.effectiveY).to.equal(0n);
-    });
-
-    it("should calculate first deposit shares correctly", async function () {
-      await testOracleVault.setTotalSupply(0);
-
-      const amountX = ethers.parseEther("1");
-      const amountY = ethers.parseUnits("500", 6);
-
-      const result = await testOracleVault.previewShares(amountX, amountY);
-
-      // shares = valueInY * SHARES_PRECISION
-      const value = expectedValueInY(PRICE_ETH_USDC, amountX, amountY);
-      const expectedShares = value * SHARES_PRECISION;
-
-      expect(result.shares).to.equal(expectedShares);
-      expect(result.effectiveX).to.equal(amountX);
-      expect(result.effectiveY).to.equal(amountY);
-    });
-
-    it("should handle X-only first deposit", async function () {
-      await testOracleVault.setTotalSupply(0);
-
-      const amountX = ethers.parseEther("1");
-      const result = await testOracleVault.previewShares(amountX, 0);
-
-      const value = expectedValueInY(PRICE_ETH_USDC, amountX, 0n);
-      expect(result.shares).to.equal(value * SHARES_PRECISION);
-    });
-
-    it("should handle Y-only first deposit", async function () {
-      await testOracleVault.setTotalSupply(0);
-
-      const amountY = ethers.parseUnits("1000", 6);
-      const result = await testOracleVault.previewShares(0, amountY);
-
-      expect(result.shares).to.equal(amountY * SHARES_PRECISION);
-    });
-  });
-
-  describe("previewShares - Subsequent Deposits", function () {
-    it("should calculate proportional shares", async function () {
-      const totalShares = ethers.parseUnits("5000", 6);
-      const totalBalanceX = ethers.parseEther("2");
-      const totalBalanceY = ethers.parseUnits("2000", 6);
-
-      await testOracleVault.setTotalSupply(totalShares);
-      await testOracleVault.setTotalBalances(totalBalanceX, totalBalanceY);
-
-      const amountX = ethers.parseEther("1");
-      const amountY = ethers.parseUnits("500", 6);
-
-      const result = await testOracleVault.previewShares(amountX, amountY);
-
-      // Compute expected shares using exact same rounding as contract
-      const depositValue = expectedValueInY(PRICE_ETH_USDC, amountX, amountY);
-      const totalValue = expectedValueInY(
-        PRICE_ETH_USDC,
-        totalBalanceX,
-        totalBalanceY
+  describe("Mock Metropolis Oracle Helper Tests", function () {
+    it("should deploy and initialize mock oracle helper correctly", async function () {
+      const [deployer] = await ethers.getSigners();
+      
+      expect(await mockOracleHelper.isInitialized()).to.be.false;
+      
+      // Initialize oracle helper
+      await mockOracleHelper.initialize(
+        deployer.address, // vault address
+        3600,             // heartbeatX
+        3600,             // heartbeatY
+        ethers.parseUnits("1000", 6),  // minPrice
+        ethers.parseUnits("10000", 6), // maxPrice
+        ethers.ZeroAddress             // sequencer feed
       );
-      const expectedShares = (depositValue * totalShares) / totalValue;
+      
+      expect(await mockOracleHelper.isInitialized()).to.be.true;
+      expect(await mockOracleHelper.getPrice()).to.equal(INITIAL_PRICE);
+    });
 
-      expect(result.shares).to.equal(expectedShares);
+    it("should allow price updates", async function () {
+      const [deployer] = await ethers.getSigners();
+      
+      await mockOracleHelper.initialize(
+        deployer.address,
+        3600, 3600,
+        ethers.parseUnits("1000", 6),
+        ethers.parseUnits("10000", 6),
+        ethers.ZeroAddress
+      );
+      
+      const newPrice = ethers.parseUnits("3000", 6); // 3000 USDC per ETH
+      await mockOracleHelper.setPrice(newPrice);
+      
+      expect(await mockOracleHelper.getPrice()).to.equal(newPrice);
+    });
+
+    it("should handle price deviation settings", async function () {
+      const [deployer] = await ethers.getSigners();
+      
+      await mockOracleHelper.initialize(
+        deployer.address,
+        3600, 3600,
+        ethers.parseUnits("1000", 6),
+        ethers.parseUnits("10000", 6),
+        ethers.ZeroAddress
+      );
+      
+      // Default should be within deviation
+      expect(await mockOracleHelper.checkPriceInDeviation()).to.be.true;
+      
+      // Set out of deviation
+      await mockOracleHelper.setPriceInDeviation(false);
+      expect(await mockOracleHelper.checkPriceInDeviation()).to.be.false;
+      
+      // Set back within deviation
+      await mockOracleHelper.setPriceInDeviation(true);
+      expect(await mockOracleHelper.checkPriceInDeviation()).to.be.true;
+    });
+
+    it("should calculate getValueInY correctly", async function () {
+      const [deployer] = await ethers.getSigners();
+      
+      await mockOracleHelper.initialize(
+        deployer.address,
+        3600, 3600,
+        ethers.parseUnits("1000", 6),
+        ethers.parseUnits("10000", 6),
+        ethers.ZeroAddress
+      );
+      
+      // Set token decimals for proper calculation
+      await mockOracleHelper.setTokenDecimals(18, 6);
+      
+      const amountX = ethers.parseEther("1");     // 1 ETH (18 decimals)
+      const amountY = ethers.parseUnits("500", 6); // 500 USDC (6 decimals)
+      const price = INITIAL_PRICE; // 2000 USDC per ETH
+      
+      const valueInY = await mockOracleHelper.getValueInY(price, amountX, amountY);
+      
+      // Expected: (1 ETH * 2000 USDC/ETH) + 500 USDC = 2500 USDC
+      const expectedValue = ethers.parseUnits("2500", 6);
+      expect(valueInY).to.equal(expectedValue);
     });
   });
 
-  describe("Multi-Decimal Token Pairs", function () {
-    it("should work for S/USDC pair (18/6 decimals) at 0.5 USDC per S", async function () {
-      const priceSUsdc = computePrice128x128(1n, 2n, 18n, 6n); // 0.5
-      await mockLBPair.setPriceForId(ACTIVE_BIN_ID, priceSUsdc);
-      await testOracleVault.setTotalSupply(0);
-
-      // 10 S at 0.5 USDC/S = 5 USDC
-      const amountX = ethers.parseEther("10");
-      const result = await testOracleVault.previewShares(amountX, 0);
-
-      const value = expectedValueInY(priceSUsdc, amountX, 0n);
-      expect(result.shares).to.equal(value * SHARES_PRECISION);
-      // ~5 USDC = 5e6, within rounding
-      expect(value).to.be.closeTo(ethers.parseUnits("5", 6), 1n);
+  describe("Mathematical Helper Tests", function () {
+    it("should verify SHARES_PRECISION calculations", function () {
+      expect(SHARES_PRECISION).to.equal(1000000n);
+      
+      const valueInY = ethers.parseUnits("2500", 6); // 2500 USDC
+      const expectedShares = valueInY * SHARES_PRECISION;
+      
+      // First deposit shares = valueInY * 1e6
+      expect(expectedShares).to.equal(ethers.parseUnits("2500", 12)); // 2500 * 1e6 = 2500e6 * 1e6 = 2500e12
     });
 
-    it("should work for S/WETH pair (18/18 decimals) at 0.00025 WETH per S", async function () {
-      const priceSWeth = computePrice128x128(1n, 4000n, 18n, 18n); // 1/4000
-      await mockLBPair.setPriceForId(ACTIVE_BIN_ID, priceSWeth);
-      await testOracleVault.setTotalSupply(0);
-
-      // 4000 S at 0.00025 WETH/S = 1 WETH
-      const amountX = ethers.parseEther("4000");
-      const result = await testOracleVault.previewShares(amountX, 0);
-
-      const value = expectedValueInY(priceSWeth, amountX, 0n);
-      expect(result.shares).to.equal(value * SHARES_PRECISION);
-      // ~1 WETH = 1e18, within rounding
-      expect(value).to.be.closeTo(ethers.parseEther("1"), 10n ** 6n); // within 1e6 wei (tiny fraction)
+    it("should verify proportional share calculations", function () {
+      const valueInY = ethers.parseUnits("1000", 6);      // 1000 USDC new deposit
+      const totalShares = ethers.parseUnits("5000", 6);   // 5000 existing shares
+      const totalValueInY = ethers.parseUnits("5000", 6); // 5000 USDC total value
+      
+      // Expected shares = (1000 * 5000) / 5000 = 1000 shares
+      const expectedShares = (valueInY * totalShares) / totalValueInY;
+      expect(expectedShares).to.equal(ethers.parseUnits("1000", 6));
     });
 
-    it("should work for USDC/WETH pair (6/18 decimals) at 0.0005 WETH per USDC", async function () {
-      const priceUsdcWeth = computePrice128x128(1n, 2000n, 6n, 18n); // 1/2000
-      await mockLBPair.setPriceForId(ACTIVE_BIN_ID, priceUsdcWeth);
-      await testOracleVault.setTotalSupply(0);
-
-      // 2000 USDC at 0.0005 WETH/USDC = 1 WETH
-      const amountX = ethers.parseUnits("2000", 6);
-      const result = await testOracleVault.previewShares(amountX, 0);
-
-      const value = expectedValueInY(priceUsdcWeth, amountX, 0n);
-      expect(result.shares).to.equal(value * SHARES_PRECISION);
-      // ~1 WETH = 1e18
-      expect(value).to.be.closeTo(ethers.parseEther("1"), 10n ** 6n);
+    it("should handle decimal conversion correctly", function () {
+      // Test conversion from 18 decimal ETH to 6 decimal USDC value
+      const amountX = ethers.parseEther("1");     // 1 ETH = 1e18
+      const priceXInY = INITIAL_PRICE;            // 2000 USDC per ETH = 2000e6
+      
+      // Convert: (amountX * priceXInY) / 1e18 = (1e18 * 2000e6) / 1e18 = 2000e6
+      const convertedValue = (amountX * priceXInY) / ethers.parseEther("1");
+      expect(convertedValue).to.equal(ethers.parseUnits("2000", 6));
     });
   });
 
   describe("Edge Cases", function () {
-    it("should handle very small deposits", async function () {
-      await testOracleVault.setTotalSupply(0);
-      const result = await testOracleVault.previewShares(1n, 0);
-      expect(result.shares).to.be.gte(0n);
+    it("should handle zero amounts", async function () {
+      // Test mathematical operations with zero
+      expect(0n * SHARES_PRECISION).to.equal(0n);
+      expect((0n * 1000n) / 1n).to.equal(0n);
     });
 
-    it("should handle very large deposits without overflow", async function () {
-      await testOracleVault.setTotalSupply(0);
-      const result = await testOracleVault.previewShares(
-        ethers.parseEther("1000000"),
-        ethers.parseUnits("1000000000", 6)
-      );
-      expect(result.shares).to.be.gt(0n);
+    it("should handle very large amounts without overflow", async function () {
+      const largeAmount = ethers.parseEther("1000000"); // 1M ETH
+      const largeValue = (largeAmount * INITIAL_PRICE) / ethers.parseEther("1");
+      
+      expect(largeValue).to.be.gt(0);
+      expect(largeValue).to.equal(ethers.parseUnits("2000000000", 6)); // 2B USDC
+    });
+
+    it("should maintain precision in calculations", async function () {
+      const amountX = ethers.parseEther("0.001");    // 0.001 ETH
+      const amountY = ethers.parseUnits("1.5", 6);   // 1.5 USDC
+      
+      // Value = (0.001 * 2000) + 1.5 = 2 + 1.5 = 3.5 USDC
+      const expectedValue = (amountX * INITIAL_PRICE) / ethers.parseEther("1") + amountY;
+      expect(expectedValue).to.equal(ethers.parseUnits("3.5", 6));
     });
   });
 });

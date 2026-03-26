@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useAccount } from 'wagmi';
+import { useAccount, useBalance } from 'wagmi';
 import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useUserHarvestedForVault } from '@/hooks/useUserHarvestedForVault';
@@ -11,8 +11,7 @@ import { getTokenLogo } from '@/lib/tokenHelpers';
 import { DepositModal } from './DepositModal';
 import { WithdrawModal } from './WithdrawModal';
 import { Tooltip } from './Tooltip';
-import { getToken, getTokenByAddress } from '@/lib/tokenRegistry';
-import { useTokenBalance } from '@/hooks/useTokenBalance';
+import { CONTRACTS } from '@/lib/contracts';
 
 interface VaultTableViewProps {
   vaults: any[];
@@ -86,42 +85,32 @@ function useVaultPositionData(vault: any) {
 type SortColumn = 'deposit' | 'dailyRewards' | 'earned' | 'apr' | null;
 type SortDirection = 'asc' | 'desc' | null;
 
-/**
- * Helper hook: fetch tokenX and tokenY balances for the deposit modal
- * of the currently-open vault.
- */
-function useDepositBalances(vault: any | null, userAddress?: string) {
-  const tokenXDef = vault ? getToken(vault.tokenX) : undefined;
-  const tokenYDef = vault ? getToken(vault.tokenY) : undefined;
-
-  const tokenXBalance = useTokenBalance(
-    tokenXDef?.address ?? null,
-    vault ? userAddress : undefined,
-  );
-  const tokenYBalance = useTokenBalance(
-    tokenYDef?.address ?? null,
-    vault ? userAddress : undefined,
-  );
-
-  return {
-    tokenXBalance: (tokenXBalance?.data as bigint) || 0n,
-    tokenYBalance: (tokenYBalance?.data as bigint) || 0n,
-  };
-}
-
 export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVault }: VaultTableViewProps) {
   const [depositModalVault, setDepositModalVault] = useState<string | null>(null);
   const [withdrawModalVault, setWithdrawModalVault] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
-  // Find the vault object for the currently-open deposit modal
-  const depositVault = depositModalVault
-    ? vaults.find(v => v.vaultAddress === depositModalVault) ?? null
-    : null;
+  // Fetch token balances
+  // SONIC is the native token, so don't pass the token parameter
+  const sonicBalance = useBalance({
+    address: userAddress as `0x${string}` | undefined,
+  });
 
-  // Fetch balances dynamically for the deposit-modal vault
-  const { tokenXBalance, tokenYBalance } = useDepositBalances(depositVault, userAddress);
+  const wsBalance = useBalance({
+    address: userAddress as `0x${string}` | undefined,
+    token: CONTRACTS.WS as `0x${string}`,
+  });
+
+  const usdcBalance = useBalance({
+    address: userAddress as `0x${string}` | undefined,
+    token: CONTRACTS.USDC as `0x${string}`,
+  });
+
+  const wethBalance = useBalance({
+    address: userAddress as `0x${string}` | undefined,
+    token: CONTRACTS.WETH as `0x${string}`,
+  });
 
   const vaultMetrics = vaults.map(config =>
     useVaultMetrics(config, userAddress)
@@ -132,6 +121,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
     const metrics = vaultMetrics[index];
     const isShadow = vault.name.includes('Shadow');
     const tokenPrice = isShadow ? (metrics.prices?.shadow || 0) : (metrics.prices?.metro || 0);
+    const hasBalance = !!(metrics.depositedValueUSD && metrics.depositedValueUSD > 0);
 
     return useUserHarvestedForVault(vault.vaultAddress, userAddress, tokenPrice);
   });
@@ -292,14 +282,18 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
               ? metrics.pendingRewards.filter((reward: any) => reward.pendingRewards > 0n)
               : [];
 
-            // Calculate total USD value of rewards using registry
+            // Calculate total USD value of rewards
             let totalRewardsUSD = 0;
             if (nonZeroRewards.length > 0 && metrics.prices) {
               totalRewardsUSD = nonZeroRewards.reduce((sum: number, reward: any) => {
                 const amount = Number(reward.pendingRewards) / 1e18;
-                const tokenDef = getTokenByAddress(reward.token);
-                const priceKey = tokenDef?.canonicalName.toLowerCase();
-                const price = priceKey && metrics.prices ? (metrics.prices[priceKey] || 0) : 0;
+                const addr = reward.token.toLowerCase();
+                let price = 0;
+
+                if (addr === CONTRACTS.METRO.toLowerCase()) price = metrics.prices?.metro || 0;
+                else if (addr === CONTRACTS.SHADOW.toLowerCase()) price = metrics.prices?.shadow || 0;
+                else if (addr === CONTRACTS.xSHADOW.toLowerCase()) price = metrics.prices?.xShadow || 0;
+
                 return sum + (amount * price);
               }, 0);
             }
@@ -642,18 +636,24 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
       </div>
 
       {/* Modals - Outside table container to avoid overflow clipping */}
-      {depositVault && (
-        <DepositModal
-          vaultAddress={depositVault.vaultAddress}
-          stratAddress={depositVault.stratAddress}
-          vaultName={depositVault.name}
-          tokenXBalance={tokenXBalance}
-          tokenYBalance={tokenYBalance}
-          tokenX={depositVault.tokenX}
-          tokenY={depositVault.tokenY}
-          onClose={() => setDepositModalVault(null)}
-        />
-      )}
+      {depositModalVault && (() => {
+        const vault = vaults.find(v => v.vaultAddress === depositModalVault);
+        if (!vault) return null;
+        return (
+          <DepositModal
+            vaultAddress={vault.vaultAddress}
+            stratAddress={vault.stratAddress}
+            vaultName={vault.name}
+            sonicBalance={(sonicBalance?.data?.value as bigint) || 0n}
+            wsBalance={(wsBalance?.data?.value as bigint) || 0n}
+            usdcBalance={(usdcBalance?.data?.value as bigint) || 0n}
+            wethBalance={(wethBalance?.data?.value as bigint) || 0n}
+            tokenX={vault.tokenX}
+            tokenY={vault.tokenY}
+            onClose={() => setDepositModalVault(null)}
+          />
+        );
+      })()}
 
       {withdrawModalVault && (() => {
         const vaultIndex = vaults.findIndex(v => v.vaultAddress === withdrawModalVault);

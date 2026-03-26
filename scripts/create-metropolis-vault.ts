@@ -18,6 +18,17 @@ interface MetropolisDeployment {
   };
 }
 
+interface HybridPriceLensDeployment {
+  network: string;
+  timestamp: string;
+  deployer: string;
+  addresses: {
+    hybridPriceLens: string;
+    wnative: string;
+  };
+  configuration: unknown;
+}
+
 async function main() {
   console.log(`Creating Market Maker Oracle Vault on ${network.name}...`);
 
@@ -26,20 +37,31 @@ async function main() {
 
   // Load deployment addresses from JSON files
   const metropolisPath = path.join(__dirname, "../deployments", `metropolis-${network.name}.json`);
+  const priceLensPath = path.join(__dirname, "../deployments", `hybrid-price-lens-${network.name}.json`);
 
   if (!fs.existsSync(metropolisPath)) {
     console.log("❌ Metropolis deployment not found:", metropolisPath);
-    console.log("Please run: npx hardhat run scripts/deploy-multi-dex.ts --network", network.name);
+    console.log("Please run: npx hardhat run scripts/deploy-multi-dex.ts --network!", network.name);
+    return;
+  }
+
+  if (!fs.existsSync(priceLensPath)) {
+    console.log("❌ HybridPriceLens deployment not found:", priceLensPath);
+    console.log("Please run: npx hardhat run scripts/deploy-hybrid-price-lens.ts --network", network.name);
     return;
   }
 
   const metropolisDeployment: MetropolisDeployment = JSON.parse(fs.readFileSync(metropolisPath, "utf8"));
+  const priceLensDeployment: HybridPriceLensDeployment = JSON.parse(fs.readFileSync(priceLensPath, "utf8"));
 
   const VAULT_FACTORY_ADDRESS = metropolisDeployment.addresses.vaultFactory;
+  const PRICE_LENS_ADDRESS = priceLensDeployment.addresses.hybridPriceLens;
 
   console.log("\n📄 Loaded deployment data:");
   console.log("  Metropolis deployed:", metropolisDeployment.timestamp);
+  console.log("  PriceLens deployed:", priceLensDeployment.timestamp);
   console.log("  VaultFactory:", VAULT_FACTORY_ADDRESS);
+  console.log("  HybridPriceLens:", PRICE_LENS_ADDRESS);
   
   // Mainnet LB Pair and tokens
   const LB_PAIR_ADDRESS = "0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC"; // S-USDC pair on mainnet
@@ -52,6 +74,16 @@ async function main() {
   console.log("\n📋 Loading contracts...");
   const vaultFactory = await ethers.getContractAt("VaultFactory", VAULT_FACTORY_ADDRESS);
   console.log("VaultFactory loaded at:", await vaultFactory.getAddress());
+  const priceLens = await ethers.getContractAt("HybridPriceLens", PRICE_LENS_ADDRESS);
+  console.log("PriceLens loaded at:", await priceLens.getAddress());
+  
+  // Debug: Check if priceLens is already set
+  try {
+    const currentPriceLens = await vaultFactory.getPriceLens();
+    console.log("Current PriceLens in VaultFactory:", currentPriceLens);
+  } catch (e) {
+    console.log("Could not get current PriceLens:", e.message);
+  }
 
   // Step 1: Verify LB Pair configuration
   console.log("\nStep 1: Verifying LB Pair configuration...");
@@ -82,8 +114,31 @@ async function main() {
   }
   console.log("✅ Oracle is configured");
 
-  // Step 2: Whitelist the pair
-  console.log("\nStep 2: Checking pair whitelist...");
+  // Step 2: Set PriceLens on VaultFactory
+  console.log("\nStep 2: Setting PriceLens on VaultFactory...");
+  try {
+    // First verify PriceLens is working
+    const usdcPrice = await priceLens.getTokenPriceNative(USDC_ADDRESS);
+    console.log("USDC price in S:", ethers.formatEther(usdcPrice));
+    const sPrice = await priceLens.getTokenPriceNative(S_ADDRESS);
+    console.log("S price in S:", ethers.formatEther(sPrice), "(should be 1.0)");
+    
+    // Set the PriceLens on VaultFactory
+    console.log("Setting PriceLens on VaultFactory...");
+    const setPriceLensTx = await vaultFactory.setPriceLens(PRICE_LENS_ADDRESS);
+    await setPriceLensTx.wait();
+    console.log("✅ PriceLens set on VaultFactory");
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if (errorMessage.includes("Ownable")) {
+      console.log("❌ Only owner can set PriceLens. Are you using the correct account?");
+      return;
+    }
+    console.log("✅ PriceLens might already be configured or error occurred:", errorMessage);
+  }
+
+  // Step 3: Whitelist the pair
+  console.log("\nStep 3: Checking pair whitelist...");
   const isWhitelisted = await vaultFactory.isPairWhitelisted(LB_PAIR_ADDRESS);
   
   if (!isWhitelisted) {
@@ -101,7 +156,7 @@ async function main() {
   }
 
   // Step 4: Check creation fee
-  console.log("\nStep 3: Checking creation fee...");
+  console.log("\nStep 4: Checking creation fee...");
   const creationFee = await vaultFactory.getCreationFee();
   console.log("Creation fee:", ethers.formatEther(creationFee), "S");
 
@@ -109,7 +164,7 @@ async function main() {
   const balance = await ethers.provider.getBalance(deployer.address);
 
   // Step 5: Final safety checks and confirmation
-  console.log("\nStep 4: Final Safety Checks...");
+  console.log("\nStep 5: Final Safety Checks...");
   
   // Check if vault already exists for this pair and operator
   console.log("\nChecking existing vaults...");
@@ -175,7 +230,7 @@ async function main() {
   }
   
   // Step 6: Create the vault
-  console.log("\nStep 5: Creating Market Maker Oracle Vault...");
+  console.log("\nStep 6: Creating Market Maker Oracle Vault...");
   
   try {
     console.log("\nSubmitting transaction...");

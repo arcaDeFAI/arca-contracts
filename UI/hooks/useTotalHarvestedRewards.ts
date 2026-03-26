@@ -2,8 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { usePublicClient } from 'wagmi';
 import { parseAbi } from 'viem';
 import { usePrices } from '@/contexts/PriceContext';
-import { getTokenByAddress } from '@/lib/tokenRegistry';
-import { getTokenPrice } from '@/lib/tokenPriceHelpers';
+import { CONTRACTS } from '@/lib/contracts';
 
 const HARVEST_ABI = parseAbi([
   'event Harvested(address indexed user, address indexed token, uint256 amount)'
@@ -43,14 +42,12 @@ export function useTotalHarvestedRewards(
       const amount = Number(event.amount) / (10 ** 18);
       const tokenAddr = event.token.toLowerCase();
 
-      // Use registry for price lookup
-      const tokenDef = getTokenByAddress(tokenAddr);
       let price = 0;
-      if (tokenDef) {
-        price = getTokenPrice(tokenDef.symbol, prices);
-      } else if (tokenAddr === '0x0000000000000000000000000000000000000000' || tokenAddr === 's') {
-        price = prices.sonic || 0;
-      }
+      if (tokenAddr === CONTRACTS.METRO.toLowerCase()) price = prices.metro || 0;
+      else if (tokenAddr === CONTRACTS.SHADOW.toLowerCase()) price = prices.shadow || 0;
+      else if (tokenAddr === CONTRACTS.xSHADOW.toLowerCase()) price = prices.xShadow || 0;
+      else if (tokenAddr === '0x0000000000000000000000000000000000000000' || tokenAddr === 's') price = prices.sonic || 0;
+      else if (tokenAddr === CONTRACTS.WS.toLowerCase()) price = prices.sonic || 0;
 
       return sum + (amount * price);
     }, 0);

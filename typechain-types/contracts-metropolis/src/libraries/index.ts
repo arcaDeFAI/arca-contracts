@@ -2,5 +2,4 @@
 /* tslint:disable */
 /* eslint-disable */
 export type { Hooks } from "./Hooks";
-export type { MetropolisPriceHelper } from "./MetropolisPriceHelper";
 export type { TokenHelper } from "./TokenHelper";

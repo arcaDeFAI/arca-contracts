@@ -731,19 +731,6 @@ const _abi = [
   },
   {
     inputs: [],
-    name: "getVersion",
-    outputs: [
-      {
-        internalType: "string",
-        name: "",
-        type: "string",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "getWNative",
     outputs: [
       {
@@ -932,6 +919,61 @@ const _abi = [
   {
     inputs: [
       {
+        internalType: "address",
+        name: "oracleVault",
+        type: "address",
+      },
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "minPrice",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "maxPrice",
+            type: "uint256",
+          },
+          {
+            internalType: "uint24",
+            name: "heartbeatX",
+            type: "uint24",
+          },
+          {
+            internalType: "uint24",
+            name: "heartbeatY",
+            type: "uint24",
+          },
+          {
+            internalType: "uint256",
+            name: "deviationThreshold",
+            type: "uint256",
+          },
+          {
+            internalType: "bool",
+            name: "twapPriceCheckEnabled",
+            type: "bool",
+          },
+          {
+            internalType: "uint40",
+            name: "twapInterval",
+            type: "uint40",
+          },
+        ],
+        internalType: "struct IOracleHelper.OracleParameters",
+        name: "parameters",
+        type: "tuple",
+      },
+    ],
+    name: "setOracleParameters",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
         internalType: "address[]",
         name: "pairs",
         type: "address[]",
@@ -979,6 +1021,24 @@ const _abi = [
       },
     ],
     name: "setRebalanceCoolDown",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "oracleVault",
+        type: "address",
+      },
+      {
+        internalType: "contract IAggregatorV3",
+        name: "sequencerUptimeFeed",
+        type: "address",
+      },
+    ],
+    name: "setSequencerUptimeFeed",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",
@@ -1043,24 +1103,6 @@ const _abi = [
   {
     inputs: [
       {
-        internalType: "address",
-        name: "oracleVault",
-        type: "address",
-      },
-      {
-        internalType: "uint256",
-        name: "threshold",
-        type: "uint256",
-      },
-    ],
-    name: "setVaultDeviationThreshold",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
         internalType: "enum IVaultFactory.VaultType",
         name: "vType",
         type: "uint8",
@@ -1072,24 +1114,6 @@ const _abi = [
       },
     ],
     name: "setVaultImplementation",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "address",
-        name: "oracleVault",
-        type: "address",
-      },
-      {
-        internalType: "uint32",
-        name: "twapInterval",
-        type: "uint32",
-      },
-    ],
-    name: "setVaultTwapInterval",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

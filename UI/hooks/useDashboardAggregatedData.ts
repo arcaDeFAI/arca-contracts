@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { formatUnits } from 'viem'
-import { getToken, getTokenByAddress } from '@/lib/tokenRegistry'
+import { CONTRACTS } from '@/lib/contracts'
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers'
 import type { VaultConfig } from '@/lib/vaultConfigs'
 
@@ -14,10 +14,10 @@ export interface AggregatedData {
     totalHarvestedMetroUSD: number
     totalHarvestedShadowUSD: number
     earliestFirstDeposit: number | null
-    allocations: Array<{ token: string; amount: number; usdValue: number; percentage: number; color: string }>
-    deposited: Array<{ token: string; amount: number; usdValue: number }>
-    metroRewards: Array<{ token: string; amount: number; usdValue: number; logo?: string }>
-    shadowRewards: Array<{ token: string; amount: number; usdValue: number; logo?: string }>
+    allocations: any[]
+    deposited: any[]
+    metroRewards: any[]
+    shadowRewards: any[]
     isLoading: boolean
 }
 
@@ -33,23 +33,24 @@ interface VaultMetric {
         shadow: number
         xShadow: number
         weth: number
-        [key: string]: number
     }
-    pendingRewards?: Array<{ token: string; pendingRewards: bigint }>
-    isLoading?: boolean
+    pendingRewards?: any[]
+    isLoading?: boolean // Added for aggregation
 }
+
+
 
 interface TotalHarvestedData {
     totalHarvestedUSD: number
     firstHarvestTimestamp: number | null
-    isLoading?: boolean
+    isLoading?: boolean // Added for aggregation
 }
 
 export function useDashboardAggregatedData(
-    vaultMetrics: (VaultMetric | Record<string, unknown>)[],
+    vaultMetrics: (VaultMetric | any)[], // Flexible typing
     vaultConfigs: VaultConfig[],
     totalHarvestedData: TotalHarvestedData[],
-    prices: Record<string, number> | undefined
+    prices: any
 ) {
     return useMemo(() => {
         let totalBalanceUSD = 0
@@ -65,7 +66,7 @@ export function useDashboardAggregatedData(
         const metroRewards: Array<{ token: string; amount: number; usdValue: number; logo?: string }> = []
         const shadowRewards: Array<{ token: string; amount: number; usdValue: number; logo?: string }> = []
 
-        vaultMetrics.forEach((metrics: any, index: number) => {
+        vaultMetrics.forEach((metrics, index) => {
             const config = vaultConfigs[index]
             const isShadowVault = config.name.includes('Shadow')
 
@@ -82,11 +83,8 @@ export function useDashboardAggregatedData(
                 const tokenX = config.tokenX || 'S'
                 const tokenY = config.tokenY || 'USDC'
 
-                // Group by canonical name for aggregation (S and WS → 'S / wS')
-                const getAllocKey = (name: string) => {
-                    const canonical = getToken(name)?.canonicalName;
-                    return canonical === 'SONIC' ? 'S / wS' : name;
-                };
+                // Normalize S and WS for aggregation
+                const getAllocKey = (name: string) => (name === 'S' || name === 'WS') ? 'S / wS' : name;
                 const keyX = getAllocKey(tokenX);
                 const keyY = getAllocKey(tokenY);
 
@@ -135,18 +133,30 @@ export function useDashboardAggregatedData(
 
             // Process pending rewards
             if (metrics.pendingRewards) {
+                // We assume pendingRewards is an array of objects compliant with the ABI output
                 const rewards = metrics.pendingRewards
 
-                rewards.forEach((reward: { token: string; pendingRewards: bigint }) => {
+                rewards.forEach((reward: any) => {
                     const tokenAddress = reward.token.toLowerCase()
                     const amount = Number(formatUnits(reward.pendingRewards, 18))
 
-                    // Look up reward token via registry
-                    const tokenDef = getTokenByAddress(tokenAddress)
-                    const tokenName = tokenDef?.displayName ?? 'Unknown'
-                    const priceKey = tokenDef?.canonicalName.toLowerCase()
-                    const tokenPrice = priceKey && metrics.prices ? (metrics.prices[priceKey] || 0) : 0
-                    const logo = tokenDef?.logo
+                    let tokenName = 'Unknown'
+                    let tokenPrice = 0
+                    let logo: string | undefined = undefined
+
+                    if (tokenAddress === CONTRACTS.METRO.toLowerCase()) {
+                        tokenName = 'Metro'
+                        tokenPrice = metrics.prices?.metro || 0
+                        logo = '/MetropolisLogo.png'
+                    } else if (tokenAddress === CONTRACTS.SHADOW.toLowerCase()) {
+                        tokenName = 'Shadow'
+                        tokenPrice = metrics.prices?.shadow || 0
+                        logo = '/SHadowLogo.jpg'
+                    } else if (tokenAddress === CONTRACTS.xSHADOW.toLowerCase()) {
+                        tokenName = 'xShadow'
+                        tokenPrice = metrics.prices?.xShadow || 0
+                        logo = '/SHadowLogo.jpg'
+                    }
 
                     const usdValue = amount * tokenPrice
 
@@ -186,9 +196,12 @@ export function useDashboardAggregatedData(
         const allocations = Array.from(tokenAllocations.entries()).map(([token, data]) => {
             const percentage = totalBalanceUSD > 0 ? (data.usdValue / totalBalanceUSD) * 100 : 0
 
-            // Get chart color from registry (use first word as token key for grouped keys like 'S / wS')
-            const tokenKey = token.split(' ')[0]; // 'S / wS' → 'S'
-            const color = getToken(tokenKey)?.chartColor ?? '#6B7280';
+            // Assign colors based on token
+            let color = '#6B7280' // gray fallback
+            if (token === 'S' || token === 'S / wS') color = '#00FFA3' // Neon Green
+            else if (token === 'WS') color = '#2DD4BF' // Teal
+            else if (token === 'USDC') color = '#3B82F6' // Blue
+            else if (token === 'WETH' || token === 'ETH') color = '#8B5CF6' // Purple (matching standard WETH)
 
             return {
                 token,
@@ -206,7 +219,7 @@ export function useDashboardAggregatedData(
             usdValue: data.usdValue
         }))
 
-        const isAnyVaultLoading = vaultMetrics.some((m: any) => m.isLoading);
+        const isAnyVaultLoading = vaultMetrics.some(m => m.isLoading);
         const isAnyHarvestLoading = totalHarvestedData.some(h => h.isLoading);
         const isLoading = isAnyVaultLoading || isAnyHarvestLoading;
 
@@ -214,7 +227,7 @@ export function useDashboardAggregatedData(
             totalBalanceUSD,
             totalRewardsUSD: totalMetroRewardsUSD + totalShadowRewardsUSD,
             totalMetroRewardsUSD,
-            totalShadowRewardsUSD,
+            totalShadowRewardsUSD: totalShadowRewardsUSD, // Consistency
             totalClaimableUSD,
             totalHarvestedUSD: totalHarvestedMetroUSD + totalHarvestedShadowUSD,
             totalHarvestedMetroUSD,

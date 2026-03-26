@@ -8,6 +8,7 @@ import {ILBPair} from "@arca/joe-v2/interfaces/ILBPair.sol";
 import {IAggregatorV3} from "./IAggregatorV3.sol";
 import {IStrategyCommon} from "./IStrategyCommon.sol";
 import {IMinimalVault} from "./IMinimalVault.sol";
+import {IOracleHelper} from "./IOracleHelper.sol";
 
 /**
  * @title Vault Factory Interface
@@ -201,6 +202,16 @@ interface IVaultFactory {
         IAggregatorV3 sequencerUptimeFeed
     ) external;
 
+    function setSequencerUptimeFeed(
+        address oracleVault,
+        IAggregatorV3 sequencerUptimeFeed
+    ) external;
+
+    function setOracleParameters(
+        address oracleVault,
+        IOracleHelper.OracleParameters calldata parameters
+    ) external;
+
     function setPairWhitelist(
         address[] calldata pairs,
         bool isWhitelisted
@@ -241,26 +252,4 @@ interface IVaultFactory {
 
     /// @dev Register my contract on Sonic FeeM
     function registerMe() external;
-
-    /**
-     * @notice Sets the TWAP interval for an oracle vault.
-     * @param oracleVault The address of the oracle vault.
-     * @param twapInterval The TWAP interval in seconds (0 = spot price only).
-     */
-    function setVaultTwapInterval(
-        address oracleVault,
-        uint32 twapInterval
-    ) external;
-
-    /**
-     * @notice Sets the deviation threshold for an oracle vault.
-     * @param oracleVault The address of the oracle vault.
-     * @param threshold The maximum deviation percentage (e.g. 5 = 5%).
-     */
-    function setVaultDeviationThreshold(
-        address oracleVault,
-        uint256 threshold
-    ) external;
-
-    function getVersion() external view returns (string memory);
 }

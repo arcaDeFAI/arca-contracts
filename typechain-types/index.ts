@@ -126,8 +126,6 @@ export type { IWNative } from "./contracts-metropolis/src/interfaces/IWNative";
 export { IWNative__factory } from "./factories/contracts-metropolis/src/interfaces/IWNative__factory";
 export type { Hooks } from "./contracts-metropolis/src/libraries/Hooks";
 export { Hooks__factory } from "./factories/contracts-metropolis/src/libraries/Hooks__factory";
-export type { MetropolisPriceHelper } from "./contracts-metropolis/src/libraries/MetropolisPriceHelper";
-export { MetropolisPriceHelper__factory } from "./factories/contracts-metropolis/src/libraries/MetropolisPriceHelper__factory";
 export type { TokenHelper } from "./contracts-metropolis/src/libraries/TokenHelper";
 export { TokenHelper__factory } from "./factories/contracts-metropolis/src/libraries/TokenHelper__factory";
 export type { MetropolisStrategy } from "./contracts-metropolis/src/MetropolisStrategy";
@@ -192,8 +190,6 @@ export type { ShadowPriceHelperWrapper } from "./contracts-shadow/src/ShadowPric
 export { ShadowPriceHelperWrapper__factory } from "./factories/contracts-shadow/src/ShadowPriceHelperWrapper__factory";
 export type { ShadowStrategy } from "./contracts-shadow/src/ShadowStrategy";
 export { ShadowStrategy__factory } from "./factories/contracts-shadow/src/ShadowStrategy__factory";
-export type { MockLBPair } from "./test/mocks/MockLBPair";
-export { MockLBPair__factory } from "./factories/test/mocks/MockLBPair__factory";
 export type { MockMetropolisStrategy } from "./test/mocks/MockMetropolisStrategy";
 export { MockMetropolisStrategy__factory } from "./factories/test/mocks/MockMetropolisStrategy__factory";
 export type { MockOracleHelper } from "./test/mocks/MockOracleHelper";

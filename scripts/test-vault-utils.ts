@@ -548,11 +548,6 @@ export function displayVisualRange(
     try {
         const width = 50;
         const range = upper - lower;
-        if (range === 0) {
-            console.log(chalk.cyan(`\n${type === "tick" ? "Tick" : "Bin"} Range Visualization:`));
-            console.log(chalk.gray(`[${lower}]──[${upper}] (no range set)`));
-            return;
-        }
         const currentPos = Math.round(((current - lower) / range) * width);
         
         console.log(chalk.cyan(`\n${type === "tick" ? "Tick" : "Bin"} Range Visualization:`));

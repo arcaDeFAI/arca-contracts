@@ -764,19 +764,6 @@ const _abi = [
   },
   {
     inputs: [],
-    name: "getDeviationThreshold",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
     name: "getFactory",
     outputs: [
       {
@@ -801,6 +788,69 @@ const _abi = [
         internalType: "address",
         name: "operator",
         type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getOracleHelper",
+    outputs: [
+      {
+        internalType: "contract IOracleHelper",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getOracleParameters",
+    outputs: [
+      {
+        components: [
+          {
+            internalType: "uint256",
+            name: "minPrice",
+            type: "uint256",
+          },
+          {
+            internalType: "uint256",
+            name: "maxPrice",
+            type: "uint256",
+          },
+          {
+            internalType: "uint24",
+            name: "heartbeatX",
+            type: "uint24",
+          },
+          {
+            internalType: "uint24",
+            name: "heartbeatY",
+            type: "uint24",
+          },
+          {
+            internalType: "uint256",
+            name: "deviationThreshold",
+            type: "uint256",
+          },
+          {
+            internalType: "bool",
+            name: "twapPriceCheckEnabled",
+            type: "bool",
+          },
+          {
+            internalType: "uint40",
+            name: "twapInterval",
+            type: "uint40",
+          },
+        ],
+        internalType: "struct IOracleHelper.OracleParameters",
+        name: "parameters",
+        type: "tuple",
       },
     ],
     stateMutability: "view",
@@ -956,19 +1006,6 @@ const _abi = [
         internalType: "uint256",
         name: "totalQueuedShares",
         type: "uint256",
-      },
-    ],
-    stateMutability: "view",
-    type: "function",
-  },
-  {
-    inputs: [],
-    name: "getTwapInterval",
-    outputs: [
-      {
-        internalType: "uint32",
-        name: "",
-        type: "uint32",
       },
     ],
     stateMutability: "view",
@@ -1216,19 +1253,6 @@ const _abi = [
     type: "function",
   },
   {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "threshold",
-        type: "uint256",
-      },
-    ],
-    name: "setDeviationThreshold",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
     inputs: [],
     name: "setEmergencyMode",
     outputs: [],
@@ -1244,19 +1268,6 @@ const _abi = [
       },
     ],
     name: "setStrategy",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint32",
-        name: "twapInterval",
-        type: "uint32",
-      },
-    ],
-    name: "setTwapInterval",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

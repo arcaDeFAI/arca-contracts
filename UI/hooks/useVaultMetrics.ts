@@ -7,7 +7,6 @@ import { useMetroAPY } from './useMetroAPY';
 import { useShadowAPY } from './useShadowAPY';
 import { useShadowAPYAdjusted } from './useShadowAPYAdjusted';
 import { CONTRACTS } from '@/lib/contracts';
-import { getTokenOrThrow } from '@/lib/tokenRegistry';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 
@@ -58,7 +57,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   // Calculate APY based on vault type
   const metroAPY = useMetroAPY(
     stratAddress,
-    getTokenOrThrow('METRO').address!,
+    CONTRACTS.METRO,
     vaultTVL,
     prices?.metro || 0
   );
@@ -73,7 +72,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   const shadowAPYOld = useShadowAPY(
     stratAddress,
     (config as any).rewardsAddress || CONTRACTS.SHADOW_REWARDS,
-    getTokenOrThrow('SHADOW').address!,
+    CONTRACTS.SHADOW,
     vaultTVL,
     prices?.shadow || 0
   );

@@ -23,7 +23,6 @@
     "vault-factory:cli": "hardhat run scripts/vault-factory-cli.ts --network sonic-mainnet",
     "deploy:shadow-strat:mainnet": "hardhat compile && hardhat run scripts/deploy-shadow-strategy.ts --network sonic-mainnet",
     "deploy:shadow-vault:mainnet": "hardhat compile && hardhat run scripts/deploy-shadow-vault-upgrade.ts --network sonic-mainnet",
-    "deploy:metropolis-vault:mainnet": "hardhat compile && hardhat run scripts/deploy-metropolis-vault-upgrade.ts --network sonic-mainnet",
     "metropolis-vault:cli": "hardhat run scripts/metropolis-vault-cli.ts --network sonic-mainnet"
   },
   "devDependencies": {

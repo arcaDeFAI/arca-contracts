@@ -51,36 +51,6 @@ export const VAULT_CONFIGS: VaultConfig[] = [
     tokenX: 'S',
     tokenY: 'USDC',
   },
-  {
-    protocol: 'metropolis',
-    vaultAddress: '0xBaef4Da824f554c35035211cb997db4ecB75F45f',
-    stratAddress: '0x7069B87c64ee8DA6bF928B4Af0693bC7a4f9D7e6',
-    lbBookAddress: '0x12f1cacda05242ccfe4c7139a46b8545bd2b2537',
-    name: 'USSD • USDC | Metropolis',
-    tier: 'Premium',
-    tokenX: 'USSD',
-    tokenY: 'USDC',
-  },
-  {
-    protocol: 'metropolis',
-    vaultAddress: '0x1C0C5A4197b7Fa25a180E6e08eA19A91EBBe5fD2',
-    stratAddress: '0xeca4AE2D4778b1417d6cB47B9C7769e9f5fC4A3f',
-    lbBookAddress: '0x361f55337074ae43957204cb30ffbabbce4fb837',
-    name: 'wS • USSD | Metropolis',
-    tier: 'Premium',
-    tokenX: 'wS',
-    tokenY: 'USSD',
-  },
-  {
-    protocol: 'metropolis',
-    vaultAddress: '0x34331E66a634D69D64edC3e21E52A53899e12640',
-    stratAddress: '0x38FdF9a12Ac2e2aD95dd5bE3d271cC6EA23C5c2C',
-    lbBookAddress: '0x9eDE606c7168bb09fF73EbdE7bFD6FcfaBDA9Bc3',
-    name: 'WETH • wS | Metropolis',
-    tier: 'Premium',
-    tokenX: 'WETH',
-    tokenY: 'WS',
-  },
 
   // Shadow Vaults
   {
@@ -118,30 +88,6 @@ export const VAULT_CONFIGS: VaultConfig[] = [
     tier: 'Premium',
     tokenX: 'USDC',
     tokenY: 'WETH',
-  },
-  {
-    protocol: 'shadow',
-    vaultAddress: '0xc318C24c8A8584B03019D34E586DAa14F208eF2d',
-    stratAddress: '0x4ddB609F6D03dC29172c51C6D7f3a2B66e997c18',
-    clpoolAddress: '0x092c0B146201Bb16D9A37cFC0a7310b05fc8799b',
-    rewardsAddress: '',
-    poolSymbol: '', // DeFi Llama pool ID (not found)
-    name: 'USSD • USDC | Shadow',
-    tier: 'Premium',
-    tokenX: 'USSD',
-    tokenY: 'USDC',
-  },
-  {
-    protocol: 'shadow',
-    vaultAddress: '0x3a284cc4080F9d88aC2eE330296975C78C53B5cd',
-    stratAddress: '0x496932dD85dB0E9A64F08e529E91cF86D7A65775',
-    clpoolAddress: '0x356C9EB08f9121cfB00AD6Dc03A12422eEf8a9A8',
-    rewardsAddress: '',
-    poolSymbol: '', // DeFi Llama pool ID (not found)
-    name: 'USSD • wS | Shadow',
-    tier: 'Premium',
-    tokenX: 'USSD',
-    tokenY: 'wS',
   },
 ];
 

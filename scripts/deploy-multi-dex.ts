@@ -1,6 +1,6 @@
 import type { Contract, TransactionReceipt, TransactionResponse } from "ethers";
 import { ethers, network } from "hardhat";
-import type { ProxyAdmin, ShadowPriceHelper, ShadowPriceHelperWrapper } from "typechain-types";
+import type { OracleHelperFactory, ProxyAdmin, ShadowPriceHelper, ShadowPriceHelperWrapper } from "typechain-types";
 
 // Gas tracking utility
 interface GasTransaction {
@@ -257,10 +257,9 @@ async function main() {
   let wnative: string;
 
   // -------------------------------------- CONFIG ZONE START --------------------------------------
-  // If you want to re-use existing contracts, set their addresses here.
-  // Otherwise, new ones will be deployed (except for hardhat localhost where they're not used).
-  // Note: oracleHelperFactory is a vestigial VaultFactory constructor param — no longer used for vault creation.
-  const oracleHelperFactoryAddress: string = "0x1c4be246e60A602d09A2e5074ff99942353Cf750";
+  // If you want to re-use a contract for the Oracle Helper Factory or other contracts, set it here
+  // Otherwise, a new one will be deployed (except for hardhat localhost where it's not used)
+  let oracleHelperFactoryAddress: string = "0x1c4be246e60A602d09A2e5074ff99942353Cf750";
   let shadowPriceHelperAddress: string = "0x0000000000000000000000000000000000000000";
   let shadowPriceHelperWrapperAddress: string = "0xa8D204f63885bdD531c1b5Bde9d8e540e76F2E53";
 
@@ -318,6 +317,8 @@ async function main() {
     // For localhost, always deploy the shadow price helper wrapper
     [, shadowPriceHelperWrapperAddress] = await deployShadowPriceHelperWrapper(gasTracker, shadowPriceHelperAddress);
 
+    // For localhost, always deploy a oracle helper factory contract
+    [, oracleHelperFactoryAddress] = await deployOracleHelperFactory(gasTracker);
   } else if (network.name === "sonic-testnet") {
     // For testnet, use the testnet wS address
     wnative = "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"; // Actual testnet wS
@@ -328,6 +329,11 @@ async function main() {
     wnative = "0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38"; // Actual mainnet wS
   } else {
     throw new Error(`Unsupported network: ${network.name}`);
+  }
+
+  if (oracleHelperFactoryAddress === "0x0000000000000000000000000000000000000000") {
+    // Deploy OracleHelperFactory
+    [,oracleHelperFactoryAddress] = await deployOracleHelperFactory(gasTracker);
   }
 
   if (shadowPriceHelperAddress === "0x0000000000000000000000000000000000000000") {
@@ -395,6 +401,8 @@ async function main() {
   
   // Skip OracleVault for now since it's failing and focus on OracleRewardVault
   console.log("⚠️  Skipping OracleVault deployment (not needed for current use case)");
+  const oracleVaultImpl: Contract | null = null;
+
   let oracleRewardVaultImpl: Contract;
   try {
     const OracleRewardVault = await ethers.getContractFactory("OracleRewardVault");
@@ -486,13 +494,13 @@ async function main() {
   // Set vault and strategy implementations
   console.log("\n=== Setting Factory Implementations ===");
   
-  const VAULT_TYPE_ORACLE_REWARD = 3;
+  const VAULT_TYPE_ORACLE = 2;
   const VAULT_TYPE_SHADOW_ORACLE_REWARD = 4;
   const STRATEGY_TYPE_DEFAULT = 1;
   const STRATEGY_TYPE_SHADOW = 2;
 
   console.log("Constants being used:");
-  console.log("  VAULT_TYPE_ORACLE_REWARD:", VAULT_TYPE_ORACLE_REWARD);
+  console.log("  VAULT_TYPE_ORACLE:", VAULT_TYPE_ORACLE);
   console.log("  VAULT_TYPE_SHADOW_ORACLE_REWARD:", VAULT_TYPE_SHADOW_ORACLE_REWARD);
   console.log("  STRATEGY_TYPE_DEFAULT:", STRATEGY_TYPE_DEFAULT);
   console.log("  STRATEGY_TYPE_SHADOW:", STRATEGY_TYPE_SHADOW);
@@ -500,8 +508,8 @@ async function main() {
   console.log("\nSetting vault implementations...");
   const oracleRewardVaultAddress = await oracleRewardVaultImpl.getAddress();
   await sendTransaction(
-    `Set VAULT_TYPE_ORACLE_REWARD (${VAULT_TYPE_ORACLE_REWARD}) to ${oracleRewardVaultAddress}`,
-    vaultFactory.setVaultImplementation(VAULT_TYPE_ORACLE_REWARD, oracleRewardVaultAddress),
+    `Set VAULT_TYPE_ORACLE (${VAULT_TYPE_ORACLE}) to ${oracleRewardVaultAddress}`,
+    vaultFactory.setVaultImplementation(VAULT_TYPE_ORACLE, oracleRewardVaultAddress),
     gasTracker
   );
 
@@ -584,6 +592,17 @@ async function main() {
     }
   }
 
+  // Set oracle helper factory
+  if (oracleHelperFactoryAddress !== "0x0000000000000000000000000000000000000000") {
+    await sendTransaction(
+      `Set Oracle Helper Factory to ${oracleHelperFactoryAddress}`,
+      vaultFactory.setOracleHelperFactory(oracleHelperFactoryAddress),
+      gasTracker
+    );
+  } else {
+    console.log("⚠️  Warning: Oracle Helper Factory not set - createMarketMakerOracleVault will fail");
+  }
+
   // Verify the configuration
   console.log("\n=== Verifying Factory Configuration ===");
   
@@ -591,19 +610,29 @@ async function main() {
   console.log("Factory owner:", owner);
 
   console.log("\nRetrieving implementations from factory...");
-  const oracleRewardVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_ORACLE_REWARD);
+  const oracleVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_ORACLE);
   const oracleRewardShadowVaultImplFromFactory = await vaultFactory.getVaultImplementation(VAULT_TYPE_SHADOW_ORACLE_REWARD);
   const strategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_DEFAULT);
   const shadowStrategyImplFromFactory = await vaultFactory.getStrategyImplementation(STRATEGY_TYPE_SHADOW);
   const npmFromFactory = await vaultFactory.getShadowNonfungiblePositionManager();
   const voterFromFactory = await vaultFactory.getShadowVoter();
   const priceLensFromFactory = await vaultFactory.getPriceLens();
-  console.log("\n=== Detailed Verification ===");
+  const oracleHelperFactoryFromFactory = await vaultFactory.getOracleHelperFactory();
 
-  console.log("Metropolis OracleRewardVault verification:");
-  console.log("OracleRewardVault - Deployed:", oracleRewardVaultAddress);
-  console.log("OracleRewardVault - Factory :", oracleRewardVaultImplFromFactory);
-  console.log("OracleRewardVault - Match   :", oracleRewardVaultImplFromFactory === oracleRewardVaultAddress);
+  console.log("\n=== Detailed Verification ===");
+  
+  // Only check Oracle vault if it was deployed
+  if (oracleVaultImpl) {
+    const oracleVaultDeployedAddr = await oracleVaultImpl.getAddress();
+    console.log("Metropolis Oracle vault - Deployed:", oracleVaultDeployedAddr);
+    console.log("Metropolis Oracle vault - Factory :", oracleVaultImplFromFactory);
+    console.log("Metropolis Oracle vault - Match   :", oracleVaultImplFromFactory === oracleVaultDeployedAddr);
+  } else {
+    console.log("Metropolis Oracle vault: SKIPPED (using OracleRewardVault for VAULT_TYPE_ORACLE)");
+    console.log("VAULT_TYPE_ORACLE =", VAULT_TYPE_ORACLE, "set to:", oracleVaultImplFromFactory);
+    console.log("Expected (OracleRewardVault):", oracleRewardVaultAddress);
+    console.log("Match:", oracleVaultImplFromFactory === oracleRewardVaultAddress);
+  }
   
   console.log("\nShadow vault verification:");
   console.log("Shadow vault - Deployed:", oracleRewardShadowVaultAddress);
@@ -623,12 +652,19 @@ async function main() {
   console.log("\nProtocol addresses:");
   console.log("Shadow NPM configured:", npmFromFactory);
   console.log("Shadow Voter configured:", voterFromFactory);
+  console.log("Oracle Helper Factory configured:", oracleHelperFactoryFromFactory);
   
   console.log("\n✅ Deployment complete!");
   console.log("\n=== Metropolis Contracts ===");
   console.log("VaultFactory (Proxy):", proxyAddress);
   console.log("VaultFactory (Implementation):", await vaultFactoryImpl.getAddress());
   console.log("ProxyAdmin:", await proxyAdmin.getAddress());
+  
+  if (oracleVaultImpl) {
+    console.log("OracleVault Implementation:", await oracleVaultImpl.getAddress());
+  } else {
+    console.log("OracleVault Implementation: SKIPPED");
+  }
   
   console.log("Metropolis OracleRewardVault Implementation:", await oracleRewardVaultImpl.getAddress());
   console.log("Metropolis Strategy Implementation:", await strategyImpl.getAddress());
@@ -654,7 +690,7 @@ async function main() {
       vaultFactory: proxyAddress,
       vaultFactoryImpl: await vaultFactoryImpl.getAddress(),
       proxyAdmin: await proxyAdmin.getAddress(),
-      oracleVaultImpl: null, // Not deployed separately — OracleRewardVault covers this
+      oracleVaultImpl: oracleVaultImpl ? await oracleVaultImpl.getAddress() : null,
       oracleRewardVaultImpl: await oracleRewardVaultImpl.getAddress(),
       oracleRewardShadowVaultImpl: await oracleRewardShadowVaultImpl.getAddress(),
       strategyImpl: await strategyImpl.getAddress(),
@@ -687,6 +723,19 @@ main()
     console.error(error);
     process.exit(1);
   });
+
+async function deployOracleHelperFactory(gasTracker: GasTracker) : Promise<[OracleHelperFactory, string]> {
+  const OracleHelperFactoryContract = await ethers.getContractFactory("OracleHelperFactory");
+  const oracleHelperFactory = await deployContract<OracleHelperFactory>(
+    "OracleHelperFactory",
+    OracleHelperFactoryContract,
+    [],
+    gasTracker,
+    { gasLimit: 10000000 }
+  );
+  const oracleHelperFactoryAddress = await oracleHelperFactory.getAddress();
+  return [oracleHelperFactory, oracleHelperFactoryAddress];
+}
 
 async function deployShadowPriceHelper(gasTracker: GasTracker) : Promise<[ShadowPriceHelper, string]> {
   const contract = await ethers.getContractFactory("ShadowPriceHelper");
