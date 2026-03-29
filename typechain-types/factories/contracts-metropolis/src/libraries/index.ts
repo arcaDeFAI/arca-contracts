@@ -2,4 +2,5 @@
 /* tslint:disable */
 /* eslint-disable */
 export { Hooks__factory } from "./Hooks__factory";
+export { MetropolisPriceHelper__factory } from "./MetropolisPriceHelper__factory";
 export { TokenHelper__factory } from "./TokenHelper__factory";

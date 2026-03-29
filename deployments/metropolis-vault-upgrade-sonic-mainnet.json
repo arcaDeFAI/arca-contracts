@@ -1,0 +1,9 @@
+{
+  "network": "sonic-mainnet",
+  "timestamp": "2026-03-22T04:25:38.966Z",
+  "deployer": "0x646F78A4b96aCfb028CEbAC77fc40Bd00b1173bC",
+  "newOracleRewardVaultImpl": "0x1a932E44fabc5197910192B8b6Fa23a510EA5DfD",
+  "previousImpl": "0x0000000000000000000000000000000000000000",
+  "factoryUpdated": true,
+  "existingVaults": 1
+}

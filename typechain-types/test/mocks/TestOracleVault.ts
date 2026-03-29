@@ -23,16 +23,21 @@ import type {
 export interface TestOracleVaultInterface extends Interface {
   getFunction(
     nameOrSignature:
-      | "getOracleHelper"
+      | "getPrice"
+      | "getSpotPrice"
       | "getTotalBalances"
       | "getTotalSupply"
+      | "getValueInY"
       | "previewShares"
+      | "setDeviationThreshold"
       | "setTotalBalances"
       | "setTotalSupply"
+      | "setTwapInterval"
   ): FunctionFragment;
 
+  encodeFunctionData(functionFragment: "getPrice", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "getOracleHelper",
+    functionFragment: "getSpotPrice",
     values?: undefined
   ): string;
   encodeFunctionData(
@@ -44,8 +49,16 @@ export interface TestOracleVaultInterface extends Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "getValueInY",
+    values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
     functionFragment: "previewShares",
     values: [BigNumberish, BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setDeviationThreshold",
+    values: [BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "setTotalBalances",
@@ -55,9 +68,14 @@ export interface TestOracleVaultInterface extends Interface {
     functionFragment: "setTotalSupply",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "setTwapInterval",
+    values: [BigNumberish]
+  ): string;
 
+  decodeFunctionResult(functionFragment: "getPrice", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "getOracleHelper",
+    functionFragment: "getSpotPrice",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -69,7 +87,15 @@ export interface TestOracleVaultInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "getValueInY",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "previewShares",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setDeviationThreshold",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -78,6 +104,10 @@ export interface TestOracleVaultInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setTotalSupply",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setTwapInterval",
     data: BytesLike
   ): Result;
 }
@@ -125,11 +155,19 @@ export interface TestOracleVault extends BaseContract {
     event?: TCEvent
   ): Promise<this>;
 
-  getOracleHelper: TypedContractMethod<[], [string], "view">;
+  getPrice: TypedContractMethod<[], [bigint], "view">;
+
+  getSpotPrice: TypedContractMethod<[], [bigint], "view">;
 
   getTotalBalances: TypedContractMethod<[], [[bigint, bigint]], "view">;
 
   getTotalSupply: TypedContractMethod<[], [bigint], "view">;
+
+  getValueInY: TypedContractMethod<
+    [amountX: BigNumberish, amountY: BigNumberish],
+    [bigint],
+    "view"
+  >;
 
   previewShares: TypedContractMethod<
     [amountX: BigNumberish, amountY: BigNumberish],
@@ -141,6 +179,12 @@ export interface TestOracleVault extends BaseContract {
       }
     ],
     "view"
+  >;
+
+  setDeviationThreshold: TypedContractMethod<
+    [threshold: BigNumberish],
+    [void],
+    "nonpayable"
   >;
 
   setTotalBalances: TypedContractMethod<
@@ -155,19 +199,35 @@ export interface TestOracleVault extends BaseContract {
     "nonpayable"
   >;
 
+  setTwapInterval: TypedContractMethod<
+    [twapInterval: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
   getFunction<T extends ContractMethod = ContractMethod>(
     key: string | FunctionFragment
   ): T;
 
   getFunction(
-    nameOrSignature: "getOracleHelper"
-  ): TypedContractMethod<[], [string], "view">;
+    nameOrSignature: "getPrice"
+  ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "getSpotPrice"
+  ): TypedContractMethod<[], [bigint], "view">;
   getFunction(
     nameOrSignature: "getTotalBalances"
   ): TypedContractMethod<[], [[bigint, bigint]], "view">;
   getFunction(
     nameOrSignature: "getTotalSupply"
   ): TypedContractMethod<[], [bigint], "view">;
+  getFunction(
+    nameOrSignature: "getValueInY"
+  ): TypedContractMethod<
+    [amountX: BigNumberish, amountY: BigNumberish],
+    [bigint],
+    "view"
+  >;
   getFunction(
     nameOrSignature: "previewShares"
   ): TypedContractMethod<
@@ -182,6 +242,9 @@ export interface TestOracleVault extends BaseContract {
     "view"
   >;
   getFunction(
+    nameOrSignature: "setDeviationThreshold"
+  ): TypedContractMethod<[threshold: BigNumberish], [void], "nonpayable">;
+  getFunction(
     nameOrSignature: "setTotalBalances"
   ): TypedContractMethod<
     [totalBalanceX: BigNumberish, totalBalanceY: BigNumberish],
@@ -191,6 +254,9 @@ export interface TestOracleVault extends BaseContract {
   getFunction(
     nameOrSignature: "setTotalSupply"
   ): TypedContractMethod<[totalSupply: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "setTwapInterval"
+  ): TypedContractMethod<[twapInterval: BigNumberish], [void], "nonpayable">;
 
   filters: {};
 }

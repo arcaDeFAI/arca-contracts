@@ -4,8 +4,8 @@ import { formatUnits } from 'viem';
 import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { formatUSD, formatPercentage, formatShares } from '@/lib/utils';
-import { CONTRACTS } from '@/lib/contracts';
 import { type UserRewardStructOutput } from '@/lib/typechain';
+import { getTokenByAddress } from '@/lib/tokenRegistry';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
 import { getTokenLogo, getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { usePrices } from '@/contexts/PriceContext';
@@ -191,11 +191,7 @@ export function DashboardVaultCard({
 
   // Helper function to get token name from address
   const getTokenName = (tokenAddress: string): string => {
-    const addr = tokenAddress.toLowerCase();
-    if (addr === CONTRACTS.METRO.toLowerCase()) return 'Metro';
-    if (addr === CONTRACTS.SHADOW.toLowerCase()) return 'Shadow';
-    if (addr === CONTRACTS.xSHADOW.toLowerCase()) return 'xShadow';
-    return 'Unknown';
+    return getTokenByAddress(tokenAddress)?.displayName ?? 'Unknown';
   };
 
   // Simple check - show if user has shares, pending rewards, queued withdrawal, or claimable withdrawal
@@ -481,18 +477,13 @@ export function DashboardVaultCard({
             <div className="bg-black/50 rounded-lg p-3 border border-gray-700/50">
               <div className="space-y-2 mb-2">
                 {nonZeroRewards.map((reward: UserRewardStructOutput, index: number) => {
-                  const tokenName = getTokenName(reward.token);
+                  const tokenDef = getTokenByAddress(reward.token);
+                  const tokenName = tokenDef?.displayName ?? 'Unknown';
                   const tokenAmount = Number(formatUnits(reward.pendingRewards, 18));
 
-                  // Get token price based on token name
-                  let tokenPrice = 0;
-                  if (tokenName === 'Metro' && prices?.metro) {
-                    tokenPrice = prices.metro;
-                  } else if (tokenName === 'Shadow' && prices?.shadow) {
-                    tokenPrice = prices.shadow;
-                  } else if (tokenName === 'xShadow' && prices?.xShadow) {
-                    tokenPrice = prices.xShadow;
-                  }
+                  // Get token price from registry
+                  const priceKey = tokenDef?.canonicalName.toLowerCase();
+                  const tokenPrice = priceKey && prices ? (prices[priceKey] || 0) : 0;
 
                   const usdValue = tokenAmount * tokenPrice;
 

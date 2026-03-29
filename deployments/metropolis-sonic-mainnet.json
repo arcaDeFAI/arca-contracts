@@ -1,13 +1,13 @@
 {
   "network": "sonic-mainnet",
-  "timestamp": "2025-11-05T04:05:37.647Z",
+  "timestamp": "2026-03-22T04:25:38.966Z",
   "deployer": "0x646F78A4b96aCfb028CEbAC77fc40Bd00b1173bC",
   "addresses": {
     "vaultFactory": "0x85b3C119201E4A2FbE827a778749816ABa340083",
-    "vaultFactoryImpl": "0xe2BbCA4CeDd28a3d50C0dA63eE2303431d2C24AA",
+    "vaultFactoryImpl": "0x7a712Cf74e0d24B42f7F1a46dd1ec3bDa73e02a4",
     "proxyAdmin": "0xaf4c8eAe23013237Fae3daE62f2aFC472b19B734",
     "oracleVaultImpl": null,
-    "oracleRewardVaultImpl": "0xfbe51D8D5dc3E7e1001fa81124567Bc8DE11b350",
+    "oracleRewardVaultImpl": "0x1a932E44fabc5197910192B8b6Fa23a510EA5DfD",
     "oracleRewardShadowVaultImpl": "0xB813555f2BD90E9917702A0c06178524115bC859",
     "strategyImpl": "0x99113A5B907B05102C61Ec906E6f708C63e1af38",
     "shadowStrategyImpl": "0xC48abe84A037143eC26620676dcC67b6Da23f7b2",

@@ -14,7 +14,6 @@ import {Precision} from "./libraries/Precision.sol";
 
 /**
  * @title Liquidity Book Oracle Reward Vault contract
- * @author BlueLabs
  * @notice This contract is used to interact with the Liquidity Book Pair contract.
  */
 contract OracleRewardVault is OracleVault, IOracleRewardVault {
