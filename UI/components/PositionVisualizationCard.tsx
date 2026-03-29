@@ -6,6 +6,7 @@ import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/l
 import { TokenPairLogos } from './TokenPairLogos'
 import { usePrices } from '@/contexts/PriceContext'
 import { getTokenLogo, getTokenAddress, getTokenDecimals } from '@/lib/tokenHelpers'
+import { isStablecoin } from '@/lib/tokenUtils'
 import { parseAbi } from 'viem'
 
 // Minimal ABI for getLastRebalance
@@ -195,9 +196,9 @@ export default function PositionVisualizationCard({
   const shadowLowerPrice = shadowRangeData ? tickToPrice(shadowRangeData[0]) : null;
   const shadowUpperPrice = shadowRangeData ? tickToPrice(shadowRangeData[1]) : null;
 
-  // Formatting helpers
-  const isUSDPair = ['USDC', 'USSD'].includes(tokenX) || ['USDC', 'USSD'].includes(tokenY);
-  const isStablePair = ['USDC', 'USSD'].includes(tokenX) && ['USDC', 'USSD'].includes(tokenY);
+  // Formatting helpers — use tokenRegistry to avoid hardcoded symbol lists
+  const isUSDPair = isStablecoin(tokenX) || isStablecoin(tokenY);
+  const isStablePair = isStablecoin(tokenX) && isStablecoin(tokenY);
   const formatPrice = (price: number | null): string => {
     if (price === null) return '...';
     // Always include the unit {tokenY}/{tokenX} in the main string to ensure consistent bold styling
