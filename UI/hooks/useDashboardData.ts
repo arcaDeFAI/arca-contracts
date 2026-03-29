@@ -2,10 +2,13 @@
 
 import { useReadContract, useWriteContract, useReadContracts, useWaitForTransactionReceipt } from 'wagmi';
 import { useEffect, useState, useMemo } from 'react';
+import { parseAbi } from 'viem';
 import {
   METRO_VAULT_ABI,
   SHADOW_VAULT_ABI,
-  SHADOW_STRAT_ABI
+  SHADOW_STRAT_ABI,
+  METRO_STRAT_ABI,
+  LB_BOOK_ABI
 } from '@/lib/typechain';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 
@@ -44,22 +47,89 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     },
   });
 
-  // Combine vault pending rewards + user's share of strategy gauge rewards
-  const pendingRewards = useMemo(() => {
-    if (!vaultPendingRewards) return vaultPendingRewards;
-    if (!isShadowVault || !strategyRewardStatus || !sharePercentage || sharePercentage === 0) {
-      return vaultPendingRewards;
+  // ================= METRO UNHARVESTED REWARDS LOGIC (Metropolis vaults only) =================
+
+  // Get active range from Metro Strategy
+  const { data: rangeDataMetro } = useReadContract({
+    address: config.stratAddress as `0x${string}`,
+    abi: METRO_STRAT_ABI,
+    functionName: 'getRange',
+    query: {
+      enabled: !!config.stratAddress && !isShadowVault,
+    },
+  });
+
+  // Get active bins
+  const activeIds = useMemo(() => {
+    if (!rangeDataMetro) return undefined;
+    const lower = Number(rangeDataMetro[0]);
+    const upper = Number(rangeDataMetro[1]);
+    const ids = [];
+    for (let i = lower; i <= upper; i++) {
+        ids.push(BigInt(i));
     }
+    return ids;
+  }, [rangeDataMetro]);
 
+  // Read LB Hooks Parameters to find METRO rewarder address
+  const lbBookAddress = (config as any).lbBookAddress as `0x${string}` | undefined;
+  const { data: hooksParamsRaw } = useReadContract({
+    address: isShadowVault ? undefined : lbBookAddress,
+    abi: parseAbi(['function getLBHooksParameters() view returns (bytes32)']),
+    functionName: 'getLBHooksParameters',
+    query: {
+      enabled: !isShadowVault && !!lbBookAddress,
+    },
+  });
+
+  // Extract rewarder address from bytes32 (last 20 bytes)
+  const rewarderAddress = useMemo(() => {
+    if (!hooksParamsRaw) return undefined;
+    const hex = (hooksParamsRaw as string).substring(2);
+    // Pad to 64 chars to ensure safe extraction
+    const paddedHex = hex.padStart(64, '0');
+    return `0x${paddedHex.slice(-40)}` as `0x${string}`;
+  }, [hooksParamsRaw]);
+
+  // Query unharvested METRO rewards from the LB rewarder for those active bins
+  const { data: unharvestedMetroRewards } = useReadContract({
+    address: rewarderAddress,
+    abi: parseAbi(['function getPendingRewards(address, uint256[]) view returns (uint256)']),
+    functionName: 'getPendingRewards',
+    args: rewarderAddress && activeIds ? [config.stratAddress as `0x${string}`, activeIds] : undefined,
+    query: {
+      enabled: !!rewarderAddress && !!activeIds && !isShadowVault,
+    },
+  });
+
+  // ================= COMBINE VAULT REWARDS + UNHARVESTED AMOUNTS =================
+
+  // Metro: vault pending rewards + unharvested METRO rewarder rewards
+  const metroPendingRewards = useMemo(() => {
+    if (isShadowVault || !vaultPendingRewards) return undefined;
+    if (!unharvestedMetroRewards || sharePercentage === 0) return vaultPendingRewards;
+    const userShareRatio = (sharePercentage || 0) / 100;
+    const vaultRewardsList = vaultPendingRewards as any[];
+    return vaultRewardsList.map((vaultReward: any) => ({
+      ...vaultReward,
+      pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(unharvestedMetroRewards) * userShareRatio))
+    }));
+  }, [isShadowVault, vaultPendingRewards, unharvestedMetroRewards, sharePercentage]);
+
+  // Shadow: vault pending rewards + unharvested gauge rewards from strategy
+  const shadowPendingRewards = useMemo(() => {
+    if (!isShadowVault || !vaultPendingRewards) return undefined;
+    if (!strategyRewardStatus || sharePercentage === 0) return vaultPendingRewards;
+    const userShareRatio = (sharePercentage || 0) / 100;
+    const vaultRewardsList = vaultPendingRewards as any[];
     const earned = (strategyRewardStatus as any)[1] as readonly bigint[];
-    const userShareRatio = sharePercentage / 100;
-
-    // Add user's share of gauge rewards to vault pending rewards
-    return (vaultPendingRewards as any[]).map((vaultReward: any, i: number) => ({
+    return vaultRewardsList.map((vaultReward: any, i: number) => ({
       ...vaultReward,
       pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(earned[i] || 0n) * userShareRatio))
     }));
-  }, [vaultPendingRewards, strategyRewardStatus, sharePercentage, isShadowVault]);
+  }, [isShadowVault, vaultPendingRewards, strategyRewardStatus, sharePercentage]);
+
+  const pendingRewards = isShadowVault ? shadowPendingRewards : metroPendingRewards;
 
 
   // Get current round
