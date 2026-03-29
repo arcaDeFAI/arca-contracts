@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git fetch:*)",
+      "WebFetch(domain:yields.llama.fi)",
+      "WebSearch",
+      "WebFetch(domain:defillama.com)",
+      "WebFetch(domain:api.llama.fi)",
+      "WebFetch(domain:api-docs.defillama.com)"
+    ]
+  }
+}
