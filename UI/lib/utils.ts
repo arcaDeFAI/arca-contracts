@@ -54,11 +54,19 @@ export function formatPercentage(value: number): string {
   return `${value.toFixed(2)}%`
 }
 
+/**
+ * Get vault share decimals using the on-chain formula: tokenY.decimals + 6
+ * This matches BaseVault.decimals() = _decimalsY() + _SHARES_DECIMALS (6)
+ */
+export function getShareDecimals(tokenY?: string): number {
+  const SHARES_DECIMALS = 6;
+  const tokenYDecimals = tokenY ? (getToken(tokenY)?.decimals ?? 18) : 18;
+  return tokenYDecimals + SHARES_DECIMALS;
+}
+
 // Format shares with vault-specific decimals
 export function formatShares(shares: bigint, tokenX?: string, tokenY?: string): string {
-  const xShareDec = tokenX ? (getToken(tokenX)?.shareDecimals ?? 12) : 12;
-  const yShareDec = tokenY ? (getToken(tokenY)?.shareDecimals ?? 12) : 12;
-  const decimals = Math.max(xShareDec, yShareDec);
+  const decimals = getShareDecimals(tokenY);
 
   const formatted = formatUnits(shares, decimals)
   const num = parseFloat(formatted)
@@ -71,10 +79,7 @@ export function formatShares(shares: bigint, tokenX?: string, tokenY?: string): 
 
 // Parse shares from user input with vault-specific decimals
 export function parseShares(amount: string, tokenX?: string, tokenY?: string): bigint {
-  const xShareDec = tokenX ? (getToken(tokenX)?.shareDecimals ?? 12) : 12;
-  const yShareDec = tokenY ? (getToken(tokenY)?.shareDecimals ?? 12) : 12;
-  const decimals = Math.max(xShareDec, yShareDec);
-
+  const decimals = getShareDecimals(tokenY);
   return parseUnits(amount, decimals)
 }
 
