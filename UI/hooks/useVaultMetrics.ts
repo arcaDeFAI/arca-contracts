@@ -5,7 +5,9 @@ import { useDashboardData } from './useDashboardData';
 import { useTokenPrices } from './useAPYCalculation';
 import { useMetroAPY } from './useMetroAPY';
 import { useShadowAPY } from './useShadowAPY';
-import { useShadowAPYAdjusted } from './useShadowAPYAdjusted';
+import { useDefiLlamaAPYAdjusted } from './useDefiLlamaAPYAdjusted';
+import { useShadowRewardForwardedAPY } from './useShadowRewardForwardedAPY';
+import { useSubgraphAPR } from './useSubgraphAPR';
 import { CONTRACTS } from '@/lib/contracts';
 import { getTokenOrThrow } from '@/lib/tokenRegistry';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
@@ -64,7 +66,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   );
 
   // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided
-  const shadowAPYAdjusted = useShadowAPYAdjusted(
+  const shadowAPYAdjusted = useDefiLlamaAPYAdjusted(
     stratAddress,
     config.poolSymbol || 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' // Default to WS-USDC pool ID if not specified
   );
@@ -78,10 +80,28 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     prices?.shadow || 0
   );
 
-  // Use new DeFi Llama APY if available and poolSymbol is provided, otherwise fallback to old calculation
-  const shadowAPY = config.poolSymbol && !shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld;
+  // Calculate Forwarded APY natively via RPC (for Shadow vaults without a DeFi Llama pool)
+  const shadowAPYForwarded = useShadowRewardForwardedAPY(
+    stratAddress,
+    getTokenOrThrow('SHADOW').address!,
+    config.vaultAddress,
+    vaultTVL,
+    prices?.shadow || 0
+  );
 
-  // Calculate activePercentage for Shadow APY adjustment
+  // Use new DeFi Llama APY if available, otherwise route to the native Forwarded APY
+  const shadowAPY = config.poolSymbol 
+    ? (!shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld)
+    : shadowAPYForwarded;
+
+  // Goldsky Subgraph APR — only enabled for vaults that opt in via useSubgraphAPR config flag
+  const subgraphAPR = useSubgraphAPR(
+    config.useSubgraphAPR ? config.vaultAddress : '',
+    vaultTVL,
+    prices?.shadow || 0
+  );
+
+  // Calculate activePercentage for Shadow APY adjustment (active vs idle liquidity ratio)
   const activePercentage = (vaultData.balances && vaultData.idleBalances) ? (() => {
     const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
     const token1Price = getTokenPrice(tokenY, prices);
@@ -94,10 +114,31 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     return totalUSD > 0 ? ((totalUSD - idleUSD) / totalUSD) * 100 : 0;
   })() : 0;
 
-  // Metro APY is already calculated against Total TVL in useMetroAPY hook.
-  // Shadow APY (from pool data) needs scaling by the % of vault TVL actually in the pool.
-  const apy = isShadowVault ? (shadowAPY.apy * (activePercentage / 100)) : metroAPY.apy;
-  const aprLoading = isShadowVault ? shadowAPY.isLoading : metroAPY.isLoading;
+  // Final APY/APR — clear calculation path per vault type
+  let finalAPY: number;
+  let aprLoading: boolean;
+
+  if (!isShadowVault) {
+    // Metropolis vault: use on-chain METRO reward rate
+    finalAPY = metroAPY.apy;
+    aprLoading = metroAPY.isLoading;
+  } else if (config.useSubgraphAPR) {
+    // Shadow vault with Subgraph APR: prefer Subgraph, fall back to RPC log scanning
+    if (!subgraphAPR.isLoading && subgraphAPR.apr > 0) {
+      finalAPY = subgraphAPR.apr;
+    } else {
+      finalAPY = shadowAPYForwarded.apy;
+    }
+    aprLoading = subgraphAPR.isLoading && shadowAPYForwarded.isLoading;
+  } else if (config.poolSymbol) {
+    // Shadow vault with DeFi Llama pool ID: scale by active liquidity percentage
+    finalAPY = shadowAPY.apy * (activePercentage / 100);
+    aprLoading = shadowAPY.isLoading;
+  } else {
+    // Shadow vault without pool ID: use forwarded APY via RPC log scanning
+    finalAPY = shadowAPY.apy;
+    aprLoading = shadowAPY.isLoading;
+  }
 
   const raw30dMean = isShadowVault && config.poolSymbol ? shadowAPYAdjusted.apy30dMean : null;
   const apy30dMean = (isShadowVault && raw30dMean !== null) ? (raw30dMean * (activePercentage / 100)) : raw30dMean;
@@ -119,7 +160,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     vaultTVL,
 
     // APY metrics
-    apy,
+    apy: finalAPY,
     apy30dMean,
     aprLoading,
 

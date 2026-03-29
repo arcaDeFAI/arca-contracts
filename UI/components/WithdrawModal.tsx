@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from 'wagmi';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
-import { formatTokenAmount, parseTokenAmount, formatShares, parseShares } from '@/lib/utils';
+import { formatTokenAmount, parseTokenAmount, formatShares, parseShares, getShareDecimals } from '@/lib/utils';
 import { formatUnits } from 'viem';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -44,9 +44,8 @@ export function WithdrawModal({
   }, [isSuccess, showClaim, onClose]);
 
   const handleMaxWithdraw = () => {
-    // Use vault-specific decimals (18 for WETH, 12 for others)
-    const isWETHVault = tokenX === 'WETH' || tokenY === 'WETH';
-    const decimals = isWETHVault ? 18 : 12;
+    // Use vault-specific decimals from on-chain formula: tokenY.decimals + 6
+    const decimals = getShareDecimals(tokenY);
     const maxAmount = formatUnits(userShares, decimals);
     setWithdrawAmount(maxAmount);
   };
@@ -95,7 +94,7 @@ export function WithdrawModal({
   const estimatedUsdc = previewData ? previewData[1] : 0n;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
       <div className="bg-arca-gray rounded-lg p-6 w-full max-w-md border border-arca-light-gray">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-white">
