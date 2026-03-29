@@ -94,15 +94,14 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     ? (!shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld)
     : shadowAPYForwarded;
 
-  // Goldsky Subgraph APR (specifically requested for USSD/wS Shadow vault)
-  const isUSSDwSShadow = config.vaultAddress.toLowerCase() === '0x3a284cc4080F9d88aC2eE330296975C78C53B5cd'.toLowerCase();
+  // Goldsky Subgraph APR — only enabled for vaults that opt in via useSubgraphAPR config flag
   const subgraphAPR = useSubgraphAPR(
-    isUSSDwSShadow ? config.vaultAddress : '',
+    config.useSubgraphAPR ? config.vaultAddress : '',
     vaultTVL,
     prices?.shadow || 0
   );
 
-  // Calculate activePercentage for Shadow APY adjustment
+  // Calculate activePercentage for Shadow APY adjustment (active vs idle liquidity ratio)
   const activePercentage = (vaultData.balances && vaultData.idleBalances) ? (() => {
     const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
     const token1Price = getTokenPrice(tokenY, prices);
@@ -115,25 +114,31 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     return totalUSD > 0 ? ((totalUSD - idleUSD) / totalUSD) * 100 : 0;
   })() : 0;
 
-  // Final APY calculation
-  const isDefiLlamaAPY = isShadowVault && !!config.poolSymbol;
-  let finalAPY = isShadowVault 
-    ? (isDefiLlamaAPY ? (shadowAPY.apy * (activePercentage / 100)) : shadowAPY.apy) 
-    : metroAPY.apy;
-  
-  // Override with Subgraph APR for USSD/wS, but fallback to RPC logs if Subgraph has no data yet
-  if (isShadowVault && isUSSDwSShadow) {
+  // Final APY/APR — clear calculation path per vault type
+  let finalAPY: number;
+  let aprLoading: boolean;
+
+  if (!isShadowVault) {
+    // Metropolis vault: use on-chain METRO reward rate
+    finalAPY = metroAPY.apy;
+    aprLoading = metroAPY.isLoading;
+  } else if (config.useSubgraphAPR) {
+    // Shadow vault with Subgraph APR: prefer Subgraph, fall back to RPC log scanning
     if (!subgraphAPR.isLoading && subgraphAPR.apr > 0) {
       finalAPY = subgraphAPR.apr;
-    } else if (!shadowAPYForwarded.isLoading) {
-      // Fallback to direct RPC log scanning while subgraph is syncing or if it has no data
+    } else {
       finalAPY = shadowAPYForwarded.apy;
     }
+    aprLoading = subgraphAPR.isLoading && shadowAPYForwarded.isLoading;
+  } else if (config.poolSymbol) {
+    // Shadow vault with DeFi Llama pool ID: scale by active liquidity percentage
+    finalAPY = shadowAPY.apy * (activePercentage / 100);
+    aprLoading = shadowAPY.isLoading;
+  } else {
+    // Shadow vault without pool ID: use forwarded APY via RPC log scanning
+    finalAPY = shadowAPY.apy;
+    aprLoading = shadowAPY.isLoading;
   }
-
-  const aprLoading = isShadowVault 
-    ? (isUSSDwSShadow ? (subgraphAPR.isLoading && shadowAPYForwarded.isLoading) : shadowAPY.isLoading) 
-    : metroAPY.isLoading;
 
   const raw30dMean = isShadowVault && config.poolSymbol ? shadowAPYAdjusted.apy30dMean : null;
   const apy30dMean = (isShadowVault && raw30dMean !== null) ? (raw30dMean * (activePercentage / 100)) : raw30dMean;
