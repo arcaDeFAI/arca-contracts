@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react'
 import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain'
 import { TokenPairLogos } from './TokenPairLogos'
 import { usePrices } from '@/contexts/PriceContext'
-import { getTokenLogo } from '@/lib/tokenHelpers'
+import { getTokenLogo, getTokenAddress, getTokenDecimals } from '@/lib/tokenHelpers'
+import { isStablecoin } from '@/lib/tokenUtils'
 import { parseAbi } from 'viem'
 
 // Minimal ABI for getLastRebalance
@@ -162,27 +163,47 @@ export default function PositionVisualizationCard({
   // getRange returns: [lower, upper] both int24
   const shadowRangeData = rangeDataShadow ? (rangeDataShadow as readonly [number, number]) : null;
 
-  // Convert Metro prices from raw to USD
-  const activePrice = isWETHVault ? (prices?.weth || null) : (activePriceRaw ? Number(activePriceRaw) / Math.pow(2, 128) * 1e12 : null);
-  const lowerPrice = isWETHVault ? (prices?.weth || null) : (lowerPriceRaw ? Number(lowerPriceRaw) / Math.pow(2, 128) * 1e12 : null);
-  const upperPrice = isWETHVault ? (prices?.weth || null) : (upperPriceRaw ? Number(upperPriceRaw) / Math.pow(2, 128) * 1e12 : null);
+  const tokenXDecimals = getTokenDecimals(tokenX);
+  const tokenYDecimals = getTokenDecimals(tokenY);
 
-  // Convert Shadow ticks to prices using Uniswap V3/Ramses V3 formula for WETH vaults
+  // Convert Metro prices from raw to human-readable
+  const convertMetroPrice = (raw: any): number | null => {
+    if (!raw) return null;
+    return Number(raw) / Math.pow(2, 128) * Math.pow(10, tokenXDecimals - tokenYDecimals);
+  };
+
+  const activePrice = convertMetroPrice(activePriceRaw);
+  const lowerPrice = convertMetroPrice(lowerPriceRaw);
+  const upperPrice = convertMetroPrice(upperPriceRaw);
+
+  const token0Address = getTokenAddress(tokenX);
+  const token1Address = getTokenAddress(tokenY);
+  const isToken0X = token0Address.toLowerCase() < token1Address.toLowerCase();
+  
+  const token0Decimals = isToken0X ? tokenXDecimals : tokenYDecimals;
+  const token1Decimals = isToken0X ? tokenYDecimals : tokenXDecimals;
+
   const tickToPrice = (tick: number): number => {
-    const exponentResult = Math.pow(1.0001, tick);
-    return exponentResult * 1e12;
+    // 1.0001^tick gives price of token0 in terms of token1 natively
+    const rawPrice0In1 = Math.pow(1.0001, tick);
+    // Adjust by decimals to get human readable price of token0 in terms of token1
+    const humanPrice0In1 = rawPrice0In1 * Math.pow(10, token0Decimals - token1Decimals);
+    // Return price of tokenX in terms of tokenY
+    return isToken0X ? humanPrice0In1 : (1 / humanPrice0In1);
   };
 
-  // Uniswap V3/Ramses V3 formula for WETH vaults
-  const tickToPriceWETH = (tick: number, decimalsX: number = 18, decimalsY: number = 18): number => {
-    const basePrice = Math.pow(1.0001, tick);
-    const decimalAdjustment = Math.pow(10, decimalsY - decimalsX - (isWSWETHVault ? 0 : 24)); // Only reduce for USDC-WETH by 24 total
-    return basePrice * decimalAdjustment;
-  };
+  const shadowActivePrice = shadowActiveTick !== null ? tickToPrice(shadowActiveTick) : null;
+  const shadowLowerPrice = shadowRangeData ? tickToPrice(shadowRangeData[0]) : null;
+  const shadowUpperPrice = shadowRangeData ? tickToPrice(shadowRangeData[1]) : null;
 
-  const shadowActivePrice = isWETHVault ? (shadowActiveTick !== null ? tickToPriceWETH(shadowActiveTick, isWSWETHVault ? 18 : 6, 18) : null) : (shadowActiveTick !== null ? tickToPrice(shadowActiveTick) : null);
-  const shadowLowerPrice = isWETHVault ? (shadowRangeData ? tickToPriceWETH(shadowRangeData[0], isWSWETHVault ? 18 : 6, 18) : null) : (shadowRangeData ? tickToPrice(shadowRangeData[0]) : null);
-  const shadowUpperPrice = isWETHVault ? (shadowRangeData ? tickToPriceWETH(shadowRangeData[1], isWSWETHVault ? 18 : 6, 18) : null) : (shadowRangeData ? tickToPrice(shadowRangeData[1]) : null);
+  // Formatting helpers — use tokenRegistry to avoid hardcoded symbol lists
+  const isUSDPair = isStablecoin(tokenX) || isStablecoin(tokenY);
+  const isStablePair = isStablecoin(tokenX) && isStablecoin(tokenY);
+  const formatPrice = (price: number | null): string => {
+    if (price === null) return '...';
+    // Always include the unit {tokenY}/{tokenX} in the main string to ensure consistent bold styling
+    return `${price.toFixed(6)} ${tokenY}/${tokenX}`;
+  };
 
   // Get last rebalance timestamp from contract (Metropolis only)
   const { data: contractLastRebalance } = useReadContract({
@@ -348,7 +369,7 @@ export default function PositionVisualizationCard({
           <div className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded p-2 min-w-0">
             <div className="text-xs text-blue-400 mb-1 truncate">Active Price</div>
             <div className="text-base font-bold text-white truncate">
-              {shadowActivePrice ? (isWETHVault ? `${shadowActivePrice.toFixed(8)} WETH` : `$${shadowActivePrice.toFixed(4)}`) : '...'}
+              {formatPrice(shadowActivePrice)}
             </div>
           </div>
           
@@ -407,14 +428,14 @@ export default function PositionVisualizationCard({
               <div className="flex flex-col items-start">
                 <span className="text-gray-500 mb-0.5">Lower Price</span>
                 <span className="text-white font-semibold">
-                  {shadowLowerPrice ? (isWETHVault ? `${shadowLowerPrice.toFixed(8)} WETH` : `$${shadowLowerPrice.toFixed(4)}`) : '...'}
+                  {formatPrice(shadowLowerPrice)}
                 </span>
               </div>
               
               <div className="flex flex-col items-end">
                 <span className="text-gray-500 mb-0.5">Upper Price</span>
                 <span className="text-white font-semibold">
-                  {shadowUpperPrice ? (isWETHVault ? `${shadowUpperPrice.toFixed(8)} WETH` : `$${shadowUpperPrice.toFixed(4)}`) : '...'}
+                  {formatPrice(shadowUpperPrice)}
                 </span>
               </div>
             </div>
@@ -472,7 +493,7 @@ export default function PositionVisualizationCard({
         <div className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded p-2 min-w-0">
           <div className="text-xs text-blue-400 mb-1 truncate">Active Price</div>
           <div className="text-base font-bold text-white truncate">
-            {activePrice ? `$${activePrice.toFixed(4)}` : '...'}
+            {formatPrice(activePrice)}
           </div>
         </div>
         
@@ -531,14 +552,14 @@ export default function PositionVisualizationCard({
             <div className="flex flex-col items-start">
               <span className="text-gray-500 mb-0.5">Lower Price</span>
               <span className="text-white font-semibold">
-                {lowerPrice ? `$${lowerPrice.toFixed(4)}` : '...'}
+                {formatPrice(lowerPrice)}
               </span>
             </div>
             
             <div className="flex flex-col items-end">
               <span className="text-gray-500 mb-0.5">Upper Price</span>
               <span className="text-white font-semibold">
-                {upperPrice ? `$${upperPrice.toFixed(4)}` : '...'}
+                {formatPrice(upperPrice)}
               </span>
             </div>
           </div>
