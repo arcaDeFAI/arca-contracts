@@ -72,30 +72,30 @@ export function Header() {
               </div>
             </div>
 
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden md:flex items-center gap-8">
               <Link
                 href="/vaults"
-                className={`text-lg italic transition-colors ${pathname === '/vaults' || pathname === '/vaults/'
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
-                    : 'text-white hover:text-arca-green'
+                className={`text-lg transition-colors ${pathname === '/vaults' || pathname === '/vaults/'
+                  ? 'text-arca-green font-medium'
+                  : 'text-gray-400 hover:text-white'
                   }`}
               >
                 Vaults
               </Link>
               <Link
                 href="/dashboard"
-                className={`text-lg italic transition-colors ${pathname.startsWith('/dashboard')
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
-                    : 'text-white hover:text-arca-green'
+                className={`text-lg transition-colors ${pathname.startsWith('/dashboard')
+                  ? 'text-arca-green font-medium'
+                  : 'text-gray-400 hover:text-white'
                   }`}
               >
                 Dashboard
               </Link>
               <Link
                 href="/staking"
-                className={`text-lg italic transition-colors ${pathname.startsWith('/staking')
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-1'
-                    : 'text-white hover:text-arca-green'
+                className={`text-lg transition-colors ${pathname.startsWith('/staking')
+                  ? 'text-arca-green font-medium'
+                  : 'text-gray-400 hover:text-white'
                   }`}
               >
                 Staking
@@ -108,13 +108,6 @@ export function Header() {
               <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-arca-green/10 rounded-lg border border-arca-green/20">
                 <span className="text-base text-gray-300">S :</span>
                 <span className="text-xl font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
-              </div>
-            )}
-            {/* Sonic Price - Mobile */}
-            {!isLoading && prices && (
-              <div className="md:hidden flex items-center gap-1 px-2 py-1 bg-arca-green/10 rounded-lg border border-arca-green/20">
-                <span className="text-xs text-gray-300">S:</span>
-                <span className="text-sm font-bold text-arca-green">${prices.sonic.toFixed(4)}</span>
               </div>
             )}
             <ConnectButton.Custom>
@@ -231,9 +224,9 @@ export function Header() {
               <Link
                 href="/vaults"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${pathname === '/vaults' || pathname === '/vaults/'
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
-                    : 'text-white hover:text-arca-green'
+                className={`block text-lg py-1 transition-colors ${pathname === '/vaults' || pathname === '/vaults/'
+                  ? 'text-arca-green font-medium'
+                  : 'text-white hover:text-arca-green'
                   }`}
               >
                 Vaults
@@ -241,9 +234,9 @@ export function Header() {
               <Link
                 href="/dashboard"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${pathname.startsWith('/dashboard')
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
-                    : 'text-white hover:text-arca-green'
+                className={`block text-lg py-1 transition-colors ${pathname.startsWith('/dashboard')
+                  ? 'text-arca-green font-medium'
+                  : 'text-white hover:text-arca-green'
                   }`}
               >
                 Dashboard
@@ -251,9 +244,9 @@ export function Header() {
               <Link
                 href="/staking"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className={`block text-lg italic transition-colors ${pathname.startsWith('/staking')
-                    ? 'text-arca-green font-bold border border-arca-green rounded-full px-4 py-2'
-                    : 'text-white hover:text-arca-green'
+                className={`block text-lg py-1 transition-colors ${pathname.startsWith('/staking')
+                  ? 'text-arca-green font-medium'
+                  : 'text-white hover:text-arca-green'
                   }`}
               >
                 Staking

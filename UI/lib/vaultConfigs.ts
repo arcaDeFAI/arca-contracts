@@ -41,16 +41,16 @@ export type VaultConfig = MetropolisVaultConfig | ShadowVaultConfig;
  */
 export const VAULT_CONFIGS: VaultConfig[] = [
   // Metropolis Vaults
-  {
-    protocol: 'metropolis',
-    vaultAddress: '0xF5708969da13879d7A6D2F21d0411BF9eEB045E9',
-    stratAddress: '0x20302bc08CcaAFB039916e4a06f0B3917506019a',
-    lbBookAddress: '0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC',
-    name: 'S • USDC | Metropolis',
-    tier: 'Premium',
-    tokenX: 'S',
-    tokenY: 'USDC',
-  },
+  //{
+  //protocol: 'metropolis',
+  //vaultAddress: '0xF5708969da13879d7A6D2F21d0411BF9eEB045E9',
+  //stratAddress: '0x20302bc08CcaAFB039916e4a06f0B3917506019a',
+  //lbBookAddress: '0x32c0D87389E72E46b54bc4Ea6310C1a0e921C4DC',
+  //name: 'S • USDC | Metropolis',
+  //tier: 'Premium',
+  //tokenX: 'S',
+  //tokenY: 'USDC',
+  //},
   {
     protocol: 'metropolis',
     vaultAddress: '0xBaef4Da824f554c35035211cb997db4ecB75F45f',

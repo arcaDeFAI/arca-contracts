@@ -5,7 +5,9 @@ import { useDashboardData } from './useDashboardData';
 import { useTokenPrices } from './useAPYCalculation';
 import { useMetroAPY } from './useMetroAPY';
 import { useShadowAPY } from './useShadowAPY';
-import { useShadowAPYAdjusted } from './useShadowAPYAdjusted';
+import { useDefiLlamaAPYAdjusted } from './useDefiLlamaAPYAdjusted';
+import { useShadowRewardForwardedAPY } from './useShadowRewardForwardedAPY';
+import { useSubgraphAPR } from './useSubgraphAPR';
 import { CONTRACTS } from '@/lib/contracts';
 import { getTokenOrThrow } from '@/lib/tokenRegistry';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
@@ -64,7 +66,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   );
 
   // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided
-  const shadowAPYAdjusted = useShadowAPYAdjusted(
+  const shadowAPYAdjusted = useDefiLlamaAPYAdjusted(
     stratAddress,
     config.poolSymbol || 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' // Default to WS-USDC pool ID if not specified
   );
@@ -78,8 +80,27 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     prices?.shadow || 0
   );
 
-  // Use new DeFi Llama APY if available and poolSymbol is provided, otherwise fallback to old calculation
-  const shadowAPY = config.poolSymbol && !shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld;
+  // Calculate Forwarded APY natively via RPC (for Shadow vaults without a DeFi Llama pool)
+  const shadowAPYForwarded = useShadowRewardForwardedAPY(
+    stratAddress,
+    getTokenOrThrow('SHADOW').address!,
+    config.vaultAddress,
+    vaultTVL,
+    prices?.shadow || 0
+  );
+
+  // Use new DeFi Llama APY if available, otherwise route to the native Forwarded APY
+  const shadowAPY = config.poolSymbol 
+    ? (!shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld)
+    : shadowAPYForwarded;
+
+  // Goldsky Subgraph APR (specifically requested for USSD/wS Shadow vault)
+  const isUSSDwSShadow = config.vaultAddress.toLowerCase() === '0x3a284cc4080F9d88aC2eE330296975C78C53B5cd'.toLowerCase();
+  const subgraphAPR = useSubgraphAPR(
+    isUSSDwSShadow ? config.vaultAddress : '',
+    vaultTVL,
+    prices?.shadow || 0
+  );
 
   // Calculate activePercentage for Shadow APY adjustment
   const activePercentage = (vaultData.balances && vaultData.idleBalances) ? (() => {
@@ -94,10 +115,25 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     return totalUSD > 0 ? ((totalUSD - idleUSD) / totalUSD) * 100 : 0;
   })() : 0;
 
-  // Metro APY is already calculated against Total TVL in useMetroAPY hook.
-  // Shadow APY (from pool data) needs scaling by the % of vault TVL actually in the pool.
-  const apy = isShadowVault ? (shadowAPY.apy * (activePercentage / 100)) : metroAPY.apy;
-  const aprLoading = isShadowVault ? shadowAPY.isLoading : metroAPY.isLoading;
+  // Final APY calculation
+  const isDefiLlamaAPY = isShadowVault && !!config.poolSymbol;
+  let finalAPY = isShadowVault 
+    ? (isDefiLlamaAPY ? (shadowAPY.apy * (activePercentage / 100)) : shadowAPY.apy) 
+    : metroAPY.apy;
+  
+  // Override with Subgraph APR for USSD/wS, but fallback to RPC logs if Subgraph has no data yet
+  if (isShadowVault && isUSSDwSShadow) {
+    if (!subgraphAPR.isLoading && subgraphAPR.apr > 0) {
+      finalAPY = subgraphAPR.apr;
+    } else if (!shadowAPYForwarded.isLoading) {
+      // Fallback to direct RPC log scanning while subgraph is syncing or if it has no data
+      finalAPY = shadowAPYForwarded.apy;
+    }
+  }
+
+  const aprLoading = isShadowVault 
+    ? (isUSSDwSShadow ? (subgraphAPR.isLoading && shadowAPYForwarded.isLoading) : shadowAPY.isLoading) 
+    : metroAPY.isLoading;
 
   const raw30dMean = isShadowVault && config.poolSymbol ? shadowAPYAdjusted.apy30dMean : null;
   const apy30dMean = (isShadowVault && raw30dMean !== null) ? (raw30dMean * (activePercentage / 100)) : raw30dMean;
@@ -119,7 +155,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     vaultTVL,
 
     // APY metrics
-    apy,
+    apy: finalAPY,
     apy30dMean,
     aprLoading,
 

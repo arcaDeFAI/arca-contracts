@@ -22,8 +22,7 @@ export default function Home() {
         <div className="flex justify-between items-center">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <ArcaLogo size={40} className="w-10 h-10" />
-            <div className="text-3xl font-bold text-arca-green">ARCA</div>
+            <ArcaLogo width={130} height={44} />
           </div>
 
           {/* Mobile Menu Button - Removed since no navigation items */}
@@ -65,14 +64,14 @@ export default function Home() {
               <div className="bg-orange-900/20 border border-orange-600/50 rounded-lg p-6 text-left">
                 <div className="flex items-center justify-center gap-2 mb-4">
                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse"></div>
-                  <span className="text-orange-400 text-sm font-semibold">ALPHA VERSION</span>
+                  <span className="text-orange-400 text-sm font-semibold">BETA VERSION</span>
                 </div>
 
                 {/* Disclaimer Content */}
                 <div className="space-y-3 text-xs leading-relaxed">
                   <p className="text-gray-300">
                     <span className="text-orange-400 font-semibold">⚠️ Disclaimer:</span>
-                    The Arca DeFi platform is currently in alpha phase. This software is provided "as is" without any warranties. By using this platform, you acknowledge and agree that you are using it at your own risk.
+                    The Arca DeFi platform is currently in beta phase. This software is provided "as is" without any warranties. By using this platform, you acknowledge and agree that you are using it at your own risk.
                   </p>
 
                   <p className="text-gray-300">
