@@ -17,6 +17,8 @@ type BaseVaultConfig = {
   // Optional fields that any vault might have
   poolSymbol?: string; // DeFi Llama pool ID
   rewardsAddress?: string;
+  /** When true, APY is sourced from the Goldsky Subgraph (with RPC fallback) instead of DeFi Llama */
+  useSubgraphAPR?: boolean;
 };
 
 // Protocol-specific vault configurations using discriminated unions
@@ -41,6 +43,8 @@ export type VaultConfig = MetropolisVaultConfig | ShadowVaultConfig;
  */
 export const VAULT_CONFIGS: VaultConfig[] = [
   // Metropolis Vaults
+
+  // ARCHIVED: S • USDC Metropolis vault has been paused and is no longer active.
   //{
   //protocol: 'metropolis',
   //vaultAddress: '0xF5708969da13879d7A6D2F21d0411BF9eEB045E9',
@@ -138,6 +142,7 @@ export const VAULT_CONFIGS: VaultConfig[] = [
     clpoolAddress: '0x356C9EB08f9121cfB00AD6Dc03A12422eEf8a9A8',
     rewardsAddress: '',
     poolSymbol: '', // DeFi Llama pool ID (not found)
+    useSubgraphAPR: true, // APY sourced from Goldsky Subgraph with RPC fallback
     name: 'USSD • wS | Shadow',
     tier: 'Premium',
     tokenX: 'USSD',

@@ -47,8 +47,8 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     },
   });
 
-  // ================= METRO UNHARVESTED REWARDS LOGIC =================
-  
+  // ================= METRO UNHARVESTED REWARDS LOGIC (Metropolis vaults only) =================
+
   // Get active range from Metro Strategy
   const { data: rangeDataMetro } = useReadContract({
     address: config.stratAddress as `0x${string}`,
@@ -71,7 +71,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     return ids;
   }, [rangeDataMetro]);
 
-  // Read Hooks Parameters to find MasterChef Rewarder address
+  // Read LB Hooks Parameters to find METRO rewarder address
   const lbBookAddress = (config as any).lbBookAddress as `0x${string}` | undefined;
   const { data: hooksParamsRaw } = useReadContract({
     address: isShadowVault ? undefined : lbBookAddress,
@@ -91,7 +91,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     return `0x${paddedHex.slice(-40)}` as `0x${string}`;
   }, [hooksParamsRaw]);
 
-  // Query unharvested rewards from the MasterChef gauge for those active bins
+  // Query unharvested METRO rewards from the LB rewarder for those active bins
   const { data: unharvestedMetroRewards } = useReadContract({
     address: rewarderAddress,
     abi: parseAbi(['function getPendingRewards(address, uint256[]) view returns (uint256)']),
@@ -102,29 +102,34 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     },
   });
 
-  // Combine vault pending rewards + user's share of unharvested gauge rewards
-  const pendingRewards = useMemo(() => {
-    if (!vaultPendingRewards) return undefined;
-    
+  // ================= COMBINE VAULT REWARDS + UNHARVESTED AMOUNTS =================
+
+  // Metro: vault pending rewards + unharvested METRO rewarder rewards
+  const metroPendingRewards = useMemo(() => {
+    if (isShadowVault || !vaultPendingRewards) return undefined;
+    if (!unharvestedMetroRewards || sharePercentage === 0) return vaultPendingRewards;
     const userShareRatio = (sharePercentage || 0) / 100;
     const vaultRewardsList = vaultPendingRewards as any[];
+    return vaultRewardsList.map((vaultReward: any) => ({
+      ...vaultReward,
+      pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(unharvestedMetroRewards) * userShareRatio))
+    }));
+  }, [isShadowVault, vaultPendingRewards, unharvestedMetroRewards, sharePercentage]);
 
-    if (isShadowVault) {
-      if (!strategyRewardStatus || sharePercentage === 0) return vaultPendingRewards;
-      const earned = (strategyRewardStatus as any)[1] as readonly bigint[];
-      return vaultRewardsList.map((vaultReward: any, i: number) => ({
-        ...vaultReward,
-        pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(earned[i] || 0n) * userShareRatio))
-      }));
-    } else {
-      // Metro vault: add the unharvested Metro strategy rewards
-      if (!unharvestedMetroRewards || sharePercentage === 0) return vaultPendingRewards;
-      return vaultRewardsList.map((vaultReward: any) => ({
-        ...vaultReward,
-        pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(unharvestedMetroRewards) * userShareRatio))
-      }));
-    }
-  }, [vaultPendingRewards, strategyRewardStatus, unharvestedMetroRewards, sharePercentage, isShadowVault]);
+  // Shadow: vault pending rewards + unharvested gauge rewards from strategy
+  const shadowPendingRewards = useMemo(() => {
+    if (!isShadowVault || !vaultPendingRewards) return undefined;
+    if (!strategyRewardStatus || sharePercentage === 0) return vaultPendingRewards;
+    const userShareRatio = (sharePercentage || 0) / 100;
+    const vaultRewardsList = vaultPendingRewards as any[];
+    const earned = (strategyRewardStatus as any)[1] as readonly bigint[];
+    return vaultRewardsList.map((vaultReward: any, i: number) => ({
+      ...vaultReward,
+      pendingRewards: vaultReward.pendingRewards + BigInt(Math.floor(Number(earned[i] || 0n) * userShareRatio))
+    }));
+  }, [isShadowVault, vaultPendingRewards, strategyRewardStatus, sharePercentage]);
+
+  const pendingRewards = isShadowVault ? shadowPendingRewards : metroPendingRewards;
 
 
   // Get current round
