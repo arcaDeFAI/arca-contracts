@@ -125,7 +125,7 @@ export const VAULT_CONFIGS: VaultConfig[] = [
     stratAddress: '0x4ddB609F6D03dC29172c51C6D7f3a2B66e997c18',
     clpoolAddress: '0x092c0B146201Bb16D9A37cFC0a7310b05fc8799b',
     rewardsAddress: '',
-    poolSymbol: '', // DeFi Llama pool ID (not found)
+    poolSymbol: '0725b464-45d7-44a7-a758-9ef71d202cbd', // DeFi Llama pool ID (not found)
     name: 'USSD • USDC | Shadow',
     tier: 'Premium',
     tokenX: 'USSD',
