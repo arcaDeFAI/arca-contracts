@@ -1,0 +1,17 @@
+type Vault @entity {
+  id: Bytes!                    # vault address
+  strategy: Bytes!              # strategy address  
+  protocol: String!             # "shadow" or "metropolis"
+  rewardEvents: [RewardEvent!]! @derivedFrom(field: "vault")
+}
+
+type RewardEvent @entity(immutable: true) {
+  id: Bytes!                    # tx hash + log index
+  vault: Vault!
+  strategy: Bytes!
+  rewardToken: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}

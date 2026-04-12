@@ -1,0 +1,137 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: ShadowStrategyUSSDUSDC
+    network: sonic
+    source:
+      address: "0x4ddB609F6D03dC29172c51C6D7f3a2B66e997c18"
+      abi: ShadowStrategy
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+      abis:
+        - name: ShadowStrategy
+          file: ./abis/ShadowStrategy.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+      file: ./src/mapping.ts
+
+  - kind: ethereum
+    name: ShadowStrategyUSSDwS
+    network: sonic
+    source:
+      address: "0x496932dD85dB0E9A64F08e529E91cF86D7A65775"
+      abi: ShadowStrategy
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+      abis:
+        - name: ShadowStrategy
+          file: ./abis/ShadowStrategy.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+      file: ./src/mapping.ts
+
+  - kind: ethereum
+    name: ShadowStrategywSUSDC
+    network: sonic
+    source:
+      address: "0x64efeA2531f2b1A3569555084B88bb5714f5286c"
+      abi: ShadowStrategy
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+      abis:
+        - name: ShadowStrategy
+          file: ./abis/ShadowStrategy.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+      file: ./src/mapping.ts
+
+  - kind: ethereum
+    name: ShadowStrategyWSWETH
+    network: sonic
+    source:
+      address: "0x58c244BE630753e8E668f18C0F2Cffe3ea0E8126"
+      abi: ShadowStrategy
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+      abis:
+        - name: ShadowStrategy
+          file: ./abis/ShadowStrategy.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+      file: ./src/mapping.ts
+
+  - kind: ethereum
+    name: ShadowStrategyUSDCWETH
+    network: sonic
+    source:
+      address: "0x0806709c30A2999867160A1e4064f29ecCFA4605"
+      abi: ShadowStrategy
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+      abis:
+        - name: ShadowStrategy
+          file: ./abis/ShadowStrategy.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+      file: ./src/mapping.ts
+
+  - kind: ethereum
+    name: MetroToken
+    network: sonic
+    source:
+      address: "0x71e99522ead5e21cf57f1f542dc4ad2e841f7321"
+      abi: ERC20
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+      abis:
+        - name: ERC20
+          file: ./abis/ERC20.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleMetroTransfer
+      file: ./src/mapping.ts
