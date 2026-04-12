@@ -2,10 +2,8 @@ specVersion: 1.0.0
 indexerHints:
   prune: auto
 schema:
-  file: ./schema.graphql
+  file: schema.graphql
 dataSources:
-  # ── Shadow Strategies (RewardForwarded + RebalanceStarted) ──────────────────
-
   - kind: ethereum
     name: ShadowStrategyUSSDUSDC
     network: sonic
@@ -24,18 +22,17 @@ dataSources:
         - ILSnapshot
       abis:
         - name: ShadowStrategy
-          file: ./abis/ShadowStrategy.json
+          file: ShadowStrategyUSSDUSDC\abis\ShadowStrategy.json
         - name: MetroVault
-          file: ./abis/MetroVault.json
+          file: ShadowStrategyUSSDUSDC\abis\MetroVault.json
         - name: CLPool
-          file: ./abis/CLPool.json
+          file: ShadowStrategyUSSDUSDC\abis\CLPool.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
         - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
           handler: handleRebalanceStartedShadow
-      file: ./src/mapping.ts
-
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
   - kind: ethereum
     name: ShadowStrategyUSSDwS
     network: sonic
@@ -54,18 +51,17 @@ dataSources:
         - ILSnapshot
       abis:
         - name: ShadowStrategy
-          file: ./abis/ShadowStrategy.json
+          file: ShadowStrategyUSSDwS\abis\ShadowStrategy.json
         - name: MetroVault
-          file: ./abis/MetroVault.json
+          file: ShadowStrategyUSSDwS\abis\MetroVault.json
         - name: CLPool
-          file: ./abis/CLPool.json
+          file: ShadowStrategyUSSDwS\abis\CLPool.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
         - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
           handler: handleRebalanceStartedShadow
-      file: ./src/mapping.ts
-
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
   - kind: ethereum
     name: ShadowStrategywSUSDC
     network: sonic
@@ -84,18 +80,17 @@ dataSources:
         - ILSnapshot
       abis:
         - name: ShadowStrategy
-          file: ./abis/ShadowStrategy.json
+          file: ShadowStrategywSUSDC\abis\ShadowStrategy.json
         - name: MetroVault
-          file: ./abis/MetroVault.json
+          file: ShadowStrategywSUSDC\abis\MetroVault.json
         - name: CLPool
-          file: ./abis/CLPool.json
+          file: ShadowStrategywSUSDC\abis\CLPool.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
         - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
           handler: handleRebalanceStartedShadow
-      file: ./src/mapping.ts
-
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
   - kind: ethereum
     name: ShadowStrategyWSWETH
     network: sonic
@@ -114,18 +109,17 @@ dataSources:
         - ILSnapshot
       abis:
         - name: ShadowStrategy
-          file: ./abis/ShadowStrategy.json
+          file: ShadowStrategyWSWETH\abis\ShadowStrategy.json
         - name: MetroVault
-          file: ./abis/MetroVault.json
+          file: ShadowStrategyWSWETH\abis\MetroVault.json
         - name: CLPool
-          file: ./abis/CLPool.json
+          file: ShadowStrategyWSWETH\abis\CLPool.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
         - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
           handler: handleRebalanceStartedShadow
-      file: ./src/mapping.ts
-
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
   - kind: ethereum
     name: ShadowStrategyUSDCWETH
     network: sonic
@@ -144,20 +138,17 @@ dataSources:
         - ILSnapshot
       abis:
         - name: ShadowStrategy
-          file: ./abis/ShadowStrategy.json
+          file: ShadowStrategyUSDCWETH\abis\ShadowStrategy.json
         - name: MetroVault
-          file: ./abis/MetroVault.json
+          file: ShadowStrategyUSDCWETH\abis\MetroVault.json
         - name: CLPool
-          file: ./abis/CLPool.json
+          file: ShadowStrategyUSDCWETH\abis\CLPool.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
         - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
           handler: handleRebalanceStartedShadow
-      file: ./src/mapping.ts
-
-  # ── Metro Token (METRO reward Transfers strat→vault) ────────────────────────
-
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
   - kind: ethereum
     name: MetroToken
     network: sonic
@@ -175,14 +166,11 @@ dataSources:
         - ILSnapshot
       abis:
         - name: ERC20
-          file: ./abis/ERC20.json
+          file: MetroToken\abis\ERC20.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleMetroTransfer
-      file: ./src/mapping.ts
-
-  # ── Metropolis Strategies (RebalanceStart snapshot) ─────────────────────────
-
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
   - kind: ethereum
     name: MetroStrategyUSSDUSDC
     network: sonic
@@ -200,16 +188,15 @@ dataSources:
         - ILSnapshot
       abis:
         - name: MetropolisStrategy
-          file: ./abis/MetropolisStrategy.json
+          file: MetroStrategyUSSDUSDC\abis\MetropolisStrategy.json
         - name: MetroVault
-          file: ./abis/MetroVault.json
+          file: MetroStrategyUSSDUSDC\abis\MetroVault.json
         - name: LBPair
-          file: ./abis/LBPair.json
+          file: MetroStrategyUSSDUSDC\abis\LBPair.json
       eventHandlers:
         - event: RebalanceStart(uint24,uint24,uint24,uint24,uint256,uint256)
           handler: handleRebalanceStartMetro
-      file: ./src/mapping.ts
-
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
   - kind: ethereum
     name: MetroStrategywSUSSD
     network: sonic
@@ -227,16 +214,15 @@ dataSources:
         - ILSnapshot
       abis:
         - name: MetropolisStrategy
-          file: ./abis/MetropolisStrategy.json
+          file: MetroStrategywSUSSD\abis\MetropolisStrategy.json
         - name: MetroVault
-          file: ./abis/MetroVault.json
+          file: MetroStrategywSUSSD\abis\MetroVault.json
         - name: LBPair
-          file: ./abis/LBPair.json
+          file: MetroStrategywSUSSD\abis\LBPair.json
       eventHandlers:
         - event: RebalanceStart(uint24,uint24,uint24,uint24,uint256,uint256)
           handler: handleRebalanceStartMetro
-      file: ./src/mapping.ts
-
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
   - kind: ethereum
     name: MetroStrategyWETHwS
     network: sonic
@@ -254,12 +240,12 @@ dataSources:
         - ILSnapshot
       abis:
         - name: MetropolisStrategy
-          file: ./abis/MetropolisStrategy.json
+          file: MetroStrategyWETHwS\abis\MetropolisStrategy.json
         - name: MetroVault
-          file: ./abis/MetroVault.json
+          file: MetroStrategyWETHwS\abis\MetroVault.json
         - name: LBPair
-          file: ./abis/LBPair.json
+          file: MetroStrategyWETHwS\abis\LBPair.json
       eventHandlers:
         - event: RebalanceStart(uint24,uint24,uint24,uint24,uint256,uint256)
           handler: handleRebalanceStartMetro
-      file: ./src/mapping.ts
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm

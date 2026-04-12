@@ -4,7 +4,7 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "graph deploy arca-vaults-rewards --node https://api.studio.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ --version-label 0.0.1"
+    "deploy": "goldsky subgraph deploy arca-vaults/1.0.10 --path ."
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.68.5",

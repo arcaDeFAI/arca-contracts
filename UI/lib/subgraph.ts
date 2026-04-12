@@ -2,7 +2,7 @@
 // Tracks RewardForwarded events for custom APR calculation
 
 const SUBGRAPH_URL = process.env.NEXT_PUBLIC_SUBGRAPH_URL ||
-  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.7/gn';
+  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.10/gn';
 
 export interface SubgraphResponse<T> {
   data: T;
@@ -28,24 +28,59 @@ export async function querySubgraph<T>(
   return json.data;
 }
 
-// Type definitions matching actual subgraph schema
+// Type definitions matching subgraph schema (v1.0.8)
 
 export interface VaultEntity {
-  id: string;             // Vault Address
-  strategy: string;       // Strategy Address
-  protocol: string;       // "shadow" or "metropolis"
+  id: string;
+  strategy: string;
+  protocol: string;
   rewardEvents: RewardEventEntity[];
 }
 
 export interface RewardEventEntity {
-  id: string;             // tx hash + log index
-  vault: { id: string };  // Vault Address
-  strategy: string;       // Strategy Address
-  rewardToken: string;    // Token Address
-  amount: string;         // Amount in raw BIGINT string
-  timestamp: string;      // Unix timestamp
-  blockNumber: string;    // Block number
-  txHash: string;         // Transaction hash
+  id: string;
+  vault: { id: string };
+  strategy: string;
+  rewardToken: string;
+  amount: string;         // raw BigInt string
+  timestamp: string;
+  blockNumber: string;
+  txHash: string;
+}
+
+export interface SnapshotEntity {
+  id: string;
+  vault: { id: string };
+  amountXPerShare: string; // raw BigInt string — previewAmounts(1e18).amountX
+  amountYPerShare: string; // raw BigInt string — previewAmounts(1e18).amountY
+  totalBalanceX: string;
+  totalBalanceY: string;
+  tickLower: number;
+  tickUpper: number;
+  timestamp: string;
+  blockNumber: string;
+  txHash: string;
+}
+
+export interface ILSnapshotEntity {
+  id: string;
+  vault: { id: string };
+  firstAmountXPerShare: string;
+  firstAmountYPerShare: string;
+  firstTimestamp: string;
+  latestAmountXPerShare: string;
+  latestAmountYPerShare: string;
+  latestTimestamp: string;
+  snapshotCount: string;
+  totalBalanceXSum: string;
+  totalBalanceYSum: string;
+  totalRewardAmount: string;
+  // Shadow: sqrtPriceX96 from CL pool slot0 — convert: (sqrtPriceX96/2^96)^2 * 10^(decimalsX-decimalsY)
+  firstSqrtPriceX96: string;
+  latestSqrtPriceX96: string;
+  // Metro: getPriceFromId(desiredActiveId) scaled by 2^128 — convert: lbPrice/2^128 * 10^(decimalsX-decimalsY)
+  firstLBPrice: string;
+  latestLBPrice: string;
 }
 
 // GraphQL query fragments
@@ -63,7 +98,38 @@ export const REWARD_EVENT_FIELDS = `
   timestamp
   blockNumber
   txHash
-  vault {
-    id
-  }
+  vault { id }
+`;
+
+export const SNAPSHOT_FIELDS = `
+  id
+  amountXPerShare
+  amountYPerShare
+  totalBalanceX
+  totalBalanceY
+  tickLower
+  tickUpper
+  timestamp
+  blockNumber
+  txHash
+  vault { id }
+`;
+
+export const IL_SNAPSHOT_FIELDS = `
+  id
+  firstAmountXPerShare
+  firstAmountYPerShare
+  firstTimestamp
+  latestAmountXPerShare
+  latestAmountYPerShare
+  latestTimestamp
+  snapshotCount
+  totalBalanceXSum
+  totalBalanceYSum
+  totalRewardAmount
+  firstSqrtPriceX96
+  latestSqrtPriceX96
+  firstLBPrice
+  latestLBPrice
+  vault { id }
 `;

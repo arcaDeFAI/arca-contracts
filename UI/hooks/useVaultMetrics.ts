@@ -8,6 +8,7 @@ import { useShadowAPY } from './useShadowAPY';
 import { useDefiLlamaAPYAdjusted } from './useDefiLlamaAPYAdjusted';
 import { useShadowRewardForwardedAPY } from './useShadowRewardForwardedAPY';
 import { useSubgraphAPR } from './useSubgraphAPR';
+import { useSubgraphMetrics } from './useSubgraphMetrics';
 import { CONTRACTS } from '@/lib/contracts';
 import { getTokenOrThrow } from '@/lib/tokenRegistry';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
@@ -106,6 +107,10 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     prices?.shadow || 0
   );
 
+  // New subgraph metrics hook — computes fee_apr + reward_apr using bot formula
+  // Used for all vaults; falls back to legacy APR methods when subgraph has no data yet
+  const subgraphMetrics = useSubgraphMetrics(config);
+
   // Calculate activePercentage for Shadow APY adjustment (active vs idle liquidity ratio)
   const activePercentage = (vaultData.balances && vaultData.idleBalances) ? (() => {
     const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
@@ -119,16 +124,21 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     return totalUSD > 0 ? ((totalUSD - idleUSD) / totalUSD) * 100 : 0;
   })() : 0;
 
-  // Final APY/APR — clear calculation path per vault type
+  // Final APY/APR — subgraph metrics (bot formula) take priority when data is available.
+  // Legacy RPC-based methods serve as fallback while the subgraph indexes history.
   let finalAPY: number;
   let aprLoading: boolean;
 
-  if (!isShadowVault) {
-    // Metropolis vault: use on-chain METRO reward rate
+  if (!subgraphMetrics.isLoading && subgraphMetrics.totalApr !== null) {
+    // Subgraph has data for this vault → use bot-formula APR (fee + reward)
+    finalAPY = Math.max(0, subgraphMetrics.totalApr);
+    aprLoading = false;
+  } else if (!isShadowVault) {
+    // Metropolis vault with no subgraph data yet: use on-chain METRO reward rate
     finalAPY = metroAPY.apy;
     aprLoading = metroAPY.isLoading;
   } else if (config.useSubgraphAPR) {
-    // Shadow vault with Subgraph APR: prefer Subgraph, fall back to RPC log scanning
+    // Shadow vault with legacy subgraph APR flag: prefer old subgraph, fall back to RPC
     if (!subgraphAPR.isLoading && subgraphAPR.apr > 0) {
       finalAPY = subgraphAPR.apr;
     } else {
@@ -168,6 +178,8 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     apy: finalAPY,
     apy30dMean,
     aprLoading,
+    // Subgraph metrics breakdown (fee + reward APR components)
+    subgraphMetrics,
 
     // Dashboard data
     pendingRewards: dashboardData.pendingRewards,
