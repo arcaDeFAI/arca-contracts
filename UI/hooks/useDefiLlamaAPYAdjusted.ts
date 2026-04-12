@@ -22,12 +22,17 @@ interface APYAdjustedResult {
 /**
  * Hook to calculate adjusted APY based on DeFi Llama data and vault's range
  * Supports both Shadow (tick-based) and Metropolis (bin-based) protocols
+ *
+ * @param baseTicksOverride - Override the DeFi Llama assumed base range for this specific vault.
+ *   Use when DeFi Llama calculates APY for a different tick width than our standard assumption.
+ *   Example: USSD•USDC Shadow pool operates at 8 ticks, not the standard 1400.
  */
 export function useDefiLlamaAPYAdjusted(
   stratAddress: string,
   poolId: string,
   protocol: 'shadow' | 'metropolis' = 'shadow',
-  vaultAddress: string = ''
+  vaultAddress: string = '',
+  baseTicksOverride?: number
 ): APYAdjustedResult {
   const [apy, setApy] = useState(0);
   const [baseAPY, setBaseAPY] = useState(0);
@@ -39,7 +44,9 @@ export function useDefiLlamaAPYAdjusted(
 
   const isShadow = protocol === 'shadow';
   const isMetropolis = protocol === 'metropolis';
-  const baseRange = isShadow ? DEFI_LLAMA_BASE_TICKS : DEFI_LLAMA_BASE_BINS;
+  // Allow per-vault override of the DeFi Llama assumed base range.
+  // USSD•USDC Shadow uses 8 ticks natively, so its APY is already priced for an 8-tick range.
+  const baseRange = baseTicksOverride ?? (isShadow ? DEFI_LLAMA_BASE_TICKS : DEFI_LLAMA_BASE_BINS);
 
   // Fetch DeFi Llama APY data
   const { getPoolAPY, isLoading: llamaLoading, error: llamaError } = useDefiLlamaAPY();
