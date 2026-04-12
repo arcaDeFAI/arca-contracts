@@ -65,10 +65,15 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     prices?.metro || 0
   );
 
-  // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided
+  // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided.
+  // Pass defiLlamaBaseTicks override for vaults whose pool natively uses a non-standard range
+  // (e.g. USSD•USDC Shadow uses 8 ticks, so DeFi Llama's APY is already priced for 8 ticks).
   const shadowAPYAdjusted = useDefiLlamaAPYAdjusted(
     stratAddress,
-    config.poolSymbol || 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' // Default to WS-USDC pool ID if not specified
+    config.poolSymbol || 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0', // Default to WS-USDC pool ID if not specified
+    'shadow',
+    '',
+    config.defiLlamaBaseTicks
   );
 
   // Fallback to old Shadow APY calculation (kept for backwards compatibility)
