@@ -141,13 +141,13 @@ export function WithdrawModal({
               <div className="flex justify-between">
                 <span className="text-gray-400">{tokenX}:</span>
                 <span className="text-white font-semibold">
-                  {formatTokenAmount(estimatedS, tokenX.toUpperCase() as any)}
+                  {formatTokenAmount(estimatedS, tokenX.toUpperCase())}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-400">{tokenY}:</span>
                 <span className="text-white font-semibold">
-                  {formatTokenAmount(estimatedUsdc, tokenY.toUpperCase() as any)}
+                  {formatTokenAmount(estimatedUsdc, tokenY.toUpperCase())}
                 </span>
               </div>
             </div>
@@ -155,7 +155,7 @@ export function WithdrawModal({
             {/* Warning */}
             <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3">
               <p className="text-yellow-400 text-sm">
-                ⚠️ Withdrawals are ONLY cancelable while QUEUED. You'll be able to claim your withdrawal on the DASHBOARD PAGE once ready (Next Rebalance).
+                ⚠️ Withdrawals are ONLY cancelable while QUEUED. You&apos;ll be able to claim your withdrawal on the DASHBOARD PAGE once ready (Next Rebalance).
               </p>
             </div>
 

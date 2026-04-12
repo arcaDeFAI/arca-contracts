@@ -1,0 +1,419 @@
+specVersion: 1.0.0
+indexerHints:
+  prune: auto
+schema:
+  file: schema.graphql
+dataSources:
+  - kind: ethereum
+    name: ShadowStrategyUSSDUSDC
+    network: sonic
+    source:
+      address: "0x4ddB609F6D03dC29172c51C6D7f3a2B66e997c18"
+      abi: ShadowStrategy
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+        - Snapshot
+        - ILSnapshot
+      abis:
+        - name: ShadowStrategy
+          file: ShadowStrategyUSSDUSDC\abis\ShadowStrategy.json
+        - name: MetroVault
+          file: ShadowStrategyUSSDUSDC\abis\MetroVault.json
+        - name: CLPool
+          file: ShadowStrategyUSSDUSDC\abis\CLPool.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+        - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
+          handler: handleRebalanceStartedShadow
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowStrategyUSSDwS
+    network: sonic
+    source:
+      address: "0x496932dD85dB0E9A64F08e529E91cF86D7A65775"
+      abi: ShadowStrategy
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+        - Snapshot
+        - ILSnapshot
+      abis:
+        - name: ShadowStrategy
+          file: ShadowStrategyUSSDwS\abis\ShadowStrategy.json
+        - name: MetroVault
+          file: ShadowStrategyUSSDwS\abis\MetroVault.json
+        - name: CLPool
+          file: ShadowStrategyUSSDwS\abis\CLPool.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+        - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
+          handler: handleRebalanceStartedShadow
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowStrategywSUSDC
+    network: sonic
+    source:
+      address: "0x64efeA2531f2b1A3569555084B88bb5714f5286c"
+      abi: ShadowStrategy
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+        - Snapshot
+        - ILSnapshot
+      abis:
+        - name: ShadowStrategy
+          file: ShadowStrategywSUSDC\abis\ShadowStrategy.json
+        - name: MetroVault
+          file: ShadowStrategywSUSDC\abis\MetroVault.json
+        - name: CLPool
+          file: ShadowStrategywSUSDC\abis\CLPool.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+        - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
+          handler: handleRebalanceStartedShadow
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowStrategyWSWETH
+    network: sonic
+    source:
+      address: "0x58c244BE630753e8E668f18C0F2Cffe3ea0E8126"
+      abi: ShadowStrategy
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+        - Snapshot
+        - ILSnapshot
+      abis:
+        - name: ShadowStrategy
+          file: ShadowStrategyWSWETH\abis\ShadowStrategy.json
+        - name: MetroVault
+          file: ShadowStrategyWSWETH\abis\MetroVault.json
+        - name: CLPool
+          file: ShadowStrategyWSWETH\abis\CLPool.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+        - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
+          handler: handleRebalanceStartedShadow
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowStrategyUSDCWETH
+    network: sonic
+    source:
+      address: "0x0806709c30A2999867160A1e4064f29ecCFA4605"
+      abi: ShadowStrategy
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+        - Snapshot
+        - ILSnapshot
+      abis:
+        - name: ShadowStrategy
+          file: ShadowStrategyUSDCWETH\abis\ShadowStrategy.json
+        - name: MetroVault
+          file: ShadowStrategyUSDCWETH\abis\MetroVault.json
+        - name: CLPool
+          file: ShadowStrategyUSDCWETH\abis\CLPool.json
+      eventHandlers:
+        - event: RewardForwarded(indexed address,indexed address,uint256)
+          handler: handleRewardForwardedShadow
+        - event: RebalanceStarted(indexed address,int24,int24,uint256,uint256)
+          handler: handleRebalanceStartedShadow
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: MetroToken
+    network: sonic
+    source:
+      address: "0x71e99522ead5e21cf57f1f542dc4ad2e841f7321"
+      abi: ERC20
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - RewardEvent
+        - ILSnapshot
+      abis:
+        - name: ERC20
+          file: MetroToken\abis\ERC20.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleMetroTransfer
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: MetroVaultUSSDUSDC
+    network: sonic
+    source:
+      address: "0xBaef4Da824f554c35035211cb997db4ecB75F45f"
+      abi: ArcaVault
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - UserHarvestEvent
+      abis:
+        - name: ArcaVault
+          file: MetroVaultUSSDUSDC\abis\ArcaVault.json
+      eventHandlers:
+        - event: Harvested(indexed address,indexed address,uint256)
+          handler: handleHarvested
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: MetroVaultwSUSSD
+    network: sonic
+    source:
+      address: "0x1C0C5A4197b7Fa25a180E6e08eA19A91EBBe5fD2"
+      abi: ArcaVault
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - UserHarvestEvent
+      abis:
+        - name: ArcaVault
+          file: MetroVaultwSUSSD\abis\ArcaVault.json
+      eventHandlers:
+        - event: Harvested(indexed address,indexed address,uint256)
+          handler: handleHarvested
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: MetroVaultWETHwS
+    network: sonic
+    source:
+      address: "0x34331E66a634D69D64edC3e21E52A53899e12640"
+      abi: ArcaVault
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - UserHarvestEvent
+      abis:
+        - name: ArcaVault
+          file: MetroVaultWETHwS\abis\ArcaVault.json
+      eventHandlers:
+        - event: Harvested(indexed address,indexed address,uint256)
+          handler: handleHarvested
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowVaultUSSDwS
+    network: sonic
+    source:
+      address: "0x727e6D1FF1f1836Bb7Cdfad30e89EdBbef878ab5"
+      abi: ArcaVault
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - UserHarvestEvent
+      abis:
+        - name: ArcaVault
+          file: ShadowVaultUSSDwS\abis\ArcaVault.json
+      eventHandlers:
+        - event: Harvested(indexed address,indexed address,uint256)
+          handler: handleHarvested
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowVaultwSUSDC
+    network: sonic
+    source:
+      address: "0xB6a8129779E57845588Db74435A9aFAE509e1454"
+      abi: ArcaVault
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - UserHarvestEvent
+      abis:
+        - name: ArcaVault
+          file: ShadowVaultwSUSDC\abis\ArcaVault.json
+      eventHandlers:
+        - event: Harvested(indexed address,indexed address,uint256)
+          handler: handleHarvested
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowVaultUSDCWETH
+    network: sonic
+    source:
+      address: "0xd4083994F3ce977bcb5d3022041D489B162f5B85"
+      abi: ArcaVault
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - UserHarvestEvent
+      abis:
+        - name: ArcaVault
+          file: ShadowVaultUSDCWETH\abis\ArcaVault.json
+      eventHandlers:
+        - event: Harvested(indexed address,indexed address,uint256)
+          handler: handleHarvested
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowVaultUSSDUSDC
+    network: sonic
+    source:
+      address: "0xc318C24c8A8584B03019D34E586DAa14F208eF2d"
+      abi: ArcaVault
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - UserHarvestEvent
+      abis:
+        - name: ArcaVault
+          file: ShadowVaultUSSDUSDC\abis\ArcaVault.json
+      eventHandlers:
+        - event: Harvested(indexed address,indexed address,uint256)
+          handler: handleHarvested
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: ShadowVaultUSSDWETH
+    network: sonic
+    source:
+      address: "0x3a284cc4080F9d88aC2eE330296975C78C53B5cd"
+      abi: ArcaVault
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - UserHarvestEvent
+      abis:
+        - name: ArcaVault
+          file: ShadowVaultUSSDWETH\abis\ArcaVault.json
+      eventHandlers:
+        - event: Harvested(indexed address,indexed address,uint256)
+          handler: handleHarvested
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: MetroStrategyUSSDUSDC
+    network: sonic
+    source:
+      address: "0x7069B87c64ee8DA6bF928B4Af0693bC7a4f9D7e6"
+      abi: MetropolisStrategy
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - Snapshot
+        - ILSnapshot
+      abis:
+        - name: MetropolisStrategy
+          file: MetroStrategyUSSDUSDC\abis\MetropolisStrategy.json
+        - name: MetroVault
+          file: MetroStrategyUSSDUSDC\abis\MetroVault.json
+        - name: LBPair
+          file: MetroStrategyUSSDUSDC\abis\LBPair.json
+      eventHandlers:
+        - event: RebalanceStart(uint24,uint24,uint24,uint24,uint256,uint256)
+          handler: handleRebalanceStartMetro
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: MetroStrategywSUSSD
+    network: sonic
+    source:
+      address: "0xeca4AE2D4778b1417d6cB47B9C7769e9f5fC4A3f"
+      abi: MetropolisStrategy
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - Snapshot
+        - ILSnapshot
+      abis:
+        - name: MetropolisStrategy
+          file: MetroStrategywSUSSD\abis\MetropolisStrategy.json
+        - name: MetroVault
+          file: MetroStrategywSUSSD\abis\MetroVault.json
+        - name: LBPair
+          file: MetroStrategywSUSSD\abis\LBPair.json
+      eventHandlers:
+        - event: RebalanceStart(uint24,uint24,uint24,uint24,uint256,uint256)
+          handler: handleRebalanceStartMetro
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm
+  - kind: ethereum
+    name: MetroStrategyWETHwS
+    network: sonic
+    source:
+      address: "0x38FdF9a12Ac2e2aD95dd5bE3d271cC6EA23C5c2C"
+      abi: MetropolisStrategy
+      startBlock: 66600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - Vault
+        - Snapshot
+        - ILSnapshot
+      abis:
+        - name: MetropolisStrategy
+          file: MetroStrategyWETHwS\abis\MetropolisStrategy.json
+        - name: MetroVault
+          file: MetroStrategyWETHwS\abis\MetroVault.json
+        - name: LBPair
+          file: MetroStrategyWETHwS\abis\LBPair.json
+      eventHandlers:
+        - event: RebalanceStart(uint24,uint24,uint24,uint24,uint256,uint256)
+          handler: handleRebalanceStartMetro
+      file: ShadowStrategyUSSDUSDC\ShadowStrategyUSSDUSDC.wasm

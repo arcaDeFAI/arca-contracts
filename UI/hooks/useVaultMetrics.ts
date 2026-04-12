@@ -18,13 +18,13 @@ import { type VaultConfig } from '@/lib/vaultConfigs';
  * Eliminates duplication between VaultCard and DashboardVaultCard
  */
 export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
-  const { name, vaultAddress, stratAddress, tokenX = 'S', tokenY = 'USDC' } = config;
+  const { name, vaultAddress, tokenX = 'S', tokenY = 'USDC' } = config;
   const isShadowVault = name.includes('Shadow');
 
   // Fetch all data
   const vaultData = useVaultData(config, userAddress);
   const dashboardData = useDashboardData(config, userAddress, vaultData.sharePercentage);
-  const { prices, isLoading: pricesLoading } = useTokenPrices();
+  const { prices, isLoading: pricesLoading } = usePrices();
   const sonicPrice = prices?.sonic || 0.17;
 
   // Calculate active vs reserved liquidity
@@ -57,13 +57,8 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   const depositedValueUSD = (vaultData.userShares && vaultData.totalSupply && vaultData.totalSupply > 0n) ?
     vaultTVL * (Number(vaultData.userShares) / Number(vaultData.totalSupply)) : 0;
 
-  // Calculate APY based on vault type
-  const metroAPY = useMetroAPY(
-    stratAddress,
-    getTokenOrThrow('METRO').address!,
-    vaultTVL,
-    prices?.metro || 0
-  );
+  // Subgraph metrics — single source of truth for fee APR + reward APR
+  const subgraphMetrics = useSubgraphMetrics(config);
 
   // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided
   const shadowAPYAdjusted = useDefiLlamaAPYAdjusted(
@@ -140,8 +135,22 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     aprLoading = shadowAPY.isLoading;
   }
 
-  const raw30dMean = isShadowVault && config.poolSymbol ? shadowAPYAdjusted.apy30dMean : null;
-  const apy30dMean = (isShadowVault && raw30dMean !== null) ? (raw30dMean * (activePercentage / 100)) : raw30dMean;
+  if (subgraphMetrics.isLoading) {
+    // Still fetching — show loading state
+    finalAPY = 0;
+    aprLoading = true;
+  } else if (subgraphMetrics.rewardApr !== null) {
+    // Use rewards-only APR (fee APR excluded — unreliable during withdrawal periods)
+    finalAPY = Math.max(0, subgraphMetrics.rewardApr);
+    aprLoading = false;
+  } else {
+    // No subgraph data yet (vault not indexed / insufficient snapshots) → show 0
+    finalAPY = 0;
+    aprLoading = false;
+  }
+
+  // Subgraph is the single APR source — never show the DeFi Llama 30d average.
+  const apy30dMean = null;
 
   return {
     // Vault data
@@ -163,6 +172,8 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     apy: finalAPY,
     apy30dMean,
     aprLoading,
+    // Subgraph metrics breakdown (fee + reward APR components)
+    subgraphMetrics,
 
     // Dashboard data
     pendingRewards: dashboardData.pendingRewards,

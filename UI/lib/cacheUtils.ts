@@ -25,7 +25,7 @@ export function clearAllShadowCaches() {
     keysToRemove.forEach(key => localStorage.removeItem(key));
     
     return keysToRemove.length;
-  } catch (error) {
+  } catch {
     return 0;
   }
 }
@@ -36,18 +36,18 @@ export function clearAllShadowCaches() {
 export function clearAllMetroCaches() {
   try {
     const keysToRemove: string[] = [];
-    
+
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith('metro_transfers_')) {
         keysToRemove.push(key);
       }
     }
-    
+
     keysToRemove.forEach(key => localStorage.removeItem(key));
-    
+
     return keysToRemove.length;
-  } catch (error) {
+  } catch {
     return 0;
   }
 }
@@ -91,7 +91,7 @@ export function getCacheStats() {
     }
     
     return stats;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -109,10 +109,12 @@ export function logCacheStats() {
 }
 
 // Make functions available in browser console for debugging
+type DebugWindow = Window & typeof globalThis & Record<string, unknown>;
 if (typeof window !== 'undefined') {
-  (window as any).clearAllShadowCaches = clearAllShadowCaches;
-  (window as any).clearAllMetroCaches = clearAllMetroCaches;
-  (window as any).clearAllAPYCaches = clearAllAPYCaches;
-  (window as any).getCacheStats = getCacheStats;
-  (window as any).logCacheStats = logCacheStats;
+  const w = window as DebugWindow;
+  w.clearAllShadowCaches = clearAllShadowCaches;
+  w.clearAllMetroCaches = clearAllMetroCaches;
+  w.clearAllAPYCaches = clearAllAPYCaches;
+  w.getCacheStats = getCacheStats;
+  w.logCacheStats = logCacheStats;
 }

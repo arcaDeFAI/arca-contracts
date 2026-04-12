@@ -23,7 +23,16 @@ type PriceSourceFixed = {
   price: number;
 };
 
-export type PriceSource = PriceSourceDIA | PriceSourceCoinGecko | PriceSourceFixed;
+/** GeckoTerminal: free, no API key, covers all DEX tokens on any EVM chain */
+type PriceSourceGeckoTerminal = {
+  type: 'geckoterminal';
+  /** Network slug as used by GeckoTerminal (e.g. 'sonic', 'ethereum') */
+  network: string;
+  /** Token contract address */
+  address: string;
+};
+
+export type PriceSource = PriceSourceDIA | PriceSourceCoinGecko | PriceSourceFixed | PriceSourceGeckoTerminal;
 
 // --- Token definition ---
 
@@ -147,7 +156,7 @@ export const TOKEN_REGISTRY: Record<string, TokenDefinition> = {
     logo: '/MetropolisLogo.png',
     isNative: false,
     canonicalName: 'METRO',
-    priceSource: { type: 'coingecko', id: 'metropolis' },
+    priceSource: { type: 'geckoterminal', network: 'sonic', address: '0x71E99522EaD5E21CF57F1f542Dc4ad2E841F7321' },
     fallbackPrice: 0,
     coingeckoId: 'metropolis',
     chartColor: '#EC4899',
@@ -161,7 +170,7 @@ export const TOKEN_REGISTRY: Record<string, TokenDefinition> = {
     logo: '/SHadowLogo.jpg',
     isNative: false,
     canonicalName: 'SHADOW',
-    priceSource: { type: 'coingecko', id: 'shadow-2' },
+    priceSource: { type: 'geckoterminal', network: 'sonic', address: '0x3333b97138D4b086720b5aE8A7844b1345a33333' },
     fallbackPrice: 0,
     coingeckoId: 'shadow-2',
     chartColor: '#6366F1',
@@ -175,7 +184,8 @@ export const TOKEN_REGISTRY: Record<string, TokenDefinition> = {
     logo: '/SHadowLogo.jpg',
     isNative: false,
     canonicalName: 'SHADOW',
-    priceSource: { type: 'coingecko', id: 'shadow-2' },
+    // xSHADOW shares the same price as SHADOW
+    priceSource: { type: 'geckoterminal', network: 'sonic', address: '0x3333b97138D4b086720b5aE8A7844b1345a33333' },
     fallbackPrice: 0,
     coingeckoId: 'shadow-2',
     chartColor: '#6366F1',

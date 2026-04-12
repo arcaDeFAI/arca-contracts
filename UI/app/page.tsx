@@ -1,8 +1,4 @@
-'use client'
-
-import { useState } from 'react'
-import Link from 'next/link'
-import { ArcaLogo } from '@/components/ArcaLogo'
+import { redirect } from 'next/navigation'
 
 export default function Home() {
   const [understandsRisks, setUnderstandsRisks] = useState(false)

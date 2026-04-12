@@ -61,7 +61,7 @@ export function RewardsHistoryCard({
       Total: point.totalValue,
       timestamp: point.timestamp
     }))
-  }, [totalRewardsUSD, metroRewardsUSD, shadowRewardsUSD, historicalData])
+  }, [metroRewardsUSD, shadowRewardsUSD, historicalData])
 
   const isPositive = change24h >= 0
 

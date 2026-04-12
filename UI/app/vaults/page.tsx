@@ -8,7 +8,6 @@ import { SocialLinks } from '@/components/SocialLinks';
 import { formatUSD } from '@/lib/utils';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { VAULT_CONFIGS } from '@/lib/vaultConfigs';
-import { Skeleton } from '@/components/Skeleton';
 import { StatsCard } from '@/components/StatsCard';
 
 // Tab Component
