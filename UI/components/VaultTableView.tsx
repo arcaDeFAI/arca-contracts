@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useAccount } from 'wagmi';
-import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useUserHarvestedForVault } from '@/hooks/useUserHarvestedForVault';
-import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain';
+import { useVaultPositionData } from '@/hooks/useVaultPositionData';
+import { RangeBar } from './RangeBar';
 import { TokenPairLogos } from './TokenPairLogos';
 import { getTokenLogo } from '@/lib/tokenHelpers';
 import { DepositModal } from './DepositModal';
@@ -13,75 +12,16 @@ import { WithdrawModal } from './WithdrawModal';
 import { Tooltip } from './Tooltip';
 import { getToken, getTokenByAddress } from '@/lib/tokenRegistry';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
+import { type VaultConfig } from '@/lib/vaultConfigs';
+import { type UserRewardStructOutput } from '@/lib/typechain';
 
 interface VaultTableViewProps {
-  vaults: any[];
+  vaults: VaultConfig[];
   userAddress?: string;
-  onVaultClick: (vault: any) => void;
-  selectedVault?: any;
+  onVaultClick: (vault: VaultConfig) => void;
+  selectedVault?: VaultConfig;
 }
 
-// Helper component to fetch position data for a single vault
-function useVaultPositionData(vault: any) {
-  const isMetropolis = vault.name.includes('Metropolis');
-  const isShadow = vault.name.includes('Shadow');
-
-  // Metropolis: Get active ID
-  const { data: activeIdReal } = useReadContract({
-    address: vault.lbBookAddress as `0x${string}`,
-    abi: LB_BOOK_ABI,
-    functionName: 'getActiveId',
-    query: { enabled: !!vault.lbBookAddress && isMetropolis },
-  });
-
-  // Metropolis: Get range
-  const { data: rangeDataMetro } = useReadContract({
-    address: vault.vaultAddress as `0x${string}`,
-    abi: METRO_VAULT_ABI,
-    functionName: 'getRange',
-    query: { enabled: !!vault.vaultAddress && isMetropolis },
-  });
-
-  // Shadow: Get slot0 for active tick
-  const { data: slot0Data } = useReadContract({
-    address: vault.clpoolAddress as `0x${string}`,
-    abi: CL_POOL_ABI,
-    functionName: 'slot0',
-    query: { enabled: !!vault.clpoolAddress && isShadow },
-  });
-
-  // Shadow: Get range
-  const { data: rangeDataShadow } = useReadContract({
-    address: vault.stratAddress as `0x${string}`,
-    abi: SHADOW_STRAT_ABI,
-    functionName: 'getRange',
-    query: { enabled: !!vault.stratAddress && isShadow },
-  });
-
-  // Extract data
-  const shadowActiveTick = slot0Data ? (slot0Data as readonly [bigint, number, number, number, number, number, boolean])[1] : null;
-  const shadowRangeData = rangeDataShadow ? (rangeDataShadow as readonly [number, number]) : null;
-
-  const activeId = isMetropolis ? activeIdReal : (shadowActiveTick !== null ? BigInt(shadowActiveTick) : null);
-  const rangeData = isMetropolis ? rangeDataMetro : shadowRangeData;
-
-  // Calculate price position percentage
-  let pricePosition = 50; // Default to middle
-  if (rangeData && activeId !== null) {
-    const [lower, upper] = rangeData as readonly [any, any];
-    const lowerNum = Number(lower);
-    const upperNum = Number(upper);
-    const activeNum = Number(activeId);
-
-    if (upperNum > lowerNum) {
-      pricePosition = ((activeNum - lowerNum) / (upperNum - lowerNum)) * 100;
-      // Clamp between 0 and 100
-      pricePosition = Math.max(0, Math.min(100, pricePosition));
-    }
-  }
-
-  return { pricePosition, hasData: !!(rangeData && activeId !== null) };
-}
 
 type SortColumn = 'deposit' | 'dailyRewards' | 'earned' | 'apr' | null;
 type SortDirection = 'asc' | 'desc' | null;
@@ -90,7 +30,7 @@ type SortDirection = 'asc' | 'desc' | null;
  * Helper hook: fetch tokenX and tokenY balances for the deposit modal
  * of the currently-open vault.
  */
-function useDepositBalances(vault: any | null, userAddress?: string) {
+function useDepositBalances(vault: VaultConfig | null, userAddress?: string) {
   const tokenXDef = vault ? getToken(vault.tokenX) : undefined;
   const tokenYDef = vault ? getToken(vault.tokenY) : undefined;
 
@@ -127,17 +67,21 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
     useVaultMetrics(config, userAddress)
   );
 
-  // Fetch harvested amounts for each vault
-  const harvestedData = vaults.map((vault, index) => {
-    const metrics = vaultMetrics[index];
-    const isShadow = vault.name.includes('Shadow');
-    const tokenPrice = isShadow ? (metrics.prices?.shadow || 0) : (metrics.prices?.metro || 0);
-
-    return useUserHarvestedForVault(vault.vaultAddress, userAddress, tokenPrice);
-  });
+  // Fetch harvested amounts for each vault (single subgraph query, shared cache)
+  const harvestedData = vaults.map(vault =>
+    useUserHarvestedForVault(vault.vaultAddress, userAddress)
+  );
 
   // Fetch position data for each vault
-  const positionData = vaults.map(vault => useVaultPositionData(vault));
+  const positionData = vaults.map(vault => useVaultPositionData({
+    vaultAddress: vault.vaultAddress,
+    stratAddress: vault.stratAddress,
+    lbBookAddress: vault.lbBookAddress,
+    clpoolAddress: vault.clpoolAddress,
+    name: vault.name,
+    tokenX: vault.tokenX,
+    tokenY: vault.tokenY,
+  }));
 
   // Handle sorting
   const handleSort = (column: SortColumn) => {
@@ -219,12 +163,11 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
           bValue = bMetrics.depositedValueUSD || 0;
           break;
         case 'dailyRewards':
-          // Calculate daily rewards from APR
-          aValue = aMetrics.depositedValueUSD && aMetrics.apy > 0
-            ? (aMetrics.depositedValueUSD * (aMetrics.apy / 100)) / 365
+          aValue = aMetrics.depositedValueUSD && (aMetrics.subgraphMetrics.rewardApr ?? 0) > 0
+            ? (aMetrics.depositedValueUSD * ((aMetrics.subgraphMetrics.rewardApr ?? 0) / 100)) / 365
             : 0;
-          bValue = bMetrics.depositedValueUSD && bMetrics.apy > 0
-            ? (bMetrics.depositedValueUSD * (bMetrics.apy / 100)) / 365
+          bValue = bMetrics.depositedValueUSD && (bMetrics.subgraphMetrics.rewardApr ?? 0) > 0
+            ? (bMetrics.depositedValueUSD * ((bMetrics.subgraphMetrics.rewardApr ?? 0) / 100)) / 365
             : 0;
           break;
         case 'earned':
@@ -232,8 +175,8 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
           bValue = bHarvested.totalHarvestedUSD || 0;
           break;
         case 'apr':
-          aValue = aMetrics.apy || 0;
-          bValue = bMetrics.apy || 0;
+          aValue = aMetrics.subgraphMetrics.rewardApr ?? 0;
+          bValue = bMetrics.subgraphMetrics.rewardApr ?? 0;
           break;
       }
 
@@ -289,13 +232,13 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
 
             // Filter non-zero rewards
             const nonZeroRewards = metrics.pendingRewards
-              ? metrics.pendingRewards.filter((reward: any) => reward.pendingRewards > 0n)
+              ? metrics.pendingRewards.filter((reward: UserRewardStructOutput) => reward.pendingRewards > 0n)
               : [];
 
             // Calculate total USD value of rewards using registry
             let totalRewardsUSD = 0;
             if (nonZeroRewards.length > 0 && metrics.prices) {
-              totalRewardsUSD = nonZeroRewards.reduce((sum: number, reward: any) => {
+              totalRewardsUSD = nonZeroRewards.reduce((sum: number, reward: UserRewardStructOutput) => {
                 const amount = Number(reward.pendingRewards) / 1e18;
                 const tokenDef = getTokenByAddress(reward.token);
                 const priceKey = tokenDef?.canonicalName.toLowerCase();
@@ -323,9 +266,9 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
               return null;
             }
 
-            // Calculate daily rewards from APR
-            const dailyRewardsUSD = metrics.depositedValueUSD && metrics.apy > 0
-              ? (metrics.depositedValueUSD * (metrics.apy / 100)) / 365
+            const rewardApr = metrics.subgraphMetrics.rewardApr ?? 0;
+            const dailyRewardsUSD = metrics.depositedValueUSD && rewardApr > 0
+              ? (metrics.depositedValueUSD * (rewardApr / 100)) / 365
               : 0;
 
             // Get DEX name
@@ -377,35 +320,16 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
 
                   {/* Status Column - Liquidity Distribution Bar with Price Position */}
                   <div className="flex items-center justify-center">
-                    {hasPosition && position.hasData ? (
-                      <div className="w-full max-w-[120px]">
-                        <div className="h-4 bg-gray-800/50 rounded-full overflow-visible relative">
-                          {/* Green bar showing active range - matching PositionVisualizationCard */}
-                          <div
-                            className="h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 absolute left-0 rounded-full"
-                            style={{
-                              width: '100%'
-                            }}
-                          />
-                          {/* Red line showing current price position */}
-                          <div
-                            className="absolute top-0 w-1 h-full bg-red-400 rounded-full"
-                            style={{
-                              left: `${position.pricePosition}%`,
-                              boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)',
-                              transform: 'translateX(-50%)'
-                            }}
-                          />
-                        </div>
+                    {hasPosition ? (
+                      <div className="w-full max-w-[140px]">
+                        <RangeBar position={position} compact tokenY={vault.tokenY} />
                       </div>
                     ) : hasPosition ? (
-                      <div className="w-full max-w-[120px]">
-                        <div className="h-4 bg-gray-800/50 rounded-full overflow-hidden relative">
+                      <div className="w-full max-w-[140px]">
+                        <div className="h-3 bg-gray-800/50 rounded-full overflow-hidden relative">
                           <div
                             className="h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 absolute left-0 rounded-full"
-                            style={{
-                              width: '100%'
-                            }}
+                            style={{ width: '100%' }}
                           />
                         </div>
                       </div>
@@ -436,10 +360,21 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                   </div>
 
                   {/* APR Column */}
-                  <div className="flex items-center justify-center gap-2">
+                  <div className="flex flex-col items-center justify-center gap-1.5">
                     <span className="text-arca-green font-semibold text-base">
-                      {metrics.apy > 0 ? `${metrics.apy.toFixed(2)}%` : '-'}
+                      {(metrics.subgraphMetrics.rewardApr ?? 0) > 0 ? `${metrics.subgraphMetrics.rewardApr!.toFixed(2)}%` : '-'}
                     </span>
+                    {/* vs HODL bubble — hidden for now, re-enable when ready
+                    {metrics.subgraphMetrics.vsHodl !== null && (
+                      <span className={`inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight whitespace-nowrap ${
+                        metrics.subgraphMetrics.vsHodl >= 0
+                          ? 'bg-arca-green/10 border-arca-green/25 text-arca-green'
+                          : 'bg-red-500/10 border-red-500/25 text-red-400'
+                      }`}>
+                        vs HODL&nbsp;<span className="opacity-80">{metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%</span>
+                      </span>
+                    )}
+                    */}
                   </div>
 
                   {/* Withdraw Status Column */}
@@ -629,10 +564,21 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                   </div>
 
                   {/* APR Column - Mobile */}
-                  <div className="flex items-center justify-center">
+                  <div className="flex flex-col items-center justify-center gap-1">
                     <span className="text-arca-green font-semibold text-sm">
-                      {metrics.apy > 0 ? `${metrics.apy.toFixed(1)}%` : '-'}
+                      {(metrics.subgraphMetrics.rewardApr ?? 0) > 0 ? `${metrics.subgraphMetrics.rewardApr!.toFixed(1)}%` : '-'}
                     </span>
+                    {/* vs HODL bubble — hidden for now, re-enable when ready
+                    {metrics.subgraphMetrics.vsHodl !== null && (
+                      <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight ${
+                        metrics.subgraphMetrics.vsHodl >= 0
+                          ? 'bg-arca-green/10 border-arca-green/25 text-arca-green'
+                          : 'bg-red-500/10 border-red-500/25 text-red-400'
+                      }`}>
+                        {metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%
+                      </span>
+                    )}
+                    */}
                   </div>
                 </div>
               </div>

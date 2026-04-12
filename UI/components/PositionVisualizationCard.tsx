@@ -8,6 +8,8 @@ import { usePrices } from '@/contexts/PriceContext'
 import { getTokenLogo, getTokenAddress, getTokenDecimals } from '@/lib/tokenHelpers'
 import { isStablecoin } from '@/lib/tokenUtils'
 import { parseAbi } from 'viem'
+import { useVaultPositionData } from '@/hooks/useVaultPositionData'
+import { RangeBar } from './RangeBar'
 
 // Minimal ABI for getLastRebalance
 const REBALANCE_ABI = [
@@ -58,12 +60,19 @@ export default function PositionVisualizationCard({
   clpoolAddress,
   name,
   tier,
-  userAddress,
   tokenX = 'S',
   tokenY = 'USDC'
 }: PositionVisualizationCardProps) {
-  const config = { vaultAddress, stratAddress, name, tier };
-  const { prices } = usePrices();
+
+  const positionData = useVaultPositionData({
+    vaultAddress,
+    stratAddress,
+    lbBookAddress,
+    clpoolAddress,
+    name,
+    tokenX,
+    tokenY,
+  });
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -78,8 +87,6 @@ export default function PositionVisualizationCard({
   const isMetropolis = name.includes('Metropolis');
   const isShadow = name.includes('Shadow');
   const isWETHVault = name.includes('WETH');
-  const isWSWETHVault = name.includes('WS') && isWETHVault; // WS-WETH pair
-  const isUSDCWETHVault = name.includes('USDC') && isWETHVault; // USDC-WETH pair
   
   // Get active ID from LB Book contract (for Metropolis)
   const { data: activeIdReal } = useReadContract({
@@ -135,7 +142,7 @@ export default function PositionVisualizationCard({
   });
 
   // Get active tick from CLPool slot0 (for Shadow)
-  const { data: slot0Data, error: slot0Error, isLoading: slot0Loading } = useReadContract({
+  const { data: slot0Data } = useReadContract({
     address: clpoolAddress as `0x${string}`,
     abi: CL_POOL_ABI,
     functionName: 'slot0',
@@ -145,7 +152,7 @@ export default function PositionVisualizationCard({
   });
 
   // Get range from Shadow strategy contract
-  const { data: rangeDataShadow, error: rangeError, isLoading: rangeLoading } = useReadContract({
+  const { data: rangeDataShadow } = useReadContract({
     address: stratAddress as `0x${string}`,
     abi: SHADOW_STRAT_ABI,
     functionName: 'getRange',
@@ -246,7 +253,7 @@ export default function PositionVisualizationCard({
         if (isMounted) {
           setShadowLastRebalance(block.timestamp);
         }
-      } catch (err) {
+      } catch {
         // Silently handle error - not critical for UI
       }
     };
@@ -315,23 +322,8 @@ export default function PositionVisualizationCard({
 
   // Handle different data types: Metro uses bigint, Shadow uses int24 (number, can be negative)
   const [lowRange, upperRange] = rangeData as readonly [bigint | number, bigint | number];
-  const activeIdNum = Number(activeId);
   const lowRangeNum = Number(lowRange);
   const upperRangeNum = Number(upperRange);
-
-  // Calculate extended range (low-50, upper+50) - handles negative values
-  const extendedLow = lowRangeNum - 50;
-  const extendedUpper = upperRangeNum + 50;
-  const totalRange = extendedUpper - extendedLow;
-
-  // Calculate positions as percentages
-  const activeIdPosition = ((activeIdNum - extendedLow) / totalRange) * 100;
-  const lowRangePosition = ((lowRangeNum - extendedLow) / totalRange) * 100;
-  const upperRangePosition = ((upperRangeNum - extendedLow) / totalRange) * 100;
-  const rangeWidth = upperRangePosition - lowRangePosition;
-
-  // Check if position is in range
-  const isInRange = activeIdNum >= lowRangeNum && activeIdNum <= upperRangeNum;
 
   // Enhanced view for Shadow vaults
   if (isShadow) {
@@ -353,15 +345,6 @@ export default function PositionVisualizationCard({
               <p className="text-xs text-gray-400">{name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
-              isInRange 
-                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                : 'bg-red-500/20 text-red-400 border border-red-500/30'
-            }`}>
-              {isInRange ? 'In Range' : 'Out of Range'}
-            </div>
-          </div>
         </div>
 
         {/* Price Information Grid */}
@@ -372,35 +355,20 @@ export default function PositionVisualizationCard({
               {formatPrice(shadowActivePrice)}
             </div>
           </div>
-          
+
           <div className="flex-1 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded p-2 min-w-0">
             <div className="text-xs text-purple-400 mb-1 truncate">Range Width</div>
             <div className="text-base font-bold text-white truncate">{upperRangeNum - lowRangeNum}</div>
           </div>
         </div>
 
-        {/* Active Range Display */}
+        {/* Range Bar */}
         <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-sm font-semibold text-white">Liquidity Distribution</span>
-            <span className={`text-xs px-3 py-1.5 rounded font-medium whitespace-nowrap ${
-              isInRange ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-            }`}>
-              {isInRange ? 'Earning' : 'Position Inactive'}
-            </span>
-          </div>
-          
-          <div className="space-y-3">
-            {/* Legend */}
-            <div className="flex items-center justify-center gap-4 text-xs mb-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-arca-green/60 rounded"></div>
-                <span className="text-gray-400">Active LP</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-0.5 h-3 bg-red-400"></div>
-                <span className="text-gray-400">Active Price</span>
-              </div>
+          <RangeBar position={positionData} tokenY={tokenY} compact />
+          <div className="flex items-center justify-between text-xs mt-3">
+            <div className="flex flex-col items-start">
+              <span className="text-gray-500 mb-0.5">Lower Price</span>
+              <span className="text-white font-semibold">{formatPrice(shadowLowerPrice)}</span>
             </div>
 
             {/* Range Bar - Full width for active position */}
@@ -477,15 +445,6 @@ export default function PositionVisualizationCard({
             <p className="text-xs text-gray-400">{name}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
-            isInRange 
-              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-              : 'bg-red-500/20 text-red-400 border border-red-500/30'
-          }`}>
-            {isInRange ? 'In Range' : 'Out of Range'}
-          </div>
-        </div>
       </div>
 
       {/* Price Information Grid */}
@@ -496,35 +455,20 @@ export default function PositionVisualizationCard({
             {formatPrice(activePrice)}
           </div>
         </div>
-        
+
         <div className="flex-1 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20 rounded p-2 min-w-0">
           <div className="text-xs text-cyan-400 mb-1 truncate">Bin Range</div>
           <div className="text-base font-bold text-white truncate">{(upperRangeNum - lowRangeNum).toLocaleString()}</div>
         </div>
       </div>
 
-      {/* Active Range Display */}
+      {/* Range Bar */}
       <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-sm font-semibold text-white">Liquidity Distribution</span>
-          <span className={`text-xs px-3 py-1.5 rounded font-medium whitespace-nowrap ${
-            isInRange ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-          }`}>
-            {isInRange ? 'Earning' : 'Position Inactive'}
-          </span>
-        </div>
-        
-        <div className="space-y-3">
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-4 text-xs mb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-arca-green/60 rounded"></div>
-              <span className="text-gray-400">Active LP</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-0.5 h-3 bg-red-400"></div>
-              <span className="text-gray-400">Active Price</span>
-            </div>
+        <RangeBar position={positionData} tokenY={tokenY} compact />
+        <div className="flex items-center justify-between text-xs mt-3">
+          <div className="flex flex-col items-start">
+            <span className="text-gray-500 mb-0.5">Lower Price</span>
+            <span className="text-white font-semibold">{formatPrice(lowerPrice)}</span>
           </div>
 
           {/* Range Bar - Full width for active position */}

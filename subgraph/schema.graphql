@@ -1,0 +1,98 @@
+# Live USD price per token — updated whenever a stable-pair vault rebalances.
+# e.g. wS/USDC vault sets TokenPrice[wS]; USDC/WETH vault sets TokenPrice[WETH].
+# Volatile-volatile pairs (WETH/wS) read from here instead of deriving their own.
+type TokenPrice @entity {
+  id: Bytes!            # token address (lowercase)
+  priceUsd: BigDecimal! # USD price at last stable-pair update
+  lastUpdated: BigInt!
+}
+
+type Vault @entity {
+  id: Bytes!                    # vault address
+  strategy: Bytes!              # strategy address
+  protocol: String!             # "shadow" or "metropolis"
+  rewardEvents: [RewardEvent!]! @derivedFrom(field: "vault")
+  snapshots: [Snapshot!]!       @derivedFrom(field: "vault")
+  ilSnapshot: ILSnapshot        @derivedFrom(field: "vault")
+}
+
+type RewardEvent @entity(immutable: true) {
+  id: Bytes!                    # tx hash + log index
+  vault: Vault!
+  strategy: Bytes!
+  rewardToken: Bytes!
+  amount: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+# One immutable record per rebalance — full history for charting / debugging
+type Snapshot @entity(immutable: true) {
+  id: Bytes!                    # vaultAddress + txHash + logIndex
+  vault: Vault!
+  amountXPerShare: BigInt!
+  amountYPerShare: BigInt!
+  totalBalanceX: BigInt!
+  totalBalanceY: BigInt!
+  tickLower: Int!
+  tickUpper: Int!
+  sqrtPriceX96: BigInt!         # Shadow: from slot0; Metro: 0
+  lbPrice: BigInt!              # Metro: getPriceFromId scaled by 2^128; Shadow: 0
+  priceXUsd: BigDecimal         # USD price of tokenX at this rebalance (null if not derivable yet)
+  priceYUsd: BigDecimal         # USD price of tokenY at this rebalance (null if not derivable yet)
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+# Mutable — one row per vault, updated each rebalance + each reward event.
+# All data needed for fee_apr, reward_apr, IL, vs-HODL:
+#
+#   pxInY = (sqrtPriceX96 / 2^96)^2 * 10^(dX-dY)   [Shadow]
+#         = lbPrice / 2^128 * 10^(dX-dY)             [Metro]
+#
+#   ppsY         = amtX * pxInY + amtY
+#   vault_return = ppsY_latest / ppsY_first - 1
+#   fee_apr      = vault_return * (365 / days) * 100
+#
+#   k            = pxInY_latest / pxInY_first
+#   hodl_return  = 0.5 * (k - 1)          (Y return in Y-terms = 0)
+#   il           = ((1 + vault_return) / (1 + hodl_return) - 1) * 100
+#   vs_hodl      = (vault_return - hodl_return) * 100
+#
+# For stable-Y vaults (USDC/USSD): Y-terms = USD exactly.
+# For volatile-Y vaults: accurate relative to holding Y.
+type UserHarvestEvent @entity(immutable: true) {
+  id: Bytes!                    # tx hash + log index
+  vault: Vault!
+  user: Bytes!                  # user wallet address (indexed for filtering)
+  token: Bytes!                 # reward token address
+  amount: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+type ILSnapshot @entity {
+  id: Bytes!                    # vaultAddress
+  vault: Vault!
+  firstAmountXPerShare: BigInt!
+  firstAmountYPerShare: BigInt!
+  firstTimestamp: BigInt!
+  latestAmountXPerShare: BigInt!
+  latestAmountYPerShare: BigInt!
+  latestTimestamp: BigInt!
+  snapshotCount: BigInt!
+  totalBalanceXSum: BigInt!
+  totalBalanceYSum: BigInt!
+  totalRewardAmount: BigInt!
+  firstSqrtPriceX96: BigInt!
+  latestSqrtPriceX96: BigInt!
+  firstLBPrice: BigInt!
+  latestLBPrice: BigInt!
+  # vault_tracker USD PPS method — stored at the moment the IL baseline is set.
+  # Null until a stable-pair vault has rebalanced and seeded TokenPrice for these tokens.
+  firstPriceXUsd: BigDecimal
+  firstPriceYUsd: BigDecimal
+}

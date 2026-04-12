@@ -4,6 +4,6 @@ interface BackgroundPatternProps {
   className?: string;
 }
 
-export function BackgroundPattern({ className = "" }: BackgroundPatternProps) {
+export function BackgroundPattern(_props: BackgroundPatternProps) {
   return null;
 }
