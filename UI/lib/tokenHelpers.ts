@@ -1,4 +1,4 @@
-431import { getToken, getTokenOrThrow } from './tokenRegistry';
+import { getToken, getTokenOrThrow } from './tokenRegistry';
 
 /**
  * Get token contract address by token symbol.
