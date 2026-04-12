@@ -123,6 +123,20 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     aprLoading = false;
   }
 
+  if (subgraphMetrics.isLoading) {
+    // Still fetching — show loading state
+    finalAPY = 0;
+    aprLoading = true;
+  } else if (subgraphMetrics.rewardApr !== null) {
+    // Use rewards-only APR (fee APR excluded — unreliable during withdrawal periods)
+    finalAPY = Math.max(0, subgraphMetrics.rewardApr);
+    aprLoading = false;
+  } else {
+    // No subgraph data yet (vault not indexed / insufficient snapshots) → show 0
+    finalAPY = 0;
+    aprLoading = false;
+  }
+
   // Subgraph is the single APR source — never show the DeFi Llama 30d average.
   const apy30dMean = null;
 
