@@ -11,6 +11,76 @@ import {
   BigDecimal,
 } from "@graphprotocol/graph-ts";
 
+export class TokenPrice extends Entity {
+  constructor(id: Bytes) {
+    super();
+    this.set("id", Value.fromBytes(id));
+  }
+
+  save(): void {
+    let id = this.get("id");
+    assert(id != null, "Cannot save TokenPrice entity without an ID");
+    if (id) {
+      assert(
+        id.kind == ValueKind.BYTES,
+        `Entities of type TokenPrice must have an ID of type Bytes but the id '${id.displayData()}' is of type ${id.displayKind()}`,
+      );
+      store.set("TokenPrice", id.toBytes().toHexString(), this);
+    }
+  }
+
+  static loadInBlock(id: Bytes): TokenPrice | null {
+    return changetype<TokenPrice | null>(
+      store.get_in_block("TokenPrice", id.toHexString()),
+    );
+  }
+
+  static load(id: Bytes): TokenPrice | null {
+    return changetype<TokenPrice | null>(
+      store.get("TokenPrice", id.toHexString()),
+    );
+  }
+
+  get id(): Bytes {
+    let value = this.get("id");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set id(value: Bytes) {
+    this.set("id", Value.fromBytes(value));
+  }
+
+  get priceUsd(): BigDecimal {
+    let value = this.get("priceUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set priceUsd(value: BigDecimal) {
+    this.set("priceUsd", Value.fromBigDecimal(value));
+  }
+
+  get lastUpdated(): BigInt {
+    let value = this.get("lastUpdated");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set lastUpdated(value: BigInt) {
+    this.set("lastUpdated", Value.fromBigInt(value));
+  }
+}
+
 export class Vault extends Entity {
   constructor(id: Bytes) {
     super();
@@ -394,6 +464,40 @@ export class Snapshot extends Entity {
 
   set lbPrice(value: BigInt) {
     this.set("lbPrice", Value.fromBigInt(value));
+  }
+
+  get priceXUsd(): BigDecimal | null {
+    let value = this.get("priceXUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set priceXUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("priceXUsd");
+    } else {
+      this.set("priceXUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get priceYUsd(): BigDecimal | null {
+    let value = this.get("priceYUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set priceYUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("priceYUsd");
+    } else {
+      this.set("priceYUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
   }
 
   get timestamp(): BigInt {
@@ -807,6 +911,40 @@ export class ILSnapshot extends Entity {
 
   set latestLBPrice(value: BigInt) {
     this.set("latestLBPrice", Value.fromBigInt(value));
+  }
+
+  get firstPriceXUsd(): BigDecimal | null {
+    let value = this.get("firstPriceXUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set firstPriceXUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("firstPriceXUsd");
+    } else {
+      this.set("firstPriceXUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get firstPriceYUsd(): BigDecimal | null {
+    let value = this.get("firstPriceYUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set firstPriceYUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("firstPriceYUsd");
+    } else {
+      this.set("firstPriceYUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
   }
 }
 

@@ -1,3 +1,12 @@
+# Live USD price per token — updated whenever a stable-pair vault rebalances.
+# e.g. wS/USDC vault sets TokenPrice[wS]; USDC/WETH vault sets TokenPrice[WETH].
+# Volatile-volatile pairs (WETH/wS) read from here instead of deriving their own.
+type TokenPrice @entity {
+  id: Bytes!            # token address (lowercase)
+  priceUsd: BigDecimal! # USD price at last stable-pair update
+  lastUpdated: BigInt!
+}
+
 type Vault @entity {
   id: Bytes!                    # vault address
   strategy: Bytes!              # strategy address
@@ -30,6 +39,8 @@ type Snapshot @entity(immutable: true) {
   tickUpper: Int!
   sqrtPriceX96: BigInt!         # Shadow: from slot0; Metro: 0
   lbPrice: BigInt!              # Metro: getPriceFromId scaled by 2^128; Shadow: 0
+  priceXUsd: BigDecimal         # USD price of tokenX at this rebalance (null if not derivable yet)
+  priceYUsd: BigDecimal         # USD price of tokenY at this rebalance (null if not derivable yet)
   timestamp: BigInt!
   blockNumber: BigInt!
   txHash: Bytes!
@@ -80,4 +91,8 @@ type ILSnapshot @entity {
   latestSqrtPriceX96: BigInt!
   firstLBPrice: BigInt!
   latestLBPrice: BigInt!
+  # vault_tracker USD PPS method — stored at the moment the IL baseline is set.
+  # Null until a stable-pair vault has rebalanced and seeded TokenPrice for these tokens.
+  firstPriceXUsd: BigDecimal
+  firstPriceYUsd: BigDecimal
 }

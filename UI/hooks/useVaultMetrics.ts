@@ -77,9 +77,9 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     // Still fetching — show loading state
     finalAPY = 0;
     aprLoading = true;
-  } else if (subgraphMetrics.totalApr !== null) {
-    // Subgraph has data → use it
-    finalAPY = Math.max(0, subgraphMetrics.totalApr);
+  } else if (subgraphMetrics.rewardApr !== null) {
+    // Use rewards-only APR (fee APR excluded — unreliable during withdrawal periods)
+    finalAPY = Math.max(0, subgraphMetrics.rewardApr);
     aprLoading = false;
   } else {
     // No subgraph data yet (vault not indexed / insufficient snapshots) → show 0
