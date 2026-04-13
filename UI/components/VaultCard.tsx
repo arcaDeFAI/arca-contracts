@@ -13,6 +13,7 @@ import { TokenPairLogos } from './TokenPairLogos';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { Skeleton } from './Skeleton';
 import { useVaultPositionData } from '@/hooks/useVaultPositionData';
+import { RangeBar } from './RangeBar';
 
 interface VaultCardProps {
   config: VaultConfig;
@@ -52,6 +53,8 @@ export function VaultCard({ config }: VaultCardProps) {
     lbBookAddress: config.lbBookAddress,
     clpoolAddress: config.clpoolAddress,
     name,
+    tokenX,
+    tokenY,
   });
 
   // Fetch token balances dynamically based on vault tokens
@@ -189,24 +192,22 @@ export function VaultCard({ config }: VaultCardProps) {
             </div>
 
             <div className="pt-2">
-              <div className="flex justify-between items-center mb-1.5">
+              <div className="flex justify-between items-center mb-1">
                 <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Range</span>
-                {activePercentage > 0 && (
-                  <span className="text-gray-500 text-xs">{activePercentage.toFixed(0)}% active</span>
+                {activePercentage !== undefined && activePercentage > 0 && (
+                  <span className="text-gray-400 text-[10px] font-medium">{activePercentage.toFixed(0)}% active liquidity</span>
                 )}
               </div>
-              <div className="h-3 bg-gray-800/50 rounded-full overflow-visible relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 rounded-full" />
-                {position.hasData && (
-                  <div
-                    className="absolute top-0 w-1 h-full bg-red-400 rounded-full"
-                    style={{
-                      left: `${position.pricePosition}%`,
-                      boxShadow: '0 0 8px rgba(248, 113, 113, 0.8)',
-                      transform: 'translateX(-50%)',
-                    }}
-                  />
-                )}
+              <RangeBar position={position} tokenY={tokenY} compact />
+              <div className="flex items-center gap-3 mt-1.5">
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2 bg-arca-green/60 rounded-sm" />
+                  <span className="text-[9px] text-gray-500">LP Range</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-[3px] h-2.5 bg-red-400 rounded-full" />
+                  <span className="text-[9px] text-gray-500">Current Price</span>
+                </div>
               </div>
             </div>
           </div>
