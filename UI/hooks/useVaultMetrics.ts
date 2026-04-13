@@ -2,14 +2,8 @@
 
 import { useVaultData } from './useVaultData';
 import { useDashboardData } from './useDashboardData';
-import { useTokenPrices } from './useAPYCalculation';
-import { useMetroAPY } from './useMetroAPY';
-import { useShadowAPY } from './useShadowAPY';
-import { useDefiLlamaAPYAdjusted } from './useDefiLlamaAPYAdjusted';
-import { useShadowRewardForwardedAPY } from './useShadowRewardForwardedAPY';
-import { useSubgraphAPR } from './useSubgraphAPR';
-import { CONTRACTS } from '@/lib/contracts';
-import { getTokenOrThrow } from '@/lib/tokenRegistry';
+import { usePrices } from '@/contexts/PriceContext';
+import { useSubgraphMetrics } from './useSubgraphMetrics';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 
@@ -60,42 +54,6 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   // Subgraph metrics — single source of truth for fee APR + reward APR
   const subgraphMetrics = useSubgraphMetrics(config);
 
-  // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided
-  const shadowAPYAdjusted = useDefiLlamaAPYAdjusted(
-    stratAddress,
-    config.poolSymbol || 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' // Default to WS-USDC pool ID if not specified
-  );
-
-  // Fallback to old Shadow APY calculation (kept for backwards compatibility)
-  const shadowAPYOld = useShadowAPY(
-    stratAddress,
-    (config as any).rewardsAddress || CONTRACTS.SHADOW_REWARDS,
-    getTokenOrThrow('SHADOW').address!,
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
-  // Calculate Forwarded APY natively via RPC (for Shadow vaults without a DeFi Llama pool)
-  const shadowAPYForwarded = useShadowRewardForwardedAPY(
-    stratAddress,
-    getTokenOrThrow('SHADOW').address!,
-    config.vaultAddress,
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
-  // Use new DeFi Llama APY if available, otherwise route to the native Forwarded APY
-  const shadowAPY = config.poolSymbol 
-    ? (!shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld)
-    : shadowAPYForwarded;
-
-  // Goldsky Subgraph APR — only enabled for vaults that opt in via useSubgraphAPR config flag
-  const subgraphAPR = useSubgraphAPR(
-    config.useSubgraphAPR ? config.vaultAddress : '',
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
   // Calculate activePercentage for Shadow APY adjustment (active vs idle liquidity ratio)
   const activePercentage = (vaultData.balances && vaultData.idleBalances) ? (() => {
     const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
@@ -109,31 +67,11 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     return totalUSD > 0 ? ((totalUSD - idleUSD) / totalUSD) * 100 : 0;
   })() : 0;
 
-  // Final APY/APR — clear calculation path per vault type
+  // Final APY/APR — subgraph metrics are the single source of truth.
+  // Show 0 / loading state while the subgraph is syncing; never fall back to DeFi Llama or RPC
+  // estimates so users can clearly tell when real data is available.
   let finalAPY: number;
   let aprLoading: boolean;
-
-  if (!isShadowVault) {
-    // Metropolis vault: use on-chain METRO reward rate
-    finalAPY = metroAPY.apy;
-    aprLoading = metroAPY.isLoading;
-  } else if (config.useSubgraphAPR) {
-    // Shadow vault with Subgraph APR: prefer Subgraph, fall back to RPC log scanning
-    if (!subgraphAPR.isLoading && subgraphAPR.apr > 0) {
-      finalAPY = subgraphAPR.apr;
-    } else {
-      finalAPY = shadowAPYForwarded.apy;
-    }
-    aprLoading = subgraphAPR.isLoading && shadowAPYForwarded.isLoading;
-  } else if (config.poolSymbol) {
-    // Shadow vault with DeFi Llama pool ID: scale by active liquidity percentage
-    finalAPY = shadowAPY.apy * (activePercentage / 100);
-    aprLoading = shadowAPY.isLoading;
-  } else {
-    // Shadow vault without pool ID: use forwarded APY via RPC log scanning
-    finalAPY = shadowAPY.apy;
-    aprLoading = shadowAPY.isLoading;
-  }
 
   if (subgraphMetrics.isLoading) {
     // Still fetching — show loading state
