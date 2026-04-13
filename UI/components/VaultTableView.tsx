@@ -364,6 +364,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                     <span className="text-arca-green font-semibold text-base">
                       {(metrics.subgraphMetrics.rewardApr ?? 0) > 0 ? `${metrics.subgraphMetrics.rewardApr!.toFixed(2)}%` : '-'}
                     </span>
+                    {/* vs HODL bubble — hidden for now, re-enable when ready
                     {metrics.subgraphMetrics.vsHodl !== null && (
                       <span className={`inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight whitespace-nowrap ${
                         metrics.subgraphMetrics.vsHodl >= 0
@@ -373,6 +374,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         vs HODL&nbsp;<span className="opacity-80">{metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%</span>
                       </span>
                     )}
+                    */}
                   </div>
 
                   {/* Withdraw Status Column */}
@@ -566,6 +568,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                     <span className="text-arca-green font-semibold text-sm">
                       {(metrics.subgraphMetrics.rewardApr ?? 0) > 0 ? `${metrics.subgraphMetrics.rewardApr!.toFixed(1)}%` : '-'}
                     </span>
+                    {/* vs HODL bubble — hidden for now, re-enable when ready
                     {metrics.subgraphMetrics.vsHodl !== null && (
                       <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight ${
                         metrics.subgraphMetrics.vsHodl >= 0
@@ -575,6 +578,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         {metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%
                       </span>
                     )}
+                    */}
                   </div>
                 </div>
               </div>

@@ -14,6 +14,8 @@ import { type VaultConfig } from '@/lib/vaultConfigs';
 import { Skeleton } from './Skeleton';
 import { useVaultPositionData } from '@/hooks/useVaultPositionData';
 import { RangeBar } from './RangeBar';
+import { Tooltip } from './Tooltip';
+import { getAPYCalculationExplanation } from '@/hooks/useSubgraphMetrics';
 
 interface VaultCardProps {
   config: VaultConfig;
@@ -124,13 +126,16 @@ export function VaultCard({ config }: VaultCardProps) {
           {/* Main Stats */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">APR</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">APR</span>
+                <Tooltip text={getAPYCalculationExplanation()} width="sm" ariaLabel="APR calculation explanation" />
+              </div>
               <div className="text-2xl font-bold text-arca-green tracking-tight">
                 {isLoading || aprLoading ? <Skeleton width={60} height={24} className="mt-1" /> : formatPercentage(rewardApr ?? 0)}
               </div>
+              {/* vs HODL bubble — hidden for now, re-enable when ready
               {vsHodl !== null && (
                 <div className="relative group/iltooltip mt-2">
-                  {/* vs HODL pill + tooltip */}
                   <div className="flex items-center gap-1.5 flex-nowrap">
                     {vsHodl !== null && (
                       <span className={`inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight whitespace-nowrap ${
@@ -143,8 +148,6 @@ export function VaultCard({ config }: VaultCardProps) {
                     )}
                     <span className="text-gray-600 text-[11px] cursor-default select-none leading-none">ⓘ</span>
                   </div>
-
-                  {/* Tooltip */}
                   <div className="absolute bottom-full left-0 mb-2 z-50 hidden group-hover/iltooltip:block w-56">
                     <div className="bg-[#0e1117] border border-gray-700/60 rounded-xl p-3 shadow-2xl text-xs space-y-2">
                       <div className="flex items-center justify-between">
@@ -166,6 +169,7 @@ export function VaultCard({ config }: VaultCardProps) {
                   </div>
                 </div>
               )}
+              */}
             </div>
 
             <div>
@@ -196,18 +200,18 @@ export function VaultCard({ config }: VaultCardProps) {
               <div className="flex justify-between items-center mb-1">
                 <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Range</span>
                 {activePercentage !== undefined && activePercentage > 0 && (
-                  <span className="text-gray-400 text-[10px] font-medium">{activePercentage.toFixed(0)}% active liquidity</span>
+                  <span className="text-white text-[11px] font-medium">{activePercentage.toFixed(0)}% active liquidity</span>
                 )}
               </div>
               <RangeBar position={position} tokenY={tokenY} compact />
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="flex items-center gap-1">
                   <div className="w-2.5 h-2 bg-arca-green/60 rounded-sm" />
-                  <span className="text-[9px] text-gray-500">LP Range</span>
+                  <span className="text-[10px] text-white/70">LP Range</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <div className="w-[3px] h-2.5 bg-red-400 rounded-full" />
-                  <span className="text-[9px] text-gray-500">Current Price</span>
+                  <span className="text-[10px] text-white/70">Current Price</span>
                 </div>
               </div>
             </div>
