@@ -2,7 +2,7 @@
 
 import { useVaultData } from './useVaultData';
 import { useDashboardData } from './useDashboardData';
-import { useTokenPrices } from './useAPYCalculation';
+import { usePrices } from '@/contexts/PriceContext';
 import { useSubgraphMetrics } from './useSubgraphMetrics';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { type VaultConfig } from '@/lib/vaultConfigs';
@@ -18,7 +18,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   // Fetch all data
   const vaultData = useVaultData(config, userAddress);
   const dashboardData = useDashboardData(config, userAddress, vaultData.sharePercentage);
-  const { prices, isLoading: pricesLoading } = useTokenPrices();
+  const { prices, isLoading: pricesLoading } = usePrices();
   const sonicPrice = prices?.sonic || 0.17;
 
   // Calculate active vs reserved liquidity

@@ -15,7 +15,7 @@ import { PortfolioAllocationCard } from './PortfolioAllocationCard'
 import { Tooltip } from './Tooltip'
 import { StatsCard } from './StatsCard'
 import { useDashboardAggregatedData } from '@/hooks/useDashboardAggregatedData'
-import { getAPYCalculationExplanation } from '@/hooks/useShadowAPYAdjusted'
+import { getAPYCalculationExplanation } from '@/hooks/useSubgraphMetrics'
 
 
 
