@@ -129,8 +129,8 @@ export function useVaultPositionData({
 
     const lower   = Number(rangeData[0]);
     const upper   = Number(rangeData[1]);
-    const current = Number(activeIdReal as bigint);
-    const binStep = binStepData !== undefined ? Number(binStepData as bigint) : 20; // default 20bp
+    const current = Number(activeIdReal);
+    const binStep = binStepData !== undefined ? Number(binStepData) : 20; // default 20bp
 
     const positions = computePositions(lower, upper, current);
     return {
