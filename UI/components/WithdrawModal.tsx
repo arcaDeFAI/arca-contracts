@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from 'wagmi';
 import { METRO_VAULT_ABI } from '@/lib/typechain';
-import { formatTokenAmount, parseTokenAmount, formatShares, parseShares, getShareDecimals } from '@/lib/utils';
+import { formatTokenAmount, formatShares, parseShares, getShareDecimals } from '@/lib/utils';
 import { formatUnits } from 'viem';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 

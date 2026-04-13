@@ -4,9 +4,7 @@ import { useReadContract, usePublicClient } from 'wagmi'
 import { useState, useEffect } from 'react'
 import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain'
 import { TokenPairLogos } from './TokenPairLogos'
-import { usePrices } from '@/contexts/PriceContext'
 import { getTokenLogo, getTokenAddress, getTokenDecimals } from '@/lib/tokenHelpers'
-import { isStablecoin } from '@/lib/tokenUtils'
 import { parseAbi } from 'viem'
 import { useVaultPositionData } from '@/hooks/useVaultPositionData'
 import { RangeBar } from './RangeBar'
@@ -174,7 +172,7 @@ export default function PositionVisualizationCard({
   const tokenYDecimals = getTokenDecimals(tokenY);
 
   // Convert Metro prices from raw to human-readable
-  const convertMetroPrice = (raw: any): number | null => {
+  const convertMetroPrice = (raw: bigint | undefined): number | null => {
     if (!raw) return null;
     return Number(raw) / Math.pow(2, 128) * Math.pow(10, tokenXDecimals - tokenYDecimals);
   };
@@ -204,8 +202,6 @@ export default function PositionVisualizationCard({
   const shadowUpperPrice = shadowRangeData ? tickToPrice(shadowRangeData[1]) : null;
 
   // Formatting helpers — use tokenRegistry to avoid hardcoded symbol lists
-  const isUSDPair = isStablecoin(tokenX) || isStablecoin(tokenY);
-  const isStablePair = isStablecoin(tokenX) && isStablecoin(tokenY);
   const formatPrice = (price: number | null): string => {
     if (price === null) return '...';
     // Always include the unit {tokenY}/{tokenX} in the main string to ensure consistent bold styling
@@ -370,42 +366,9 @@ export default function PositionVisualizationCard({
               <span className="text-gray-500 mb-0.5">Lower Price</span>
               <span className="text-white font-semibold">{formatPrice(shadowLowerPrice)}</span>
             </div>
-
-            {/* Range Bar - Full width for active position */}
-            <div className="relative h-2 bg-gray-800/50 rounded-full overflow-hidden">
-              {/* Active range takes full width */}
-              <div 
-                className="absolute top-0 h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60"
-                style={{
-                  left: '0%',
-                  width: '100%'
-                }}
-              />
-              {/* Current price indicator - positioned relative to range */}
-              <div 
-                className="absolute top-0 w-1 h-full bg-red-400"
-                style={{
-                  left: `${((activeIdNum - lowRangeNum) / (upperRangeNum - lowRangeNum)) * 100}%`,
-                  boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)'
-                }}
-              />
-            </div>
-
-            {/* Range Labels */}
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex flex-col items-start">
-                <span className="text-gray-500 mb-0.5">Lower Price</span>
-                <span className="text-white font-semibold">
-                  {formatPrice(shadowLowerPrice)}
-                </span>
-              </div>
-              
-              <div className="flex flex-col items-end">
-                <span className="text-gray-500 mb-0.5">Upper Price</span>
-                <span className="text-white font-semibold">
-                  {formatPrice(shadowUpperPrice)}
-                </span>
-              </div>
+            <div className="flex flex-col items-end">
+              <span className="text-gray-500 mb-0.5">Upper Price</span>
+              <span className="text-white font-semibold">{formatPrice(shadowUpperPrice)}</span>
             </div>
           </div>
         </div>
@@ -470,42 +433,9 @@ export default function PositionVisualizationCard({
             <span className="text-gray-500 mb-0.5">Lower Price</span>
             <span className="text-white font-semibold">{formatPrice(lowerPrice)}</span>
           </div>
-
-          {/* Range Bar - Full width for active position */}
-          <div className="relative h-2 bg-gray-800/50 rounded-full overflow-hidden">
-            {/* Active range takes full width */}
-            <div 
-              className="absolute top-0 h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60"
-              style={{
-                left: '0%',
-                width: '100%'
-              }}
-            />
-            {/* Current price indicator - positioned relative to range */}
-            <div 
-              className="absolute top-0 w-1 h-full bg-red-400"
-              style={{
-                left: `${((activeIdNum - lowRangeNum) / (upperRangeNum - lowRangeNum)) * 100}%`,
-                boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)'
-              }}
-            />
-          </div>
-
-          {/* Range Labels */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex flex-col items-start">
-              <span className="text-gray-500 mb-0.5">Lower Price</span>
-              <span className="text-white font-semibold">
-                {formatPrice(lowerPrice)}
-              </span>
-            </div>
-            
-            <div className="flex flex-col items-end">
-              <span className="text-gray-500 mb-0.5">Upper Price</span>
-              <span className="text-white font-semibold">
-                {formatPrice(upperPrice)}
-              </span>
-            </div>
+          <div className="flex flex-col items-end">
+            <span className="text-gray-500 mb-0.5">Upper Price</span>
+            <span className="text-white font-semibold">{formatPrice(upperPrice)}</span>
           </div>
         </div>
       </div>
