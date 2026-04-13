@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { ArcaLogo } from './ArcaLogo';
 import { usePrices } from '@/contexts/PriceContext';
-import { formatUSD } from '@/lib/utils';
 
 export function Header() {
   const pathname = usePathname();

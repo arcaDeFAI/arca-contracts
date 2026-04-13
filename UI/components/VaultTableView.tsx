@@ -1,11 +1,8 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useAccount } from 'wagmi';
-import { useReadContract } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useUserHarvestedForVault } from '@/hooks/useUserHarvestedForVault';
-import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain';
 import { useVaultPositionData } from '@/hooks/useVaultPositionData';
 import { RangeBar } from './RangeBar';
 import { TokenPairLogos } from './TokenPairLogos';
@@ -15,12 +12,14 @@ import { WithdrawModal } from './WithdrawModal';
 import { Tooltip } from './Tooltip';
 import { getToken, getTokenByAddress } from '@/lib/tokenRegistry';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
+import { type VaultConfig } from '@/lib/vaultConfigs';
+import { type UserRewardStructOutput } from '@/lib/typechain';
 
 interface VaultTableViewProps {
-  vaults: any[];
+  vaults: VaultConfig[];
   userAddress?: string;
-  onVaultClick: (vault: any) => void;
-  selectedVault?: any;
+  onVaultClick: (vault: VaultConfig) => void;
+  selectedVault?: VaultConfig;
 }
 
 
@@ -31,7 +30,7 @@ type SortDirection = 'asc' | 'desc' | null;
  * Helper hook: fetch tokenX and tokenY balances for the deposit modal
  * of the currently-open vault.
  */
-function useDepositBalances(vault: any | null, userAddress?: string) {
+function useDepositBalances(vault: VaultConfig | null, userAddress?: string) {
   const tokenXDef = vault ? getToken(vault.tokenX) : undefined;
   const tokenYDef = vault ? getToken(vault.tokenY) : undefined;
 
@@ -233,13 +232,13 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
 
             // Filter non-zero rewards
             const nonZeroRewards = metrics.pendingRewards
-              ? metrics.pendingRewards.filter((reward: any) => reward.pendingRewards > 0n)
+              ? metrics.pendingRewards.filter((reward: UserRewardStructOutput) => reward.pendingRewards > 0n)
               : [];
 
             // Calculate total USD value of rewards using registry
             let totalRewardsUSD = 0;
             if (nonZeroRewards.length > 0 && metrics.prices) {
-              totalRewardsUSD = nonZeroRewards.reduce((sum: number, reward: any) => {
+              totalRewardsUSD = nonZeroRewards.reduce((sum: number, reward: UserRewardStructOutput) => {
                 const amount = Number(reward.pendingRewards) / 1e18;
                 const tokenDef = getTokenByAddress(reward.token);
                 const priceKey = tokenDef?.canonicalName.toLowerCase();

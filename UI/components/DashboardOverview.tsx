@@ -1,13 +1,12 @@
 'use client'
-import { VAULT_CONFIGS, type VaultConfig } from '@/lib/vaultConfigs';
+import { type VaultConfig } from '@/lib/vaultConfigs';
 
 import { formatUnits } from 'viem';
-import { getTokenByAddress } from '@/lib/tokenRegistry';
+import { getTokenByAddress } from '@/lib/tokenRegistry'
+import { type UserRewardStructOutput } from '@/lib/typechain';
 
 import { useMemo, useState } from 'react'
 import { useVaultMetrics } from '@/hooks/useVaultMetrics'
-import { useBalanceHistory } from '@/hooks/useBalanceHistory'
-import { usePositionInRange } from '@/hooks/usePositionInRange'
 import { useSubgraphUserHarvested } from '@/hooks/useSubgraphUserHarvested'
 import { SUBGRAPH_START_TIMESTAMP_MS } from '@/lib/subgraph'
 import { usePrices } from '@/contexts/PriceContext'
@@ -178,7 +177,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
         // Calculate total USD value of pending rewards for this vault
         let vaultTotalUSD = 0;
-        metrics.pendingRewards.forEach((reward: any) => {
+        metrics.pendingRewards.forEach((reward: UserRewardStructOutput) => {
           const amount = Number(formatUnits(reward.pendingRewards, 18));
           const tokenDef = getTokenByAddress(reward.token);
           const priceKey = tokenDef?.canonicalName.toLowerCase();

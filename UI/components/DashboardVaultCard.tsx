@@ -54,7 +54,6 @@ export function DashboardVaultCard({
     isRedeemingWithdrawal,
     isCancellingWithdrawal,
     sonicPrice,
-    isShadowVault,
     activeLiquidity,
     reservedLiquidity,
   } = metrics;
@@ -189,11 +188,6 @@ export function DashboardVaultCard({
   });
 
 
-  // Helper function to get token name from address
-  const getTokenName = (tokenAddress: string): string => {
-    return getTokenByAddress(tokenAddress)?.displayName ?? 'Unknown';
-  };
-
   // Simple check - show if user has shares, pending rewards, queued withdrawal, or claimable withdrawal
   const hasShares = !!(userShares && userShares > 0n);
   const hasPendingRewards = !!(pendingRewards && pendingRewards.some((r: UserRewardStructOutput) => r.pendingRewards > 0n));
@@ -231,15 +225,6 @@ export function DashboardVaultCard({
   if (!hasShares && !hasPendingRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal) {
     return null;
   }
-
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case 'Elite': return 'text-yellow-400 border-yellow-400/20 bg-yellow-400/5';
-      case 'Premium': return 'text-purple-400 border-purple-400/20 bg-purple-400/5';
-      case 'Active': return 'text-blue-400 border-blue-400/20 bg-blue-400/5';
-      default: return 'text-gray-400 border-gray-400/20 bg-gray-400/5';
-    }
-  };
 
   return (
     <div className="bg-arca-gray/95 backdrop-blur-sm border border-gray-800/60 rounded-xl hover:border-gray-700/80 transition-all shadow-lg overflow-hidden">

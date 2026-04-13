@@ -4,9 +4,7 @@ import { useReadContract, usePublicClient } from 'wagmi'
 import { useState, useEffect } from 'react'
 import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain'
 import { TokenPairLogos } from './TokenPairLogos'
-import { usePrices } from '@/contexts/PriceContext'
 import { getTokenLogo, getTokenAddress, getTokenDecimals } from '@/lib/tokenHelpers'
-import { isStablecoin } from '@/lib/tokenUtils'
 import { parseAbi } from 'viem'
 import { useVaultPositionData } from '@/hooks/useVaultPositionData'
 import { RangeBar } from './RangeBar'
@@ -60,12 +58,9 @@ export default function PositionVisualizationCard({
   clpoolAddress,
   name,
   tier,
-  userAddress,
   tokenX = 'S',
   tokenY = 'USDC'
 }: PositionVisualizationCardProps) {
-  const config = { vaultAddress, stratAddress, name, tier };
-  const { prices } = usePrices();
 
   const positionData = useVaultPositionData({
     vaultAddress,
@@ -90,8 +85,6 @@ export default function PositionVisualizationCard({
   const isMetropolis = name.includes('Metropolis');
   const isShadow = name.includes('Shadow');
   const isWETHVault = name.includes('WETH');
-  const isWSWETHVault = name.includes('WS') && isWETHVault; // WS-WETH pair
-  const isUSDCWETHVault = name.includes('USDC') && isWETHVault; // USDC-WETH pair
   
   // Get active ID from LB Book contract (for Metropolis)
   const { data: activeIdReal } = useReadContract({
@@ -147,7 +140,7 @@ export default function PositionVisualizationCard({
   });
 
   // Get active tick from CLPool slot0 (for Shadow)
-  const { data: slot0Data, error: slot0Error, isLoading: slot0Loading } = useReadContract({
+  const { data: slot0Data } = useReadContract({
     address: clpoolAddress as `0x${string}`,
     abi: CL_POOL_ABI,
     functionName: 'slot0',
@@ -157,7 +150,7 @@ export default function PositionVisualizationCard({
   });
 
   // Get range from Shadow strategy contract
-  const { data: rangeDataShadow, error: rangeError, isLoading: rangeLoading } = useReadContract({
+  const { data: rangeDataShadow } = useReadContract({
     address: stratAddress as `0x${string}`,
     abi: SHADOW_STRAT_ABI,
     functionName: 'getRange',
@@ -179,7 +172,7 @@ export default function PositionVisualizationCard({
   const tokenYDecimals = getTokenDecimals(tokenY);
 
   // Convert Metro prices from raw to human-readable
-  const convertMetroPrice = (raw: any): number | null => {
+  const convertMetroPrice = (raw: bigint | undefined): number | null => {
     if (!raw) return null;
     return Number(raw) / Math.pow(2, 128) * Math.pow(10, tokenXDecimals - tokenYDecimals);
   };
@@ -209,8 +202,6 @@ export default function PositionVisualizationCard({
   const shadowUpperPrice = shadowRangeData ? tickToPrice(shadowRangeData[1]) : null;
 
   // Formatting helpers — use tokenRegistry to avoid hardcoded symbol lists
-  const isUSDPair = isStablecoin(tokenX) || isStablecoin(tokenY);
-  const isStablePair = isStablecoin(tokenX) && isStablecoin(tokenY);
   const formatPrice = (price: number | null): string => {
     if (price === null) return '...';
     // Always include the unit {tokenY}/{tokenX} in the main string to ensure consistent bold styling
@@ -258,7 +249,7 @@ export default function PositionVisualizationCard({
         if (isMounted) {
           setShadowLastRebalance(block.timestamp);
         }
-      } catch (err) {
+      } catch {
         // Silently handle error - not critical for UI
       }
     };
@@ -327,7 +318,6 @@ export default function PositionVisualizationCard({
 
   // Handle different data types: Metro uses bigint, Shadow uses int24 (number, can be negative)
   const [lowRange, upperRange] = rangeData as readonly [bigint | number, bigint | number];
-  const activeIdNum = Number(activeId);
   const lowRangeNum = Number(lowRange);
   const upperRangeNum = Number(upperRange);
 

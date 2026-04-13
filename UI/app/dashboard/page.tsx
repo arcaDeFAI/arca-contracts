@@ -7,7 +7,7 @@ import { DashboardVaultCard } from '@/components/DashboardVaultCard';
 import { DashboardOverview } from '@/components/DashboardOverview';
 import { SocialLinks } from '@/components/SocialLinks';
 import { VaultTableView } from '@/components/VaultTableView';
-import { VAULT_CONFIGS, type VaultConfig, isShadowVault } from '@/lib/vaultConfigs';
+import { VAULT_CONFIGS, type VaultConfig } from '@/lib/vaultConfigs';
 
 export default function Dashboard() {
   const { address, isConnected } = useAccount();

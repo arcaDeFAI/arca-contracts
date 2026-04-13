@@ -20,11 +20,10 @@ interface VaultCardProps {
 }
 
 export function VaultCard({ config }: VaultCardProps) {
-  const { vaultAddress, stratAddress, name, tier, tokenX, tokenY } = config;
-  const { address, isConnected } = useAccount();
+  const { vaultAddress, stratAddress, name, tokenX, tokenY } = config;
+  const { address } = useAccount();
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   // Use unified metrics hook
@@ -33,19 +32,16 @@ export function VaultCard({ config }: VaultCardProps) {
   const {
     userShares,
     sharePercentage,
-    balances,
     depositedValueUSD,
     vaultTVL,
     aprLoading,
     isLoading,
-    isShadowVault,
     activePercentage,
     subgraphMetrics,
   } = metrics;
 
   const rewardApr = subgraphMetrics.rewardApr;
   const vsHodl = subgraphMetrics.vsHodl;
-  const il = subgraphMetrics.il;
   const ilDays = subgraphMetrics.ilDays;
 
   const position = useVaultPositionData({
@@ -69,15 +65,6 @@ export function VaultCard({ config }: VaultCardProps) {
     setMounted(true);
   }, []);
 
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case 'Active': return 'text-arca-green';
-      case 'Premium': return 'text-blue-400';
-      case 'Elite': return 'text-purple-400';
-      default: return 'text-arca-green';
-    }
-  };
-
   if (!mounted) {
     return (
       <div className="bg-arca-gray/90 backdrop-blur-sm rounded-xl p-5 border border-gray-800/60 h-[320px] animate-pulse flex flex-col justify-between">
@@ -98,8 +85,6 @@ export function VaultCard({ config }: VaultCardProps) {
     <>
       <div
         className="group relative bg-arca-gray/95 backdrop-blur-sm rounded-xl p-5 border border-gray-800/60 transition-all duration-300 hover:border-arca-green/40 hover:shadow-[0_0_20px_rgba(0,255,163,0.1)] w-full flex flex-col h-full"
-        onMouseEnter={() => setIsHovered(true)}
-        onMouseLeave={() => setIsHovered(false)}
       >
         {/* DEX Badge */}
         <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/40 border border-gray-700/50 rounded-full pl-1.5 pr-2.5 py-1 pointer-events-none">
