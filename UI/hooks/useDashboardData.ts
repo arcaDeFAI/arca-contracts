@@ -2,7 +2,6 @@
 
 import { useReadContract, useWriteContract, useReadContracts, useWaitForTransactionReceipt } from 'wagmi';
 import { useEffect, useState, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { parseAbi } from 'viem';
 import {
   METRO_VAULT_ABI,

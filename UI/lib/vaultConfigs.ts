@@ -17,12 +17,6 @@ type BaseVaultConfig = {
   // Optional fields that any vault might have
   poolSymbol?: string; // DeFi Llama pool ID
   rewardsAddress?: string;
-  /**
-   * Override the DeFi Llama assumed base tick range for APY adjustment.
-   * Only needed when the pool's native tick range differs from the standard 1400-tick assumption.
-   * Example: USSD•USDC Shadow operates at 8 ticks natively.
-   */
-  defiLlamaBaseTicks?: number;
   /** When true, APY is sourced from the Goldsky Subgraph (with RPC fallback) instead of DeFi Llama */
   useSubgraphAPR?: boolean;
 };
@@ -136,7 +130,6 @@ export const VAULT_CONFIGS: VaultConfig[] = [
     clpoolAddress: '0x092c0B146201Bb16D9A37cFC0a7310b05fc8799b',
     rewardsAddress: '',
     poolSymbol: '0725b464-45d7-44a7-a758-9ef71d202cbd', // DeFi Llama pool ID (not found)
-    defiLlamaBaseTicks: 8, // This pool operates at 8 ticks natively (not 1400)
     name: 'USSD • USDC | Shadow',
     tier: 'Premium',
     tokenX: 'USSD',
