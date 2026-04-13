@@ -2,7 +2,14 @@
 // Tracks RewardForwarded events for custom APR calculation
 
 const SUBGRAPH_URL = process.env.NEXT_PUBLIC_SUBGRAPH_URL ||
-  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.10/gn';
+  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.12/gn';
+
+/**
+ * Unix timestamp (seconds) of the Sonic block this subgraph starts indexing from.
+ * Block 66,600,000 = 2026-04-03T20:33:56Z
+ * Used to display "Since Apr 3, 2026" on the Total Earned card.
+ */
+export const SUBGRAPH_START_TIMESTAMP_MS = 1775248436 * 1000;
 
 export interface SubgraphResponse<T> {
   data: T;
@@ -62,6 +69,17 @@ export interface SnapshotEntity {
   txHash: string;
 }
 
+export interface UserHarvestEventEntity {
+  id: string;
+  vault: { id: string };
+  user: string;
+  token: string;
+  amount: string;       // raw BigInt string
+  timestamp: string;
+  blockNumber: string;
+  txHash: string;
+}
+
 export interface ILSnapshotEntity {
   id: string;
   vault: { id: string };
@@ -109,6 +127,17 @@ export const SNAPSHOT_FIELDS = `
   totalBalanceY
   tickLower
   tickUpper
+  timestamp
+  blockNumber
+  txHash
+  vault { id }
+`;
+
+export const USER_HARVEST_EVENT_FIELDS = `
+  id
+  user
+  token
+  amount
   timestamp
   blockNumber
   txHash

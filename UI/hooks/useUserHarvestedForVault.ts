@@ -1,22 +1,20 @@
 'use client';
 
-import { useTotalHarvestedRewards } from './useTotalHarvestedRewards';
+import { useSubgraphUserHarvested } from './useSubgraphUserHarvested';
 
 /**
- * Wrapper hook that uses the same data source as Total Earned
- * to ensure consistency across the dashboard
+ * Per-vault harvest summary for a specific user, sourced from the subgraph.
+ * Multiple calls with the same userAddress share a single cached request.
  */
 export function useUserHarvestedForVault(
   vaultAddress: string,
   userAddress?: string,
-  tokenPrice?: number
 ) {
-  // Use the same hook as Total Earned to ensure data consistency
-  const { totalHarvestedUSD, isLoading } = useTotalHarvestedRewards(
-    vaultAddress,
-    userAddress,
-    tokenPrice
-  );
+  const { harvestsByVault, isLoading } = useSubgraphUserHarvested(userAddress);
+  const summary = harvestsByVault.get(vaultAddress.toLowerCase());
 
-  return { totalHarvestedUSD, isLoading };
+  return {
+    totalHarvestedUSD: summary?.totalHarvestedUSD ?? 0,
+    isLoading,
+  };
 }

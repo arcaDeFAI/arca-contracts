@@ -127,14 +127,10 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
     useVaultMetrics(config, userAddress)
   );
 
-  // Fetch harvested amounts for each vault
-  const harvestedData = vaults.map((vault, index) => {
-    const metrics = vaultMetrics[index];
-    const isShadow = vault.name.includes('Shadow');
-    const tokenPrice = isShadow ? (metrics.prices?.shadow || 0) : (metrics.prices?.metro || 0);
-
-    return useUserHarvestedForVault(vault.vaultAddress, userAddress, tokenPrice);
-  });
+  // Fetch harvested amounts for each vault (single subgraph query, shared cache)
+  const harvestedData = vaults.map(vault =>
+    useUserHarvestedForVault(vault.vaultAddress, userAddress)
+  );
 
   // Fetch position data for each vault
   const positionData = vaults.map(vault => useVaultPositionData(vault));

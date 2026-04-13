@@ -72,6 +72,7 @@ export function PriceProvider({ children }: { children: ReactNode }) {
         const diaTokens: Array<{ key: string; chain: string; address: string }> = [];
         const coingeckoIds = new Set<string>();
         const fixedPrices: Record<string, number> = {};
+        const geckoTerminalTokens: Array<{ key: string; network: string; address: string }> = [];
 
         // Deduplicate by canonical name
         const seen = new Set<string>();
@@ -89,6 +90,8 @@ export function PriceProvider({ children }: { children: ReactNode }) {
             coingeckoIds.add(src.id);
           } else if (src.type === 'fixed') {
             fixedPrices[key] = src.price;
+          } else if (src.type === 'geckoterminal') {
+            geckoTerminalTokens.push({ key, network: src.network, address: src.address });
           }
         }
 
@@ -136,6 +139,31 @@ export function PriceProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        // --- Fetch GeckoTerminal prices (free, no API key required) ---
+        const geckoTerminalResults: Record<string, number> = {};
+        if (geckoTerminalTokens.length > 0) {
+          await Promise.all(
+            geckoTerminalTokens.map(async ({ key, network, address }) => {
+              try {
+                const res = await fetch(
+                  `https://api.geckoterminal.com/api/v2/networks/${network}/tokens/${address.toLowerCase()}`,
+                  { headers: { Accept: 'application/json' } },
+                );
+                if (res.ok) {
+                  const data = await res.json();
+                  const priceStr = data?.data?.attributes?.price_usd;
+                  const price = priceStr ? parseFloat(priceStr) : NaN;
+                  if (!isNaN(price) && price > 0) {
+                    geckoTerminalResults[key] = price;
+                  }
+                }
+              } catch {
+                // Using fallback price
+              }
+            }),
+          );
+        }
+
         // --- Also try CoinGecko as DIA fallback ---
         for (const { key } of diaTokens) {
           if (diaResults[key]) continue; // DIA succeeded
@@ -175,6 +203,11 @@ export function PriceProvider({ children }: { children: ReactNode }) {
 
         // Apply CoinGecko prices
         for (const [key, price] of Object.entries(cgResults)) {
+          merged[key] = price;
+        }
+
+        // Apply GeckoTerminal prices (override CoinGecko — more reliable for on-chain tokens)
+        for (const [key, price] of Object.entries(geckoTerminalResults)) {
           merged[key] = price;
         }
 

@@ -4,7 +4,7 @@
   "scripts": {
     "codegen": "graph codegen",
     "build": "graph build",
-    "deploy": "goldsky subgraph deploy arca-vaults/1.0.10 --path ."
+    "deploy": "goldsky subgraph deploy arca-vaults/1.0.12 --path ."
   },
   "dependencies": {
     "@graphprotocol/graph-cli": "0.68.5",

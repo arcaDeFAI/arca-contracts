@@ -2,10 +2,11 @@ import { BigInt, Bytes, Address } from "@graphprotocol/graph-ts"
 import { RewardForwarded, RebalanceStarted } from "../generated/ShadowStrategyUSSDUSDC/ShadowStrategy"
 import { RebalanceStart } from "../generated/MetroStrategyUSSDUSDC/MetropolisStrategy"
 import { Transfer } from "../generated/MetroToken/ERC20"
+import { Harvested } from "../generated/MetroVaultUSSDUSDC/ArcaVault"
 import { MetroVault } from "../generated/MetroStrategyUSSDUSDC/MetroVault"
 import { CLPool } from "../generated/ShadowStrategyUSSDUSDC/CLPool"
 import { LBPair } from "../generated/MetroStrategyUSSDUSDC/LBPair"
-import { Vault, RewardEvent, Snapshot, ILSnapshot } from "../generated/schema"
+import { Vault, RewardEvent, Snapshot, ILSnapshot, UserHarvestEvent } from "../generated/schema"
 
 // ── Shadow: Strategy → Vault address map ─────────────────────────────────────
 export function getShadowVault(strategy: Bytes): Bytes {
@@ -61,12 +62,16 @@ function getOrCreateVault(vaultAddress: Bytes, strategyAddress: Bytes, protocol:
 }
 
 // Call previewAmounts(1 share unit) on the vault contract.
-// Shadow vaults: shareDecimals = tokenYDecimals + 6 (USDC=6 → 12, USSD=18 → 24)
-// Metro vaults:  same formula
-// We call with 1e18 as a safe standard unit — the ratio is what matters for pps tracking.
+// shareDecimals = tokenY.decimals + 6:
+//   USDC (6)  → 12   USSD (18) → 24   WETH (18) → 24
+// We call with 1e24 — the max share unit across all vault types — so WETH-tokenY
+// vaults (share_decimals=24) return non-zero amounts. For 12-decimal vaults this
+// means the returned raw amounts are 10^12× larger, but since APR is computed from
+// the ratio first→latest the scale cancels out exactly. Safe: uint256 can hold
+// typical TVL * 10^12 without overflow.
 function callPreviewAmounts(vaultAddr: Bytes): BigInt[] {
   let contract = MetroVault.bind(Address.fromBytes(vaultAddr))
-  let result = contract.try_previewAmounts(BigInt.fromString("1000000000000000000")) // 1e18 shares
+  let result = contract.try_previewAmounts(BigInt.fromString("1000000000000000000000000")) // 1e24 shares
   if (result.reverted) {
     return [BigInt.zero(), BigInt.zero()]
   }
@@ -229,6 +234,35 @@ export function handleMetroTransfer(event: Transfer): void {
       il.save()
     }
   }
+}
+
+// ── Vault: Harvested events (user-specific reward claims) ────────────────────
+// Called whenever a user claims rewards from any Arca vault.
+// event.address is the vault address itself (not the strategy).
+export function handleHarvested(event: Harvested): void {
+  const vaultAddress = event.address
+
+  // Vault may not exist yet if this fires before the first rebalance snapshot.
+  // Create a placeholder so the foreign key constraint holds — protocol will be
+  // patched to the correct value once a RewardForwarded / RebalanceStart is seen.
+  let vault = Vault.load(vaultAddress)
+  if (!vault) {
+    vault = new Vault(vaultAddress)
+    vault.strategy = vaultAddress  // placeholder; updated by reward/rebalance handlers
+    vault.protocol = "unknown"
+    vault.save()
+  }
+
+  const id = event.transaction.hash.concatI32(event.logIndex.toI32())
+  const harvestEvent = new UserHarvestEvent(id)
+  harvestEvent.vault = vaultAddress
+  harvestEvent.user = event.params.user
+  harvestEvent.token = event.params.token
+  harvestEvent.amount = event.params.amount
+  harvestEvent.timestamp = event.block.timestamp
+  harvestEvent.blockNumber = event.block.number
+  harvestEvent.txHash = event.transaction.hash
+  harvestEvent.save()
 }
 
 // Called on every Metro rebalance — captures pps + LBPair price snapshot for fee_apr + IL

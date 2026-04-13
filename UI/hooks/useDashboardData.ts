@@ -2,6 +2,7 @@
 
 import { useReadContract, useWriteContract, useReadContracts, useWaitForTransactionReceipt } from 'wagmi';
 import { useEffect, useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { parseAbi } from 'viem';
 import {
   METRO_VAULT_ABI,
@@ -14,6 +15,7 @@ import { type VaultConfig } from '@/lib/vaultConfigs';
 
 export function useDashboardData(config: VaultConfig, userAddress?: string, sharePercentage?: number) {
   const isShadowVault = config.name.includes('Shadow');
+  const queryClient = useQueryClient();
 
   // Simple contract calls - exactly like VaultCard
   const { data: userShares } = useReadContract({
@@ -197,7 +199,17 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
   }, [roundResults, currentRound]);
 
   // Write contract hooks for transactions
-  const { writeContract: claimRewards, isPending: isClaimingRewards } = useWriteContract();
+  const { writeContract: claimRewards, isPending: isClaimingRewards, data: claimTxHash } = useWriteContract();
+
+  // Watch for claim tx confirmation, then immediately refresh harvest totals
+  const { isSuccess: claimTxSuccess } = useWaitForTransactionReceipt({ hash: claimTxHash });
+  useEffect(() => {
+    if (claimTxSuccess && userAddress) {
+      queryClient.invalidateQueries({
+        queryKey: ['subgraph', 'userHarvests', userAddress.toLowerCase()],
+      });
+    }
+  }, [claimTxSuccess, userAddress, queryClient]);
 
   // Claim rewards function - unified for both Metro and Shadow vaults
   const handleClaimRewards = () => {
