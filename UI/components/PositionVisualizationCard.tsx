@@ -8,6 +8,8 @@ import { usePrices } from '@/contexts/PriceContext'
 import { getTokenLogo, getTokenAddress, getTokenDecimals } from '@/lib/tokenHelpers'
 import { isStablecoin } from '@/lib/tokenUtils'
 import { parseAbi } from 'viem'
+import { useVaultPositionData } from '@/hooks/useVaultPositionData'
+import { RangeBar } from './RangeBar'
 
 // Minimal ABI for getLastRebalance
 const REBALANCE_ABI = [
@@ -64,6 +66,16 @@ export default function PositionVisualizationCard({
 }: PositionVisualizationCardProps) {
   const config = { vaultAddress, stratAddress, name, tier };
   const { prices } = usePrices();
+
+  const positionData = useVaultPositionData({
+    vaultAddress,
+    stratAddress,
+    lbBookAddress,
+    clpoolAddress,
+    name,
+    tokenX,
+    tokenY,
+  });
 
   const getTierColor = (tier: string) => {
     switch (tier) {
@@ -319,20 +331,6 @@ export default function PositionVisualizationCard({
   const lowRangeNum = Number(lowRange);
   const upperRangeNum = Number(upperRange);
 
-  // Calculate extended range (low-50, upper+50) - handles negative values
-  const extendedLow = lowRangeNum - 50;
-  const extendedUpper = upperRangeNum + 50;
-  const totalRange = extendedUpper - extendedLow;
-
-  // Calculate positions as percentages
-  const activeIdPosition = ((activeIdNum - extendedLow) / totalRange) * 100;
-  const lowRangePosition = ((lowRangeNum - extendedLow) / totalRange) * 100;
-  const upperRangePosition = ((upperRangeNum - extendedLow) / totalRange) * 100;
-  const rangeWidth = upperRangePosition - lowRangePosition;
-
-  // Check if position is in range
-  const isInRange = activeIdNum >= lowRangeNum && activeIdNum <= upperRangeNum;
-
   // Enhanced view for Shadow vaults
   if (isShadow) {
     return (
@@ -353,15 +351,6 @@ export default function PositionVisualizationCard({
               <p className="text-xs text-gray-400">{name}</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
-              isInRange 
-                ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-                : 'bg-red-500/20 text-red-400 border border-red-500/30'
-            }`}>
-              {isInRange ? 'In Range' : 'Out of Range'}
-            </div>
-          </div>
         </div>
 
         {/* Price Information Grid */}
@@ -372,72 +361,24 @@ export default function PositionVisualizationCard({
               {formatPrice(shadowActivePrice)}
             </div>
           </div>
-          
+
           <div className="flex-1 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded p-2 min-w-0">
             <div className="text-xs text-purple-400 mb-1 truncate">Range Width</div>
             <div className="text-base font-bold text-white truncate">{upperRangeNum - lowRangeNum}</div>
           </div>
         </div>
 
-        {/* Active Range Display */}
+        {/* Range Bar */}
         <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
-          <div className="flex justify-between items-center mb-4">
-            <span className="text-sm font-semibold text-white">Liquidity Distribution</span>
-            <span className={`text-xs px-3 py-1.5 rounded font-medium whitespace-nowrap ${
-              isInRange ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-            }`}>
-              {isInRange ? 'Earning' : 'Position Inactive'}
-            </span>
-          </div>
-          
-          <div className="space-y-3">
-            {/* Legend */}
-            <div className="flex items-center justify-center gap-4 text-xs mb-2">
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 bg-arca-green/60 rounded"></div>
-                <span className="text-gray-400">Active LP</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <div className="w-0.5 h-3 bg-red-400"></div>
-                <span className="text-gray-400">Active Price</span>
-              </div>
+          <RangeBar position={positionData} tokenY={tokenY} compact />
+          <div className="flex items-center justify-between text-xs mt-3">
+            <div className="flex flex-col items-start">
+              <span className="text-gray-500 mb-0.5">Lower Price</span>
+              <span className="text-white font-semibold">{formatPrice(shadowLowerPrice)}</span>
             </div>
-
-            {/* Range Bar - Full width for active position */}
-            <div className="relative h-2 bg-gray-800/50 rounded-full overflow-hidden">
-              {/* Active range takes full width */}
-              <div 
-                className="absolute top-0 h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60"
-                style={{
-                  left: '0%',
-                  width: '100%'
-                }}
-              />
-              {/* Current price indicator - positioned relative to range */}
-              <div 
-                className="absolute top-0 w-1 h-full bg-red-400"
-                style={{
-                  left: `${((activeIdNum - lowRangeNum) / (upperRangeNum - lowRangeNum)) * 100}%`,
-                  boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)'
-                }}
-              />
-            </div>
-
-            {/* Range Labels */}
-            <div className="flex items-center justify-between text-xs">
-              <div className="flex flex-col items-start">
-                <span className="text-gray-500 mb-0.5">Lower Price</span>
-                <span className="text-white font-semibold">
-                  {formatPrice(shadowLowerPrice)}
-                </span>
-              </div>
-              
-              <div className="flex flex-col items-end">
-                <span className="text-gray-500 mb-0.5">Upper Price</span>
-                <span className="text-white font-semibold">
-                  {formatPrice(shadowUpperPrice)}
-                </span>
-              </div>
+            <div className="flex flex-col items-end">
+              <span className="text-gray-500 mb-0.5">Upper Price</span>
+              <span className="text-white font-semibold">{formatPrice(shadowUpperPrice)}</span>
             </div>
           </div>
         </div>
@@ -477,15 +418,6 @@ export default function PositionVisualizationCard({
             <p className="text-xs text-gray-400">{name}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`px-2 py-1 rounded text-xs font-medium whitespace-nowrap ${
-            isInRange 
-              ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
-              : 'bg-red-500/20 text-red-400 border border-red-500/30'
-          }`}>
-            {isInRange ? 'In Range' : 'Out of Range'}
-          </div>
-        </div>
       </div>
 
       {/* Price Information Grid */}
@@ -496,72 +428,24 @@ export default function PositionVisualizationCard({
             {formatPrice(activePrice)}
           </div>
         </div>
-        
+
         <div className="flex-1 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20 rounded p-2 min-w-0">
           <div className="text-xs text-cyan-400 mb-1 truncate">Bin Range</div>
           <div className="text-base font-bold text-white truncate">{(upperRangeNum - lowRangeNum).toLocaleString()}</div>
         </div>
       </div>
 
-      {/* Active Range Display */}
+      {/* Range Bar */}
       <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
-        <div className="flex justify-between items-center mb-4">
-          <span className="text-sm font-semibold text-white">Liquidity Distribution</span>
-          <span className={`text-xs px-3 py-1.5 rounded font-medium whitespace-nowrap ${
-            isInRange ? 'bg-green-500/20 text-green-400 border border-green-500/30' : 'bg-orange-500/20 text-orange-400 border border-orange-500/30'
-          }`}>
-            {isInRange ? 'Earning' : 'Position Inactive'}
-          </span>
-        </div>
-        
-        <div className="space-y-3">
-          {/* Legend */}
-          <div className="flex items-center justify-center gap-4 text-xs mb-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-arca-green/60 rounded"></div>
-              <span className="text-gray-400">Active LP</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-0.5 h-3 bg-red-400"></div>
-              <span className="text-gray-400">Active Price</span>
-            </div>
+        <RangeBar position={positionData} tokenY={tokenY} compact />
+        <div className="flex items-center justify-between text-xs mt-3">
+          <div className="flex flex-col items-start">
+            <span className="text-gray-500 mb-0.5">Lower Price</span>
+            <span className="text-white font-semibold">{formatPrice(lowerPrice)}</span>
           </div>
-
-          {/* Range Bar - Full width for active position */}
-          <div className="relative h-2 bg-gray-800/50 rounded-full overflow-hidden">
-            {/* Active range takes full width */}
-            <div 
-              className="absolute top-0 h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60"
-              style={{
-                left: '0%',
-                width: '100%'
-              }}
-            />
-            {/* Current price indicator - positioned relative to range */}
-            <div 
-              className="absolute top-0 w-1 h-full bg-red-400"
-              style={{
-                left: `${((activeIdNum - lowRangeNum) / (upperRangeNum - lowRangeNum)) * 100}%`,
-                boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)'
-              }}
-            />
-          </div>
-
-          {/* Range Labels */}
-          <div className="flex items-center justify-between text-xs">
-            <div className="flex flex-col items-start">
-              <span className="text-gray-500 mb-0.5">Lower Price</span>
-              <span className="text-white font-semibold">
-                {formatPrice(lowerPrice)}
-              </span>
-            </div>
-            
-            <div className="flex flex-col items-end">
-              <span className="text-gray-500 mb-0.5">Upper Price</span>
-              <span className="text-white font-semibold">
-                {formatPrice(upperPrice)}
-              </span>
-            </div>
+          <div className="flex flex-col items-end">
+            <span className="text-gray-500 mb-0.5">Upper Price</span>
+            <span className="text-white font-semibold">{formatPrice(upperPrice)}</span>
           </div>
         </div>
       </div>

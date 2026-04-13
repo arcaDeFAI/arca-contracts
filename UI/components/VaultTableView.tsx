@@ -7,6 +7,7 @@ import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useUserHarvestedForVault } from '@/hooks/useUserHarvestedForVault';
 import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain';
 import { useVaultPositionData } from '@/hooks/useVaultPositionData';
+import { RangeBar } from './RangeBar';
 import { TokenPairLogos } from './TokenPairLogos';
 import { getTokenLogo } from '@/lib/tokenHelpers';
 import { DepositModal } from './DepositModal';
@@ -79,6 +80,8 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
     lbBookAddress: vault.lbBookAddress,
     clpoolAddress: vault.clpoolAddress,
     name: vault.name,
+    tokenX: vault.tokenX,
+    tokenY: vault.tokenY,
   }));
 
   // Handle sorting
@@ -318,35 +321,16 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
 
                   {/* Status Column - Liquidity Distribution Bar with Price Position */}
                   <div className="flex items-center justify-center">
-                    {hasPosition && position.hasData ? (
-                      <div className="w-full max-w-[120px]">
-                        <div className="h-4 bg-gray-800/50 rounded-full overflow-visible relative">
-                          {/* Green bar showing active range - matching PositionVisualizationCard */}
-                          <div
-                            className="h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 absolute left-0 rounded-full"
-                            style={{
-                              width: '100%'
-                            }}
-                          />
-                          {/* Red line showing current price position */}
-                          <div
-                            className="absolute top-0 w-1 h-full bg-red-400 rounded-full"
-                            style={{
-                              left: `${position.pricePosition}%`,
-                              boxShadow: '0 0 10px rgba(248, 113, 113, 0.8)',
-                              transform: 'translateX(-50%)'
-                            }}
-                          />
-                        </div>
+                    {hasPosition ? (
+                      <div className="w-full max-w-[140px]">
+                        <RangeBar position={position} compact tokenY={vault.tokenY} />
                       </div>
                     ) : hasPosition ? (
-                      <div className="w-full max-w-[120px]">
-                        <div className="h-4 bg-gray-800/50 rounded-full overflow-hidden relative">
+                      <div className="w-full max-w-[140px]">
+                        <div className="h-3 bg-gray-800/50 rounded-full overflow-hidden relative">
                           <div
                             className="h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 absolute left-0 rounded-full"
-                            style={{
-                              width: '100%'
-                            }}
+                            style={{ width: '100%' }}
                           />
                         </div>
                       </div>
