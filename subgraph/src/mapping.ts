@@ -61,21 +61,37 @@ function getOrCreateVault(vaultAddress: Bytes, strategyAddress: Bytes, protocol:
   return vault
 }
 
-// Call previewAmounts(1 share unit) on the vault contract.
-// shareDecimals = tokenY.decimals + 6:
-//   USDC (6)  → 12   USSD (18) → 24   WETH (18) → 24
-// We call with 1e24 — the max share unit across all vault types — so WETH-tokenY
-// vaults (share_decimals=24) return non-zero amounts. For 12-decimal vaults this
-// means the returned raw amounts are 10^12× larger, but since APR is computed from
-// the ratio first→latest the scale cancels out exactly. Safe: uint256 can hold
-// typical TVL * 10^12 without overflow.
+// Call previewAmounts(1 share unit) on the vault contract, normalized to 1e24 per-share.
+// Metro vaults: previewAmounts(1e24) succeeds directly.
+// Shadow vaults: previewAmounts(1e24) reverts because the contract guards shares > totalSupply.
+//   Fallback: call previewAmounts(totalSupply) → returns (totalX, totalY), then scale to 1e24.
+//   amountXPerShare = totalX * 1e24 / totalSupply  (safe: uint256 holds up to ~1e46 for typical TVL)
+// The 1e24 normalization ensures first→latest ratios are scale-consistent across all vault types.
 function callPreviewAmounts(vaultAddr: Bytes): BigInt[] {
   let contract = MetroVault.bind(Address.fromBytes(vaultAddr))
-  let result = contract.try_previewAmounts(BigInt.fromString("1000000000000000000000000")) // 1e24 shares
-  if (result.reverted) {
+  let ONE_E24 = BigInt.fromString("1000000000000000000000000")
+
+  // Primary path: works for Metro vaults and Shadow vaults with totalSupply >= 1e24
+  let result = contract.try_previewAmounts(ONE_E24)
+  if (!result.reverted) {
+    return [result.value.getAmountX(), result.value.getAmountY()]
+  }
+
+  // Fallback for Shadow vaults: previewAmounts reverts when shares > totalSupply.
+  // Get totalSupply, call previewAmounts(totalSupply), then normalize to 1e24 per-share.
+  let supplyResult = contract.try_totalSupply()
+  if (supplyResult.reverted || supplyResult.value.equals(BigInt.zero())) {
     return [BigInt.zero(), BigInt.zero()]
   }
-  return [result.value.getAmountX(), result.value.getAmountY()]
+  let supply = supplyResult.value
+  let result2 = contract.try_previewAmounts(supply)
+  if (result2.reverted) {
+    return [BigInt.zero(), BigInt.zero()]
+  }
+  // Normalize: amountXPerShare = totalX * 1e24 / supply
+  let amountX = result2.value.getAmountX().times(ONE_E24).div(supply)
+  let amountY = result2.value.getAmountY().times(ONE_E24).div(supply)
+  return [amountX, amountY]
 }
 
 function callGetBalances(vaultAddr: Bytes): BigInt[] {
@@ -124,7 +140,6 @@ function recordSnapshot(
   // Update ILSnapshot (mutable, one row per vault)
   let il = ILSnapshot.load(vaultAddress)
   if (!il) {
-    // First rebalance — set baseline
     il = new ILSnapshot(vaultAddress)
     il.vault = vaultAddress
     il.firstAmountXPerShare = perShare[0]
@@ -134,6 +149,18 @@ function recordSnapshot(
     il.totalBalanceXSum = BigInt.zero()
     il.totalBalanceYSum = BigInt.zero()
     il.totalRewardAmount = BigInt.zero()
+    il.firstSqrtPriceX96 = sqrtPriceX96
+    il.firstLBPrice = lbPrice
+  } else if (
+    il.firstAmountXPerShare.equals(BigInt.zero()) &&
+    il.firstAmountYPerShare.equals(BigInt.zero()) &&
+    (perShare[0].gt(BigInt.zero()) || perShare[1].gt(BigInt.zero()))
+  ) {
+    // Previous first snapshot was taken when vault was empty (totalSupply=0 → previewAmounts=0).
+    // Promote the current non-zero snapshot to be the baseline for IL/vsHodl.
+    il.firstAmountXPerShare = perShare[0]
+    il.firstAmountYPerShare = perShare[1]
+    il.firstTimestamp = timestamp
     il.firstSqrtPriceX96 = sqrtPriceX96
     il.firstLBPrice = lbPrice
   }

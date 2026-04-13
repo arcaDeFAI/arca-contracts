@@ -129,16 +129,18 @@ export function useShadowAPYAdjusted(
  * Get the explanation for how APY is calculated
  */
 export function getAPYCalculationExplanation(): string {
-  return `APY Calculation Methodology
-  
-Base APR (Trading Fees):
-- Calculated from last 24h volume × fee rate
-- Annualized: (daily fees × 365 / TVL) × 100
-Reward APR (Token Emissions):
-- Based on current emission rate
-- Formula: (annual rewards USD / TVL) × 100
-Total APR = Base APR + Reward APR
+  return `APR — Rewards only
+On-chain reward events ÷ avg TVL × (365 / days).
+Window: 30d → 7d → all-time.
 
-Concentration Adjustment:APR varies with liquidity concentration. Narrower ranges = higher fees but more risk.
-**Note: APR is based on the active position only, excluding reserves held for rebalancing.**`;
+vs HODL
+Did the vault beat holding 50/50?
+vault_return = per-share value change in the pair's quote token (tokenY). For stable-Y pairs (USDC, USSD) ≈ USD. For volatile-Y pairs (WETH, wS) both tokens are priced in Y — this isolates rebalancing gains from Y's own price move, which is already in hodl_return.
+hodl_return = 0.5 × (X/Y price change)
+vs HODL = vault_return − hodl_return
+Positive → fees beat IL. Negative → IL exceeded fees.
+
+IL — Impermanent Loss
+IL = (1 + vault_return) / (1 + hodl_return) − 1
+Cost of rebalancing vs the HODL path. Always ≤ 0; fees can make vs HODL positive even when IL is negative.`;
 }

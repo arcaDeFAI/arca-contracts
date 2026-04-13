@@ -258,6 +258,11 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
   }
 
   // ---- IL / vsHodl (always since-inception from ILSnapshot first→latest) ----
+  // Mirrors Python VaultTracker.compute_metrics():
+  //   vault_return = pps_usd(latest) / pps_usd(first) - 1
+  //   hodl_return  = 0.5 * (px_change) + 0.5 * (py_change) - 1   (50/50 USD split at entry)
+  //   vsHodl       = vault_return - hodl_return
+  //   il           = (1 + vault_return) / (1 + hodl_return) - 1
   let il: number | null = null;
   let vsHodl: number | null = null;
 
@@ -267,9 +272,14 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
     decimalsX, decimalsY,
   );
 
+  const amtXFirst = Number(ilSnapshot.firstAmountXPerShare) / 10 ** decimalsX;
+  const amtYFirst = Number(ilSnapshot.firstAmountYPerShare) / 10 ** decimalsY;
+
   if (pxInYFirst > 0 && pxInYLatest > 0) {
-    const amtXFirst = Number(ilSnapshot.firstAmountXPerShare) / 10 ** decimalsX;
-    const amtYFirst = Number(ilSnapshot.firstAmountYPerShare) / 10 ** decimalsY;
+    // Path A: in-pair price available → denominate everything in Y, mirrors Python approach
+    // priceX_change = pxInYLatest / pxInYFirst  (X gained/lost vs Y)
+    // priceY_change = 1 (Y is the denominator — correct for stablecoin Y; approximation for volatile Y)
+    // hodl_return = 0.5 * (priceX_change) + 0.5 * (priceY_change) - 1 = 0.5 * (k - 1)
     const ppsYFirst   = amtXFirst  * pxInYFirst  + amtYFirst;
     const ppsYLatest2 = amtXLatest * pxInYLatest + amtYLatest;
     if (ppsYFirst > 0 && ppsYLatest2 > 0) {
@@ -280,6 +290,16 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
         il = ((1 + fullVaultReturn) / (1 + hodlReturn) - 1) * 100;
         vsHodl = (fullVaultReturn - hodlReturn) * 100;
       }
+    }
+  } else if (priceX > 0 && priceY > 0) {
+    // Path B: no in-pair price → use current USD prices for both first and latest.
+    // hodl_return = 0 (same prices used → price effect cancels out).
+    // vsHodl = vault_return = net composition change (fee income + IL combined).
+    const ppsUsdFirst  = amtXFirst  * priceX + amtYFirst  * priceY;
+    const ppsUsdLatest = amtXLatest * priceX + amtYLatest * priceY;
+    if (ppsUsdFirst > 0 && ppsUsdLatest > 0) {
+      vsHodl = (ppsUsdLatest / ppsUsdFirst - 1) * 100;
+      // IL not separable from fees without historical price data
     }
   }
 

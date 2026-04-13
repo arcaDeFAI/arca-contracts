@@ -46,15 +46,15 @@ export function APYTooltip({ className = '' }: APYTooltipProps) {
       </div>
       
       {showTooltip && typeof window !== 'undefined' && createPortal(
-        <div 
-          className="fixed z-[9999] w-[880px] p-2 bg-black border-2 border-arca-green rounded-lg shadow-[0_0_30px_rgba(0,255,163,0.3)] text-left"
+        <div
+          className="fixed z-[9999] w-80 p-3 bg-gray-950 border border-arca-green/50 rounded-lg shadow-[0_0_20px_rgba(0,255,163,0.15)] text-left"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
             transform: 'translate(-50%, -100%)',
           }}
         >
-          <div className="text-white text-xs whitespace-pre-line leading-relaxed">
+          <div className="text-gray-300 text-[11px] whitespace-pre-line leading-relaxed">
             {explanation}
           </div>
           {/* Arrow pointing down */}

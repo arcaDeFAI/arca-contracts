@@ -12,6 +12,7 @@ import { WithdrawModal } from './WithdrawModal';
 import { TokenPairLogos } from './TokenPairLogos';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { Skeleton } from './Skeleton';
+import { useVaultPositionData } from '@/hooks/useVaultPositionData';
 
 interface VaultCardProps {
   config: VaultConfig;
@@ -34,12 +35,24 @@ export function VaultCard({ config }: VaultCardProps) {
     balances,
     depositedValueUSD,
     vaultTVL,
-    apy,
-    apy30dMean,
     aprLoading,
     isLoading,
     isShadowVault,
+    activePercentage,
+    subgraphMetrics,
   } = metrics;
+
+  const rewardApr = subgraphMetrics.rewardApr;
+  const vsHodl = subgraphMetrics.vsHodl;
+  const il = subgraphMetrics.il;
+
+  const position = useVaultPositionData({
+    vaultAddress,
+    stratAddress,
+    lbBookAddress: config.lbBookAddress,
+    clpoolAddress: config.clpoolAddress,
+    name,
+  });
 
   // Fetch token balances dynamically based on vault tokens
   const tokenXDef = getToken(tokenX);
@@ -122,13 +135,31 @@ export function VaultCard({ config }: VaultCardProps) {
           {/* Main Stats */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">APY</span>
+              <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">APR</span>
               <div className="text-2xl font-bold text-arca-green tracking-tight">
-                {isLoading || aprLoading ? <Skeleton width={60} height={24} className="mt-1" /> : formatPercentage(apy)}
+                {isLoading || aprLoading ? <Skeleton width={60} height={24} className="mt-1" /> : formatPercentage(rewardApr ?? 0)}
               </div>
-              {apy30dMean !== null && (
-                <div className="text-[10px] text-gray-500 mt-0.5">
-                  30d Avg: {formatPercentage(apy30dMean)}
+              {(vsHodl !== null || il !== null) && (
+                <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
+                  {vsHodl !== null && (
+                    <span>
+                      vs HODL{' '}
+                      <span className={vsHodl >= 0 ? 'text-arca-green' : 'text-red-400'}>
+                        {vsHodl >= 0 ? '+' : ''}{vsHodl.toFixed(1)}%
+                      </span>
+                    </span>
+                  )}
+                  {il !== null && (
+                    <span className="text-gray-600">·</span>
+                  )}
+                  {il !== null && (
+                    <span>
+                      IL{' '}
+                      <span className={il >= 0 ? 'text-arca-green' : 'text-red-400'}>
+                        {il >= 0 ? '+' : ''}{il.toFixed(1)}%
+                      </span>
+                    </span>
+                  )}
                 </div>
               )}
             </div>
@@ -155,6 +186,28 @@ export function VaultCard({ config }: VaultCardProps) {
               <span className="text-gray-300">
                 {isLoading ? <Skeleton width={40} height={20} /> : `${sharePercentage.toFixed(2)}%`}
               </span>
+            </div>
+
+            <div className="pt-2">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Range</span>
+                {activePercentage > 0 && (
+                  <span className="text-gray-500 text-xs">{activePercentage.toFixed(0)}% active</span>
+                )}
+              </div>
+              <div className="h-3 bg-gray-800/50 rounded-full overflow-visible relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 rounded-full" />
+                {position.hasData && (
+                  <div
+                    className="absolute top-0 w-1 h-full bg-red-400 rounded-full"
+                    style={{
+                      left: `${position.pricePosition}%`,
+                      boxShadow: '0 0 8px rgba(248, 113, 113, 0.8)',
+                      transform: 'translateX(-50%)',
+                    }}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
