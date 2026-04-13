@@ -57,3 +57,4 @@ ignition/deployments/chain-31337
 CLAUDE.local.md
 cache_hardhat/validations.json
 cache_hardhat/solidity-files-cache.json
+.claude/settings.local.json
