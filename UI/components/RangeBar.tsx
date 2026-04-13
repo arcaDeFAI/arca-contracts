@@ -10,7 +10,7 @@ interface RangeBarProps {
   tokenY?: string;
 }
 
-function formatPrice(price: number | null, tokenY: string): string {
+function formatPrice(price: number | null, _tokenY: string): string {
   if (price === null) return '';
   if (price >= 1000)  return `$${price.toFixed(0)}`;
   if (price >= 1)     return `$${price.toFixed(2)}`;

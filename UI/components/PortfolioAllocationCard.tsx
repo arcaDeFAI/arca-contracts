@@ -27,8 +27,6 @@ interface PortfolioAllocationCardProps {
 
 export function PortfolioAllocationCard({
   allocations,
-  totalValueUSD,
-  deposited,
   isCollapsible = false,
   isExpanded: controlledIsExpanded,
   onToggle
