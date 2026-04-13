@@ -52,6 +52,17 @@ type Snapshot @entity(immutable: true) {
 #
 # For stable-Y vaults (USDC/USSD): Y-terms = USD exactly.
 # For volatile-Y vaults: accurate relative to holding Y.
+type UserHarvestEvent @entity(immutable: true) {
+  id: Bytes!                    # tx hash + log index
+  vault: Vault!
+  user: Bytes!                  # user wallet address (indexed for filtering)
+  token: Bytes!                 # reward token address
+  amount: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
+}
+
 type ILSnapshot @entity {
   id: Bytes!                    # vaultAddress
   vault: Vault!

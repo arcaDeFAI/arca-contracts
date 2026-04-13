@@ -3,14 +3,7 @@
 import { useVaultData } from './useVaultData';
 import { useDashboardData } from './useDashboardData';
 import { useTokenPrices } from './useAPYCalculation';
-import { useMetroAPY } from './useMetroAPY';
-import { useShadowAPY } from './useShadowAPY';
-import { useDefiLlamaAPYAdjusted } from './useDefiLlamaAPYAdjusted';
-import { useShadowRewardForwardedAPY } from './useShadowRewardForwardedAPY';
-import { useSubgraphAPR } from './useSubgraphAPR';
 import { useSubgraphMetrics } from './useSubgraphMetrics';
-import { CONTRACTS } from '@/lib/contracts';
-import { getTokenOrThrow } from '@/lib/tokenRegistry';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 
@@ -19,7 +12,7 @@ import { type VaultConfig } from '@/lib/vaultConfigs';
  * Eliminates duplication between VaultCard and DashboardVaultCard
  */
 export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
-  const { name, vaultAddress, stratAddress, tokenX = 'S', tokenY = 'USDC' } = config;
+  const { name, vaultAddress, tokenX = 'S', tokenY = 'USDC' } = config;
   const isShadowVault = name.includes('Shadow');
 
   // Fetch all data
@@ -58,57 +51,7 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   const depositedValueUSD = (vaultData.userShares && vaultData.totalSupply && vaultData.totalSupply > 0n) ?
     vaultTVL * (Number(vaultData.userShares) / Number(vaultData.totalSupply)) : 0;
 
-  // Calculate APY based on vault type
-  const metroAPY = useMetroAPY(
-    stratAddress,
-    getTokenOrThrow('METRO').address!,
-    vaultTVL,
-    prices?.metro || 0
-  );
-
-  // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided.
-  // Pass defiLlamaBaseTicks override for vaults whose pool natively uses a non-standard range
-  // (e.g. USSD•USDC Shadow uses 8 ticks, so DeFi Llama's APY is already priced for 8 ticks).
-  const shadowAPYAdjusted = useDefiLlamaAPYAdjusted(
-    stratAddress,
-    config.poolSymbol || 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0', // Default to WS-USDC pool ID if not specified
-    'shadow',
-    '',
-    config.defiLlamaBaseTicks
-  );
-
-  // Fallback to old Shadow APY calculation (kept for backwards compatibility)
-  const shadowAPYOld = useShadowAPY(
-    stratAddress,
-    (config as any).rewardsAddress || CONTRACTS.SHADOW_REWARDS,
-    getTokenOrThrow('SHADOW').address!,
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
-  // Calculate Forwarded APY natively via RPC (for Shadow vaults without a DeFi Llama pool)
-  const shadowAPYForwarded = useShadowRewardForwardedAPY(
-    stratAddress,
-    getTokenOrThrow('SHADOW').address!,
-    config.vaultAddress,
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
-  // Use new DeFi Llama APY if available, otherwise route to the native Forwarded APY
-  const shadowAPY = config.poolSymbol 
-    ? (!shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld)
-    : shadowAPYForwarded;
-
-  // Goldsky Subgraph APR — only enabled for vaults that opt in via useSubgraphAPR config flag
-  const subgraphAPR = useSubgraphAPR(
-    config.useSubgraphAPR ? config.vaultAddress : '',
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
-  // New subgraph metrics hook — computes fee_apr + reward_apr using bot formula
-  // Used for all vaults; falls back to legacy APR methods when subgraph has no data yet
+  // Subgraph metrics — single source of truth for fee APR + reward APR
   const subgraphMetrics = useSubgraphMetrics(config);
 
   // Calculate activePercentage for Shadow APY adjustment (active vs idle liquidity ratio)
@@ -124,39 +67,28 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
     return totalUSD > 0 ? ((totalUSD - idleUSD) / totalUSD) * 100 : 0;
   })() : 0;
 
-  // Final APY/APR — subgraph metrics (bot formula) take priority when data is available.
-  // Legacy RPC-based methods serve as fallback while the subgraph indexes history.
+  // Final APY/APR — subgraph metrics are the single source of truth.
+  // Show 0 / loading state while the subgraph is syncing; never fall back to DeFi Llama or RPC
+  // estimates so users can clearly tell when real data is available.
   let finalAPY: number;
   let aprLoading: boolean;
 
-  if (!subgraphMetrics.isLoading && subgraphMetrics.totalApr !== null) {
-    // Subgraph has data for this vault → use bot-formula APR (fee + reward)
+  if (subgraphMetrics.isLoading) {
+    // Still fetching — show loading state
+    finalAPY = 0;
+    aprLoading = true;
+  } else if (subgraphMetrics.totalApr !== null) {
+    // Subgraph has data → use it
     finalAPY = Math.max(0, subgraphMetrics.totalApr);
     aprLoading = false;
-  } else if (!isShadowVault) {
-    // Metropolis vault with no subgraph data yet: use on-chain METRO reward rate
-    finalAPY = metroAPY.apy;
-    aprLoading = metroAPY.isLoading;
-  } else if (config.useSubgraphAPR) {
-    // Shadow vault with legacy subgraph APR flag: prefer old subgraph, fall back to RPC
-    if (!subgraphAPR.isLoading && subgraphAPR.apr > 0) {
-      finalAPY = subgraphAPR.apr;
-    } else {
-      finalAPY = shadowAPYForwarded.apy;
-    }
-    aprLoading = subgraphAPR.isLoading && shadowAPYForwarded.isLoading;
-  } else if (config.poolSymbol) {
-    // Shadow vault with DeFi Llama pool ID: scale by active liquidity percentage
-    finalAPY = shadowAPY.apy * (activePercentage / 100);
-    aprLoading = shadowAPY.isLoading;
   } else {
-    // Shadow vault without pool ID: use forwarded APY via RPC log scanning
-    finalAPY = shadowAPY.apy;
-    aprLoading = shadowAPY.isLoading;
+    // No subgraph data yet (vault not indexed / insufficient snapshots) → show 0
+    finalAPY = 0;
+    aprLoading = false;
   }
 
-  const raw30dMean = isShadowVault && config.poolSymbol ? shadowAPYAdjusted.apy30dMean : null;
-  const apy30dMean = (isShadowVault && raw30dMean !== null) ? (raw30dMean * (activePercentage / 100)) : raw30dMean;
+  // Subgraph is the single APR source — never show the DeFi Llama 30d average.
+  const apy30dMean = null;
 
   return {
     // Vault data

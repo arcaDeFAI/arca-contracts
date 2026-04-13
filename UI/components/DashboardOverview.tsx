@@ -7,10 +7,9 @@ import { getTokenByAddress } from '@/lib/tokenRegistry';
 import { useMemo, useState } from 'react'
 import { useVaultMetrics } from '@/hooks/useVaultMetrics'
 import { useBalanceHistory } from '@/hooks/useBalanceHistory'
-import { use24hHarvestedRewards } from '@/hooks/use24hHarvestedRewards'
-import { useDailyHarvestedRewards } from '@/hooks/useDailyHarvestedRewards'
-import { useTotalHarvestedRewards } from '@/hooks/useTotalHarvestedRewards'
 import { usePositionInRange } from '@/hooks/usePositionInRange'
+import { useSubgraphUserHarvested } from '@/hooks/useSubgraphUserHarvested'
+import { SUBGRAPH_START_TIMESTAMP_MS } from '@/lib/subgraph'
 import { usePrices } from '@/contexts/PriceContext'
 import { PortfolioAllocationCard } from './PortfolioAllocationCard'
 import { Tooltip } from './Tooltip'
@@ -33,16 +32,23 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     useVaultMetrics(config, userAddress)
   )
 
-  // Fetch total harvested rewards for this specific user
-  const totalHarvestedData = vaultConfigs.map((config, index) => {
-    const metrics = vaultMetrics[index]
-    const isShadowVault = config.name.includes('Shadow')
-    const tokenPrice = isShadowVault
-      ? (metrics.prices?.shadow || 0)
-      : (metrics.prices?.metro || 0)
+  // Fetch total harvested rewards for this user from subgraph (all vaults in one query)
+  const { harvestsByVault, firstHarvestTimestamp, isLoading: harvestsLoading } =
+    useSubgraphUserHarvested(userAddress)
 
-    // Removed hasBalance dependency to fix lifetime earnings bug
-    return useTotalHarvestedRewards(config.vaultAddress, userAddress, tokenPrice)
+  // Show the user's earliest harvest date, or the subgraph index start date as baseline
+  const earnedSinceMs = firstHarvestTimestamp ?? SUBGRAPH_START_TIMESTAMP_MS
+  const earnedSinceLabel = new Date(earnedSinceMs).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric'
+  })
+
+  const totalHarvestedData = vaultConfigs.map(config => {
+    const summary = harvestsByVault.get(config.vaultAddress.toLowerCase())
+    return {
+      totalHarvestedUSD: summary?.totalHarvestedUSD ?? 0,
+      firstHarvestTimestamp: summary?.firstTimestamp ?? null,
+      isLoading: harvestsLoading,
+    }
   })
 
   // Use the new custom hook for aggregation
@@ -203,17 +209,13 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           title={
             <>
               <span>Total Earned</span>
-              <Tooltip text="Total claimed rewards since first deposit." width="sm" ariaLabel="Total Earned explanation" />
+              <Tooltip text={`Total claimed rewards since ${earnedSinceLabel}.`} width="sm" ariaLabel="Total Earned explanation" />
             </>
           }
           value={`$${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           loading={aggregatedData.isLoading}
           subtitle={
-            aggregatedData.earliestFirstDeposit ? (
-              <span className="text-xs text-gray-500 block -mt-1">
-                Since {new Date(aggregatedData.earliestFirstDeposit).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-              </span>
-            ) : null
+            <span className="text-xs text-gray-500 block -mt-1">Since {earnedSinceLabel}</span>
           }
         />
 

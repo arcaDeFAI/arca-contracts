@@ -42,7 +42,7 @@ interface RewardEventRaw {
 }
 
 interface VaultMetricsQueryResult {
-  ilSnapshot: ILSnapshotRaw | null;
+  ilsnapshot: ILSnapshotRaw | null;
   window30d: SnapshotRaw[];
   window7d: SnapshotRaw[];
   rewardEvents: RewardEventRaw[];
@@ -54,7 +54,7 @@ interface VaultMetricsQueryResult {
 
 const buildQuery = (ts30d: number, ts7d: number) => `
   query GetVaultMetrics($vault: Bytes!) {
-    ilSnapshot(id: $vault) {
+    ilsnapshot(id: $vault) {
       firstAmountXPerShare
       firstAmountYPerShare
       firstTimestamp
@@ -156,7 +156,7 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
 
   if (isLoading || !data) return empty;
 
-  const { ilSnapshot, rewardEvents } = data;
+  const { ilsnapshot: ilSnapshot, rewardEvents } = data;
   const snapshotCount = Number(ilSnapshot?.snapshotCount ?? 0);
 
   if (!ilSnapshot || snapshotCount < 2) {
