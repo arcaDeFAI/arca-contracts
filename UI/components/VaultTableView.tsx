@@ -361,32 +361,18 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                   </div>
 
                   {/* APR Column */}
-                  <div className="flex flex-col items-center justify-center gap-0.5">
+                  <div className="flex flex-col items-center justify-center gap-1.5">
                     <span className="text-arca-green font-semibold text-base">
                       {(metrics.subgraphMetrics.rewardApr ?? 0) > 0 ? `${metrics.subgraphMetrics.rewardApr!.toFixed(2)}%` : '-'}
                     </span>
-                    {(metrics.subgraphMetrics.vsHodl !== null || metrics.subgraphMetrics.il !== null) && (
-                      <div className="flex items-center gap-1 text-[10px] text-gray-500">
-                        {metrics.subgraphMetrics.vsHodl !== null && (
-                          <span>
-                            vs HODL{' '}
-                            <span className={metrics.subgraphMetrics.vsHodl >= 0 ? 'text-arca-green/70' : 'text-red-400/70'}>
-                              {metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%
-                            </span>
-                          </span>
-                        )}
-                        {metrics.subgraphMetrics.il !== null && (
-                          <>
-                            <span className="text-gray-700">·</span>
-                            <span>
-                              IL{' '}
-                              <span className={metrics.subgraphMetrics.il >= 0 ? 'text-arca-green/70' : 'text-red-400/70'}>
-                                {metrics.subgraphMetrics.il >= 0 ? '+' : ''}{metrics.subgraphMetrics.il.toFixed(1)}%
-                              </span>
-                            </span>
-                          </>
-                        )}
-                      </div>
+                    {metrics.subgraphMetrics.vsHodl !== null && (
+                      <span className={`inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight whitespace-nowrap ${
+                        metrics.subgraphMetrics.vsHodl >= 0
+                          ? 'bg-arca-green/10 border-arca-green/25 text-arca-green'
+                          : 'bg-red-500/10 border-red-500/25 text-red-400'
+                      }`}>
+                        vs HODL&nbsp;<span className="opacity-80">{metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%</span>
+                      </span>
                     )}
                   </div>
 
@@ -577,12 +563,16 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                   </div>
 
                   {/* APR Column - Mobile */}
-                  <div className="flex flex-col items-center justify-center gap-0.5">
+                  <div className="flex flex-col items-center justify-center gap-1">
                     <span className="text-arca-green font-semibold text-sm">
                       {(metrics.subgraphMetrics.rewardApr ?? 0) > 0 ? `${metrics.subgraphMetrics.rewardApr!.toFixed(1)}%` : '-'}
                     </span>
                     {metrics.subgraphMetrics.vsHodl !== null && (
-                      <span className={`text-[9px] ${metrics.subgraphMetrics.vsHodl >= 0 ? 'text-arca-green/60' : 'text-red-400/60'}`}>
+                      <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight ${
+                        metrics.subgraphMetrics.vsHodl >= 0
+                          ? 'bg-arca-green/10 border-arca-green/25 text-arca-green'
+                          : 'bg-red-500/10 border-red-500/25 text-red-400'
+                      }`}>
                         {metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%
                       </span>
                     )}

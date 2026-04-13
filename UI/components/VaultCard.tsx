@@ -46,6 +46,7 @@ export function VaultCard({ config }: VaultCardProps) {
   const rewardApr = subgraphMetrics.rewardApr;
   const vsHodl = subgraphMetrics.vsHodl;
   const il = subgraphMetrics.il;
+  const ilDays = subgraphMetrics.ilDays;
 
   const position = useVaultPositionData({
     vaultAddress,
@@ -142,27 +143,42 @@ export function VaultCard({ config }: VaultCardProps) {
               <div className="text-2xl font-bold text-arca-green tracking-tight">
                 {isLoading || aprLoading ? <Skeleton width={60} height={24} className="mt-1" /> : formatPercentage(rewardApr ?? 0)}
               </div>
-              {(vsHodl !== null || il !== null) && (
-                <div className="flex items-center gap-2 text-[10px] text-gray-500 mt-0.5">
-                  {vsHodl !== null && (
-                    <span>
-                      vs HODL{' '}
-                      <span className={vsHodl >= 0 ? 'text-arca-green' : 'text-red-400'}>
-                        {vsHodl >= 0 ? '+' : ''}{vsHodl.toFixed(1)}%
+              {vsHodl !== null && (
+                <div className="relative group/iltooltip mt-2">
+                  {/* vs HODL pill + tooltip */}
+                  <div className="flex items-center gap-1.5 flex-nowrap">
+                    {vsHodl !== null && (
+                      <span className={`inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight whitespace-nowrap ${
+                        vsHodl >= 0
+                          ? 'bg-arca-green/10 border-arca-green/25 text-arca-green'
+                          : 'bg-red-500/10 border-red-500/25 text-red-400'
+                      }`}>
+                        vs HODL&nbsp;<span className="opacity-80">{vsHodl >= 0 ? '+' : ''}{vsHodl.toFixed(1)}%</span>
                       </span>
-                    </span>
-                  )}
-                  {il !== null && (
-                    <span className="text-gray-600">·</span>
-                  )}
-                  {il !== null && (
-                    <span>
-                      IL{' '}
-                      <span className={il >= 0 ? 'text-arca-green' : 'text-red-400'}>
-                        {il >= 0 ? '+' : ''}{il.toFixed(1)}%
-                      </span>
-                    </span>
-                  )}
+                    )}
+                    <span className="text-gray-600 text-[11px] cursor-default select-none leading-none">ⓘ</span>
+                  </div>
+
+                  {/* Tooltip */}
+                  <div className="absolute bottom-full left-0 mb-2 z-50 hidden group-hover/iltooltip:block w-56">
+                    <div className="bg-[#0e1117] border border-gray-700/60 rounded-xl p-3 shadow-2xl text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-400 font-medium">Data window</span>
+                        <span className="text-white font-bold">{ilDays > 0 ? `${Math.round(ilDays)}d` : '—'}</span>
+                      </div>
+                      {vsHodl !== null && ilDays > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-400 font-medium">vs HODL annualized</span>
+                          <span className={`font-bold ${vsHodl >= 0 ? 'text-arca-green' : 'text-red-400'}`}>
+                            {(vsHodl * 365 / ilDays) >= 0 ? '+' : ''}{(vsHodl * 365 / ilDays).toFixed(1)}%/yr
+                          </span>
+                        </div>
+                      )}
+                      <div className="border-t border-gray-800 pt-2 text-[10px] text-gray-600 leading-relaxed">
+                        Measured since vault inception. Positive = vault outperformed simply holding both tokens.
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>

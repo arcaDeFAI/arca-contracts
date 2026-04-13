@@ -139,9 +139,5 @@ pps = per-share USD value = (tokensX × priceX) + (tokensY × priceY).
 vault_return = pps_now / pps_first − 1
 hodl_return = 0.5 × (priceX change) + 0.5 × (priceY change) since first deposit.
 vs HODL = vault_return − hodl_return
-Positive → fees beat IL. Negative → IL exceeded fees.
-
-IL — Impermanent Loss
-IL = (1 + vault_return) / (1 + hodl_return) − 1
-Always ≤ 0; fees can make vs HODL positive even when IL is negative.`;
+Positive → fees beat IL. Negative → IL exceeded fees.`;
 }

@@ -111,6 +111,8 @@ export interface SubgraphMetrics {
   /** Which APR window is active */
   periodLabel: '30d' | '7d' | 'all';
   periodDays: number;
+  /** Days covered by IL/vsHodl data (inception → latest snapshot) */
+  ilDays: number;
   snapshotCount: number;
   isLoading: boolean;
   error: string | null;
@@ -154,7 +156,7 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
 
   const empty: SubgraphMetrics = {
     feeApr: null, rewardApr: null, totalApr: null,
-    il: null, vsHodl: null, periodLabel: 'all', periodDays: 0, snapshotCount: 0,
+    il: null, vsHodl: null, periodLabel: 'all', periodDays: 0, ilDays: 0, snapshotCount: 0,
     isLoading, error: error ? String(error) : null,
   };
 
@@ -333,9 +335,14 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
       ? (feeApr ?? 0) + (rewardApr ?? 0)
       : null;
 
+  const ilDays = Math.max(
+    (Number(ilSnapshot.latestTimestamp) - Number(ilSnapshot.firstTimestamp)) / 86400,
+    0,
+  );
+
   return {
     feeApr, rewardApr, totalApr, il, vsHodl,
-    periodLabel, periodDays: days, snapshotCount,
+    periodLabel, periodDays: days, ilDays, snapshotCount,
     isLoading: false, error: null,
   };
 }
