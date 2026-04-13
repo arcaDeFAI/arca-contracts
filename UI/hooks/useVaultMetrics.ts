@@ -54,42 +54,6 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   // Subgraph metrics — single source of truth for fee APR + reward APR
   const subgraphMetrics = useSubgraphMetrics(config);
 
-  // Use new DeFi Llama APY for Shadow vaults if poolSymbol (pool ID) is provided
-  const shadowAPYAdjusted = useDefiLlamaAPYAdjusted(
-    stratAddress,
-    config.poolSymbol || 'bfb130df-7dd3-4f19-a54c-305c8cb6c9f0' // Default to WS-USDC pool ID if not specified
-  );
-
-  // Fallback to old Shadow APY calculation (kept for backwards compatibility)
-  const shadowAPYOld = useShadowAPY(
-    stratAddress,
-    (config as any).rewardsAddress || CONTRACTS.SHADOW_REWARDS,
-    getTokenOrThrow('SHADOW').address!,
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
-  // Calculate Forwarded APY natively via RPC (for Shadow vaults without a DeFi Llama pool)
-  const shadowAPYForwarded = useShadowRewardForwardedAPY(
-    stratAddress,
-    getTokenOrThrow('SHADOW').address!,
-    config.vaultAddress,
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
-  // Use new DeFi Llama APY if available, otherwise route to the native Forwarded APY
-  const shadowAPY = config.poolSymbol 
-    ? (!shadowAPYAdjusted.error ? shadowAPYAdjusted : shadowAPYOld)
-    : shadowAPYForwarded;
-
-  // Goldsky Subgraph APR — only enabled for vaults that opt in via useSubgraphAPR config flag
-  const subgraphAPR = useSubgraphAPR(
-    config.useSubgraphAPR ? config.vaultAddress : '',
-    vaultTVL,
-    prices?.shadow || 0
-  );
-
   // Calculate activePercentage for Shadow APY adjustment (active vs idle liquidity ratio)
   const activePercentage = (vaultData.balances && vaultData.idleBalances) ? (() => {
     const token0Price = getTokenPrice(tokenX, prices, sonicPrice);
@@ -108,20 +72,6 @@ export function useVaultMetrics(config: VaultConfig, userAddress?: string) {
   // estimates so users can clearly tell when real data is available.
   let finalAPY: number;
   let aprLoading: boolean;
-
-  if (subgraphMetrics.isLoading) {
-    // Still fetching — show loading state
-    finalAPY = 0;
-    aprLoading = true;
-  } else if (subgraphMetrics.rewardApr !== null) {
-    // Use rewards-only APR (fee APR excluded — unreliable during withdrawal periods)
-    finalAPY = Math.max(0, subgraphMetrics.rewardApr);
-    aprLoading = false;
-  } else {
-    // No subgraph data yet (vault not indexed / insufficient snapshots) → show 0
-    finalAPY = 0;
-    aprLoading = false;
-  }
 
   if (subgraphMetrics.isLoading) {
     // Still fetching — show loading state
