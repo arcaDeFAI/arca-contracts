@@ -330,6 +330,8 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
     }
   }
 
+  // ---- Exports ---------------------------------------------------------------
+
   const totalApr =
     feeApr !== null || rewardApr !== null
       ? (feeApr ?? 0) + (rewardApr ?? 0)
@@ -345,4 +347,22 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
     periodLabel, periodDays: days, ilDays, snapshotCount,
     isLoading: false, error: null,
   };
+}
+
+/**
+ * Human-readable explanation of how APR and vs-HODL are calculated.
+ * Shown in APYTooltip and DashboardOverview.
+ */
+export function getAPYCalculationExplanation(): string {
+  return `APR — Rewards only
+On-chain reward events ÷ avg TVL × (365 / days).
+Window: 30d → 7d → all-time.
+
+vs HODL
+Did the vault beat holding 50/50?
+pps = per-share USD value = (tokensX × priceX) + (tokensY × priceY).
+vault_return = pps_now / pps_first − 1
+hodl_return = 0.5 × (priceX change) + 0.5 × (priceY change) since first deposit.
+vs HODL = vault_return − hodl_return
+Positive → fees beat IL. Negative → IL exceeded fees.`;
 }

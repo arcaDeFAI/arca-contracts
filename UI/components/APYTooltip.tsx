@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getAPYCalculationExplanation } from '@/hooks/useShadowAPYAdjusted';
+import { getAPYCalculationExplanation } from '@/hooks/useSubgraphMetrics';
 
 interface APYTooltipProps {
   className?: string;
