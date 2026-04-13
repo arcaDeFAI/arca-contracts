@@ -1,4 +1,4 @@
-import { BigInt, Bytes, Address } from "@graphprotocol/graph-ts"
+import { BigInt, BigDecimal, Bytes, Address } from "@graphprotocol/graph-ts"
 import { RewardForwarded, RebalanceStarted } from "../generated/ShadowStrategyUSSDUSDC/ShadowStrategy"
 import { RebalanceStart } from "../generated/MetroStrategyUSSDUSDC/MetropolisStrategy"
 import { Transfer } from "../generated/MetroToken/ERC20"
@@ -6,7 +6,7 @@ import { Harvested } from "../generated/MetroVaultUSSDUSDC/ArcaVault"
 import { MetroVault } from "../generated/MetroStrategyUSSDUSDC/MetroVault"
 import { CLPool } from "../generated/ShadowStrategyUSSDUSDC/CLPool"
 import { LBPair } from "../generated/MetroStrategyUSSDUSDC/LBPair"
-import { Vault, RewardEvent, Snapshot, ILSnapshot, UserHarvestEvent } from "../generated/schema"
+import { Vault, RewardEvent, Snapshot, ILSnapshot, UserHarvestEvent, TokenPrice } from "../generated/schema"
 
 // ── Shadow: Strategy → Vault address map ─────────────────────────────────────
 export function getShadowVault(strategy: Bytes): Bytes {
@@ -46,6 +46,129 @@ export function getMetroLBPair(strategy: Bytes): Bytes {
   if (strategy.equals(Bytes.fromHexString("0xeca4AE2D4778b1417d6cB47B9C7769e9f5fC4A3f"))) return Bytes.fromHexString("0x361f55337074ae43957204cb30ffbabbce4fb837")
   if (strategy.equals(Bytes.fromHexString("0x38FdF9a12Ac2e2aD95dd5bE3d271cC6EA23C5c2C"))) return Bytes.fromHexString("0x9eDE606c7168bb09fF73EbdE7bFD6FcfaBDA9Bc3")
   return Bytes.empty()
+}
+
+// ── Token addresses (lowercase) ───────────────────────────────────────────────
+const WS_ADDR   = "0x039e2fb66102314ce7b64ce5ce3e5183bc94ad38"
+const USDC_ADDR = "0x29219dd400f2bf60e5a23d13be72b486d4038894"
+const USSD_ADDR = "0x000000000eccff26b795f73fb0a70d48da657fef"
+const WETH_ADDR = "0x50c42deacd8fc9773493ed674b675be577f2634b"
+
+const BD_ZERO = BigDecimal.fromString("0")
+const BD_ONE  = BigDecimal.fromString("1")
+
+// ── Token info per vault ──────────────────────────────────────────────────────
+
+class TokenInfo {
+  xAddr:   string
+  yAddr:   string
+  dX:      i32
+  dY:      i32
+  xStable: bool
+  yStable: bool
+  constructor(xAddr: string, yAddr: string, dX: i32, dY: i32, xStable: bool, yStable: bool) {
+    this.xAddr   = xAddr
+    this.yAddr   = yAddr
+    this.dX      = dX
+    this.dY      = dY
+    this.xStable = xStable
+    this.yStable = yStable
+  }
+}
+
+function getTokenInfo(vaultAddr: Bytes): TokenInfo | null {
+  let v = vaultAddr.toHexString().toLowerCase()
+  // ── Metro ──
+  if (v == "0xbaef4da824f554c35035211cb997db4ecb75f45f") return new TokenInfo(USSD_ADDR, USDC_ADDR, 18, 6,  true,  true)  // USSD•USDC
+  if (v == "0x1c0c5a4197b7fa25a180e6e08ea19a91ebbe5fd2") return new TokenInfo(WS_ADDR,   USSD_ADDR, 18, 18, false, true)  // wS•USSD
+  if (v == "0x34331e66a634d69d64edc3e21e52a53899e12640") return new TokenInfo(WETH_ADDR, WS_ADDR,   18, 18, false, false) // WETH•wS
+  // ── Shadow ──
+  if (v == "0x727e6d1ff1f1836bb7cdfad30e89edbbef878ab5") return new TokenInfo(WS_ADDR,   USDC_ADDR, 18, 6,  false, true)  // wS•USDC
+  if (v == "0xb6a8129779e57845588db74435a9afae509e1454") return new TokenInfo(WS_ADDR,   WETH_ADDR, 18, 18, false, false) // WS•WETH
+  if (v == "0xd4083994f3ce977bcb5d3022041d489b162f5b85") return new TokenInfo(USDC_ADDR, WETH_ADDR, 6,  18, true,  false) // USDC•WETH
+  if (v == "0xc318c24c8a8584b03019d34e586daa14f208ef2d") return new TokenInfo(USSD_ADDR, USDC_ADDR, 18, 6,  true,  true)  // USSD•USDC
+  if (v == "0x3a284cc4080f9d88ac2ee330296975c78c53b5cd") return new TokenInfo(USSD_ADDR, WS_ADDR,   18, 18, true,  false) // USSD•wS
+  return null
+}
+
+// ── USD price helpers ─────────────────────────────────────────────────────────
+
+// Decimal adjustment factor for pxInY = (raw_sqrt^2) * 10^(dX-dY)
+function decimalAdj(dX: i32, dY: i32): BigDecimal {
+  let diff = dX - dY
+  if (diff ==  12) return BigDecimal.fromString("1000000000000")
+  if (diff == -12) return BigDecimal.fromString("0.000000000001")
+  return BD_ONE // diff == 0
+}
+
+// Convert on-chain price to human-readable X/Y ratio (BigDecimal)
+function pxInYBD(sqrtPriceX96: BigInt, lbPrice: BigInt, dX: i32, dY: i32): BigDecimal {
+  let adj = decimalAdj(dX, dY)
+  if (sqrtPriceX96.gt(BigInt.zero())) {
+    let TWO96 = BigDecimal.fromString("79228162514264337593543950336")
+    let sq = sqrtPriceX96.toBigDecimal().div(TWO96)
+    return sq.times(sq).times(adj)
+  }
+  if (lbPrice.gt(BigInt.zero())) {
+    let TWO128 = BigDecimal.fromString("340282366920938463463374607431768211456")
+    return lbPrice.toBigDecimal().div(TWO128).times(adj)
+  }
+  return BD_ZERO
+}
+
+function setTokenPrice(addrStr: string, price: BigDecimal, timestamp: BigInt): void {
+  if (price.equals(BD_ZERO)) return
+  let id = Bytes.fromHexString(addrStr)
+  let tp = TokenPrice.load(id)
+  if (!tp) {
+    tp = new TokenPrice(id)
+  }
+  tp.priceUsd    = price
+  tp.lastUpdated = timestamp
+  tp.save()
+}
+
+function getTokenPriceUsd(addrStr: string): BigDecimal {
+  let tp = TokenPrice.load(Bytes.fromHexString(addrStr))
+  return tp ? tp.priceUsd : BD_ZERO
+}
+
+// Derive USD prices for tokenX and tokenY from the in-pair price + TokenPrice store.
+// Returns [priceXUsd, priceYUsd]; either may be BD_ZERO if not yet known.
+function deriveUsdPrices(
+  info: TokenInfo,
+  sqrtPriceX96: BigInt,
+  lbPrice: BigInt,
+  timestamp: BigInt
+): BigDecimal[] {
+  let px = pxInYBD(sqrtPriceX96, lbPrice, info.dX, info.dY)
+
+  if (info.xStable && info.yStable) {
+    // Both stablecoins → both $1
+    setTokenPrice(info.xAddr, BD_ONE, timestamp)
+    setTokenPrice(info.yAddr, BD_ONE, timestamp)
+    return [BD_ONE, BD_ONE]
+  }
+
+  if (info.yStable && px.gt(BD_ZERO)) {
+    // Y ≈ $1 → priceX = pxInY (X per USDC/USSD)
+    setTokenPrice(info.xAddr, px, timestamp)
+    setTokenPrice(info.yAddr, BD_ONE, timestamp)
+    return [px, BD_ONE]
+  }
+
+  if (info.xStable && px.gt(BD_ZERO)) {
+    // X ≈ $1 → priceY = 1/pxInY  (e.g. USDC/WETH: pxInY = 1/WETH_USD)
+    let priceY = BD_ONE.div(px)
+    setTokenPrice(info.xAddr, BD_ONE, timestamp)
+    setTokenPrice(info.yAddr, priceY, timestamp)
+    return [BD_ONE, priceY]
+  }
+
+  // Both volatile — look up prices set by other stable-pair vaults
+  let priceX = getTokenPriceUsd(info.xAddr)
+  let priceY = getTokenPriceUsd(info.yAddr)
+  return [priceX, priceY]
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -121,6 +244,17 @@ function recordSnapshot(
   let perShare = callPreviewAmounts(vaultAddress)
   let balances = callGetBalances(vaultAddress)
 
+  // Derive USD prices for both tokens (vault_tracker method).
+  // Stable-pair vaults write to TokenPrice; volatile-volatile vaults read from it.
+  let info = getTokenInfo(vaultAddress)
+  let priceXUsd = BD_ZERO
+  let priceYUsd = BD_ZERO
+  if (info !== null) {
+    let prices = deriveUsdPrices(info, sqrtPriceX96, lbPrice, timestamp)
+    priceXUsd = prices[0]
+    priceYUsd = prices[1]
+  }
+
   let snapId = vaultAddress.concat(txHash).concatI32(logIndex)
   let snap = new Snapshot(snapId)
   snap.vault = vaultAddress
@@ -132,6 +266,8 @@ function recordSnapshot(
   snap.tickUpper = tickUpper
   snap.sqrtPriceX96 = sqrtPriceX96
   snap.lbPrice = lbPrice
+  snap.priceXUsd = priceXUsd.equals(BD_ZERO) ? null : priceXUsd
+  snap.priceYUsd = priceYUsd.equals(BD_ZERO) ? null : priceYUsd
   snap.timestamp = timestamp
   snap.blockNumber = blockNumber
   snap.txHash = txHash
@@ -151,6 +287,9 @@ function recordSnapshot(
     il.totalRewardAmount = BigInt.zero()
     il.firstSqrtPriceX96 = sqrtPriceX96
     il.firstLBPrice = lbPrice
+    // Store USD prices at baseline — enables vault_tracker USD PPS method
+    il.firstPriceXUsd = priceXUsd.equals(BD_ZERO) ? null : priceXUsd
+    il.firstPriceYUsd = priceYUsd.equals(BD_ZERO) ? null : priceYUsd
   } else if (
     il.firstAmountXPerShare.equals(BigInt.zero()) &&
     il.firstAmountYPerShare.equals(BigInt.zero()) &&
@@ -163,6 +302,18 @@ function recordSnapshot(
     il.firstTimestamp = timestamp
     il.firstSqrtPriceX96 = sqrtPriceX96
     il.firstLBPrice = lbPrice
+    il.firstPriceXUsd = priceXUsd.equals(BD_ZERO) ? null : priceXUsd
+    il.firstPriceYUsd = priceYUsd.equals(BD_ZERO) ? null : priceYUsd
+  } else {
+    // Backfill any missing first prices independently.
+    // Happens when a volatile-volatile vault (e.g. WS•WETH) baseline was set before
+    // stable-pair vaults had seeded TokenPrice for one or both of its tokens.
+    if (il.firstPriceXUsd === null && !priceXUsd.equals(BD_ZERO)) {
+      il.firstPriceXUsd = priceXUsd
+    }
+    if (il.firstPriceYUsd === null && !priceYUsd.equals(BD_ZERO)) {
+      il.firstPriceYUsd = priceYUsd
+    }
   }
   // Always update latest
   il.latestAmountXPerShare = perShare[0]

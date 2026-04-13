@@ -23,6 +23,8 @@ interface ILSnapshotRaw {
   latestSqrtPriceX96: string;
   firstLBPrice: string;
   latestLBPrice: string;
+  firstPriceXUsd: string | null;
+  firstPriceYUsd: string | null;
   vault: { id: string };
 }
 
@@ -68,6 +70,8 @@ const buildQuery = (ts30d: number, ts7d: number) => `
       latestSqrtPriceX96
       firstLBPrice
       latestLBPrice
+      firstPriceXUsd
+      firstPriceYUsd
       vault { id }
     }
     window30d: snapshots(
@@ -257,49 +261,70 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
     }
   }
 
-  // ---- IL / vsHodl (always since-inception from ILSnapshot first→latest) ----
-  // Mirrors Python VaultTracker.compute_metrics():
-  //   vault_return = pps_usd(latest) / pps_usd(first) - 1
-  //   hodl_return  = 0.5 * (px_change) + 0.5 * (py_change) - 1   (50/50 USD split at entry)
-  //   vsHodl       = vault_return - hodl_return
-  //   il           = (1 + vault_return) / (1 + hodl_return) - 1
+  // ---- IL / vsHodl (since-inception, vault_tracker USD PPS method) ----
+  // vault_return = pps_usd(latest) / pps_usd(first) - 1
+  // hodl_return  = 0.5*(priceX_latest/priceX_first - 1) + 0.5*(priceY_latest/priceY_first - 1)
+  // vsHodl       = vault_return - hodl_return
+  // il           = (1 + vault_return) / (1 + hodl_return) - 1
+  //
+  // Historical USD prices come from subgraph firstPriceXUsd/Y (set by stable-pair vaults via
+  // TokenPrice entity). For stable-paired vaults these are always available. For volatile-volatile
+  // pairs (WETH/wS) they're available once any stable-pair vault has rebalanced after v1.0.16.
+  // Fallback: derive from in-pair ratio (works for single-stable pairs, approximate for both-volatile).
+
+  const STABLE = new Set(['USDC', 'USSD', 'USDT', 'DAI']);
+  const isXStable = STABLE.has(tokenX.toUpperCase());
+  const isYStable = STABLE.has(tokenY.toUpperCase());
+
   let il: number | null = null;
   let vsHodl: number | null = null;
-
-  const pxInYFirst = rawToHumanPxInY(
-    BigInt(ilSnapshot.firstSqrtPriceX96 ?? '0'),
-    BigInt(ilSnapshot.firstLBPrice ?? '0'),
-    decimalsX, decimalsY,
-  );
 
   const amtXFirst = Number(ilSnapshot.firstAmountXPerShare) / 10 ** decimalsX;
   const amtYFirst = Number(ilSnapshot.firstAmountYPerShare) / 10 ** decimalsY;
 
-  if (pxInYFirst > 0 && pxInYLatest > 0) {
-    // Path A: in-pair price available → denominate everything in Y, mirrors Python approach
-    // priceX_change = pxInYLatest / pxInYFirst  (X gained/lost vs Y)
-    // priceY_change = 1 (Y is the denominator — correct for stablecoin Y; approximation for volatile Y)
-    // hodl_return = 0.5 * (priceX_change) + 0.5 * (priceY_change) - 1 = 0.5 * (k - 1)
-    const ppsYFirst   = amtXFirst  * pxInYFirst  + amtYFirst;
-    const ppsYLatest2 = amtXLatest * pxInYLatest + amtYLatest;
-    if (ppsYFirst > 0 && ppsYLatest2 > 0) {
-      const fullVaultReturn = ppsYLatest2 / ppsYFirst - 1;
-      const k = pxInYLatest / pxInYFirst;
-      const hodlReturn = 0.5 * (k - 1);
-      if (1 + hodlReturn !== 0) {
-        il = ((1 + fullVaultReturn) / (1 + hodlReturn) - 1) * 100;
-        vsHodl = (fullVaultReturn - hodlReturn) * 100;
-      }
+  // Prefer subgraph-stored historical USD prices (exact, from stable-pair vaults)
+  const storedPxFirst = ilSnapshot.firstPriceXUsd ? Number(ilSnapshot.firstPriceXUsd) : 0;
+  const storedPyFirst = ilSnapshot.firstPriceYUsd ? Number(ilSnapshot.firstPriceYUsd) : 0;
+
+  let pxFirst: number, pyFirst: number;
+
+  if (storedPxFirst > 0 && storedPyFirst > 0) {
+    // Best case: subgraph stored exact historical prices at baseline
+    pxFirst = storedPxFirst;
+    pyFirst = storedPyFirst;
+  } else {
+    // Fallback: derive from in-pair price ratio
+    const pxInYFirst = rawToHumanPxInY(
+      BigInt(ilSnapshot.firstSqrtPriceX96 ?? '0'),
+      BigInt(ilSnapshot.firstLBPrice ?? '0'),
+      decimalsX, decimalsY,
+    );
+    if (pxInYFirst > 0) {
+      if (isYStable)      { pxFirst = pxInYFirst; pyFirst = 1; }
+      else if (isXStable) { pxFirst = 1; pyFirst = 1 / pxInYFirst; }
+      else                { pxFirst = priceX; pyFirst = priceY; } // both volatile, no history
+    } else {
+      pxFirst = 0; pyFirst = 0;
     }
-  } else if (priceX > 0 && priceY > 0) {
-    // Path B: no in-pair price → use current USD prices for both first and latest.
-    // hodl_return = 0 (same prices used → price effect cancels out).
-    // vsHodl = vault_return = net composition change (fee income + IL combined).
-    const ppsUsdFirst  = amtXFirst  * priceX + amtYFirst  * priceY;
-    const ppsUsdLatest = amtXLatest * priceX + amtYLatest * priceY;
+  }
+
+  // Latest prices: always use live feed (most accurate for current point)
+  const pxLatest = priceX;
+  const pyLatest = priceY;
+
+  if (pxFirst > 0 && pyFirst > 0 && pxLatest > 0 && pyLatest > 0) {
+    const ppsUsdFirst  = amtXFirst  * pxFirst  + amtYFirst  * pyFirst;
+    const ppsUsdLatest = amtXLatest * pxLatest + amtYLatest * pyLatest;
+
     if (ppsUsdFirst > 0 && ppsUsdLatest > 0) {
-      vsHodl = (ppsUsdLatest / ppsUsdFirst - 1) * 100;
-      // IL not separable from fees without historical price data
+      const vaultReturnFull = ppsUsdLatest / ppsUsdFirst - 1;
+      const hodlReturn = 0.5 * (pxLatest / pxFirst - 1) + 0.5 * (pyLatest / pyFirst - 1);
+      vsHodl = (vaultReturnFull - hodlReturn) * 100;
+      // IL requires separable price history; skip for both-volatile without stored prices
+      const hasIndependentHistory = storedPxFirst > 0 || isXStable || isYStable;
+      if (hasIndependentHistory && 1 + hodlReturn !== 0) {
+        il = ((1 + vaultReturnFull) / (1 + hodlReturn) - 1) * 100;
+      }
     }
   }
 

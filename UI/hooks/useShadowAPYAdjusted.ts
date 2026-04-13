@@ -135,12 +135,13 @@ Window: 30d → 7d → all-time.
 
 vs HODL
 Did the vault beat holding 50/50?
-vault_return = per-share value change in the pair's quote token (tokenY). For stable-Y pairs (USDC, USSD) ≈ USD. For volatile-Y pairs (WETH, wS) both tokens are priced in Y — this isolates rebalancing gains from Y's own price move, which is already in hodl_return.
-hodl_return = 0.5 × (X/Y price change)
+pps = per-share USD value = (tokensX × priceX) + (tokensY × priceY).
+vault_return = pps_now / pps_first − 1
+hodl_return = 0.5 × (priceX change) + 0.5 × (priceY change) since first deposit.
 vs HODL = vault_return − hodl_return
 Positive → fees beat IL. Negative → IL exceeded fees.
 
 IL — Impermanent Loss
 IL = (1 + vault_return) / (1 + hodl_return) − 1
-Cost of rebalancing vs the HODL path. Always ≤ 0; fees can make vs HODL positive even when IL is negative.`;
+Always ≤ 0; fees can make vs HODL positive even when IL is negative.`;
 }
