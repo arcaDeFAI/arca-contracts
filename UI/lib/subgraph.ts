@@ -1,7 +1,8 @@
 // Subgraph client for Arca Vaults on Sonic
 // Tracks RewardForwarded events for custom APR calculation
 
-const SUBGRAPH_URL = 'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.1.17/gn';
+const SUBGRAPH_URL = process.env.NEXT_PUBLIC_SUBGRAPH_URL ||
+  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.12/gn';
 
 /**
  * Unix timestamp (seconds) of the Sonic block this subgraph starts indexing from.
