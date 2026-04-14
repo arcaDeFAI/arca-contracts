@@ -3,6 +3,7 @@ html, body {
   min-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
+  font-family: 'InterLocal', sans-serif;
 }
 
 @font-face {
@@ -170,6 +171,7 @@ html, body {
   white-space: nowrap;
   width: 100%;
   text-align: center;
+  color: #fff;
   text-shadow:
     0 0 12px rgba(34, 224, 106, 0.08),
     0 0 32px rgba(34, 224, 106, 0.06);
@@ -183,6 +185,7 @@ html, body {
   font-weight: 600;
   letter-spacing: -0.04em;
   white-space: nowrap;
+  color: #fff;
 }
 
 .hero-subtitle {

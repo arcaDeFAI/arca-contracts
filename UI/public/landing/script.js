@@ -158,13 +158,13 @@ async function fetchLivePrices() {
     }
 
     updateTickerPrice("ARCA", null);
-  } catch (error) {
-    console.error("Live price fetch failed:", error);
+  } catch {
+    // silently fail — ticker stays at last known value
   }
 }
 
 fetchLivePrices();
-setInterval(fetchLivePrices, 15000);
+setInterval(fetchLivePrices, 300000);
 
 // =========================
 // FEATURE CARD REVEAL
