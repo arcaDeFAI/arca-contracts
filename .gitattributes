@@ -6,3 +6,8 @@
 *.gif binary
 *.webp binary
 *.svg -text
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+*.mp4 binary
