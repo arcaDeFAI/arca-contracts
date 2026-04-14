@@ -5,7 +5,7 @@ html, body {
   min-height: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  font-family: 'InterLocal', 'Inter', sans-serif;
+  font-family: 'Inter', 'InterLocal', sans-serif;
   color: white;
   -webkit-text-fill-color: white;
   color-scheme: dark;
@@ -188,7 +188,7 @@ html, body {
 .hero-title-bottom {
   font-size: clamp(46px, 9vw, 110px);
   line-height: 0.95;
-  font-family: 'InterLocal', sans-serif;
+  font-family: 'Inter', 'InterLocal', sans-serif;
   font-weight: 600;
   letter-spacing: -0.04em;
   white-space: nowrap;
@@ -319,7 +319,7 @@ html, body {
   }
 }
 
-.font1 { font-family: 'InterLocal', sans-serif; }
+.font1 { font-family: 'Inter', 'InterLocal', sans-serif; }
 .font2 { font-family: 'BrunoLocal', sans-serif; }
 .font3 { font-family: 'ElectrolizeLocal', sans-serif; }
 .font4 { font-family: 'JuratLocal', serif; }
@@ -418,7 +418,7 @@ html, body {
 }
 
 .coin-price {
-  font-family: 'InterLocal', sans-serif;
+  font-family: 'Inter', 'InterLocal', sans-serif;
   font-weight: 600;
   color: #b8ffcf;
   text-shadow: 0 0 6px rgba(34, 224, 106, 0.25);
@@ -542,7 +542,7 @@ html, body {
 .feature-card h3 {
   position: relative;
   z-index: 1;
-  font-family: 'InterLocal', sans-serif;
+  font-family: 'Inter', 'InterLocal', sans-serif;
   font-size: 30px;
   line-height: 1.08;
   letter-spacing: -0.04em;
@@ -553,7 +553,7 @@ html, body {
 .feature-card p {
   position: relative;
   z-index: 1;
-  font-family: 'InterLocal', sans-serif;
+  font-family: 'Inter', 'InterLocal', sans-serif;
   font-size: 16px;
   line-height: 1.7;
   color: rgba(255,255,255,0.72);
@@ -739,7 +739,7 @@ html, body {
 }
 
 .faq-title {
-  font-family: 'InterLocal', sans-serif;
+  font-family: 'Inter', 'InterLocal', sans-serif;
   font-size: clamp(54px, 7vw, 88px);
   line-height: 0.95;
   letter-spacing: -0.05em;
@@ -805,7 +805,7 @@ html, body {
   padding: 22px 26px;
   text-align: left;
   cursor: pointer;
-  font-family: 'InterLocal', sans-serif;
+  font-family: 'Inter', 'InterLocal', sans-serif;
   font-size: 16px;
   line-height: 1.4;
 }
@@ -910,7 +910,7 @@ html, body {
 }
 
 .contact-title {
-  font-family: 'InterLocal', sans-serif;
+  font-family: 'Inter', 'InterLocal', sans-serif;
   font-size: clamp(34px, 4vw, 54px);
   line-height: 1.08;
   letter-spacing: -0.04em;
