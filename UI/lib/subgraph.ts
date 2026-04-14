@@ -2,7 +2,7 @@
 // Tracks RewardForwarded events for custom APR calculation
 
 const SUBGRAPH_URL = process.env.NEXT_PUBLIC_SUBGRAPH_URL ||
-  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.12/gn';
+  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.17/gn';
 
 /**
  * Unix timestamp (seconds) of the Sonic block this subgraph starts indexing from.
@@ -30,6 +30,10 @@ export async function querySubgraph<T>(
 
   if (json.errors && json.errors.length > 0) {
     throw new Error(`Subgraph error: ${json.errors[0].message}`);
+  }
+
+  if (json.data === undefined) {
+    throw new Error('Subgraph returned no data');
   }
 
   return json.data;
