@@ -87,16 +87,12 @@ export function Header() {
                   <Link
                     key={href}
                     href={href}
-                    className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                      isActive
-                        ? 'text-arca-green bg-arca-green/[0.08]'
-                        : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
-                    }`}
+                    className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
+                      ? 'text-arca-green bg-arca-green/[0.08]'
+                      : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
+                      }`}
                   >
                     {label}
-                    {isActive && (
-                      <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-[2px] bg-arca-green rounded-full" />
-                    )}
                   </Link>
                 ))}
               </nav>
@@ -137,7 +133,7 @@ export function Header() {
                               type="button"
                               className="flex items-center gap-2 bg-arca-green text-arca-dark font-semibold py-2 px-4 rounded-xl text-sm hover:bg-arca-green/90 hover:shadow-glow-green transition-all duration-200 active:scale-[0.97]"
                             >
-                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
                                 <path d="M20 5H4c-.55 0-1 .45-1 1s.45 1 1 1h16c.55 0 1-.45 1-1s-.45-1-1-1z" />
                               </svg>
@@ -199,11 +195,9 @@ export function Header() {
                               type="button"
                               className="flex items-center gap-2 bg-arca-green text-arca-dark font-semibold py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm hover:bg-arca-green/90 hover:shadow-glow-green transition-all duration-200 active:scale-[0.97]"
                             >
-                              <div className="w-[18px] h-[18px] rounded-full bg-arca-dark/30 flex items-center justify-center">
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
-                                </svg>
-                              </div>
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
+                              </svg>
                               <span className="truncate max-w-[100px] sm:max-w-none">
                                 {account.displayName}
                               </span>
@@ -227,11 +221,10 @@ export function Header() {
                     key={href}
                     href={href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className={`block px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                      isActive
-                        ? 'text-arca-green bg-arca-green/[0.08]'
-                        : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
-                    }`}
+                    className={`relative block px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
+                      ? 'text-arca-green bg-arca-green/[0.08]'
+                      : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
+                      }`}
                   >
                     {label}
                   </Link>
