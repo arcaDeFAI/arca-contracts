@@ -36,9 +36,8 @@ const SOCIAL_LINKS: SocialLink[] = [
 
 export function SocialLinks() {
   return (
-    <div className="mt-12 mb-8">
-      {/* Social Links */}
-      <div className="flex justify-center items-center gap-6 mb-6">
+    <div className="py-8">
+      <div className="flex justify-center items-center gap-4 mb-4">
         {SOCIAL_LINKS.map((social) => (
           <a
             key={social.name}
@@ -51,16 +50,18 @@ export function SocialLinks() {
             <img
               src={social.logo}
               alt={social.name}
-              className="w-8 h-8 rounded-lg object-cover bg-black transition-all duration-300 hover:scale-110 hover:shadow-[0_0_20px_rgba(0,255,163,0.5)]"
+              className="w-7 h-7 rounded-lg object-cover bg-arca-dark transition-all duration-300 hover:scale-110 hover:shadow-glow-green opacity-60 hover:opacity-100"
             />
-            {/* Tooltip on hover */}
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1 bg-black border border-arca-green rounded-lg text-white text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            {/* Tooltip */}
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2.5 py-1 bg-arca-gray border border-white/[0.08] rounded-lg text-arca-text text-[10px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-elevated">
               {social.name}
             </div>
           </a>
         ))}
       </div>
-
+      <p className="text-center text-arca-text-tertiary text-[11px]">
+        arca Finance © {new Date().getFullYear()}
+      </p>
     </div>
   );
 }

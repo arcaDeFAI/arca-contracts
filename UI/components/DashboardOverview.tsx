@@ -26,16 +26,13 @@ interface DashboardOverviewProps {
 export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOverviewProps) {
   const { prices } = usePrices()
 
-  // Fetch metrics for all vaults
   const vaultMetrics = vaultConfigs.map(config =>
     useVaultMetrics(config, userAddress)
   )
 
-  // Fetch total harvested rewards for this user from subgraph (all vaults in one query)
   const { harvestsByVault, firstHarvestTimestamp, isLoading: harvestsLoading } =
     useSubgraphUserHarvested(userAddress)
 
-  // Show the user's earliest harvest date, or the subgraph index start date as baseline
   const earnedSinceMs = firstHarvestTimestamp ?? SUBGRAPH_START_TIMESTAMP_MS
   const earnedSinceLabel = new Date(earnedSinceMs).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric'
@@ -50,7 +47,6 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     }
   })
 
-  // Use the new custom hook for aggregation
   const aggregatedData = useDashboardAggregatedData(vaultMetrics, vaultConfigs, totalHarvestedData, prices)
 
   const activeLPs = useMemo(() => {
@@ -85,7 +81,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   const calculatedRate = useMemo(() => {
     if (ratePeriod === 'DPR') return avgAPY / 365
     if (ratePeriod === 'WPR') return avgAPY / 52
-    return avgAPY // APR (monthly)
+    return avgAPY
   }, [avgAPY, ratePeriod])
 
   const extrapolatedReward = useMemo(() => {
@@ -108,62 +104,6 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     return null
   }
 
-  // Right Element for Reward Card
-  const RewardDropdown = (
-    <div className="relative z-[300]">
-      <button onClick={() => setShowRewardDropdown(!showRewardDropdown)} className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
-        <span className="capitalize">{rewardPeriod}</span>
-        <span>▼</span>
-      </button>
-      {showRewardDropdown && (
-        <div className="absolute top-full right-0 mt-1 w-32 bg-black border border-gray-700 rounded-lg shadow-xl z-[300]">
-          {(['hourly', 'daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => (
-            <button
-              key={period}
-              onClick={() => {
-                setRewardPeriod(period)
-                setShowRewardDropdown(false)
-              }}
-              className="w-full px-3 py-2 text-left text-white text-sm hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg flex items-center justify-between"
-            >
-              <span className="capitalize">{period}</span>
-              {rewardPeriod === period && <span className="text-arca-green text-xs">✓</span>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-
-  // Right Element for Rate Card
-  const RateDropdown = (
-    <div className="relative z-[300]">
-      <button onClick={() => setShowRateDropdown(!showRateDropdown)} className="text-xs text-gray-400 hover:text-white flex items-center gap-1">
-        <span>{ratePeriod}</span>
-        <span>▼</span>
-      </button>
-      {showRateDropdown && (
-        <div className="absolute top-full right-0 mt-1 w-32 bg-black border border-gray-700 rounded-lg shadow-xl z-[300]">
-          {(['DPR', 'WPR', 'APR'] as const).map((period) => (
-            <button
-              key={period}
-              onClick={() => {
-                setRatePeriod(period)
-                setShowRateDropdown(false)
-              }}
-              className="w-full px-3 py-2 text-left text-white text-sm hover:bg-gray-800 first:rounded-t-lg last:rounded-b-lg flex items-center justify-between"
-            >
-              <span>{period}</span>
-              {ratePeriod === period && <span className="text-arca-green text-xs">✓</span>}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-
-  // ... existing imports
-
   const handleClaimAll = () => {
     const vaultsWithRewards = new Set<string>()
     vaultMetrics.forEach((metrics, index) => {
@@ -175,7 +115,6 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         metrics.pendingRewards.length > 0 &&
         !vaultsWithRewards.has(vaultKey)) {
 
-        // Calculate total USD value of pending rewards for this vault
         let vaultTotalUSD = 0;
         metrics.pendingRewards.forEach((reward: UserRewardStructOutput) => {
           const amount = Number(formatUnits(reward.pendingRewards, 18));
@@ -185,7 +124,6 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           vaultTotalUSD += amount * price;
         });
 
-        // Only claim if value is greater than $0.05
         if (vaultTotalUSD > 0.05) {
           vaultsWithRewards.add(vaultKey)
           metrics.handleClaimRewards()
@@ -194,10 +132,67 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
     })
   }
 
+  // Dropdown components
+  const DropdownButton = ({ label, onClick }: { label: string; onClick: () => void }) => (
+    <button onClick={onClick} className="text-[14px] text-arca-text-tertiary hover:text-arca-text-secondary flex items-center gap-1 transition-colors">
+      <span className="capitalize">{label}</span>
+      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+      </svg>
+    </button>
+  )
+
+  const DropdownMenu = ({ items, active, onSelect }: { items: string[]; active: string; onSelect: (item: string) => void }) => (
+    <div className="absolute top-full right-0 mt-1.5 w-28 bg-arca-gray border border-white/[0.08] rounded-xl shadow-elevated z-[300] overflow-hidden animate-fade-in">
+      {items.map((item) => (
+        <button
+          key={item}
+          onClick={() => onSelect(item)}
+          className="w-full px-3 py-2 text-left text-arca-text text-xs hover:bg-white/[0.04] flex items-center justify-between transition-colors"
+        >
+          <span className="capitalize">{item}</span>
+          {active === item && <span className="text-arca-green text-[10px]">✓</span>}
+        </button>
+      ))}
+    </div>
+  )
+
+  const RewardDropdown = (
+    <div className="relative z-[300]">
+      <DropdownButton label={rewardPeriod} onClick={() => setShowRewardDropdown(!showRewardDropdown)} />
+      {showRewardDropdown && (
+        <DropdownMenu
+          items={['hourly', 'daily', 'weekly', 'monthly', 'yearly']}
+          active={rewardPeriod}
+          onSelect={(item) => {
+            setRewardPeriod(item as typeof rewardPeriod)
+            setShowRewardDropdown(false)
+          }}
+        />
+      )}
+    </div>
+  )
+
+  const RateDropdown = (
+    <div className="relative z-[300]">
+      <DropdownButton label={ratePeriod} onClick={() => setShowRateDropdown(!showRateDropdown)} />
+      {showRateDropdown && (
+        <DropdownMenu
+          items={['DPR', 'WPR', 'APR']}
+          active={ratePeriod}
+          onSelect={(item) => {
+            setRatePeriod(item as typeof ratePeriod)
+            setShowRateDropdown(false)
+          }}
+        />
+      )}
+    </div>
+  )
+
   return (
     <div className="space-y-5 mb-6">
-      {/* Top Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 overflow-visible">
+      {/* Stats Cards Row */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 overflow-visible">
         <StatsCard
           title="Total Deposits"
           value={`$${aggregatedData.totalBalanceUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
@@ -214,13 +209,13 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           value={`$${aggregatedData.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           loading={aggregatedData.isLoading}
           subtitle={
-            <span className="text-xs text-gray-500 block -mt-1">Since {earnedSinceLabel}</span>
+            <span className="text-[12px] text-arca-text-tertiary">Since {earnedSinceLabel}</span>
           }
         />
 
         <StatsCard
           title="Rewards"
-          subtitle={<span className="text-xs text-gray-500 block -mt-1 capitalize">Est. {rewardPeriod}</span>}
+          subtitle={<span className="text-[12px] text-arca-text-tertiary capitalize">Est. {rewardPeriod}</span>}
           value={`$${extrapolatedReward.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           rightElement={RewardDropdown}
           loading={aggregatedData.isLoading && extrapolatedReward === 0}
@@ -229,12 +224,12 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
 
         <StatsCard
           title={
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <span>Rate</span>
               <Tooltip text={getAPYCalculationExplanation()} width="lg" position="right" ariaLabel="APY calculation explanation" />
             </div>
           }
-          subtitle={<span className="text-xs text-gray-500 block -mt-1">{ratePeriod}</span>}
+          subtitle={<span className="text-[11px] text-arca-text-tertiary">{ratePeriod}</span>}
           value={`${calculatedRate.toFixed(2)}%`}
           rightElement={RateDropdown}
           loading={aggregatedData.isLoading && calculatedRate === 0}
@@ -248,19 +243,19 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
         />
       </div>
 
-      {/* Main Content Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Left Column: Claimable Rewards */}
-        <div className={`bg-arca-gray border border-gray-800/60 rounded-xl transition-all ${showSections ? 'p-5' : 'p-3'}`}>
+      {/* Claimable Rewards + Capital Allocation */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Claimable Rewards */}
+        <div className={`bg-arca-gray/80 border border-white/[0.04] rounded-2xl shadow-card transition-all ${showSections ? 'p-5' : 'p-4'}`}>
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setShowSections(!showSections)}
-                  className="hover:opacity-80 transition-opacity p-1 -ml-1"
+                  className="hover:opacity-80 transition-opacity p-0.5 -ml-0.5"
                 >
                   <svg
-                    className={`w-5 h-5 text-gray-400 transition-transform ${showSections ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 text-arca-text-tertiary transition-transform duration-200 ${showSections ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -268,77 +263,77 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                <h3 className="text-white text-base md:text-lg font-semibold">Claimable Rewards</h3>
+                <h3 className="text-arca-text text-sm font-semibold">Claimable Rewards</h3>
               </div>
-              <div className="text-arca-green text-lg md:text-xl font-bold mt-1 pl-1">
+              <div className="text-arca-green text-xl font-bold mt-1.5 ml-6">
                 ${aggregatedData.totalClaimableUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
             </div>
             <button
               onClick={handleClaimAll}
               disabled={aggregatedData.totalClaimableUSD === 0}
-              className="bg-arca-green text-black font-semibold px-4 py-2 md:px-6 rounded-lg text-sm md:text-base hover:bg-arca-green/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+              className="bg-arca-green text-arca-dark font-semibold px-5 py-2 rounded-xl text-sm hover:bg-arca-green/90 hover:shadow-glow-green transition-all duration-200 active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none whitespace-nowrap"
             >
-              Claim Rewards
+              Claim All
             </button>
           </div>
 
           {showSections && (
             <>
-              <div className="border-t border-gray-800/50 pt-4 mt-4"></div>
-
-              {/* Metropolis Rewards */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <img src="/MetropolisLogo.png" alt="Metropolis" className="w-5 h-5" />
-                  <span className="text-white font-semibold">Metropolis Rewards</span>
-                </div>
-                {aggregatedData.totalMetroRewardsUSD > 0 ? (
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-2">
-                      <img src="/MetropolisLogo.png" alt="Metro" className="w-4 h-4" />
-                      <span className="text-gray-300 text-sm">Metro</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-white font-semibold">
-                        {aggregatedData.metroRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
-                      </div>
-                      <div className="text-gray-400 text-xs">${aggregatedData.totalMetroRewardsUSD.toFixed(2)}</div>
-                    </div>
+              <div className="border-t border-white/[0.04] mt-4 pt-4 space-y-4">
+                {/* Metropolis Rewards */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <img src="/MetropolisLogo.png" alt="Metropolis" className="w-4 h-4" />
+                    <span className="text-arca-text text-sm font-medium">Metropolis</span>
                   </div>
-                ) : (
-                  <div className="text-gray-500 text-sm py-2">No Metropolis rewards</div>
-                )}
-              </div>
-
-              {/* Shadow Rewards */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <img src="/SHadowLogo.jpg" alt="Shadow" className="w-5 h-5 rounded-full" />
-                  <span className="text-white font-semibold">Shadow Rewards</span>
-                </div>
-                {aggregatedData.totalShadowRewardsUSD > 0 ? (
-                  <div className="flex items-center justify-between py-2">
-                    <div className="flex items-center gap-2">
-                      <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full" />
-                      <span className="text-gray-300 text-sm">Shadow</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-white font-semibold">
-                        {aggregatedData.shadowRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                  {aggregatedData.totalMetroRewardsUSD > 0 ? (
+                    <div className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-white/[0.02]">
+                      <div className="flex items-center gap-2">
+                        <img src="/MetropolisLogo.png" alt="Metro" className="w-3.5 h-3.5" />
+                        <span className="text-arca-text-secondary text-sm">Metro</span>
                       </div>
-                      <div className="text-gray-400 text-xs">${aggregatedData.totalShadowRewardsUSD.toFixed(2)}</div>
+                      <div className="text-right">
+                        <div className="text-arca-text font-medium text-sm">
+                          {aggregatedData.metroRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                        </div>
+                        <div className="text-arca-text-tertiary text-xs">${aggregatedData.totalMetroRewardsUSD.toFixed(2)}</div>
+                      </div>
                     </div>
+                  ) : (
+                    <div className="text-arca-text-tertiary text-xs py-1.5 px-3">No Metropolis rewards</div>
+                  )}
+                </div>
+
+                {/* Shadow Rewards */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full" />
+                    <span className="text-arca-text text-sm font-medium">Shadow</span>
                   </div>
-                ) : (
-                  <div className="text-gray-500 text-sm py-2">No Shadow rewards</div>
-                )}
+                  {aggregatedData.totalShadowRewardsUSD > 0 ? (
+                    <div className="flex items-center justify-between py-1.5 px-3 rounded-xl bg-white/[0.02]">
+                      <div className="flex items-center gap-2">
+                        <img src="/SHadowLogo.jpg" alt="Shadow" className="w-3.5 h-3.5 rounded-full" />
+                        <span className="text-arca-text-secondary text-sm">Shadow</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-arca-text font-medium text-sm">
+                          {aggregatedData.shadowRewards.reduce((sum, reward) => sum + reward.amount, 0).toFixed(4)}
+                        </div>
+                        <div className="text-arca-text-tertiary text-xs">${aggregatedData.totalShadowRewardsUSD.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-arca-text-tertiary text-xs py-1.5 px-3">No Shadow rewards</div>
+                  )}
+                </div>
               </div>
             </>
           )}
         </div>
 
-        {/* Right Column: Capital Allocation */}
+        {/* Capital Allocation */}
         <div>
           <PortfolioAllocationCard
             allocations={aggregatedData.allocations}
