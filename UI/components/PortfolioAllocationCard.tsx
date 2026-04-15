@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useMemo, useState } from 'react'
 
@@ -34,24 +34,20 @@ export function PortfolioAllocationCard({
   const [hoveredToken, setHoveredToken] = useState<string | null>(null)
   const [internalIsExpanded, setInternalIsExpanded] = useState(true)
 
-  // Use controlled state if provided, otherwise use internal state
   const isExpanded = controlledIsExpanded !== undefined ? controlledIsExpanded : internalIsExpanded
   const handleToggle = onToggle || (() => setInternalIsExpanded(!internalIsExpanded))
 
-  // Calculate pie chart segments
   const pieSegments = useMemo(() => {
-    let currentAngle = -90 // Start at top
+    let currentAngle = -90
 
     return allocations.map((allocation) => {
       const sweepAngle = (allocation.percentage / 100) * 360
       const startAngle = currentAngle
       const endAngle = currentAngle + sweepAngle
 
-      // Convert to radians
       const startRad = (startAngle * Math.PI) / 180
       const endRad = (endAngle * Math.PI) / 180
 
-      // Calculate arc path
       const radius = 80
       const centerX = 100
       const centerY = 100
@@ -83,9 +79,9 @@ export function PortfolioAllocationCard({
 
   if (allocations.length === 0) {
     return (
-      <div className="bg-arca-gray border border-gray-800/60 rounded-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Capital Allocation</h3>
-        <div className="text-center text-gray-400 py-8">
+      <div className="bg-arca-gray/80 border border-white/[0.04] rounded-2xl p-6 shadow-card">
+        <h3 className="text-sm font-semibold text-arca-text mb-4">Capital Allocation</h3>
+        <div className="text-center text-arca-text-tertiary py-8 text-sm">
           No positions yet
         </div>
       </div>
@@ -93,16 +89,16 @@ export function PortfolioAllocationCard({
   }
 
   return (
-    <div className={`bg-arca-gray border border-gray-800/60 rounded-xl transition-all h-full ${isExpanded ? 'p-5' : 'p-3'}`}>
-      <div className={`flex items-center justify-between ${isExpanded ? 'mb-6' : 'mb-0'}`}>
+    <div className={`bg-arca-gray/80 border border-white/[0.04] rounded-2xl shadow-card transition-all h-full ${isExpanded ? 'p-5' : 'p-4'}`}>
+      <div className={`flex items-center justify-between ${isExpanded ? 'mb-5' : 'mb-0'}`}>
         {isCollapsible ? (
           <div className="flex items-center gap-2">
             <button
               onClick={handleToggle}
-              className="hover:opacity-80 transition-opacity p-1 -ml-1"
+              className="hover:opacity-80 transition-opacity p-0.5 -ml-0.5"
             >
               <svg
-                className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 text-arca-text-tertiary transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -110,29 +106,29 @@ export function PortfolioAllocationCard({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
-            <h3 className="text-lg font-semibold text-white">Capital Allocation</h3>
+            <h3 className="text-sm font-semibold text-arca-text">Capital Allocation</h3>
           </div>
         ) : (
-          <h3 className="text-lg font-semibold text-white">Capital Allocation</h3>
+          <h3 className="text-sm font-semibold text-arca-text">Capital Allocation</h3>
         )}
       </div>
 
       {isExpanded && (
         <div className="flex flex-col lg:flex-row items-center gap-6">
           {/* Pie Chart */}
-          <div className="flex-shrink-0 w-40 h-40 sm:w-48 sm:h-48 lg:w-52 lg:h-52">
-            <svg width="100%" height="100%" viewBox="0 0 200 200" className="drop-shadow-lg">
-              {/* Pie segments */}
+          <div className="flex-shrink-0 w-36 h-36 sm:w-44 sm:h-44">
+            <svg width="100%" height="100%" viewBox="0 0 200 200">
               {pieSegments.map((segment, index) => (
                 <path
                   key={index}
                   d={segment.pathData}
                   fill={segment.color}
-                  stroke="#1a1a1a"
+                  stroke="#12161e"
                   strokeWidth="2"
-                  className="transition-all cursor-pointer"
+                  className="transition-all duration-200 cursor-pointer"
                   style={{
-                    opacity: hoveredToken === null || hoveredToken === segment.token ? 1 : 0.4
+                    opacity: hoveredToken === null || hoveredToken === segment.token ? 1 : 0.35,
+                    filter: hoveredToken === segment.token ? 'brightness(1.2)' : 'none'
                   }}
                   onMouseEnter={() => setHoveredToken(segment.token)}
                   onMouseLeave={() => setHoveredToken(null)}
@@ -142,36 +138,35 @@ export function PortfolioAllocationCard({
           </div>
 
           {/* Legend */}
-          <div className="flex-1 space-y-3 w-full">
+          <div className="flex-1 space-y-2 w-full">
             {allocations.map((allocation, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 bg-arca-dark/30 rounded-lg border transition-all cursor-pointer"
+                className="flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer border border-transparent"
                 style={{
-                  borderColor: hoveredToken === allocation.token ? allocation.color : 'rgba(55, 65, 81, 0.3)',
-                  backgroundColor: hoveredToken === allocation.token ? `${allocation.color}15` : 'rgba(0, 0, 0, 0.3)',
-                  transform: hoveredToken === allocation.token ? 'scale(1.02)' : 'scale(1)'
+                  borderColor: hoveredToken === allocation.token ? `${allocation.color}40` : 'transparent',
+                  backgroundColor: hoveredToken === allocation.token ? `${allocation.color}08` : 'transparent',
                 }}
                 onMouseEnter={() => setHoveredToken(allocation.token)}
                 onMouseLeave={() => setHoveredToken(null)}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <div
-                    className="w-3 h-3 rounded-sm flex-shrink-0"
+                    className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
                     style={{ backgroundColor: allocation.color }}
                   />
                   <div>
-                    <div className="text-white font-medium text-sm">{allocation.token}</div>
-                    <div className="text-gray-400 text-xs">
-                      {allocation.amount.toFixed(4)} tokens
+                    <div className="text-arca-text font-medium text-sm">{allocation.token}</div>
+                    <div className="text-arca-text-tertiary text-xs">
+                      {allocation.amount.toFixed(4)}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-white font-semibold text-sm">
+                  <div className="text-arca-text font-medium text-sm">
                     {allocation.percentage.toFixed(1)}%
                   </div>
-                  <div className="text-gray-400 text-xs">
+                  <div className="text-arca-text-tertiary text-xs">
                     ${allocation.usdValue.toFixed(2)}
                   </div>
                 </div>
