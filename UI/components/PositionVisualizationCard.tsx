@@ -72,19 +72,9 @@ export default function PositionVisualizationCard({
     tokenY,
   });
 
-  const getTierColor = (tier: string) => {
-    switch (tier) {
-      case 'Elite': return 'text-yellow-400 border-yellow-400/20 bg-yellow-400/5';
-      case 'Premium': return 'text-purple-400 border-purple-400/20 bg-purple-400/5';
-      case 'Active': return 'text-blue-400 border-blue-400/20 bg-blue-400/5';
-      default: return 'text-gray-400 border-gray-400/20 bg-gray-400/5';
-    }
-  };
-
   // Determine vault type and token decimals
   const isMetropolis = name.includes('Metropolis');
   const isShadow = name.includes('Shadow');
-  const isWETHVault = name.includes('WETH');
   
   // Get active ID from LB Book contract (for Metropolis)
   const { data: activeIdReal } = useReadContract({
@@ -160,12 +150,9 @@ export default function PositionVisualizationCard({
   });
 
   // Extract active tick from slot0 data for Shadow
-  // slot0 returns: [sqrtPriceX96, tick, observationIndex, observationCardinality, observationCardinalityNext, feeProtocol, unlocked]
-  // We need the tick at index 1 (int24)
   const shadowActiveTick = slot0Data ? (slot0Data as readonly [bigint, number, number, number, number, number, boolean])[1] : null;
 
   // Extract range data from Shadow strategy
-  // getRange returns: [lower, upper] both int24
   const shadowRangeData = rangeDataShadow ? (rangeDataShadow as readonly [number, number]) : null;
 
   const tokenXDecimals = getTokenDecimals(tokenX);
@@ -189,11 +176,8 @@ export default function PositionVisualizationCard({
   const token1Decimals = isToken0X ? tokenYDecimals : tokenXDecimals;
 
   const tickToPrice = (tick: number): number => {
-    // 1.0001^tick gives price of token0 in terms of token1 natively
     const rawPrice0In1 = Math.pow(1.0001, tick);
-    // Adjust by decimals to get human readable price of token0 in terms of token1
     const humanPrice0In1 = rawPrice0In1 * Math.pow(10, token0Decimals - token1Decimals);
-    // Return price of tokenX in terms of tokenY
     return isToken0X ? humanPrice0In1 : (1 / humanPrice0In1);
   };
 
@@ -201,10 +185,8 @@ export default function PositionVisualizationCard({
   const shadowLowerPrice = shadowRangeData ? tickToPrice(shadowRangeData[0]) : null;
   const shadowUpperPrice = shadowRangeData ? tickToPrice(shadowRangeData[1]) : null;
 
-  // Formatting helpers — use tokenRegistry to avoid hardcoded symbol lists
   const formatPrice = (price: number | null): string => {
     if (price === null) return '...';
-    // Always include the unit {tokenY}/{tokenX} in the main string to ensure consistent bold styling
     return `${price.toFixed(6)} ${tokenY}/${tokenX}`;
   };
 
@@ -230,7 +212,7 @@ export default function PositionVisualizationCard({
     const fetchLastRebalance = async () => {
       try {
         const currentBlock = await publicClient.getBlockNumber();
-        const blocksPerMonth = 86400n * 30n; // 30 days
+        const blocksPerMonth = 86400n * 30n;
         const fromBlock = currentBlock > blocksPerMonth ? currentBlock - blocksPerMonth : 0n;
 
         const logs = await publicClient.getLogs({
@@ -242,7 +224,6 @@ export default function PositionVisualizationCard({
 
         if (!isMounted || logs.length === 0) return;
 
-        // Get the most recent rebalance event
         const lastLog = logs[logs.length - 1];
         const block = await publicClient.getBlock({ blockNumber: lastLog.blockNumber });
         
@@ -261,197 +242,130 @@ export default function PositionVisualizationCard({
     };
   }, [isShadow, publicClient, stratAddress]);
 
-  // Use contract data for Metropolis, cached events for Shadow
   const lastRebalance = isMetropolis ? contractLastRebalance : shadowLastRebalance;
 
   // State to force re-render for time updates
   const [, setTick] = useState(0);
   
-  // Update time display every minute
   useEffect(() => {
     if (!lastRebalance) return;
     const interval = setInterval(() => {
       setTick(t => t + 1);
-    }, 60000); // Update every minute
+    }, 60000);
     return () => clearInterval(interval);
   }, [lastRebalance]);
 
-  // Use appropriate active ID/tick based on vault type - for Shadow, tick IS the activeID (int24, can be negative)
   const activeId = isMetropolis ? activeIdReal : (shadowActiveTick !== null ? BigInt(shadowActiveTick) : null);
   const rangeData = isMetropolis ? rangeDataMetro : shadowRangeData;
 
+  const dexName = isShadow ? 'Shadow' : 'Metropolis';
+  const dexLogo = isShadow ? '/SHadowLogo.jpg' : '/MetropolisLogo.png';
+
   if (!rangeData || activeId === null) {
     return (
-      <>
-        <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-6 mb-4">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold text-white">Position Range</h3>
-            <span className={`px-2 py-1 rounded text-xs font-medium border ${getTierColor(tier)}`}>
-              {tier}
-            </span>
-          </div>
-          <div className="text-center text-gray-400">
-            {isShadow ? 'Loading Shadow position data...' : 'Loading position data...'}
-            {isShadow && (
-              <div className="text-xs mt-2">
-                CLPool: {clpoolAddress ? 'Connected' : 'Missing'}<br/>
-                Strategy: {stratAddress ? 'Connected' : 'Missing'}
-              </div>
-            )}
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-2">
+            <img src={dexLogo} alt={dexName} className={`w-5 h-5 ${isShadow ? 'rounded-full' : ''}`} />
+            <h3 className="text-sm font-semibold text-arca-text">Position Range</h3>
           </div>
         </div>
+        <div className="flex items-center gap-2 mb-3">
+          <TokenPairLogos 
+            token0Logo={getTokenLogo(tokenX)} 
+            token1Logo={getTokenLogo(tokenY)} 
+            size={18}
+          />
+          <p className="text-xs text-arca-text-tertiary">{name}</p>
+        </div>
+        <div className="text-center text-arca-text-tertiary text-xs py-4 animate-pulse">
+          Loading position data...
+        </div>
         
-        {/* Last Rebalance */}
         {lastRebalance && (
-          <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3 mb-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Last Rebalance:</span>
-              <span className="text-white font-semibold">
+          <div className="bg-arca-surface rounded-xl p-2.5 mt-3 border border-white/[0.03]">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-arca-text-tertiary">Last Rebalance:</span>
+              <span className="text-arca-text font-medium">
                 {formatTimeElapsed(lastRebalance)}
               </span>
             </div>
           </div>
         )}
-      </>
+      </div>
     );
   }
 
-  // Handle different data types: Metro uses bigint, Shadow uses int24 (number, can be negative)
   const [lowRange, upperRange] = rangeData as readonly [bigint | number, bigint | number];
   const lowRangeNum = Number(lowRange);
   const upperRangeNum = Number(upperRange);
 
-  // Enhanced view for Shadow vaults
-  if (isShadow) {
-    return (
-      <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-4">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <img src="/SHadowLogo.jpg" alt="Shadow" className="w-7 h-7 rounded-full" />
-              <h3 className="text-base font-semibold text-white">Position Range</h3>
-            </div>
-            <div className="flex items-center gap-2 mt-1">
-              <TokenPairLogos 
-                token0Logo={getTokenLogo(tokenX)} 
-                token1Logo={getTokenLogo(tokenY)} 
-                size={22}
-              />
-              <p className="text-xs text-gray-400">{name}</p>
-            </div>
-          </div>
-        </div>
+  const currentActivePrice = isShadow ? shadowActivePrice : activePrice;
+  const currentLowerPrice = isShadow ? shadowLowerPrice : lowerPrice;
+  const currentUpperPrice = isShadow ? shadowUpperPrice : upperPrice;
+  const rangeWidth = upperRangeNum - lowRangeNum;
+  const rangeLabel = isShadow ? 'Range Width' : 'Bin Range';
+  const currentLastRebalance = isShadow ? shadowLastRebalance : lastRebalance;
 
-        {/* Price Information Grid */}
-        <div className="flex gap-2 mb-3">
-          <div className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded p-2 min-w-0">
-            <div className="text-xs text-blue-400 mb-1 truncate">Active Price</div>
-            <div className="text-base font-bold text-white truncate">
-              {formatPrice(shadowActivePrice)}
-            </div>
-          </div>
-
-          <div className="flex-1 bg-gradient-to-br from-purple-500/10 to-purple-600/5 border border-purple-500/20 rounded p-2 min-w-0">
-            <div className="text-xs text-purple-400 mb-1 truncate">Range Width</div>
-            <div className="text-base font-bold text-white truncate">{upperRangeNum - lowRangeNum}</div>
-          </div>
-        </div>
-
-        {/* Range Bar */}
-        <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
-          <RangeBar position={positionData} tokenY={tokenY} compact />
-          <div className="flex items-center justify-between text-xs mt-3">
-            <div className="flex flex-col items-start">
-              <span className="text-gray-500 mb-0.5">Lower Price</span>
-              <span className="text-white font-semibold">{formatPrice(shadowLowerPrice)}</span>
-            </div>
-            <div className="flex flex-col items-end">
-              <span className="text-gray-500 mb-0.5">Upper Price</span>
-              <span className="text-white font-semibold">{formatPrice(shadowUpperPrice)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Last Rebalance for Shadow */}
-        {shadowLastRebalance && (
-          <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">Last Rebalance:</span>
-              <span className="text-white font-semibold">
-                {formatTimeElapsed(shadowLastRebalance)}
-              </span>
-            </div>
-          </div>
-        )}
-
-      </div>
-    );
-  }
-
-  // Enhanced view for Metro vaults
   return (
-    <div className="bg-arca-dark border border-arca-light-gray/20 rounded-xl p-4">
+    <div className="p-4">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <img src="/MetropolisLogo.png" alt="Metropolis" className="w-7 h-7" />
-            <h3 className="text-base font-semibold text-white">Position Range</h3>
-          </div>
-          <div className="flex items-center gap-2 mt-1">
-            <TokenPairLogos 
-              token0Logo={getTokenLogo(tokenX)} 
-              token1Logo={getTokenLogo(tokenY)} 
-              size={22}
-            />
-            <p className="text-xs text-gray-400">{name}</p>
-          </div>
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-2">
+          <img src={dexLogo} alt={dexName} className={`w-5 h-5 ${isShadow ? 'rounded-full' : ''}`} />
+          <h3 className="text-sm font-semibold text-arca-text">Position Range</h3>
         </div>
+      </div>
+      <div className="flex items-center gap-2 mb-4">
+        <TokenPairLogos 
+          token0Logo={getTokenLogo(tokenX)} 
+          token1Logo={getTokenLogo(tokenY)} 
+          size={18}
+        />
+        <p className="text-xs text-arca-text-tertiary">{name}</p>
       </div>
 
       {/* Price Information Grid */}
       <div className="flex gap-2 mb-3">
-        <div className="flex-1 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border border-blue-500/20 rounded p-2 min-w-0">
-          <div className="text-xs text-blue-400 mb-1 truncate">Active Price</div>
-          <div className="text-base font-bold text-white truncate">
-            {formatPrice(activePrice)}
+        <div className="flex-1 bg-arca-surface rounded-xl p-2.5 border border-white/[0.03] min-w-0">
+          <div className="text-[10px] text-arca-text-tertiary mb-1 uppercase tracking-wider font-medium">Active Price</div>
+          <div className="text-sm font-bold text-arca-text truncate">
+            {formatPrice(currentActivePrice)}
           </div>
         </div>
 
-        <div className="flex-1 bg-gradient-to-br from-cyan-500/10 to-cyan-600/5 border border-cyan-500/20 rounded p-2 min-w-0">
-          <div className="text-xs text-cyan-400 mb-1 truncate">Bin Range</div>
-          <div className="text-base font-bold text-white truncate">{(upperRangeNum - lowRangeNum).toLocaleString()}</div>
+        <div className="flex-1 bg-arca-surface rounded-xl p-2.5 border border-white/[0.03] min-w-0">
+          <div className="text-[10px] text-arca-text-tertiary mb-1 uppercase tracking-wider font-medium">{rangeLabel}</div>
+          <div className="text-sm font-bold text-arca-text truncate">{rangeWidth.toLocaleString()}</div>
         </div>
       </div>
 
       {/* Range Bar */}
-      <div className="bg-black/30 border border-gray-700/30 rounded-lg p-4 mb-4">
+      <div className="bg-arca-surface rounded-xl p-3 mb-3 border border-white/[0.03]">
         <RangeBar position={positionData} tokenY={tokenY} compact />
-        <div className="flex items-center justify-between text-xs mt-3">
+        <div className="flex items-center justify-between text-xs mt-2.5">
           <div className="flex flex-col items-start">
-            <span className="text-gray-500 mb-0.5">Lower Price</span>
-            <span className="text-white font-semibold">{formatPrice(lowerPrice)}</span>
+            <span className="text-arca-text-tertiary text-[10px] mb-0.5">Lower Price</span>
+            <span className="text-arca-text font-medium text-[11px]">{formatPrice(currentLowerPrice)}</span>
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-gray-500 mb-0.5">Upper Price</span>
-            <span className="text-white font-semibold">{formatPrice(upperPrice)}</span>
+            <span className="text-arca-text-tertiary text-[10px] mb-0.5">Upper Price</span>
+            <span className="text-arca-text font-medium text-[11px]">{formatPrice(currentUpperPrice)}</span>
           </div>
         </div>
       </div>
 
       {/* Last Rebalance */}
-      {lastRebalance && (
-        <div className="bg-black/20 border border-gray-700/20 rounded-lg p-3">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">Last Rebalance:</span>
-            <span className="text-white font-semibold">
-              {formatTimeElapsed(lastRebalance)}
+      {currentLastRebalance && (
+        <div className="bg-arca-surface rounded-xl p-2.5 border border-white/[0.03]">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-arca-text-tertiary">Last Rebalance:</span>
+            <span className="text-arca-text font-medium">
+              {formatTimeElapsed(currentLastRebalance)}
             </span>
           </div>
         </div>
       )}
-
     </div>
   );
 }

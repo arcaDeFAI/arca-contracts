@@ -2,8 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* ─── Base Reset ─── */
 * {
   box-sizing: border-box;
   padding: 0;
@@ -14,9 +15,11 @@ html,
 body {
   max-width: 100vw;
   overflow-x: hidden;
-  background-color: #0a0a0a;
-  color: white;
-  font-family: 'Inter', sans-serif;
+  background-color: #0b0e13;
+  color: #e6edf3;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -28,4 +31,83 @@ a {
   html {
     color-scheme: dark;
   }
+}
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: rgba(0, 255, 136, 0.2);
+  color: #fff;
+}
+
+/* ─── Number Input Arrows ─── */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+/* ─── Utility: Glassmorphism Card ─── */
+.glass-card {
+  background: rgba(18, 22, 30, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: rgba(0, 255, 136, 0.12);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0, 255, 136, 0.06);
+}
+
+/* ─── Utility: Surface (inner card / input areas) ─── */
+.surface {
+  background: rgba(30, 37, 48, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+}
+
+/* ─── Utility: Arca Green Gradient Text ─── */
+.text-gradient-green {
+  background: linear-gradient(135deg, #00ff88 0%, #34d399 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Focus Ring ─── */
+.focus-ring:focus-visible {
+  outline: 2px solid rgba(0, 255, 136, 0.5);
+  outline-offset: 2px;
+}
+
+/* ─── Transition Helpers ─── */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-fast {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }

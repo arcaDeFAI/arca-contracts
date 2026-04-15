@@ -26,10 +26,6 @@ interface VaultTableViewProps {
 type SortColumn = 'deposit' | 'dailyRewards' | 'earned' | 'apr' | null;
 type SortDirection = 'asc' | 'desc' | null;
 
-/**
- * Helper hook: fetch tokenX and tokenY balances for the deposit modal
- * of the currently-open vault.
- */
 function useDepositBalances(vault: VaultConfig | null, userAddress?: string) {
   const tokenXDef = vault ? getToken(vault.tokenX) : undefined;
   const tokenYDef = vault ? getToken(vault.tokenY) : undefined;
@@ -55,24 +51,20 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
   const [sortColumn, setSortColumn] = useState<SortColumn>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
 
-  // Find the vault object for the currently-open deposit modal
   const depositVault = depositModalVault
     ? vaults.find(v => v.vaultAddress === depositModalVault) ?? null
     : null;
 
-  // Fetch balances dynamically for the deposit-modal vault
   const { tokenXBalance, tokenYBalance } = useDepositBalances(depositVault, userAddress);
 
   const vaultMetrics = vaults.map(config =>
     useVaultMetrics(config, userAddress)
   );
 
-  // Fetch harvested amounts for each vault (single subgraph query, shared cache)
   const harvestedData = vaults.map(vault =>
     useUserHarvestedForVault(vault.vaultAddress, userAddress)
   );
 
-  // Fetch position data for each vault
   const positionData = vaults.map(vault => useVaultPositionData({
     vaultAddress: vault.vaultAddress,
     stratAddress: vault.stratAddress,
@@ -83,25 +75,22 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
     tokenY: vault.tokenY,
   }));
 
-  // Handle sorting
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
-      // Cycle through: null -> desc (up arrow) -> asc (down arrow) -> null
       if (sortDirection === null) {
-        setSortDirection('desc'); // Up arrow: largest to smallest
+        setSortDirection('desc');
       } else if (sortDirection === 'desc') {
-        setSortDirection('asc'); // Down arrow: smallest to largest
+        setSortDirection('asc');
       } else {
         setSortColumn(null);
         setSortDirection(null);
       }
     } else {
       setSortColumn(column);
-      setSortDirection('desc'); // First click: largest to smallest
+      setSortDirection('desc');
     }
   };
 
-  // Sortable header component
   const SortableHeader = ({ column, children }: { column: SortColumn; children: React.ReactNode }) => {
     const isActive = sortColumn === column;
     const isAsc = isActive && sortDirection === 'asc';
@@ -109,15 +98,14 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
 
     return (
       <div
-        className="text-center flex items-center justify-center gap-1.5 cursor-pointer hover:text-arca-green transition-colors group outline-none select-none"
+        className="text-center flex items-center justify-center gap-1 cursor-pointer hover:text-arca-green transition-colors group outline-none select-none"
         onClick={() => handleSort(column)}
         onMouseDown={(e) => e.preventDefault()}
       >
         <span>{children}</span>
-        <div className="flex flex-col gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
-          {/* Up Arrow = Descending (largest to smallest) */}
+        <div className="flex flex-col gap-0.5 opacity-40 group-hover:opacity-80 transition-opacity">
           <svg
-            className={`w-2.5 h-2.5 transition-all ${isDesc ? 'text-arca-green opacity-100' : 'text-gray-500'}`}
+            className={`w-2 h-2 transition-all ${isDesc ? 'text-arca-green opacity-100' : 'text-arca-text-tertiary'}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
@@ -125,9 +113,8 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
           >
             <path d="M6 9 L6 3 M6 3 L3 6 M6 3 L9 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          {/* Down Arrow = Ascending (smallest to largest) */}
           <svg
-            className={`w-2.5 h-2.5 transition-all ${isAsc ? 'text-arca-green opacity-100' : 'text-gray-500'}`}
+            className={`w-2 h-2 transition-all ${isAsc ? 'text-arca-green opacity-100' : 'text-arca-text-tertiary'}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
@@ -140,7 +127,6 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
     );
   };
 
-  // Sort vaults based on selected column and direction
   const sortedVaultIndices = useMemo(() => {
     const indices = vaults.map((_, index) => index);
 
@@ -190,27 +176,27 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
 
   return (
     <>
-      <div className="bg-arca-gray border-2 border-gray-700/50 rounded-xl overflow-hidden backdrop-blur-sm">
-        {/* Table Header - Responsive */}
-        <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4 bg-arca-gray border-b-2 border-gray-700/50 text-sm font-semibold text-white uppercase tracking-wider">
-          <div className="flex items-center justify-start pl-4 gap-2">
+      <div className="bg-arca-gray/80 border border-white/[0.04] rounded-2xl overflow-hidden backdrop-blur-sm shadow-card">
+        {/* Desktop Header */}
+        <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-3 border-b border-white/[0.04] text-[14px] font-medium text-arca-text-tertiary uppercase tracking-wider">
+          <div className="flex items-center justify-start gap-2 pl-[64px]">
             <span>Vaults</span>
           </div>
           <div className="flex items-center justify-center">Status</div>
           <SortableHeader column="deposit">Deposit</SortableHeader>
-          <SortableHeader column="dailyRewards">Daily Rewards</SortableHeader>
+          <SortableHeader column="dailyRewards">Daily</SortableHeader>
           <SortableHeader column="earned">Earned</SortableHeader>
           <SortableHeader column="apr">APR</SortableHeader>
           <div className="flex items-center justify-center gap-1">
             <span>Withdraw</span>
             <Tooltip text="Withdrawal are only cancelable while queued" width="sm" ariaLabel="Withdrawal information" />
           </div>
-          <div className="w-[110px]"></div> {/* Actions column */}
+          <div className="w-[100px]"></div>
         </div>
 
         {/* Mobile Header */}
-        <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3 bg-arca-gray border-b-2 border-gray-700/50 text-xs font-semibold text-white uppercase tracking-wider">
-          <div>Vault</div>
+        <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3 border-b border-white/[0.04] text-[10px] font-medium text-arca-text-tertiary uppercase tracking-wider">
+          <div className="pl-[46px]">Vault</div>
           <div className="text-center flex items-center justify-center gap-1">
             <span>Withdraw</span>
             <Tooltip text="Withdrawal only cancelable while queued" width="sm" ariaLabel="Withdrawal information" />
@@ -230,12 +216,10 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
             const isShadow = vault.name.includes('Shadow');
             const hasPosition = metrics.depositedValueUSD && metrics.depositedValueUSD > 0;
 
-            // Filter non-zero rewards
             const nonZeroRewards = metrics.pendingRewards
               ? metrics.pendingRewards.filter((reward: UserRewardStructOutput) => reward.pendingRewards > 0n)
               : [];
 
-            // Calculate total USD value of rewards using registry
             let totalRewardsUSD = 0;
             if (nonZeroRewards.length > 0 && metrics.prices) {
               totalRewardsUSD = nonZeroRewards.reduce((sum: number, reward: UserRewardStructOutput) => {
@@ -247,7 +231,6 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
               }, 0);
             }
 
-            // Metro: any non-zero rewards | Shadow: >= $0.01 USD
             let hasClaimableRewards = false;
             if (isShadow) {
               hasClaimableRewards = totalRewardsUSD >= 0.01;
@@ -255,12 +238,9 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
               hasClaimableRewards = nonZeroRewards.length > 0;
             }
 
-            // Check for claimable or queued withdrawals
             const hasQueuedWithdrawal = metrics.queuedWithdrawal && metrics.queuedWithdrawal > 0n;
             const hasClaimableWithdrawal = metrics.claimableWithdrawals && metrics.claimableWithdrawals.length > 0;
 
-            // Only show vaults with positions, rewards, or withdrawals
-            // Show row if there are any non-zero rewards, even if below claim threshold
             const hasAnyRewards = nonZeroRewards.length > 0;
             if (!hasPosition && !hasAnyRewards && !hasQueuedWithdrawal && !hasClaimableWithdrawal) {
               return null;
@@ -271,144 +251,112 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
               ? (metrics.depositedValueUSD * (rewardApr / 100)) / 365
               : 0;
 
-            // Get DEX name
             const dexName = isShadow ? 'Shadow' : 'Metropolis';
 
             return (
               <div
                 key={vault.vaultAddress}
                 onClick={() => onVaultClick(vault)}
-                className={`w-full transition-all duration-200 cursor-pointer relative ${sortIndex > 0 ? 'border-t border-gray-700/40' : ''
+                className={`w-full transition-all duration-200 cursor-pointer ${sortIndex > 0 ? 'border-t border-white/[0.04]' : ''
                   } ${isSelected
-                    ? 'bg-arca-green/5 border-l-4'
-                    : 'hover:bg-gray-900/30 hover:border-l-4'
+                    ? 'bg-arca-green/[0.04] border-l-2 border-l-arca-green'
+                    : 'hover:bg-white/[0.02] border-l-2 border-l-transparent hover:border-l-arca-green/40'
                   }`}
-                style={{
-                  borderLeftColor: isSelected || undefined ? '#00ff88' : undefined
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.borderLeftColor = '#00ff88'}
-                onMouseLeave={(e) => {
-                  if (!isSelected) e.currentTarget.style.borderLeftColor = 'transparent';
-                }}
               >
-                {/* Desktop Layout */}
-                <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-4">
-                  {/* Asset Column - Token Pair Logos + Name */}
-                  <div className="flex items-center gap-4">
-
+                {/* Desktop Row */}
+                <div className="hidden md:grid grid-cols-[2fr,1fr,1fr,1fr,1fr,1fr,1fr,auto] gap-4 px-6 py-3.5">
+                  {/* Asset */}
+                  <div className="flex items-center gap-3">
                     <TokenPairLogos
                       token0Logo={getTokenLogo(vault.tokenX)}
                       token1Logo={getTokenLogo(vault.tokenY)}
-                      size={32}
+                      size={30}
                     />
                     <div>
-                      <div className="text-white font-semibold text-base">
+                      <div className="text-arca-text font-medium text-sm">
                         {vault.tokenX} • {vault.tokenY}
                       </div>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1.5 mt-0.5">
                         <img
                           src={isShadow ? '/SHadowLogo.jpg' : '/MetropolisLogo.png'}
                           alt={dexName}
-                          className="w-4 h-4 rounded-full"
+                          className="w-3.5 h-3.5 rounded-full"
                         />
-                        <span className="text-sm text-white/70 font-medium">
+                        <span className="text-[12px] text-arca-text-tertiary font-medium">
                           {dexName}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Status Column - Liquidity Distribution Bar with Price Position */}
+                  {/* Status */}
                   <div className="flex items-center justify-center">
                     {hasPosition ? (
-                      <div className="w-full max-w-[140px]">
+                      <div className="w-full max-w-[130px]">
                         <RangeBar position={position} compact tokenY={vault.tokenY} />
                       </div>
-                    ) : hasPosition ? (
-                      <div className="w-full max-w-[140px]">
-                        <div className="h-3 bg-gray-800/50 rounded-full overflow-hidden relative">
-                          <div
-                            className="h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 absolute left-0 rounded-full"
-                            style={{ width: '100%' }}
-                          />
-                        </div>
-                      </div>
                     ) : (
-                      <span className="text-xs text-arca-green/40">-</span>
+                      <span className="text-xs text-arca-text-tertiary">-</span>
                     )}
                   </div>
 
-                  {/* Deposit Column */}
+                  {/* Deposit */}
                   <div className="flex items-center justify-center">
-                    <span className="text-white font-medium text-base">
+                    <span className="text-arca-text font-medium text-sm">
                       ${metrics.depositedValueUSD?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                     </span>
                   </div>
 
-                  {/* Daily Rewards Column - Extrapolated from APR */}
+                  {/* Daily Rewards */}
                   <div className="flex items-center justify-center">
-                    <span className="text-white font-medium text-base">
+                    <span className="text-arca-text font-medium text-sm">
                       ${dailyRewardsUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
 
-                  {/* Earned Column - User's Harvested Amount */}
+                  {/* Earned */}
                   <div className="flex items-center justify-center">
-                    <span className="text-white font-medium text-base">
+                    <span className="text-arca-text font-medium text-sm">
                       ${harvested.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
 
-                  {/* APR Column */}
-                  <div className="flex flex-col items-center justify-center gap-1.5">
-                    <span className="text-arca-green font-semibold text-base">
-                      {(metrics.subgraphMetrics.rewardApr ?? 0) > 0 ? `${metrics.subgraphMetrics.rewardApr!.toFixed(2)}%` : '-'}
+                  {/* APR */}
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="text-arca-green font-semibold text-sm">
+                      {rewardApr > 0 ? `${rewardApr.toFixed(2)}%` : '-'}
                     </span>
-                    {/* vs HODL bubble — hidden for now, re-enable when ready
-                    {metrics.subgraphMetrics.vsHodl !== null && (
-                      <span className={`inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight whitespace-nowrap ${
-                        metrics.subgraphMetrics.vsHodl >= 0
-                          ? 'bg-arca-green/10 border-arca-green/25 text-arca-green'
-                          : 'bg-red-500/10 border-red-500/25 text-red-400'
-                      }`}>
-                        vs HODL&nbsp;<span className="opacity-80">{metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%</span>
-                      </span>
-                    )}
-                    */}
                   </div>
 
-                  {/* Withdraw Status Column */}
+                  {/* Withdrawal Status */}
                   <div className="flex items-center justify-center">
-                    {/* Show claim button if claimable withdrawal exists */}
                     {metrics.claimableWithdrawals && metrics.claimableWithdrawals.length > 0 ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           if (metrics.handleRedeemWithdrawal && metrics.claimableWithdrawals && !metrics.isRedeemingWithdrawal) {
-                            // Claim from the first available round
                             metrics.handleRedeemWithdrawal(metrics.claimableWithdrawals[0].round);
                           }
                         }}
                         disabled={metrics.isRedeemingWithdrawal}
-                        className={`px-3 py-1 border rounded text-xs font-semibold transition-all ${metrics.isRedeemingWithdrawal
-                          ? 'bg-gray-700/20 border-gray-600/50 text-gray-500 cursor-not-allowed'
-                          : 'bg-arca-green/10 border-arca-green/50 text-arca-green hover:bg-arca-green/20 animate-pulse'
+                        className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${metrics.isRedeemingWithdrawal
+                          ? 'bg-white/[0.04] text-arca-text-tertiary cursor-not-allowed'
+                          : 'bg-arca-green/[0.1] text-arca-green hover:bg-arca-green/[0.15] animate-pulse-soft'
                           }`}
                         title={metrics.claimableWithdrawals.length > 1 ? `${metrics.claimableWithdrawals.length} withdrawals available` : undefined}
                       >
                         {metrics.isRedeemingWithdrawal ? 'Processing...' : `Claim${metrics.claimableWithdrawals.length > 1 ? ` (${metrics.claimableWithdrawals.length})` : ''}`}
                       </button>
                     ) : metrics.queuedWithdrawal && metrics.queuedWithdrawal > 0n ? (
-                      /* Show queued status if withdrawal is queued in current round */
-                      <span className="text-xs text-orange-400 font-medium">Queued</span>
+                      <span className="text-xs text-amber-400 font-medium">Queued</span>
                     ) : (
-                      <span className="text-xs text-gray-500">-</span>
+                      <span className="text-xs text-arca-text-tertiary">-</span>
                     )}
                   </div>
 
-                  {/* Action Buttons */}
+                  {/* Actions */}
                   <div className="flex items-center justify-end gap-1.5">
-                    {/* Claim Rewards Button */}
+                    {/* Claim Rewards */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -417,17 +365,14 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         }
                       }}
                       disabled={metrics.isClaimingRewards || !hasClaimableRewards}
-                      className={`w-7 h-7 flex items-center justify-center bg-gray-900/50 border border-gray-700/50 rounded transition-all ${metrics.isClaimingRewards || !hasClaimableRewards
-                        ? 'opacity-30 cursor-not-allowed'
-                        : 'hover:bg-arca-green/10 hover:border-arca-green/50'
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg transition-all ${metrics.isClaimingRewards || !hasClaimableRewards
+                        ? 'opacity-20 cursor-not-allowed'
+                        : 'bg-white/[0.03] hover:bg-arca-green/[0.08] hover:text-arca-green'
                         }`}
                       title={hasClaimableRewards ? "Claim Rewards" : "No Rewards Available"}
                     >
                       <svg
-                        className={`w-3.5 h-3.5 ${metrics.isClaimingRewards || !hasClaimableRewards
-                          ? 'text-gray-600'
-                          : 'text-arca-green'
-                          }`}
+                        className={`w-3.5 h-3.5 ${metrics.isClaimingRewards || !hasClaimableRewards ? 'text-arca-text-tertiary' : 'text-arca-green'}`}
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -436,14 +381,14 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                       </svg>
                     </button>
 
-                    {/* Deposit Button */}
+                    {/* Deposit */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         setDepositModalVault(vault.vaultAddress);
                       }}
                       disabled={!userAddress}
-                      className="w-7 h-7 flex items-center justify-center bg-gray-900/50 border border-gray-700/50 rounded hover:bg-arca-green/10 hover:border-arca-green/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-white/[0.03] hover:bg-arca-green/[0.08] transition-all disabled:opacity-20 disabled:cursor-not-allowed"
                       title="Deposit"
                     >
                       <svg className="w-3.5 h-3.5 text-arca-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -451,11 +396,10 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                       </svg>
                     </button>
 
-                    {/* Withdraw Button - Shows X if queued withdrawal exists */}
+                    {/* Withdraw / Cancel */}
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        // If there's a queued withdrawal, cancel it. Otherwise, open withdraw modal
                         if (hasQueuedWithdrawal && metrics.queuedWithdrawal && metrics.handleCancelWithdrawal) {
                           metrics.handleCancelWithdrawal(metrics.queuedWithdrawal);
                         } else {
@@ -463,14 +407,16 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                         }
                       }}
                       disabled={!hasPosition && !hasQueuedWithdrawal}
-                      className={`w-7 h-7 flex items-center justify-center bg-gray-900/50 border border-gray-700/50 rounded transition-all disabled:opacity-30 disabled:cursor-not-allowed ${hasQueuedWithdrawal
-                        ? 'hover:bg-red-600/20 hover:border-red-600/50'
-                        : 'hover:bg-red-500/10 hover:border-red-500/50'
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg bg-white/[0.03] transition-all disabled:opacity-20 disabled:cursor-not-allowed ${hasQueuedWithdrawal
+                        ? 'hover:bg-red-500/[0.1]'
+                        : 'hover:bg-red-500/[0.08]'
                         }`}
                       title={hasQueuedWithdrawal ? "Cancel Withdrawal" : "Withdraw"}
                     >
                       {hasQueuedWithdrawal ? (
-                        <span className="text-red-400 text-sm font-bold">✕</span>
+                        <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                       ) : (
                         <svg className="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -480,17 +426,17 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                   </div>
                 </div>
 
-                {/* Mobile Layout */}
+                {/* Mobile Row */}
                 <div className="md:hidden grid grid-cols-[2fr,1fr,1fr,1fr] gap-2 px-3 py-3">
                   {/* Vault Info */}
                   <div className="flex items-center gap-2">
                     <TokenPairLogos
                       token0Logo={getTokenLogo(vault.tokenX)}
                       token1Logo={getTokenLogo(vault.tokenY)}
-                      size={24}
+                      size={22}
                     />
                     <div>
-                      <div className="text-white font-semibold text-sm">
+                      <div className="text-arca-text font-medium text-xs">
                         {vault.tokenX} • {vault.tokenY}
                       </div>
                       <div className="flex items-center gap-1 mt-0.5">
@@ -499,12 +445,12 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                           alt={dexName}
                           className="w-3 h-3 rounded-full"
                         />
-                        <span className="text-xs text-white/70">{dexName}</span>
+                        <span className="text-[10px] text-arca-text-tertiary">{dexName}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Withdraw Status Column - Mobile */}
+                  {/* Withdraw Status — Mobile */}
                   <div className="flex items-center justify-center">
                     {metrics.claimableWithdrawals && metrics.claimableWithdrawals.length > 0 ? (
                       <button
@@ -515,70 +461,58 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
                           }
                         }}
                         disabled={metrics.isRedeemingWithdrawal}
-                        className={`px-2 py-1 border rounded text-xs font-semibold transition-all ${metrics.isRedeemingWithdrawal
-                          ? 'bg-gray-700/20 border-gray-600/50 text-gray-500 cursor-not-allowed'
-                          : 'bg-arca-green/10 border-arca-green/50 text-arca-green hover:bg-arca-green/20 animate-pulse'
+                        className={`px-2 py-1 rounded-lg text-[10px] font-medium transition-all ${metrics.isRedeemingWithdrawal
+                          ? 'bg-white/[0.04] text-arca-text-tertiary cursor-not-allowed'
+                          : 'bg-arca-green/[0.1] text-arca-green hover:bg-arca-green/[0.15] animate-pulse-soft'
                           }`}
-                        title={metrics.claimableWithdrawals.length > 1 ? `${metrics.claimableWithdrawals.length} withdrawals available` : undefined}
                       >
-                        {metrics.isRedeemingWithdrawal ? 'Processing...' : `Claim${metrics.claimableWithdrawals.length > 1 ? ` (${metrics.claimableWithdrawals.length})` : ''}`}
+                        {metrics.isRedeemingWithdrawal ? '...' : `Claim${metrics.claimableWithdrawals.length > 1 ? ` (${metrics.claimableWithdrawals.length})` : ''}`}
                       </button>
                     ) : metrics.queuedWithdrawal && metrics.queuedWithdrawal > 0n ? (
-                      <span className="text-xs text-orange-400 font-medium">Queued</span>
+                      <span className="text-[10px] text-amber-400 font-medium">Queued</span>
                     ) : (
-                      <span className="text-xs text-gray-500">-</span>
+                      <span className="text-[10px] text-arca-text-tertiary">-</span>
                     )}
                   </div>
 
-                  {/* Status Column - Mobile */}
+                  {/* Status — Mobile */}
                   <div className="flex items-center justify-center">
                     {hasPosition && position.hasData ? (
-                      <div className="w-full max-w-[60px]">
-                        <div className="h-3 bg-gray-800/50 rounded-full overflow-visible relative">
+                      <div className="w-full max-w-[55px]">
+                        <div className="h-2.5 bg-white/[0.04] rounded-full overflow-visible relative">
                           <div
-                            className="h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 absolute left-0 rounded-full"
+                            className="h-full bg-gradient-to-r from-arca-green/50 via-arca-green/30 to-arca-green/50 absolute left-0 rounded-full"
                             style={{ width: '100%' }}
                           />
                           <div
                             className="absolute top-0 w-0.5 h-full bg-red-400 rounded-full"
                             style={{
                               left: `${position.pricePosition}%`,
-                              boxShadow: '0 0 6px rgba(248, 113, 113, 0.8)',
+                              boxShadow: '0 0 4px rgba(248, 113, 113, 0.6)',
                               transform: 'translateX(-50%)'
                             }}
                           />
                         </div>
                       </div>
                     ) : hasPosition ? (
-                      <div className="w-full max-w-[60px]">
-                        <div className="h-3 bg-gray-800/50 rounded-full overflow-hidden relative">
+                      <div className="w-full max-w-[55px]">
+                        <div className="h-2.5 bg-white/[0.04] rounded-full overflow-hidden relative">
                           <div
-                            className="h-full bg-gradient-to-r from-arca-green/60 via-arca-green/40 to-arca-green/60 absolute left-0 rounded-full"
+                            className="h-full bg-gradient-to-r from-arca-green/50 via-arca-green/30 to-arca-green/50 absolute left-0 rounded-full"
                             style={{ width: '100%' }}
                           />
                         </div>
                       </div>
                     ) : (
-                      <span className="text-xs text-arca-green/40">-</span>
+                      <span className="text-[10px] text-arca-text-tertiary">-</span>
                     )}
                   </div>
 
-                  {/* APR Column - Mobile */}
-                  <div className="flex flex-col items-center justify-center gap-1">
-                    <span className="text-arca-green font-semibold text-sm">
-                      {(metrics.subgraphMetrics.rewardApr ?? 0) > 0 ? `${metrics.subgraphMetrics.rewardApr!.toFixed(1)}%` : '-'}
+                  {/* APR — Mobile */}
+                  <div className="flex flex-col items-center justify-center">
+                    <span className="text-arca-green font-semibold text-xs">
+                      {rewardApr > 0 ? `${rewardApr.toFixed(1)}%` : '-'}
                     </span>
-                    {/* vs HODL bubble — hidden for now, re-enable when ready
-                    {metrics.subgraphMetrics.vsHodl !== null && (
-                      <span className={`inline-flex items-center text-[10px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight ${
-                        metrics.subgraphMetrics.vsHodl >= 0
-                          ? 'bg-arca-green/10 border-arca-green/25 text-arca-green'
-                          : 'bg-red-500/10 border-red-500/25 text-red-400'
-                      }`}>
-                        {metrics.subgraphMetrics.vsHodl >= 0 ? '+' : ''}{metrics.subgraphMetrics.vsHodl.toFixed(1)}%
-                      </span>
-                    )}
-                    */}
                   </div>
                 </div>
               </div>
@@ -587,7 +521,7 @@ export function VaultTableView({ vaults, userAddress, onVaultClick, selectedVaul
         </div>
       </div>
 
-      {/* Modals - Outside table container to avoid overflow clipping */}
+      {/* Modals */}
       {depositVault && (
         <DepositModal
           vaultAddress={depositVault.vaultAddress}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAccount } from 'wagmi';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
@@ -28,7 +29,6 @@ export function VaultCard({ config }: VaultCardProps) {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [mounted, setMounted] = useState(false);
 
-  // Use unified metrics hook
   const metrics = useVaultMetrics(config, address);
 
   const {
@@ -43,8 +43,6 @@ export function VaultCard({ config }: VaultCardProps) {
   } = metrics;
 
   const rewardApr = subgraphMetrics.rewardApr;
-  const vsHodl = subgraphMetrics.vsHodl;
-  const ilDays = subgraphMetrics.ilDays;
 
   const position = useVaultPositionData({
     vaultAddress,
@@ -56,162 +54,124 @@ export function VaultCard({ config }: VaultCardProps) {
     tokenY,
   });
 
-  // Fetch token balances dynamically based on vault tokens
   const tokenXDef = getToken(tokenX);
   const tokenYDef = getToken(tokenY);
   const tokenXBalance = useTokenBalance(tokenXDef?.address ?? null, address);
   const tokenYBalance = useTokenBalance(tokenYDef?.address ?? null, address);
 
-  // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) {
     return (
-      <div className="bg-arca-gray/90 backdrop-blur-sm rounded-xl p-5 border border-gray-800/60 h-[320px] animate-pulse flex flex-col justify-between">
+      <div className="bg-arca-gray/80 rounded-2xl p-6 border border-white/[0.04] shadow-card h-[360px] animate-pulse flex flex-col justify-between">
         <div className="flex gap-3">
-          <div className="h-10 w-10 bg-gray-800 rounded-full" />
-          <div className="h-10 w-10 bg-gray-800 rounded-full" />
+          <div className="h-10 w-10 bg-white/[0.04] rounded-full" />
+          <div className="h-10 w-10 bg-white/[0.04] rounded-full -ml-4" />
         </div>
-        <div className="space-y-4">
-          <div className="h-4 w-1/2 bg-gray-800 rounded" />
-          <div className="h-4 w-3/4 bg-gray-800 rounded" />
+        <div className="space-y-3 mt-6">
+          <div className="h-5 w-2/3 bg-white/[0.04] rounded-lg" />
+          <div className="h-4 w-1/2 bg-white/[0.04] rounded-lg" />
         </div>
-        <div className="h-10 w-full bg-gray-800 rounded" />
+        <div className="space-y-2 mt-auto">
+          <div className="h-3 w-full bg-white/[0.04] rounded-lg" />
+          <div className="h-10 w-full bg-white/[0.04] rounded-xl" />
+        </div>
       </div>
     );
   }
 
+  const isShadow = name.includes('Shadow');
+  const dexName = isShadow ? 'Shadow' : 'Metropolis';
+  const dexLogo = isShadow ? '/SHadowLogo.jpg' : '/MetropolisLogo.png';
+  const cleanName = name.replace(' | Metropolis', '').replace(' | Shadow', '');
+
   return (
     <>
-      <div
-        className="group relative bg-arca-gray/95 backdrop-blur-sm rounded-xl p-5 border border-gray-800/60 transition-all duration-300 hover:border-arca-green/40 hover:shadow-[0_0_20px_rgba(0,255,163,0.1)] w-full flex flex-col h-full"
-      >
-        {/* DEX Badge */}
-        <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/40 border border-gray-700/50 rounded-full pl-1.5 pr-2.5 py-1 pointer-events-none">
-          {name.includes('Metropolis') ? (
-            <>
-              <img src="/MetropolisLogo.png" alt="Metro" className="w-4 h-4 object-contain" />
-              <span className="text-[10px] font-semibold text-gray-300 tracking-wide uppercase">Metropolis</span>
-            </>
-          ) : (
-            <>
-              <img src="/SHadowLogo.jpg" alt="Shadow" className="w-4 h-4 rounded-full object-contain" />
-              <span className="text-[10px] font-semibold text-gray-300 tracking-wide uppercase">Shadow</span>
-            </>
-          )}
+      <div className="group relative bg-arca-gray/80 backdrop-blur-sm rounded-2xl p-6 border border-white/[0.04] shadow-card transition-all duration-300 hover:shadow-card-hover hover:border-white/[0.07] hover:-translate-y-[2px] w-full flex flex-col h-full">
+
+        {/* DEX Badge — top right */}
+        <div className="absolute top-5 right-5 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.04]">
+          <img src={dexLogo} alt={dexName} className={`w-3.5 h-3.5 object-contain ${isShadow ? 'rounded-full' : ''}`} />
+          <span className="text-[10px] font-medium text-arca-text-secondary tracking-wide">{dexName}</span>
         </div>
 
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-2">
+        {/* Token pair + name */}
+        <div className="mb-5">
+          <div className="flex items-center gap-3 mb-3">
             <TokenPairLogos
               token0Logo={getTokenLogo(tokenX)}
               token1Logo={getTokenLogo(tokenY)}
-              size={42}
+              size={40}
             />
           </div>
-          <h3 className="text-white font-bold text-lg tracking-tight group-hover:text-arca-green transition-colors">
-            {name.replace(' | Metropolis', '').replace(' | Shadow', '')}
+          <h3 className="text-arca-text font-semibold text-lg tracking-tight group-hover:text-white transition-colors">
+            {cleanName}
           </h3>
-          <p className="text-xs text-gray-500 font-medium">
-            {name.includes('Metropolis') ? 'Algorithmic Rebalancing' : 'Algorithmic Rebalancing'}
+          <p className="text-xs text-arca-text-tertiary font-medium mt-0.5">
+            Algorithmic Rebalancing
           </p>
         </div>
 
-        {/* Stats Grid */}
+        {/* Key Metrics */}
         <div className="flex-1 space-y-4">
 
-          {/* Main Stats */}
+          {/* APR + TVL row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">APR</span>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-arca-text-tertiary text-[11px] font-medium uppercase tracking-wider">APR</span>
                 <Tooltip text={getAPYCalculationExplanation()} width="sm" ariaLabel="APR calculation explanation" />
               </div>
               <div className="text-2xl font-bold text-arca-green tracking-tight">
-                {isLoading || aprLoading ? <Skeleton width={60} height={24} className="mt-1" /> : formatPercentage(rewardApr ?? 0)}
+                {isLoading || aprLoading ? <Skeleton width={60} height={24} /> : formatPercentage(rewardApr ?? 0)}
               </div>
-              {/* vs HODL bubble — hidden for now, re-enable when ready
-              {vsHodl !== null && (
-                <div className="relative group/iltooltip mt-2">
-                  <div className="flex items-center gap-1.5 flex-nowrap">
-                    {vsHodl !== null && (
-                      <span className={`inline-flex items-center text-[11px] font-semibold px-1.5 py-0.5 rounded-md border tracking-tight whitespace-nowrap ${
-                        vsHodl >= 0
-                          ? 'bg-arca-green/10 border-arca-green/25 text-arca-green'
-                          : 'bg-red-500/10 border-red-500/25 text-red-400'
-                      }`}>
-                        vs HODL&nbsp;<span className="opacity-80">{vsHodl >= 0 ? '+' : ''}{vsHodl.toFixed(1)}%</span>
-                      </span>
-                    )}
-                    <span className="text-gray-600 text-[11px] cursor-default select-none leading-none">ⓘ</span>
-                  </div>
-                  <div className="absolute bottom-full left-0 mb-2 z-50 hidden group-hover/iltooltip:block w-56">
-                    <div className="bg-[#0e1117] border border-gray-700/60 rounded-xl p-3 shadow-2xl text-xs space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-400 font-medium">Data window</span>
-                        <span className="text-white font-bold">{ilDays > 0 ? `${Math.round(ilDays)}d` : '—'}</span>
-                      </div>
-                      {vsHodl !== null && ilDays > 0 && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400 font-medium">vs HODL annualized</span>
-                          <span className={`font-bold ${vsHodl >= 0 ? 'text-arca-green' : 'text-red-400'}`}>
-                            {(vsHodl * 365 / ilDays) >= 0 ? '+' : ''}{(vsHodl * 365 / ilDays).toFixed(1)}%/yr
-                          </span>
-                        </div>
-                      )}
-                      <div className="border-t border-gray-800 pt-2 text-[10px] text-gray-600 leading-relaxed">
-                        Measured since vault inception. Positive = vault outperformed simply holding both tokens.
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              */}
             </div>
 
             <div>
-              <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">TVL</span>
-              <div className="text-xl font-bold text-white">
-                {isLoading ? <Skeleton width={60} height={24} className="mt-1" /> : formatUSD(vaultTVL)}
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-arca-text-tertiary text-[11px] font-medium uppercase tracking-wider">TVL</span>
+              </div>
+              <div className="text-2xl font-bold text-arca-text tracking-tight">
+                {isLoading ? <Skeleton width={60} height={24} /> : formatUSD(vaultTVL)}
               </div>
             </div>
           </div>
 
-          {/* Secondary Stats */}
-          <div className="pt-4 border-t border-gray-800/50 space-y-2">
+          {/* Divider + secondary stats */}
+          <div className="pt-4 border-t border-white/[0.04] space-y-2.5">
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 font-medium">Your Deposit</span>
-              <span className="text-white font-semibold">
-                {isLoading ? <Skeleton width={50} height={20} /> : formatUSD(depositedValueUSD)}
+              <span className="text-arca-text-tertiary">Your Deposit</span>
+              <span className="text-arca-text font-medium">
+                {isLoading ? <Skeleton width={50} height={18} /> : formatUSD(depositedValueUSD)}
               </span>
             </div>
 
             <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-500 font-medium">Share of Pool</span>
-              <span className="text-gray-300">
-                {isLoading ? <Skeleton width={40} height={20} /> : `${sharePercentage.toFixed(2)}%`}
+              <span className="text-arca-text-tertiary">Share of Pool</span>
+              <span className="text-arca-text-secondary">
+                {isLoading ? <Skeleton width={40} height={18} /> : `${sharePercentage.toFixed(2)}%`}
               </span>
             </div>
 
+            {/* Range visualization */}
             <div className="pt-2">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-gray-500 text-xs font-semibold uppercase tracking-wider">Range</span>
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="text-arca-text-tertiary text-[11px] font-medium uppercase tracking-wider">Range</span>
                 {activePercentage !== undefined && activePercentage > 0 && (
-                  <span className="text-white text-[11px] font-medium">{activePercentage.toFixed(0)}% active liquidity</span>
+                  <span className="text-arca-text-secondary text-[11px] font-medium">{activePercentage.toFixed(0)}% active</span>
                 )}
               </div>
               <RangeBar position={position} tokenY={tokenY} compact />
               <div className="flex items-center gap-3 mt-1.5">
                 <div className="flex items-center gap-1">
-                  <div className="w-2.5 h-2 bg-arca-green/60 rounded-sm" />
-                  <span className="text-[10px] text-white/70">LP Range</span>
+                  <div className="w-2.5 h-1.5 bg-arca-green/50 rounded-sm" />
+                  <span className="text-[10px] text-arca-text-tertiary">LP Range</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-[3px] h-2.5 bg-red-400 rounded-full" />
-                  <span className="text-[10px] text-white/70">Current Price</span>
+                  <div className="w-[3px] h-2 bg-red-400 rounded-full" />
+                  <span className="text-[10px] text-arca-text-tertiary">Price</span>
                 </div>
               </div>
             </div>
@@ -224,21 +184,21 @@ export function VaultCard({ config }: VaultCardProps) {
           <button
             onClick={() => setShowDepositModal(true)}
             disabled={!address}
-            className="bg-arca-green text-black font-extrabold py-3 px-4 rounded-lg hover:bg-white hover:scale-[1.02] transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_10px_rgba(0,255,163,0.15)]"
+            className="bg-arca-green text-arca-dark font-semibold py-2.5 px-4 rounded-xl text-sm hover:bg-white hover:shadow-glow-green hover:scale-[1.02] transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
           >
             Deposit
           </button>
           <button
             onClick={() => setShowWithdrawModal(true)}
             disabled={!address || !userShares || userShares === 0n}
-            className="bg-transparent border border-gray-700 text-gray-300 font-semibold py-3 px-4 rounded-lg hover:border-gray-500 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            className="bg-white/[0.04] border border-white/[0.08] text-arca-text-secondary font-medium py-2.5 px-4 rounded-xl text-sm hover:bg-white/[0.08] hover:text-arca-text hover:border-white/[0.12] transition-all duration-200 disabled:opacity-25 disabled:cursor-not-allowed"
           >
             Withdraw
           </button>
         </div>
       </div>
 
-      {showDepositModal && (
+      {mounted && showDepositModal && createPortal(
         <DepositModal
           vaultAddress={vaultAddress}
           stratAddress={stratAddress}
@@ -248,10 +208,11 @@ export function VaultCard({ config }: VaultCardProps) {
           tokenX={tokenX}
           tokenY={tokenY}
           onClose={() => setShowDepositModal(false)}
-        />
+        />,
+        document.body
       )}
 
-      {showWithdrawModal && (
+      {mounted && showWithdrawModal && createPortal(
         <WithdrawModal
           vaultAddress={vaultAddress}
           vaultName={name}
@@ -259,7 +220,8 @@ export function VaultCard({ config }: VaultCardProps) {
           tokenX={tokenX}
           tokenY={tokenY}
           onClose={() => setShowWithdrawModal(false)}
-        />
+        />,
+        document.body
       )}
     </>
   );
