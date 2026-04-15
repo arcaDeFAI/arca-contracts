@@ -223,7 +223,7 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
   };
 
   const { writeContract: redeemWithdrawal, data: redeemTxHash, isPending: isRedeemingWithdrawal } = useWriteContract();
-  const { writeContract: cancelWithdrawal, isPending: isCancellingWithdrawal } = useWriteContract();
+  const { writeContract: cancelWithdrawal, data: cancelTxHash, isPending: isCancellingWithdrawal } = useWriteContract();
 
   // Track transaction receipt for withdrawal claims
   const { isSuccess: redeemTxSuccess } = useWaitForTransactionReceipt({
@@ -243,11 +243,23 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
     setLastClaimedRound(round);
     redeemWithdrawal({
       address: config.vaultAddress as `0x${string}`,
-      abi: METRO_VAULT_ABI,
+      abi: isShadowVault ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
       functionName: 'redeemQueuedWithdrawal',
       args: [round, userAddress as `0x${string}`],
     });
   };
+
+  // Track cancel tx receipt to invalidate stale queries
+  const { isSuccess: cancelTxSuccess } = useWaitForTransactionReceipt({
+    hash: cancelTxHash,
+  });
+
+  // Invalidate queries after successful cancel so "Queued" status clears
+  useEffect(() => {
+    if (cancelTxSuccess) {
+      queryClient.invalidateQueries();
+    }
+  }, [cancelTxSuccess, queryClient]);
 
   // Cancel queued withdrawal
   const handleCancelWithdrawal = (shares: bigint) => {
@@ -270,11 +282,14 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
       // Immediately remove the claimed withdrawal from local state
       setClaimableWithdrawals(prev => prev.filter(w => w.round !== lastClaimedRound));
 
+      // Invalidate on-chain queries so stale roundResults don't restore the claimed round
+      queryClient.invalidateQueries();
+
       // Reset processing state
       setProcessingClaims(false);
       setLastClaimedRound(null);
     }
-  }, [redeemTxSuccess, redeemTxHash, processedTxHash, processingClaims, lastClaimedRound]);
+  }, [redeemTxSuccess, redeemTxHash, processedTxHash, processingClaims, lastClaimedRound, queryClient]);
 
   // Calculate total claimable amount across all rounds
   const totalClaimableAmount = claimableWithdrawals.reduce((sum, w) => sum + w.amount, 0n);
