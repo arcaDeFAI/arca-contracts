@@ -111,3 +111,84 @@ input[type='number'] {
 .transition-fast {
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Vault card logo-toned hover glow */
+.vault-card-glow {
+  position: relative;
+  transition:
+    box-shadow 0.55s ease,
+    border-color 0.55s ease,
+    transform 0.55s ease;
+}
+
+.vault-card-glow:hover,
+.vault-card-glow:focus-within {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(58, 255, 170, 0.18),
+    0 0 14px rgba(0, 255, 136, 0.12),
+    0 0 28px rgba(52, 211, 153, 0.08);
+}
+
+@keyframes arcaGlowReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes arcaStepFillSlide {
+  from {
+    opacity: 0;
+    transform: scaleX(0.24);
+    transform-origin: left center;
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleX(1);
+    transform-origin: left center;
+  }
+}
+
+@keyframes arcaStepCircleDraw {
+  from {
+    stroke-dashoffset: 57;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes arcaStepCheckDraw {
+  from {
+    stroke-dashoffset: 18;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.arca-step-fill {
+  background: linear-gradient(90deg, rgba(11, 92, 51, 0.96) 0%, rgba(16, 141, 77, 0.9) 42%, rgba(19, 188, 102, 0.86) 100%);
+  animation: arcaStepFillSlide 680ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.arca-step-circle {
+  stroke-dasharray: 57;
+  stroke-dashoffset: 57;
+  animation: arcaStepCircleDraw 340ms ease-out forwards;
+}
+
+.arca-step-check {
+  stroke-dasharray: 18;
+  stroke-dashoffset: 18;
+  animation: arcaStepCheckDraw 260ms ease-out 180ms forwards;
+}
