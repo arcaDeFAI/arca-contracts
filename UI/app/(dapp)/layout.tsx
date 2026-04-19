@@ -2,6 +2,7 @@ import '../globals.css'
 import type { Metadata } from 'next'
 import { Providers } from '../providers'
 import { BackgroundPattern } from '@/components/BackgroundPattern'
+import { ToastViewport } from '@/components/ToastViewport'
 
 export const metadata: Metadata = {
   title: 'Arca DeFi - Vault Management',
@@ -40,6 +41,7 @@ export default function DappLayout({
       <BackgroundPattern />
       <Providers>
         {children}
+        <ToastViewport />
       </Providers>
     </>
   )
