@@ -276,6 +276,17 @@ export function useDashboardData(config: VaultConfig, userAddress?: string, shar
   // Handle successful transaction and immediately remove from local state
   useEffect(() => {
     if (redeemTxSuccess && redeemTxHash && redeemTxHash !== processedTxHash && processingClaims && lastClaimedRound !== null) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('arca:toast', {
+            detail: {
+              title: 'Withdrawal claimed successfully',
+              description: 'Your withdrawn assets have been claimed and should now be available in your wallet.',
+            },
+          }),
+        );
+      }
+
       // Mark this transaction as processed
       setProcessedTxHash(redeemTxHash);
 
