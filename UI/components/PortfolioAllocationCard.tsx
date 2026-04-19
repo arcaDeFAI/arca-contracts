@@ -89,8 +89,8 @@ export function PortfolioAllocationCard({
   }
 
   return (
-    <div className={`bg-arca-gray/80 border border-white/[0.04] rounded-2xl shadow-card transition-all h-full ${isExpanded ? 'p-5' : 'p-4'}`}>
-      <div className={`flex items-center justify-between ${isExpanded ? 'mb-5' : 'mb-0'}`}>
+    <div className={`bg-arca-gray/80 border border-white/[0.04] rounded-2xl shadow-card transition-all duration-300 ${isExpanded ? 'h-[286px] p-5' : 'h-[72px] p-4 md:h-[84px]'}`}>
+      <div className={`flex items-center justify-between transition-all duration-300 ${isExpanded ? 'mb-5' : 'mb-0'}`}>
         {isCollapsible ? (
           <div className="flex items-center gap-2">
             <button
@@ -98,7 +98,7 @@ export function PortfolioAllocationCard({
               className="hover:opacity-80 transition-opacity p-0.5 -ml-0.5"
             >
               <svg
-                className={`w-4 h-4 text-arca-text-tertiary transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 text-arca-text-tertiary transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -113,10 +113,15 @@ export function PortfolioAllocationCard({
         )}
       </div>
 
-      {isExpanded && (
-        <div className="flex flex-col lg:flex-row items-center gap-6">
+      <div
+        className={`grid overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+        }`}
+      >
+        <div className="min-h-0">
+          <div className="flex flex-row items-center gap-3 sm:gap-4 lg:flex-row">
           {/* Pie Chart */}
-          <div className="flex-shrink-0 w-36 h-36 sm:w-44 sm:h-44">
+          <div className="h-24 w-24 flex-shrink-0 sm:h-32 sm:w-32 lg:h-36 lg:w-36">
             <svg width="100%" height="100%" viewBox="0 0 200 200">
               {pieSegments.map((segment, index) => (
                 <path
@@ -138,11 +143,11 @@ export function PortfolioAllocationCard({
           </div>
 
           {/* Legend */}
-          <div className="flex-1 space-y-2 w-full">
+          <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1 w-full">
             {allocations.map((allocation, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-2.5 rounded-xl transition-all duration-200 cursor-pointer border border-transparent"
+                className="flex items-center justify-between gap-2 rounded-xl border border-transparent px-1 py-1 transition-all duration-200 cursor-pointer sm:px-2 sm:py-1.5"
                 style={{
                   borderColor: hoveredToken === allocation.token ? `${allocation.color}40` : 'transparent',
                   backgroundColor: hoveredToken === allocation.token ? `${allocation.color}08` : 'transparent',
@@ -150,31 +155,32 @@ export function PortfolioAllocationCard({
                 onMouseEnter={() => setHoveredToken(allocation.token)}
                 onMouseLeave={() => setHoveredToken(null)}
               >
-                <div className="flex items-center gap-2.5">
+                <div className="min-w-0 flex items-center gap-2">
                   <div
-                    className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+                    className="h-2.5 w-2.5 flex-shrink-0 rounded-sm"
                     style={{ backgroundColor: allocation.color }}
                   />
-                  <div>
-                    <div className="text-arca-text font-medium text-sm">{allocation.token}</div>
-                    <div className="text-arca-text-tertiary text-xs">
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-medium text-arca-text sm:text-sm">{allocation.token}</div>
+                    <div className="text-[10px] leading-tight text-arca-text-tertiary">
                       {allocation.amount.toFixed(4)}
                     </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-arca-text font-medium text-sm">
+                <div className="shrink-0 text-right">
+                  <div className="text-[12px] font-medium text-arca-text sm:text-sm">
                     {allocation.percentage.toFixed(1)}%
                   </div>
-                  <div className="text-arca-text-tertiary text-xs">
+                  <div className="text-[10px] leading-tight text-arca-text-tertiary">
                     ${allocation.usdValue.toFixed(2)}
                   </div>
                 </div>
               </div>
             ))}
           </div>
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }

@@ -21,6 +21,44 @@ interface DepositModalProps {
   onClose: () => void;
 }
 
+function StepStatusIcon({ status }: { status: 'pending' | 'processing' | 'complete' | 'error' }) {
+  if (status === 'complete') {
+    return (
+      <div className="relative h-5 w-5 shrink-0">
+        <svg
+          className="absolute inset-0 h-5 w-5 text-arca-green"
+          viewBox="0 0 24 24"
+          fill="none"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            className="arca-step-circle"
+          />
+          <path
+            d="M7.5 12.5l2.8 2.8 6.2-6.6"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="arca-step-check"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  if (status === 'processing') {
+    return <div className="h-5 w-5 shrink-0 rounded-full border-2 border-arca-green border-t-transparent animate-spin" />;
+  }
+
+  return <div className="h-5 w-5 shrink-0 rounded-full border border-white/[0.08] bg-white/[0.02]" />;
+}
+
 export function DepositModal({
   vaultAddress,
   stratAddress,
@@ -92,7 +130,19 @@ export function DepositModal({
         setTimeout(() => executeStep(nextStep), 500);
       } else {
         setSteps(updatedSteps);
-        setTimeout(() => onClose(), 1500);
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(
+              new CustomEvent('arca:toast', {
+                detail: {
+                  title: 'Deposit completed successfully',
+                  description: `Liquidity was added to ${vaultName}.`,
+                },
+              }),
+            );
+          }
+          onClose();
+        }, 1500);
       }
     }
   }, [txSuccess, txHash]);
@@ -274,26 +324,38 @@ export function DepositModal({
               {steps.map((step, index) => (
                 <div
                   key={index}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-arca-surface border border-white/[0.04]"
+                  className={`relative overflow-hidden rounded-xl border p-3 transition-all duration-500 ${
+                    step.status === 'complete'
+                      ? 'border-arca-green/20 bg-[#12261d]'
+                      : step.status === 'processing'
+                        ? 'border-arca-green/16 bg-arca-surface'
+                        : 'border-white/[0.04] bg-arca-surface'
+                  }`}
                 >
-                  {step.status === 'complete' ? (
-                    <div className="w-5 h-5 rounded-full bg-arca-green/20 flex items-center justify-center">
-                      <svg className="w-3 h-3 text-arca-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  ) : step.status === 'processing' ? (
-                    <div className="w-5 h-5 rounded-full border-2 border-arca-green border-t-transparent animate-spin" />
-                  ) : (
-                    <div className="w-5 h-5 rounded-full border border-white/[0.08]" />
-                  )}
-                  <span className={`flex-1 text-sm ${
-                    step.status === 'complete' ? 'text-arca-text-tertiary' :
-                    step.status === 'processing' ? 'text-arca-text' :
-                    'text-arca-text-tertiary'
-                  }`}>
-                    {step.label}
-                  </span>
+                  <span
+                    className={`pointer-events-none absolute inset-0 ${
+                      step.status === 'complete' ? 'arca-step-fill' : 'opacity-0'
+                    }`}
+                  />
+                  <span
+                    className={`pointer-events-none absolute -bottom-2 left-1/2 h-5 w-[68%] -translate-x-1/2 rounded-full blur-md transition-opacity duration-700 ${
+                      step.status === 'complete'
+                        ? 'opacity-100 shadow-[0_0_22px_rgba(236,242,248,0.18)]'
+                        : 'opacity-0'
+                    }`}
+                  />
+                  <div className="relative z-[1] flex items-center gap-3">
+                    <StepStatusIcon status={step.status} />
+                    <span className={`flex-1 text-sm transition-colors duration-300 ${
+                      step.status === 'complete'
+                        ? 'text-arca-text'
+                        : step.status === 'processing'
+                          ? 'text-arca-text'
+                          : 'text-arca-text-tertiary'
+                    }`}>
+                      {step.label}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
