@@ -143,7 +143,7 @@ export function Header() {
                           );
                         }
 
-                        if (connected && chain.unsupported) {
+                        if (chain.unsupported) {
                           return (
                             <button
                               onClick={openChainModal}
@@ -163,7 +163,7 @@ export function Header() {
                               className="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-arca-text text-sm font-medium hover:bg-white/[0.08] transition-all"
                               type="button"
                             >
-                              {connected && chain.hasIcon && chain.iconUrl ? (
+                              {chain.hasIcon && chain.iconUrl ? (
                                 <div
                                   style={{
                                     background: chain.iconBackground,
@@ -186,28 +186,20 @@ export function Header() {
                                   className="w-[18px] h-[18px] rounded-full"
                                 />
                               )}
-                              <span className="hidden lg:inline">{connected ? chain.name : 'Sonic'}</span>
+                              <span className="hidden lg:inline">{chain.name}</span>
                             </button>
 
                             {/* Account button */}
                             <button
                               onClick={openAccountModal}
                               type="button"
-                              className="relative flex items-center gap-2 rounded-xl bg-arca-green px-3 py-2 text-xs font-semibold text-arca-dark transition-all duration-200 active:scale-[0.97] sm:px-4 sm:text-sm hover:bg-arca-green/90"
+                              className="flex items-center gap-2 bg-arca-green text-arca-dark font-semibold py-2 px-3 sm:px-4 rounded-xl text-xs sm:text-sm hover:bg-arca-green/90 hover:shadow-glow-green transition-all duration-200 active:scale-[0.97]"
                             >
-                              <span
-                                className="pointer-events-none absolute inset-0 rounded-xl opacity-0 shadow-[0_0_18px_rgba(235,241,248,0.18)]"
-                                style={{ animation: 'arcaGlowReveal 720ms ease-out forwards' }}
-                              />
-                              <span
-                                className="pointer-events-none absolute -bottom-1 left-1/2 h-4 w-[74%] -translate-x-1/2 rounded-full bg-[#eef3fb]/0 opacity-0 blur-md shadow-[0_0_22px_rgba(238,243,251,0.2)]"
-                                style={{ animation: 'arcaGlowReveal 820ms ease-out forwards' }}
-                              />
-                              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="relative z-[1]">
+                              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
                               </svg>
-                              <span className="relative z-[1] truncate max-w-[100px] sm:max-w-none">
-                                {account?.displayName ?? ''}
+                              <span className="truncate max-w-[100px] sm:max-w-none">
+                                {account.displayName}
                               </span>
                             </button>
                           </div>

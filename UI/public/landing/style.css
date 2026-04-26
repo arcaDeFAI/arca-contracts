@@ -6,10 +6,8 @@ html, body {
 }
 
 @font-face {
-  font-family: 'InterHeroLocal';
-  src: url('/fonts/inter.ttf?v=3') format('truetype');
-  font-style: normal;
-  font-weight: 100 900;
+  font-family: 'InterLocal';
+  src: url('/fonts/inter.ttf') format('truetype');
   font-display: swap;
 }
 
@@ -186,7 +184,7 @@ body {
   justify-content: center;
   font-size: clamp(46px, 9vw, 110px);
   line-height: 1;
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: -0.06em;
   white-space: nowrap;
   width: 100%;
@@ -195,14 +193,12 @@ body {
     0 0 12px rgba(34, 224, 106, 0.08),
     0 0 32px rgba(34, 224, 106, 0.06);
   font-synthesis: none;
-  font-kerning: normal;
-  text-rendering: geometricPrecision;
 }
 
 .hero-title-bottom {
   font-size: clamp(46px, 9vw, 110px);
   line-height: 0.95;
-  font-family: 'InterHeroLocal', sans-serif;
+  font-family: 'InterLocal', sans-serif;
   font-weight: 600;
   letter-spacing: -0.04em;
   white-space: nowrap;
@@ -319,23 +315,23 @@ body {
   }
 }
 
-.font1 { font-family: 'InterHeroLocal', sans-serif; font-weight: 600; letter-spacing: -0.075em; }
+.font1 { font-family: 'InterLocal', sans-serif; }
 
-.font2 { font-family: 'BrunoLocal', sans-serif; font-weight: 400; }
+.font2 { font-family: 'BrunoLocal', sans-serif; }
 
-.font3 { font-family: 'ElectrolizeLocal', sans-serif; font-weight: 400; letter-spacing: -0.05em; }
+.font3 { font-family: 'ElectrolizeLocal', sans-serif; }
 
-.font4 { font-family: 'JuratLocal', serif; font-weight: 300; }
+.font4 { font-family: 'JuratLocal', serif; }
 
-.font5 { font-family: 'KellyLocal', sans-serif; font-weight: 400; }
+.font5 { font-family: 'KellyLocal', sans-serif; }
 
-.font6 { font-family: 'MegrimLocal', sans-serif; font-weight: 400; letter-spacing: 0.01em; }
+.font6 { font-family: 'MegrimLocal', sans-serif; }
 
-.font7 { font-family: 'SilkscreenLocal', sans-serif; font-weight: 700; }
+.font7 { font-family: 'SilkscreenLocal', sans-serif; }
 
-.font8 { font-family: 'SixtyfourLocal', sans-serif; font-weight: 400; }
+.font8 { font-family: 'SixtyfourLocal', sans-serif; }
 
-.font9 { font-family: 'UbuntuMonoLocal', monospace; font-weight: 400; }
+.font9 { font-family: 'UbuntuMonoLocal', monospace; }
 
 .price-ticker-wrap {
   width: min(100%, 950px);
@@ -425,7 +421,7 @@ body {
 }
 
 .coin-price {
-  font-family: 'InterHeroLocal', sans-serif;
+  font-family: 'InterLocal', sans-serif;
   font-weight: 600;
   color: #b8ffcf;
   text-shadow: 0 0 6px rgba(34, 224, 106, 0.25);
@@ -549,7 +545,7 @@ body {
 .feature-card h3 {
   position: relative;
   z-index: 1;
-  font-family: 'InterHeroLocal', sans-serif;
+  font-family: 'InterLocal', sans-serif;
   font-size: 30px;
   line-height: 1.08;
   letter-spacing: -0.04em;
@@ -560,7 +556,7 @@ body {
 .feature-card p {
   position: relative;
   z-index: 1;
-  font-family: 'InterHeroLocal', sans-serif;
+  font-family: 'InterLocal', sans-serif;
   font-size: 16px;
   line-height: 1.7;
   color: rgba(255,255,255,0.72);
@@ -746,7 +742,7 @@ body {
 }
 
 .faq-title {
-  font-family: 'InterHeroLocal', sans-serif;
+  font-family: 'InterLocal', sans-serif;
   font-size: clamp(54px, 7vw, 88px);
   line-height: 0.95;
   letter-spacing: -0.05em;
@@ -812,7 +808,7 @@ body {
   padding: 22px 26px;
   text-align: left;
   cursor: pointer;
-  font-family: 'InterHeroLocal', sans-serif;
+  font-family: 'InterLocal', sans-serif;
   font-size: 16px;
   line-height: 1.4;
 }
@@ -917,7 +913,7 @@ body {
 }
 
 .contact-title {
-  font-family: 'InterHeroLocal', sans-serif;
+  font-family: 'InterLocal', sans-serif;
   font-size: clamp(34px, 4vw, 54px);
   line-height: 1.08;
   letter-spacing: -0.04em;
