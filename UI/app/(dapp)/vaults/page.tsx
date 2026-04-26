@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, type ReactNode } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAccount } from 'wagmi';
 import { Header } from '@/components/Header';
 import { VaultCard } from '@/components/VaultCard';
@@ -9,7 +9,6 @@ import { formatUSD } from '@/lib/utils';
 import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { VAULT_CONFIGS } from '@/lib/vaultConfigs';
 import { StatsCard } from '@/components/StatsCard';
-import { VaultTableView } from '@/components/VaultTableView';
 
 // Tab Component
 const FilterTab = ({
@@ -23,7 +22,7 @@ const FilterTab = ({
 }) => (
   <button
     onClick={onClick}
-    className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ${isActive
+    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
       ? 'bg-arca-green/[0.1] text-arca-green shadow-sm'
       : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
       }`}
@@ -32,37 +31,10 @@ const FilterTab = ({
   </button>
 );
 
-const ViewToggleButton = ({
-  isActive,
-  label,
-  onClick,
-  children,
-}: {
-  isActive: boolean;
-  label: string;
-  onClick: () => void;
-  children: ReactNode;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    aria-label={label}
-    title={label}
-    className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200 ${
-      isActive
-        ? 'border-arca-green/30 bg-arca-green/[0.12] text-arca-green shadow-[0_0_0_1px_rgba(0,255,136,0.08)]'
-        : 'border-white/[0.05] bg-arca-gray/60 text-arca-text-secondary hover:border-white/[0.1] hover:bg-white/[0.04] hover:text-arca-text'
-    }`}
-  >
-    {children}
-  </button>
-);
-
 export default function Home() {
   const { address, isConnected } = useAccount();
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'All' | 'Metropolis' | 'Shadow'>('All');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const allVaultMetrics = VAULT_CONFIGS.map(config =>
     useVaultMetrics(config, address)
@@ -114,8 +86,8 @@ export default function Home() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid w-full grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="min-w-0">
+            <div className="flex flex-wrap gap-3 w-full">
+              <div className="flex-1 min-w-[180px] max-w-[260px]">
                 <StatsCard
                   title="Total TVL"
                   value={allVaultMetrics.some(m => m.isLoading) ? undefined : formatUSD(totalTVL)}
@@ -124,7 +96,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="min-w-0">
+              <div className="flex-1 min-w-[180px] max-w-[260px]">
                 <StatsCard
                   title="Your Balance"
                   value={!isConnected ? '--' : (allVaultMetrics.some(m => m.isLoading) ? undefined : formatUSD(userTotalBalance))}
@@ -133,7 +105,7 @@ export default function Home() {
                 />
               </div>
 
-              <div className="min-w-0">
+              <div className="flex-1 min-w-[180px] max-w-[260px]">
                 <StatsCard
                   title="Active Vaults"
                   value={VAULT_CONFIGS.length}
@@ -158,26 +130,10 @@ export default function Home() {
 
           {/* Filter Tabs */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-            <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-3">
-              <div className="flex w-fit max-w-[calc(100%-5.5rem)] bg-arca-gray/60 p-1 rounded-2xl border border-white/[0.04] sm:max-w-none">
-                <FilterTab label="All Strategies" isActive={activeTab === 'All'} onClick={() => setActiveTab('All')} />
-                <FilterTab label="Metropolis" isActive={activeTab === 'Metropolis'} onClick={() => setActiveTab('Metropolis')} />
-                <FilterTab label="Shadow" isActive={activeTab === 'Shadow'} onClick={() => setActiveTab('Shadow')} />
-              </div>
-
-              <div className="flex shrink-0 items-center gap-2">
-                <ViewToggleButton isActive={viewMode === 'grid'} label="Grid view" onClick={() => setViewMode('grid')}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.75 4.75h5.5v5.5h-5.5zm9 0h5.5v5.5h-5.5zm-9 9h5.5v5.5h-5.5zm9 0h5.5v5.5h-5.5z" />
-                  </svg>
-                </ViewToggleButton>
-                <ViewToggleButton isActive={viewMode === 'list'} label="List view" onClick={() => setViewMode('list')}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 7.25h14M5 12h14M5 16.75h14" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.75 7.25h.5M3.75 12h.5M3.75 16.75h.5" />
-                  </svg>
-                </ViewToggleButton>
-              </div>
+            <div className="flex bg-arca-gray/60 p-1 rounded-2xl border border-white/[0.04]">
+              <FilterTab label="All Strategies" isActive={activeTab === 'All'} onClick={() => setActiveTab('All')} />
+              <FilterTab label="Metropolis" isActive={activeTab === 'Metropolis'} onClick={() => setActiveTab('Metropolis')} />
+              <FilterTab label="Shadow" isActive={activeTab === 'Shadow'} onClick={() => setActiveTab('Shadow')} />
             </div>
 
             <span className="text-xs text-arca-text-tertiary hidden sm:block">
@@ -185,26 +141,14 @@ export default function Home() {
             </span>
           </div>
 
-          {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-              {displayedVaults.map((vault, index) => (
-                <div key={index} className="animate-fade-up" style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}>
-                  <VaultCard config={vault} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="animate-fade-in">
-              <VaultTableView
-                vaults={VAULT_CONFIGS}
-                userAddress={address}
-                onVaultClick={() => {}}
-                showAllVaults
-                interactiveRows={false}
-                visibleVaultAddresses={displayedVaults.map((vault) => vault.vaultAddress)}
-              />
-            </div>
-          )}
+          {/* Vault Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
+            {displayedVaults.map((vault, index) => (
+              <div key={index} className="animate-fade-up" style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}>
+                <VaultCard config={vault} />
+              </div>
+            ))}
+          </div>
 
           {/* Footer */}
           <div className="mt-20 pt-8 border-t border-white/[0.04]">

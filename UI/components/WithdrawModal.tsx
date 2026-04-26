@@ -36,16 +36,6 @@ export function WithdrawModal({
 
   useEffect(() => {
     if (isSuccess && !showClaim) {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('arca:toast', {
-            detail: {
-              title: 'Withdrawal queued successfully',
-              description: 'Your withdrawal request is now queued and will be claimable after the next rebalance.',
-            },
-          }),
-        );
-      }
       setShowClaim(true);
     } else if (isSuccess && showClaim) {
       onClose();

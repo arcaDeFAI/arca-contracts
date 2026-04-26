@@ -14,8 +14,6 @@ interface TooltipProps {
 export function Tooltip({ text, width = 'sm', position: positionProp = 'top', className = '', ariaLabel = 'Information' }: TooltipProps) {
   const [showTooltip, setShowTooltip] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
-  const [resolvedPosition, setResolvedPosition] = useState<'top' | 'right' | 'bottom-left'>('top');
-  const [tooltipWidthPx, setTooltipWidthPx] = useState(200);
   const iconRef = useRef<HTMLDivElement>(null);
 
   const widthClass = {
@@ -24,47 +22,23 @@ export function Tooltip({ text, width = 'sm', position: positionProp = 'top', cl
     lg: 'w-[460px]',
   }[width];
 
-  const tooltipWidth = {
-    sm: 200,
-    md: 280,
-    lg: 460,
-  }[width];
-
   useEffect(() => {
     if (showTooltip && iconRef.current) {
       const rect = iconRef.current.getBoundingClientRect();
-      const viewportWidth = window.innerWidth;
-      const gutter = 12;
-      const effectiveTooltipWidth = Math.min(tooltipWidth, viewportWidth - gutter * 2);
-
-      setTooltipWidthPx(effectiveTooltipWidth);
 
       if (positionProp === 'right') {
-        const preferredLeft = rect.right + 10;
-        const maxLeft = viewportWidth - effectiveTooltipWidth - gutter;
-
-        if (preferredLeft <= maxLeft) {
-          setResolvedPosition('right');
-          setPosition({
-            top: rect.top + rect.height / 2,
-            left: preferredLeft,
-          });
-        } else {
-          setResolvedPosition('bottom-left');
-          setPosition({
-            top: rect.bottom + 10,
-            left: Math.max(gutter, Math.min(rect.right - effectiveTooltipWidth, maxLeft)),
-          });
-        }
+        setPosition({
+          top: rect.top + rect.height / 2,
+          left: rect.right + 10,
+        });
       } else {
-        setResolvedPosition('top');
         setPosition({
           top: rect.top - 10,
-          left: Math.max(gutter + effectiveTooltipWidth / 2, Math.min(rect.left + rect.width / 2, viewportWidth - gutter - effectiveTooltipWidth / 2)),
+          left: rect.left + rect.width / 2,
         });
       }
     }
-  }, [showTooltip, positionProp, tooltipWidth]);
+  }, [showTooltip, positionProp]);
 
   return (
     <>
@@ -87,15 +61,9 @@ export function Tooltip({ text, width = 'sm', position: positionProp = 'top', cl
         <div
           className={`fixed z-[9999] ${widthClass} p-3 bg-arca-gray border border-white/[0.08] rounded-xl shadow-elevated text-left animate-fade-in`}
           style={{
-            width: `${tooltipWidthPx}px`,
             top: `${position.top}px`,
             left: `${position.left}px`,
-            transform:
-              resolvedPosition === 'right'
-                ? 'translate(0, -50%)'
-                : resolvedPosition === 'bottom-left'
-                  ? 'translate(0, 0)'
-                  : 'translate(-50%, -100%)',
+            transform: positionProp === 'right' ? 'translate(0, -50%)' : 'translate(-50%, -100%)',
           }}
         >
           <div className="text-arca-text-secondary text-xs whitespace-pre-line leading-relaxed">

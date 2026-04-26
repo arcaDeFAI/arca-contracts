@@ -79,13 +79,37 @@ export default function Dashboard() {
               </div>
 
               {/* Table + Detail Panel */}
-              <div>
-                <VaultTableView
-                  vaults={VAULT_CONFIGS}
-                  userAddress={address}
-                  onVaultClick={(vault) => setSelectedVault(vault)}
-                  selectedVault={selectedVault || undefined}
-                />
+              <div className="flex flex-col lg:flex-row gap-5">
+                <div className={`transition-all duration-300 ${selectedVault ? 'lg:w-2/3' : 'w-full'}`}>
+                  <VaultTableView
+                    vaults={VAULT_CONFIGS}
+                    userAddress={address}
+                    onVaultClick={(vault) => setSelectedVault(vault)}
+                    selectedVault={selectedVault || undefined}
+                  />
+                </div>
+
+                {selectedVault && (
+                  <div className="w-full lg:w-1/3 transition-all duration-300 animate-fade-in">
+                    <div className="lg:sticky lg:top-20">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-arca-text font-semibold text-sm">Vault Details</h3>
+                        <button
+                          onClick={() => setSelectedVault(null)}
+                          className="text-arca-text-tertiary hover:text-arca-text transition-colors p-1 rounded-lg hover:bg-white/[0.04]"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <DashboardVaultCard
+                        config={selectedVault}
+                        userAddress={address}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -96,35 +120,6 @@ export default function Dashboard() {
           </div>
         </main>
       </div>
-
-      {isConnected && selectedVault && (
-        <div
-          className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/55 px-4 py-4 backdrop-blur-sm animate-fade-in"
-          onClick={() => setSelectedVault(null)}
-        >
-          <div
-            className="relative w-full max-w-[560px] max-h-[78vh] overflow-y-auto rounded-2xl lg:max-w-[600px]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mb-3 flex items-center justify-between px-1">
-              <h3 className="text-arca-text font-semibold text-sm">Vault Details</h3>
-              <button
-                onClick={() => setSelectedVault(null)}
-                className="text-arca-text-tertiary hover:text-arca-text transition-colors p-1 rounded-lg hover:bg-white/[0.04]"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            <DashboardVaultCard
-              config={selectedVault}
-              userAddress={address}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

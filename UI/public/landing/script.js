@@ -1,53 +1,31 @@
 // =========================
 // HERO WORD LOOP
 // =========================
-const heroFontFamilies = [
-  "InterHeroLocal",
-  "BrunoLocal",
-  "ElectrolizeLocal",
-  "Jura",
-  "Kelly Slab",
-  "Megrim",
-  "SilkscreenLocal",
-  "SixtyfourLocal",
-  "UbuntuMonoLocal"
-];
+const wordTrack = document.getElementById("wordTrack");
+const wordItems = Array.from(document.querySelectorAll(".word"));
 
-function waitForHeroFonts() {
-  if (!document.fonts?.load) {
-    return Promise.resolve();
-  }
+if (wordTrack && wordItems.length > 0) {
+  const firstClone = wordItems[0].cloneNode(true);
+  wordTrack.appendChild(firstClone);
 
-  const fontLoads = heroFontFamilies.map((family) =>
-    document.fonts.load(`64px "${family}"`)
-  );
-
-  return Promise.allSettled(fontLoads).then(() => document.fonts.ready);
-}
-
-function startHeroWordLoop() {
-  const wordTrack = document.getElementById("wordTrack");
-  const wordItems = Array.from(document.querySelectorAll(".word"));
-
-  if (!wordTrack || wordItems.length === 0) {
-    return;
-  }
+  const allWords = Array.from(wordTrack.querySelectorAll(".word"));
   let currentWordIndex = 0;
   let isResettingWordLoop = false;
 
-  const getWordHeight = () => wordItems[0].offsetHeight;
+  const getWordHeight = () => allWords[0].offsetHeight;
 
   function goToWord(index, animated = true) {
     wordTrack.style.transition = animated ? "transform 0.8s ease" : "none";
     wordTrack.style.transform = `translateY(-${index * getWordHeight()}px)`;
   }
 
-  goToWord(0, false);
-
   setInterval(() => {
     if (isResettingWordLoop) return;
 
-    if (currentWordIndex === wordItems.length - 1) {
+    currentWordIndex++;
+    goToWord(currentWordIndex, true);
+
+    if (currentWordIndex === allWords.length - 1) {
       isResettingWordLoop = true;
 
       setTimeout(() => {
@@ -60,21 +38,14 @@ function startHeroWordLoop() {
             isResettingWordLoop = false;
           });
         });
-      }, 1000);
-
-      return;
+      }, 800);
     }
-
-    currentWordIndex++;
-    goToWord(currentWordIndex, true);
   }, 1000);
 
   window.addEventListener("resize", () => {
     goToWord(currentWordIndex, false);
   });
 }
-
-waitForHeroFonts().finally(startHeroWordLoop);
 
 // =========================
 // PRICE TICKER MARQUEE
