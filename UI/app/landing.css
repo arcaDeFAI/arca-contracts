@@ -468,7 +468,7 @@ html, body {
 .feature-card {
   position: relative;
   min-height: 220px;
-  padding: 28px;
+  padding: 74px 28px 28px;
   border-radius: 24px;
   overflow: hidden;
   background: linear-gradient(
@@ -482,9 +482,9 @@ html, body {
     0 0 0 1px rgba(34, 224, 106, 0.04),
     0 0 28px rgba(34, 224, 106, 0.08);
   transition:
-    transform 0.35s ease,
-    border-color 0.35s ease,
-    box-shadow 0.35s ease;
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .feature-card::before {
@@ -535,20 +535,47 @@ html, body {
   transform: translateX(120%);
 }
 
-.feature-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 14px;
+.feature-step-badge {
+  position: absolute;
+  top: 24px;
+  left: 28px;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  margin-bottom: 20px;
-  background: rgba(34, 224, 106, 0.08);
-  border: 1px solid rgba(34, 224, 106, 0.18);
-  color: #8effb9;
-  font-size: 16px;
+  justify-content: flex-start;
+  margin-bottom: 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(34, 224, 106, 0.18);
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    color 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.feature-step-badge::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 24px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(119, 255, 179, 0.92), rgba(119, 255, 179, 0));
+  pointer-events: none;
+}
+
+.feature-step-badge span {
   position: relative;
   z-index: 1;
+  font-family: 'InterHeroLocal', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  color: rgba(181, 245, 205, 0.62);
+}
+
+.feature-card:hover .feature-step-badge {
+  transform: translateX(3px);
+  border-color: rgba(34, 224, 106, 0.28);
 }
 
 .feature-card h3 {
@@ -574,17 +601,17 @@ html, body {
 
 .reveal-card {
   opacity: 0;
-  transform: translateX(60px);
+  transform: translateY(30px) scale(0.985);
   filter: blur(10px);
   transition:
-    opacity 0.8s ease,
-    transform 0.8s ease,
-    filter 0.8s ease;
+    opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .reveal-card.show {
   opacity: 1;
-  transform: translateX(0);
+  transform: translateY(0) scale(1);
   filter: blur(0);
 }
 
@@ -607,6 +634,7 @@ html, body {
 
   .feature-card {
     min-height: auto;
+    padding: 68px 24px 24px;
   }
 
   .feature-card h3 {
@@ -615,6 +643,17 @@ html, body {
 
   .feature-card p {
     font-size: 15px;
+  }
+
+  .feature-step-badge {
+    top: 22px;
+    left: 24px;
+    padding-bottom: 8px;
+  }
+
+  .feature-step-badge span {
+    font-size: 11px;
+    letter-spacing: 0.26em;
   }
 }
 

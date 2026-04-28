@@ -89,7 +89,7 @@ export function PortfolioAllocationCard({
   }
 
   return (
-    <div className={`bg-arca-gray/80 border border-white/[0.04] rounded-2xl shadow-card transition-all duration-300 ${isExpanded ? 'h-[286px] p-5' : 'h-[72px] p-4 md:h-[84px]'}`}>
+    <div className={`t-resize bg-arca-gray/80 border border-white/[0.04] rounded-2xl shadow-card transition-all duration-300 ${isExpanded ? 'h-[286px] p-5' : 'h-[72px] p-4 md:h-[84px]'}`}>
       <div className={`flex items-center justify-between transition-all duration-300 ${isExpanded ? 'mb-5' : 'mb-0'}`}>
         {isCollapsible ? (
           <div className="flex items-center gap-2">
@@ -113,12 +113,8 @@ export function PortfolioAllocationCard({
         )}
       </div>
 
-      <div
-        className={`grid overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-        }`}
-      >
-        <div className="min-h-0">
+      <div className="overflow-hidden">
+        <div className="t-panel-slide min-h-0" data-open={isExpanded ? 'true' : 'false'}>
           <div className="flex flex-row items-center gap-3 sm:gap-4 lg:flex-row">
           {/* Pie Chart */}
           <div className="h-24 w-24 flex-shrink-0 sm:h-32 sm:w-32 lg:h-36 lg:w-36">

@@ -36,12 +36,14 @@ const ViewToggleButton = ({
   isActive,
   label,
   onClick,
-  children,
+  inactiveIcon,
+  activeIcon,
 }: {
   isActive: boolean;
   label: string;
   onClick: () => void;
-  children: ReactNode;
+  inactiveIcon: ReactNode;
+  activeIcon: ReactNode;
 }) => (
   <button
     type="button"
@@ -54,7 +56,10 @@ const ViewToggleButton = ({
         : 'border-white/[0.05] bg-arca-gray/60 text-arca-text-secondary hover:border-white/[0.1] hover:bg-white/[0.04] hover:text-arca-text'
     }`}
   >
-    {children}
+    <span className="t-icon-swap" data-state={isActive ? 'b' : 'a'}>
+      <span className="t-icon" data-icon="a">{inactiveIcon}</span>
+      <span className="t-icon" data-icon="b">{activeIcon}</span>
+    </span>
   </button>
 );
 
@@ -80,14 +85,14 @@ export default function Home() {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
-
   const displayedVaults = VAULT_CONFIGS.filter(vault => {
     if (activeTab === 'All') return true;
     if (activeTab === 'Metropolis') return vault.name.includes('Metropolis');
     if (activeTab === 'Shadow') return vault.name.includes('Shadow');
     return true;
   });
+
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-arca-dark relative selection:bg-arca-green/20">
@@ -97,10 +102,10 @@ export default function Home() {
         <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-arca-green/[0.015] rounded-full blur-[100px]" />
       </div>
 
-      <div className="relative z-10 flex flex-col min-h-screen">
+      <div className="relative z-10 flex min-h-screen flex-col">
         <Header />
 
-        <main className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1 max-w-[1400px] mx-auto">
+        <main className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-4 py-8 sm:px-6 lg:px-8">
 
           {/* Page Header */}
           <div className="flex flex-col gap-6 mb-10">
@@ -166,17 +171,38 @@ export default function Home() {
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
-                <ViewToggleButton isActive={viewMode === 'grid'} label="Grid view" onClick={() => setViewMode('grid')}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.75 4.75h5.5v5.5h-5.5zm9 0h5.5v5.5h-5.5zm-9 9h5.5v5.5h-5.5zm9 0h5.5v5.5h-5.5z" />
-                  </svg>
-                </ViewToggleButton>
-                <ViewToggleButton isActive={viewMode === 'list'} label="List view" onClick={() => setViewMode('list')}>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 7.25h14M5 12h14M5 16.75h14" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.75 7.25h.5M3.75 12h.5M3.75 16.75h.5" />
-                  </svg>
-                </ViewToggleButton>
+                <ViewToggleButton
+                  isActive={viewMode === 'grid'}
+                  label="Grid view"
+                  onClick={() => setViewMode('grid')}
+                  inactiveIcon={
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.75 4.75h5.5v5.5h-5.5zm9 0h5.5v5.5h-5.5zm-9 9h5.5v5.5h-5.5zm9 0h5.5v5.5h-5.5z" />
+                    </svg>
+                  }
+                  activeIcon={
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M4.75 4.75h5.5v5.5h-5.5zM13.75 4.75h5.5v5.5h-5.5zM4.75 13.75h5.5v5.5h-5.5zM13.75 13.75h5.5v5.5h-5.5z" />
+                    </svg>
+                  }
+                />
+                <ViewToggleButton
+                  isActive={viewMode === 'list'}
+                  label="List view"
+                  onClick={() => setViewMode('list')}
+                  inactiveIcon={
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M5 7.25h14M5 12h14M5 16.75h14" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3.75 7.25h.5M3.75 12h.5M3.75 16.75h.5" />
+                    </svg>
+                  }
+                  activeIcon={
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M6 7.25h12M6 12h12M6 16.75h12" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M3.75 7.25h.5M3.75 12h.5M3.75 16.75h.5" />
+                    </svg>
+                  }
+                />
               </div>
             </div>
 
@@ -186,12 +212,14 @@ export default function Home() {
           </div>
 
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-              {displayedVaults.map((vault, index) => (
-                <div key={index} className="animate-fade-up" style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}>
-                  <VaultCard config={vault} />
-                </div>
-              ))}
+            <div className="animate-fade-in">
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                {displayedVaults.map((vault, index) => (
+                  <div key={index} className="animate-fade-up" style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}>
+                    <VaultCard config={vault} />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div className="animate-fade-in">
@@ -206,11 +234,11 @@ export default function Home() {
             </div>
           )}
 
-          {/* Footer */}
-          <div className="mt-20 pt-8 border-t border-white/[0.04]">
-            <SocialLinks />
+          <div className="mt-auto pt-16">
+            <div className="border-t border-white/[0.04] pt-6">
+              <SocialLinks />
+            </div>
           </div>
-
         </main>
       </div>
     </div>

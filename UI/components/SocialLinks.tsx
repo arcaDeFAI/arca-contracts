@@ -94,7 +94,7 @@ export function SocialLinks() {
 
   return (
     <>
-      <div className="py-6">
+      <div className="py-4">
         <div className="grid grid-cols-1 items-end gap-6 xl:grid-cols-[1fr_auto_1fr]">
           <div className="hidden xl:block" />
 

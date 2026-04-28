@@ -5,7 +5,7 @@ import { formatUnits } from 'viem';
 import { getTokenByAddress } from '@/lib/tokenRegistry'
 import { type UserRewardStructOutput } from '@/lib/typechain';
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useVaultMetrics } from '@/hooks/useVaultMetrics'
 import { useSubgraphUserHarvested } from '@/hooks/useSubgraphUserHarvested'
 import { SUBGRAPH_START_TIMESTAMP_MS } from '@/lib/subgraph'
@@ -19,6 +19,41 @@ import { getAPYCalculationExplanation } from '@/hooks/useSubgraphMetrics'
 interface DashboardOverviewProps {
   vaultConfigs: VaultConfig[]
   userAddress?: string
+}
+
+function AnimatedSwapLabel({ text, className = '' }: { text: string; className?: string }) {
+  const [displayText, setDisplayText] = useState(text)
+  const [phase, setPhase] = useState<'idle' | 'exit' | 'enter'>('idle')
+
+  useEffect(() => {
+    if (text === displayText) return
+
+    const rootStyle = getComputedStyle(document.documentElement)
+    const duration = parseFloat(rootStyle.getPropertyValue('--text-swap-dur')) || 200
+
+    setPhase('exit')
+
+    const exitTimer = window.setTimeout(() => {
+      setDisplayText(text)
+      setPhase('enter')
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setPhase('idle')
+        })
+      })
+    }, duration)
+
+    return () => window.clearTimeout(exitTimer)
+  }, [text, displayText])
+
+  return (
+    <span
+      className={`t-text-swap ${phase === 'exit' ? 'is-exit' : ''} ${phase === 'enter' ? 'is-enter-start' : ''} ${className}`.trim()}
+    >
+      {displayText}
+    </span>
+  )
 }
 
 export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOverviewProps) {
@@ -136,7 +171,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       onClick={onClick}
       className="flex items-center gap-1 text-[11px] font-medium tracking-[0.16em] text-arca-text-secondary transition-colors hover:text-arca-text md:text-xs"
     >
-      <span className={label === label.toUpperCase() ? 'uppercase' : 'capitalize'}>{label}</span>
+      <AnimatedSwapLabel className={label === label.toUpperCase() ? 'uppercase' : 'capitalize'} text={label} />
       <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
@@ -144,7 +179,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   )
 
   const DropdownMenu = ({ items, active, onSelect }: { items: string[]; active: string; onSelect: (item: string) => void }) => (
-    <div className="absolute top-full right-0 mt-1.5 z-[300] w-24 overflow-hidden rounded-xl border border-white/[0.08] bg-arca-gray shadow-elevated animate-fade-in md:w-28">
+    <div className="absolute top-full right-0 mt-1.5 z-[300] w-24 overflow-hidden rounded-xl border border-white/[0.08] bg-arca-gray shadow-elevated md:w-28">
       {items.map((item) => (
         <button
           key={item}
@@ -165,7 +200,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   const RewardDropdown = (
     <div className="relative z-[300]">
       <DropdownButton label={rewardPeriod} onClick={() => setShowRewardDropdown(!showRewardDropdown)} />
-      {showRewardDropdown && (
+      <div className={showRewardDropdown ? 't-dropdown is-open' : 't-dropdown'} data-origin="top-right">
         <DropdownMenu
           items={['hourly', 'daily', 'weekly', 'monthly', 'yearly']}
           active={rewardPeriod}
@@ -174,14 +209,14 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             setShowRewardDropdown(false)
           }}
         />
-      )}
+      </div>
     </div>
   )
 
   const RateDropdown = (
     <div className="relative z-[300]">
       <DropdownButton label={ratePeriod} onClick={() => setShowRateDropdown(!showRateDropdown)} />
-      {showRateDropdown && (
+      <div className={showRateDropdown ? 't-dropdown is-open' : 't-dropdown'} data-origin="top-right">
         <DropdownMenu
           items={['DPR', 'WPR', 'APR']}
           active={ratePeriod}
@@ -190,7 +225,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             setShowRateDropdown(false)
           }}
         />
-      )}
+      </div>
     </div>
   )
 
@@ -248,7 +283,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <div className={`rounded-2xl border border-white/[0.04] bg-arca-gray/80 shadow-card transition-all duration-300 ${showRewardsSection ? 'h-[286px] p-5' : 'h-[84px] p-4'}`}>
+        <div className={`t-resize rounded-2xl border border-white/[0.04] bg-arca-gray/80 shadow-card transition-all duration-300 ${showRewardsSection ? 'h-[286px] p-5' : 'h-[84px] p-4'}`}>
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
@@ -280,12 +315,8 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
             </button>
           </div>
 
-          <div
-            className={`grid overflow-hidden transition-all duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              showRewardsSection ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
-            }`}
-          >
-            <div className="min-h-0">
+          <div className="overflow-hidden">
+            <div className="t-panel-slide min-h-0" data-open={showRewardsSection ? 'true' : 'false'}>
               <div className="mt-4 space-y-4 border-t border-white/[0.04] pt-4">
                 <div>
                   <div className="mb-2 flex items-center gap-2">

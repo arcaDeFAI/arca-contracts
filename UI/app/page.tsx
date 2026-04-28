@@ -8,6 +8,29 @@ export const metadata: Metadata = {
 }
 
 export default function LandingPage() {
+  const featureCards = [
+    {
+      step: '01',
+      title: 'AI-Managed Vaults',
+      description: 'Deposit once. arca monitors price action, volatility and range efficiency to rebalance positions automatically.',
+    },
+    {
+      step: '02',
+      title: 'CL & DLMM Optimized',
+      description: 'Built for concentrated liquidity and DLMM pools. arca adapts to each pool instead of forcing one-size-fits-all strategies.',
+    },
+    {
+      step: '03',
+      title: 'Smart Rebalancing Engine',
+      description: 'Strategies dynamically adjust liquidity ranges and capital deployment to reduce extreme IL and improve efficiency.',
+    },
+    {
+      step: '04',
+      title: 'Passive Yield, Fully Automated',
+      description: 'No manual range management, no constant monitoring. arca handles execution so users can stay positioned with less friction.',
+    },
+  ] as const
+
   return (
     <>
       <section className="hero">
@@ -108,26 +131,15 @@ export default function LandingPage() {
       <section className="features-section">
         <div className="features-inner">
           <div className="features-grid">
-            <div className="feature-card reveal-card">
-              <div className="feature-icon">&#9900;</div>
-              <h3>AI-Managed Vaults</h3>
-              <p>Deposit once. arca monitors price action, volatility and range efficiency to rebalance positions automatically.</p>
-            </div>
-            <div className="feature-card reveal-card">
-              <div className="feature-icon">&#9900;</div>
-              <h3>CL &amp; DLMM Optimized</h3>
-              <p>Built for concentrated liquidity and DLMM pools. arca adapts to each pool instead of forcing one-size-fits-all strategies.</p>
-            </div>
-            <div className="feature-card reveal-card">
-              <div className="feature-icon">&#9900;</div>
-              <h3>Smart Rebalancing Engine</h3>
-              <p>Strategies dynamically adjust liquidity ranges and capital deployment to reduce extreme IL and improve efficiency.</p>
-            </div>
-            <div className="feature-card reveal-card">
-              <div className="feature-icon">&#9900;</div>
-              <h3>Passive Yield, Fully Automated</h3>
-              <p>No manual range management, no constant monitoring. arca handles execution so users can stay positioned with less friction.</p>
-            </div>
+            {featureCards.map((card, index) => (
+              <div key={card.title} className="feature-card reveal-card" style={{ transitionDelay: `${index * 0.08}s` }}>
+                <div className="feature-step-badge" aria-hidden="true">
+                  <span>{card.step}</span>
+                </div>
+                <h3>{card.title}</h3>
+                <p>{card.description}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
