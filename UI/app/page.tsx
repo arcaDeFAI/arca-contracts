@@ -31,8 +31,6 @@ export default function LandingPage() {
     },
   ] as const
 
-  const heroSignals = ['Shadow CL', 'Metropolis DLMM', 'Sonic-native']
-
   return (
     <>
       <section className="hero">
@@ -74,12 +72,6 @@ export default function LandingPage() {
           </p>
 
           <a href="/vaults" className="cta-btn">Go to dApp</a>
-
-          <div className="hero-signal-row" aria-label="Supported strategy signals">
-            {heroSignals.map((signal) => (
-              <span key={signal} className="hero-signal-pill">{signal}</span>
-            ))}
-          </div>
 
           <div className="price-ticker-wrap">
             <div className="price-ticker">

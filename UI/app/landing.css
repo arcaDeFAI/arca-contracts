@@ -260,30 +260,6 @@ html, body {
   transform: translateX(130%);
 }
 
-.hero-signal-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.hero-signal-pill {
-  display: inline-flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 0 13px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.08);
-  background: rgba(10, 12, 16, 0.38);
-  color: rgba(224, 255, 235, 0.76);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
-  backdrop-filter: blur(10px);
-}
-
 .cta-btn.small {
   min-width: auto;
   height: 35px;
