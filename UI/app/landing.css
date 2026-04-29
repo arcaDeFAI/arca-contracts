@@ -1134,7 +1134,6 @@ html, body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .word-track,
   .price-track,
   .feature-card,
   .feature-card::before,

@@ -151,7 +151,7 @@ export default function LandingPage() {
           <div className="faq-grid">
             <div className="faq-left">
               <div className="faq-pill"><span aria-hidden="true" /> FAQ</div>
-              <h2 className="faq-title">Answers before you connect</h2>
+              <h2 className="faq-title">Answers</h2>
               <p className="faq-subtitle">A quick read on how arca manages liquidity, what it supports, and where the risk boundaries are.</p>
               <div className="faq-image-wrap">
                 <img src="/landing/faq-image.png" alt="FAQ visual" className="faq-image" />
