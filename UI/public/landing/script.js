@@ -13,6 +13,8 @@ const heroFontFamilies = [
   "UbuntuMonoLocal"
 ];
 
+const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 function waitForHeroFonts() {
   if (!document.fonts?.load) {
     return Promise.resolve();
@@ -26,6 +28,10 @@ function waitForHeroFonts() {
 }
 
 function startHeroWordLoop() {
+  if (prefersReducedMotion) {
+    return;
+  }
+
   const wordTrack = document.getElementById("wordTrack");
   const wordItems = Array.from(document.querySelectorAll(".word"));
 
@@ -98,7 +104,9 @@ if (priceTrack) {
     requestAnimationFrame(animateTicker);
   }
 
-  animateTicker();
+  if (!prefersReducedMotion) {
+    animateTicker();
+  }
 }
 
 // =========================
@@ -188,7 +196,7 @@ async function fetchLivePrices() {
 
     updateTickerPrice("ARCA", null);
   } catch {
-    // silently fail — ticker stays at last known value
+    // Ticker stays at last known value.
   }
 }
 
@@ -223,7 +231,8 @@ faqItems.forEach((item) => {
 
   if (item.classList.contains("active")) {
     answer.style.maxHeight = answer.scrollHeight + "px";
-    symbol.textContent = "×";
+    symbol.textContent = "x";
+    question.setAttribute("aria-expanded", "true");
   }
 
   question.addEventListener("click", () => {
@@ -236,12 +245,14 @@ faqItems.forEach((item) => {
       otherItem.classList.remove("active");
       otherAnswer.style.maxHeight = null;
       otherSymbol.textContent = "+";
+      otherItem.querySelector(".faq-question")?.setAttribute("aria-expanded", "false");
     });
 
     if (!isActive) {
       item.classList.add("active");
       answer.style.maxHeight = answer.scrollHeight + "px";
-      symbol.textContent = "×";
+      symbol.textContent = "x";
+      question.setAttribute("aria-expanded", "true");
     }
   });
 });
