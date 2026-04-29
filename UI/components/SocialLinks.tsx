@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface SocialLink {
   name: string;
@@ -92,6 +92,34 @@ export function SocialLinks() {
 
   const modalContent = openModal ? LEGAL_COPY[openModal] : null;
 
+  useEffect(() => {
+    if (!openModal) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenModal(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [openModal]);
+
+  const handleModalPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width;
+    const py = (event.clientY - rect.top) / rect.height;
+
+    setTilt({
+      x: (0.5 - py) * 2.4,
+      y: (px - 0.5) * 3.2,
+    });
+  };
+
   return (
     <>
       <div className="py-4">
@@ -99,23 +127,23 @@ export function SocialLinks() {
           <div className="hidden xl:block" />
 
           <div className="flex flex-col items-center">
-            <div className="mx-auto mb-3 flex w-fit items-center justify-center gap-2 rounded-full border border-white/[0.05] bg-white/[0.02] px-3 py-2 backdrop-blur-md">
+            <div className="mx-auto mb-3 flex w-fit items-center justify-center gap-2 rounded-full border border-white/[0.05] bg-white/[0.025] px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md">
               {SOCIAL_LINKS.map((social) => (
                 <a
                   key={social.name}
                   href={social.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group relative flex h-9 w-9 items-center justify-center rounded-full border border-transparent bg-transparent transition-transform duration-200 hover:scale-[1.08]"
+                  className="arca-focus group relative flex size-9 items-center justify-center rounded-full border border-transparent bg-transparent transition-[background-color,border-color,transform] duration-200 hover:scale-[1.06] hover:border-white/[0.08] hover:bg-white/[0.035] active:scale-[0.96]"
                   aria-label={social.name}
                 >
-                  <span className="pointer-events-none absolute bottom-[5px] left-1/2 h-3 w-5 -translate-x-1/2 rounded-full bg-arca-green/0 blur-md opacity-0 transition-all duration-200 group-hover:bg-arca-green/40 group-hover:opacity-100" />
+                  <span className="pointer-events-none absolute bottom-[5px] left-1/2 h-3 w-5 -translate-x-1/2 rounded-full bg-arca-green/0 opacity-0 blur-md transition-[background-color,opacity] duration-200 group-hover:bg-arca-green/30 group-hover:opacity-100" />
                   <img
                     src={social.logo}
                     alt={social.name}
-                    className="relative z-[1] h-4.5 w-4.5 object-contain opacity-72 transition-all duration-200 group-hover:scale-110 group-hover:opacity-100"
+                    className="relative z-[1] h-4.5 w-4.5 object-contain opacity-75 transition-[opacity,transform] duration-200 group-hover:scale-105 group-hover:opacity-100"
                   />
-                  <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-lg border border-white/[0.08] bg-arca-gray px-2.5 py-1 text-[10px] text-arca-text opacity-0 transition-opacity group-hover:opacity-100 shadow-elevated">
+                  <div className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 transform whitespace-nowrap rounded-lg border border-white/[0.08] bg-arca-gray px-2.5 py-1 text-[10px] text-arca-text opacity-0 shadow-elevated transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100">
                     {social.name}
                   </div>
                 </a>
@@ -124,7 +152,7 @@ export function SocialLinks() {
             <button
               type="button"
               onClick={() => setOpenModal('terms')}
-              className="mb-1 text-[11px] text-arca-text-tertiary transition-colors duration-200 hover:text-arca-text"
+              className="arca-focus mb-1 rounded-md px-2 py-1 text-[11px] text-arca-text-tertiary transition-colors duration-200 hover:text-arca-text"
             >
               Terms and Conditions
             </button>
@@ -152,24 +180,19 @@ export function SocialLinks() {
           onClick={() => setOpenModal(null)}
         >
           <div
-            className="relative w-full max-w-[760px] rounded-[28px] border border-white/[0.12] bg-[linear-gradient(135deg,rgba(22,28,36,0.9),rgba(15,20,28,0.82)_50%,rgba(10,14,20,0.92))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl transition-transform duration-150 ease-out sm:p-8"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="legal-modal-title"
+            className="relative w-full max-w-[760px] rounded-[28px] border border-white/[0.1] bg-[linear-gradient(135deg,rgba(22,28,36,0.94),rgba(15,20,28,0.9)_50%,rgba(10,14,20,0.94))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl transition-transform duration-150 ease-out sm:p-8"
             onClick={(e) => e.stopPropagation()}
-            onMouseMove={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const px = (e.clientX - rect.left) / rect.width;
-              const py = (e.clientY - rect.top) / rect.height;
-              setTilt({
-                x: (0.5 - py) * 8,
-                y: (px - 0.5) * 10,
-              });
-            }}
-            onMouseLeave={() => setTilt({ x: 0, y: 0 })}
+            onPointerMove={handleModalPointerMove}
+            onPointerLeave={() => setTilt({ x: 0, y: 0 })}
             style={{
               transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
               transformStyle: 'preserve-3d',
             }}
           >
-            <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.12),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(0,255,136,0.08),transparent_35%)]" />
+            <div className="pointer-events-none absolute inset-0 rounded-[28px] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.1),transparent_40%),radial-gradient(circle_at_bottom_right,rgba(0,255,136,0.06),transparent_35%)]" />
 
             <div className="relative">
               <div className="mb-6 flex items-start justify-between gap-4">
@@ -177,7 +200,7 @@ export function SocialLinks() {
                   <div className="mb-2 inline-flex rounded-full border border-arca-green/[0.14] bg-arca-green/[0.06] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-arca-green">
                     arca Legal
                   </div>
-                  <h3 className="text-2xl font-semibold tracking-tight text-arca-text">
+                  <h3 id="legal-modal-title" className="text-2xl font-semibold tracking-tight text-arca-text">
                     {modalContent.title}
                   </h3>
                 </div>
@@ -185,7 +208,7 @@ export function SocialLinks() {
                 <button
                   type="button"
                   onClick={() => setOpenModal(null)}
-                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03] text-arca-text-secondary transition-all duration-200 hover:border-white/[0.14] hover:text-arca-text"
+                  className="arca-focus flex size-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.03] text-arca-text-secondary transition-[border-color,color,background-color,transform] duration-200 hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-arca-text active:scale-[0.96]"
                   aria-label="Close modal"
                 >
                   <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

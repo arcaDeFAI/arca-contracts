@@ -117,7 +117,10 @@ input[type='number'] {
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    border-color 0.2s ease-out,
+    box-shadow 0.2s ease-out,
+    transform 0.2s ease-out;
 }
 
 .glass-card:hover {
@@ -146,13 +149,33 @@ input[type='number'] {
   outline-offset: 2px;
 }
 
+.arca-focus {
+  outline: none;
+}
+
+.arca-focus:focus-visible {
+  outline: 2px solid rgba(0, 255, 136, 0.62);
+  outline-offset: 3px;
+}
+
 /* ─── Transition Helpers ─── */
 .transition-smooth {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    color 0.2s ease-out,
+    background-color 0.2s ease-out,
+    border-color 0.2s ease-out,
+    box-shadow 0.2s ease-out,
+    opacity 0.2s ease-out,
+    transform 0.2s ease-out;
 }
 
 .transition-fast {
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    color 0.15s ease-out,
+    background-color 0.15s ease-out,
+    border-color 0.15s ease-out,
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out;
 }
 
 /* Vault card logo-toned hover glow */
@@ -462,6 +485,24 @@ input[type='number'] {
   transform: scale(var(--icon-swap-start-scale));
 }
 
+.arca-view-panel {
+  animation: arcaViewPanelIn 180ms ease-out both;
+}
+
+@keyframes arcaViewPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .t-resize,
   .t-dropdown,
@@ -474,6 +515,10 @@ input[type='number'] {
   }
 
   .t-digit-group .t-digit {
+    animation: none !important;
+  }
+
+  .arca-view-panel {
     animation: none !important;
   }
 }

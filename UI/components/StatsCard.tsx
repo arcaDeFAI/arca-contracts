@@ -83,7 +83,7 @@ export function StatsCard({
 
     return (
         <div
-            className={`relative h-full rounded-2xl border border-white/[0.04] bg-arca-gray/80 backdrop-blur-sm shadow-card transition-all duration-300 hover:border-white/[0.07] hover:shadow-card-hover ${className}`}
+            className={`relative h-full rounded-2xl border border-white/[0.04] bg-arca-gray/80 shadow-card backdrop-blur-sm transition-[border-color,box-shadow] duration-200 hover:border-white/[0.07] hover:shadow-card-hover ${className}`}
         >
             <div className="flex h-full items-start justify-between gap-4 px-4 py-3 md:grid md:grid-cols-[1fr_auto] md:grid-rows-[auto_1fr] md:gap-x-4 md:gap-y-2 md:px-5 md:py-4">
                 <div className="min-w-0 flex-1">
@@ -107,7 +107,7 @@ export function StatsCard({
                     {trend && !loading && (
                         <div className={`mt-1 flex items-center gap-1.5 text-[11px] font-medium md:text-xs ${trend.positive ? 'text-arca-green-muted' : 'text-red-400'}`}>
                             <span>
-                                {trend.positive ? '↑' : '↓'} {Math.abs(trend.value)}%
+                                {trend.positive ? '+' : '-'}{Math.abs(trend.value)}%
                             </span>
                             <span className="text-arca-text-tertiary">{trend.label}</span>
                         </div>

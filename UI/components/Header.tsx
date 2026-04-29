@@ -57,7 +57,10 @@ export function Header() {
               {/* Mobile: Logo + toggle */}
               <button
                 onClick={toggleMobileMenu}
-                className="md:hidden flex items-center gap-2 hover:opacity-90 transition-opacity"
+                type="button"
+                aria-label={isMobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={isMobileMenuOpen}
+                className="arca-focus flex items-center gap-2 rounded-xl hover:opacity-90 transition-opacity md:hidden"
               >
                 <img src="/landing/arca.png" alt="arca logo" className="w-7 h-7 rounded-lg" />
                 <span className="text-arca-text font-semibold text-sm tracking-tight">arca Finance</span>
@@ -76,7 +79,7 @@ export function Header() {
               </button>
 
               {/* Desktop: Logo */}
-              <Link href="/" className="hidden md:flex items-center gap-2 hover:opacity-90 transition-opacity">
+              <Link href="/" className="arca-focus hidden items-center gap-2 rounded-xl hover:opacity-90 transition-opacity md:flex">
                 <img src="/landing/arca.png" alt="arca logo" className="w-8 h-8 rounded-lg" />
                 <span className="text-arca-text font-semibold text-base tracking-tight">arca Finance</span>
               </Link>
@@ -87,7 +90,7 @@ export function Header() {
                   <Link
                     key={href}
                     href={href}
-                    className={`relative px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
+                    className={`arca-focus relative rounded-xl px-4 py-2 text-sm font-medium transition-[background-color,color] duration-200 ${isActive
                       ? 'text-arca-green bg-arca-green/[0.08]'
                       : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
                       }`}
@@ -131,7 +134,7 @@ export function Header() {
                             <button
                               onClick={openConnectModal}
                               type="button"
-                              className="flex items-center gap-2 bg-arca-green text-arca-dark font-semibold py-2 px-4 rounded-xl text-sm hover:bg-arca-green/90 hover:shadow-glow-green transition-all duration-200 active:scale-[0.97]"
+                              className="arca-focus flex items-center gap-2 rounded-xl bg-arca-green px-4 py-2 text-sm font-semibold text-arca-dark transition-[background-color,box-shadow,transform] duration-200 hover:bg-arca-green/90 hover:shadow-glow-green active:scale-[0.96]"
                             >
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M17 7H7c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2zm0 10H7V9h10v8zm-1-4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z" />
@@ -148,7 +151,7 @@ export function Header() {
                             <button
                               onClick={openChainModal}
                               type="button"
-                              className="bg-red-500/20 text-red-400 border border-red-500/30 font-medium py-2 px-4 rounded-xl text-sm hover:bg-red-500/30 transition-all"
+                              className="arca-focus rounded-xl border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/30"
                             >
                               Wrong network
                             </button>
@@ -160,7 +163,7 @@ export function Header() {
                             {/* Chain button */}
                             <button
                               onClick={openChainModal}
-                              className="hidden sm:flex items-center gap-1.5 py-2 px-3 rounded-xl bg-white/[0.04] border border-white/[0.06] text-arca-text text-sm font-medium hover:bg-white/[0.08] transition-all"
+                              className="arca-focus hidden items-center gap-1.5 rounded-xl border border-white/[0.06] bg-white/[0.04] px-3 py-2 text-sm font-medium text-arca-text transition-colors hover:bg-white/[0.08] sm:flex"
                               type="button"
                             >
                               {connected && chain.hasIcon && chain.iconUrl ? (
@@ -193,7 +196,7 @@ export function Header() {
                             <button
                               onClick={openAccountModal}
                               type="button"
-                              className="relative flex items-center gap-2 rounded-xl bg-arca-green px-3 py-2 text-xs font-semibold text-arca-dark transition-all duration-200 active:scale-[0.97] sm:px-4 sm:text-sm hover:bg-arca-green/90"
+                              className="arca-focus relative flex items-center gap-2 rounded-xl bg-arca-green px-3 py-2 text-xs font-semibold text-arca-dark transition-[background-color,transform] duration-200 hover:bg-arca-green/90 active:scale-[0.96] sm:px-4 sm:text-sm"
                             >
                               <span
                                 className="pointer-events-none absolute inset-0 rounded-xl opacity-0 shadow-[0_0_18px_rgba(235,241,248,0.18)]"
@@ -229,7 +232,7 @@ export function Header() {
                     key={href}
                     href={href}
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className={`relative block px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${isActive
+                    className={`arca-focus relative block rounded-xl px-4 py-2.5 text-sm font-medium transition-[background-color,color] ${isActive
                       ? 'text-arca-green bg-arca-green/[0.08]'
                       : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
                       }`}

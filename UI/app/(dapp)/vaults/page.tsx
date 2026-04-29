@@ -22,9 +22,11 @@ const FilterTab = ({
   onClick: () => void;
 }) => (
   <button
+    type="button"
     onClick={onClick}
-    className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 ${isActive
-      ? 'bg-arca-green/[0.1] text-arca-green shadow-sm'
+    aria-pressed={isActive}
+    className={`arca-focus rounded-xl px-3 py-2 text-xs font-medium transition-[background-color,color,box-shadow,transform] duration-200 active:scale-[0.96] sm:text-sm ${isActive
+      ? 'bg-arca-green/[0.1] text-arca-green shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]'
       : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
       }`}
   >
@@ -49,8 +51,9 @@ const ViewToggleButton = ({
     type="button"
     onClick={onClick}
     aria-label={label}
+    aria-pressed={isActive}
     title={label}
-    className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-all duration-200 ${
+    className={`arca-focus flex size-10 items-center justify-center rounded-xl border transition-[background-color,border-color,color,box-shadow,transform] duration-200 active:scale-[0.96] ${
       isActive
         ? 'border-arca-green/30 bg-arca-green/[0.12] text-arca-green shadow-[0_0_0_1px_rgba(0,255,136,0.08)]'
         : 'border-white/[0.05] bg-arca-gray/60 text-arca-text-secondary hover:border-white/[0.1] hover:bg-white/[0.04] hover:text-arca-text'
@@ -150,8 +153,12 @@ export default function Home() {
 
           {/* Wallet prompt */}
           {!isConnected && (
-            <div className="bg-amber-500/[0.06] border border-amber-500/[0.12] rounded-2xl p-4 mb-8 flex items-start gap-3 animate-fade-in">
-              <span className="text-lg mt-0.5">⚠️</span>
+            <div className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-300/[0.14] bg-amber-300/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] animate-fade-in">
+              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl border border-amber-300/[0.14] bg-amber-300/[0.08] text-amber-300" aria-hidden="true">
+                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                </svg>
+              </span>
               <div>
                 <h3 className="text-amber-400 font-medium text-sm mb-0.5">Wallet Not Connected</h3>
                 <p className="text-amber-400/60 text-xs leading-relaxed">
@@ -164,13 +171,13 @@ export default function Home() {
           {/* Filter Tabs */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
             <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-start sm:gap-3">
-              <div className="flex w-fit max-w-[calc(100%-5.5rem)] bg-arca-gray/60 p-1 rounded-2xl border border-white/[0.04] sm:max-w-none">
+              <div className="flex w-fit max-w-[calc(100%-5.5rem)] rounded-2xl border border-white/[0.04] bg-arca-gray/60 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] sm:max-w-none">
                 <FilterTab label="All Strategies" isActive={activeTab === 'All'} onClick={() => setActiveTab('All')} />
                 <FilterTab label="Metropolis" isActive={activeTab === 'Metropolis'} onClick={() => setActiveTab('Metropolis')} />
                 <FilterTab label="Shadow" isActive={activeTab === 'Shadow'} onClick={() => setActiveTab('Shadow')} />
               </div>
 
-              <div className="flex shrink-0 items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-white/[0.04] bg-arca-gray/45 p-1">
                 <ViewToggleButton
                   isActive={viewMode === 'grid'}
                   label="Grid view"
@@ -212,17 +219,29 @@ export default function Home() {
           </div>
 
           {viewMode === 'grid' ? (
-            <div className="animate-fade-in">
-              <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {displayedVaults.map((vault, index) => (
-                  <div key={index} className="animate-fade-up" style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}>
-                    <VaultCard config={vault} />
+            <div className="arca-view-panel">
+              {displayedVaults.length > 0 ? (
+                <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                  {displayedVaults.map((vault, index) => (
+                    <div key={vault.vaultAddress} className="animate-fade-up" style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}>
+                      <VaultCard config={vault} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex min-h-[280px] flex-col items-center justify-center rounded-[22px] border border-white/[0.04] bg-arca-gray/70 px-6 py-12 text-center shadow-card">
+                  <div className="mb-3 flex size-12 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.03] text-arca-green">
+                    <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7h16M7 7v10.5A2.5 2.5 0 0 0 9.5 20h5a2.5 2.5 0 0 0 2.5-2.5V7M9 7V5.75A1.75 1.75 0 0 1 10.75 4h2.5A1.75 1.75 0 0 1 15 5.75V7" />
+                    </svg>
                   </div>
-                ))}
-              </div>
+                  <h3 className="text-sm font-semibold text-arca-text">No vaults in this filter</h3>
+                  <p className="mt-1 max-w-sm text-xs leading-6 text-arca-text-tertiary">Try a different strategy type or return to all strategies.</p>
+                </div>
+              )}
             </div>
           ) : (
-            <div className="animate-fade-in">
+            <div className="arca-view-panel">
               <VaultTableView
                 vaults={VAULT_CONFIGS}
                 userAddress={address}

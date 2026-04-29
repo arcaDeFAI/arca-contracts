@@ -14,6 +14,7 @@ import { getToken, getTokenByAddress } from '@/lib/tokenRegistry';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { type UserRewardStructOutput } from '@/lib/typechain';
+import { DexBadge } from './DexBadge';
 
 interface VaultTableViewProps {
   vaults: VaultConfig[];
@@ -105,14 +106,16 @@ export function VaultTableView({
     return (
       <button
         type="button"
-        className="grid w-full grid-cols-[1fr,auto,1fr] items-center text-center cursor-pointer hover:text-arca-green transition-colors group outline-none select-none"
+        className="arca-focus grid w-full cursor-pointer grid-cols-[1fr,auto,1fr] items-center rounded-md text-center transition-colors duration-200 hover:text-arca-green group select-none"
         onClick={() => handleSort(column)}
+        aria-label={`Sort by ${String(children)}`}
+        aria-pressed={isActive}
       >
         <span aria-hidden="true" />
         <span>{children}</span>
         <div className="justify-self-start flex flex-col gap-0.5 opacity-40 group-hover:opacity-80 transition-opacity">
           <svg
-            className={`w-2 h-2 transition-all ${isDesc ? 'text-arca-green opacity-100' : 'text-arca-text-tertiary'}`}
+            className={`h-2 w-2 transition-[color,opacity] duration-150 ${isDesc ? 'text-arca-green opacity-100' : 'text-arca-text-tertiary'}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
@@ -121,7 +124,7 @@ export function VaultTableView({
             <path d="M6 9 L6 3 M6 3 L3 6 M6 3 L9 6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
           <svg
-            className={`w-2 h-2 transition-all ${isAsc ? 'text-arca-green opacity-100' : 'text-arca-text-tertiary'}`}
+            className={`h-2 w-2 transition-[color,opacity] duration-150 ${isAsc ? 'text-arca-green opacity-100' : 'text-arca-text-tertiary'}`}
             fill="none"
             stroke="currentColor"
             strokeWidth="2.5"
@@ -182,6 +185,11 @@ export function VaultTableView({
     [visibleVaultAddresses],
   );
 
+  const visibleSortedVaultIndices = useMemo(
+    () => sortedVaultIndices.filter((index) => !visibleVaultSet || visibleVaultSet.has(vaults[index].vaultAddress)),
+    [sortedVaultIndices, visibleVaultSet, vaults],
+  );
+
   return (
     <>
       <div className="overflow-hidden rounded-[22px] border border-white/[0.04] bg-arca-gray/80 shadow-card backdrop-blur-sm">
@@ -202,11 +210,22 @@ export function VaultTableView({
             </div>
 
             <div>
-              {sortedVaultIndices.map((index, sortIndex) => {
+              {visibleSortedVaultIndices.length === 0 && (
+                <div className="flex min-h-[220px] flex-col items-center justify-center border-t border-white/[0.04] px-6 py-12 text-center">
+                  <div className="mb-3 flex size-11 items-center justify-center rounded-2xl border border-white/[0.06] bg-white/[0.03] text-arca-green">
+                    <svg className="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 7h16M7 7v10.5A2.5 2.5 0 0 0 9.5 20h5a2.5 2.5 0 0 0 2.5-2.5V7M9 7V5.75A1.75 1.75 0 0 1 10.75 4h2.5A1.75 1.75 0 0 1 15 5.75V7" />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-semibold text-arca-text">No vaults match this view</h3>
+                  <p className="mt-1 max-w-sm text-xs leading-6 text-arca-text-tertiary">
+                    Switch strategy filters or connect a wallet to surface your active positions, rewards, and queued withdrawals.
+                  </p>
+                </div>
+              )}
+
+              {visibleSortedVaultIndices.map((index, sortIndex) => {
                 const vault = vaults[index];
-                if (visibleVaultSet && !visibleVaultSet.has(vault.vaultAddress)) {
-                  return null;
-                }
                 const metrics = vaultMetrics[index];
                 const harvested = harvestedData[index];
                 const position = positionData[index];
@@ -242,23 +261,27 @@ export function VaultTableView({
                 const dailyRewardsUSD = metrics.depositedValueUSD && rewardApr > 0
                   ? (metrics.depositedValueUSD * (rewardApr / 100)) / 365
                   : 0;
-                const dexName = isShadow ? 'Shadow' : 'Metropolis';
-                const dexLogo = isShadow ? '/shadow-logo.png' : '/metropolis-logo.png';
-                const dexPillClass = isShadow
-                  ? 'border-[#8c5a16]/55 bg-[linear-gradient(135deg,rgba(255,184,77,0.22),rgba(255,184,77,0.12)_46%,rgba(89,52,10,0.3))] text-[#ffe2a7] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,238,205,0.18),inset_0_-1px_0_rgba(102,60,12,0.22),0_10px_24px_rgba(27,16,3,0.16)]'
-                  : 'border-[#25346f]/70 bg-[linear-gradient(135deg,rgba(126,137,255,0.2),rgba(126,137,255,0.12)_46%,rgba(19,29,74,0.34))] text-[#d8deff] backdrop-blur-md shadow-[inset_0_1px_0_rgba(176,190,255,0.12),inset_0_-1px_0_rgba(17,25,63,0.3),0_10px_24px_rgba(8,12,30,0.22)]';
-
                 return (
                   <div
                     key={vault.vaultAddress}
                     onClick={() => interactiveRows && onVaultClick(vault)}
-                    className={`w-full border-l-2 transition-all duration-200 ${
+                    onKeyDown={(event) => {
+                      if (!interactiveRows) return;
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        onVaultClick(vault);
+                      }
+                    }}
+                    role={interactiveRows ? 'button' : undefined}
+                    tabIndex={interactiveRows ? 0 : undefined}
+                    aria-label={interactiveRows ? `Open details for ${vault.tokenX} ${vault.tokenY} vault` : undefined}
+                    className={`w-full border-l-2 transition-[background-color,border-color] duration-200 ${
                       sortIndex > 0 ? 'border-t border-white/[0.04]' : ''
                     } ${
                       isSelected
                         ? 'border-l-arca-green bg-arca-green/[0.04]'
                         : interactiveRows
-                          ? 'border-l-transparent cursor-pointer hover:border-l-arca-green/40 hover:bg-white/[0.02]'
+                          ? 'arca-focus border-l-transparent cursor-pointer hover:border-l-arca-green/40 hover:bg-white/[0.02]'
                           : 'border-l-transparent hover:bg-white/[0.015]'
                     }`}
                   >
@@ -274,14 +297,7 @@ export function VaultTableView({
                             {vault.tokenX} / {vault.tokenY}
                           </div>
                           <div className="mt-1 flex items-center gap-1.5">
-                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-[0.375rem] text-[9px] font-medium tracking-[0.08em] ${dexPillClass}`}>
-                              <img
-                                src={dexLogo}
-                                alt={dexName}
-                                className="h-4 w-4 object-contain"
-                              />
-                              {dexName}
-                            </span>
+                            <DexBadge name={vault.name} compact />
                           </div>
                         </div>
                       </div>
@@ -292,7 +308,7 @@ export function VaultTableView({
                             <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-arca-text-tertiary">
                               Range
                             </span>
-                            <span className="text-[10px] font-medium text-arca-text-secondary">
+                            <span className="text-[10px] font-medium text-arca-text-secondary tabular-nums">
                               {metrics.activePercentage !== undefined ? `${metrics.activePercentage.toFixed(0)}% active` : '--'}
                             </span>
                           </div>
@@ -315,23 +331,23 @@ export function VaultTableView({
                         </div>
                       </div>
 
-                      <div className="text-center text-sm font-medium text-arca-text">
+                      <div className="text-center text-sm font-medium text-arca-text tabular-nums">
                         ${metrics.depositedValueUSD?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                       </div>
 
-                      <div className="text-center text-sm font-medium text-arca-text">
+                      <div className="text-center text-sm font-medium text-arca-text tabular-nums">
                         ${dailyRewardsUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
 
-                      <div className="text-center text-sm font-medium text-arca-text">
+                      <div className="text-center text-sm font-medium text-arca-text tabular-nums">
                         ${harvested.totalHarvestedUSD.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </div>
 
-                      <div className="text-center text-sm font-semibold text-arca-green">
+                      <div className="text-center text-sm font-semibold text-arca-green tabular-nums">
                         {rewardApr > 0 ? `${rewardApr.toFixed(2)}%` : '-'}
                       </div>
 
-                      <div className="text-center text-sm font-medium text-arca-text-secondary">
+                      <div className="text-center text-sm font-medium text-arca-text-secondary tabular-nums">
                         ${metrics.vaultTVL?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                       </div>
 
@@ -345,7 +361,8 @@ export function VaultTableView({
                               }
                             }}
                             disabled={metrics.isRedeemingWithdrawal}
-                            className={`rounded-lg px-3 py-1 text-xs font-medium transition-all ${
+                            aria-label={`Claim withdrawal for ${vault.tokenX} ${vault.tokenY}`}
+                            className={`rounded-lg px-3 py-1 text-xs font-medium transition-[background-color,color,opacity] duration-200 ${
                               metrics.isRedeemingWithdrawal
                                 ? 'cursor-not-allowed bg-white/[0.04] text-arca-text-tertiary'
                                 : 'animate-pulse-soft bg-arca-green/[0.1] text-arca-green hover:bg-arca-green/[0.15]'
@@ -368,7 +385,8 @@ export function VaultTableView({
                             }
                           }}
                           disabled={metrics.isClaimingRewards || !hasClaimableRewards}
-                          className={`flex h-7 w-7 items-center justify-center rounded-lg transition-all ${
+                          aria-label={hasClaimableRewards ? `Claim rewards for ${vault.tokenX} ${vault.tokenY}` : `No rewards available for ${vault.tokenX} ${vault.tokenY}`}
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg transition-[background-color,color,opacity] duration-200 ${
                             metrics.isClaimingRewards || !hasClaimableRewards
                               ? 'cursor-not-allowed opacity-20'
                               : 'bg-white/[0.03] hover:bg-arca-green/[0.08] hover:text-arca-green'
@@ -391,7 +409,8 @@ export function VaultTableView({
                             setDepositModalVault(vault.vaultAddress);
                           }}
                           disabled={!userAddress}
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.03] transition-all hover:bg-arca-green/[0.08] disabled:cursor-not-allowed disabled:opacity-20"
+                          aria-label={`Deposit into ${vault.tokenX} ${vault.tokenY}`}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.03] transition-[background-color,opacity] duration-200 hover:bg-arca-green/[0.08] disabled:cursor-not-allowed disabled:opacity-20"
                           title="Deposit"
                         >
                           <svg className="h-3.5 w-3.5 text-arca-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,7 +428,8 @@ export function VaultTableView({
                             }
                           }}
                           disabled={!hasPosition && !hasQueuedWithdrawal}
-                          className={`flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.03] transition-all disabled:cursor-not-allowed disabled:opacity-20 ${
+                          aria-label={hasQueuedWithdrawal ? `Cancel withdrawal for ${vault.tokenX} ${vault.tokenY}` : `Withdraw from ${vault.tokenX} ${vault.tokenY}`}
+                          className={`flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.03] transition-[background-color,opacity] duration-200 disabled:cursor-not-allowed disabled:opacity-20 ${
                             hasQueuedWithdrawal ? 'hover:bg-red-500/[0.1]' : 'hover:bg-red-500/[0.08]'
                           }`}
                           title={hasQueuedWithdrawal ? 'Cancel Withdrawal' : 'Withdraw'}

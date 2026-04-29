@@ -17,6 +17,7 @@ import { useVaultPositionData } from '@/hooks/useVaultPositionData';
 import { RangeBar } from './RangeBar';
 import { Tooltip } from './Tooltip';
 import { getAPYCalculationExplanation } from '@/hooks/useSubgraphMetrics';
+import { DexBadge } from './DexBadge';
 
 interface VaultCardProps {
   config: VaultConfig;
@@ -82,23 +83,20 @@ export function VaultCard({ config }: VaultCardProps) {
     );
   }
 
-  const isShadow = name.includes('Shadow');
-  const dexName = isShadow ? 'Shadow' : 'Metropolis';
-  const dexLogo = isShadow ? '/shadow-logo.png' : '/metropolis-logo.png';
-  const dexPillClass = isShadow
-    ? 'border-[#8c5a16]/55 bg-[linear-gradient(135deg,rgba(255,184,77,0.22),rgba(255,184,77,0.12)_46%,rgba(89,52,10,0.3))] text-[#ffe2a7] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,238,205,0.18),inset_0_-1px_0_rgba(102,60,12,0.22),0_10px_24px_rgba(27,16,3,0.16)]'
-    : 'border-[#25346f]/70 bg-[linear-gradient(135deg,rgba(126,137,255,0.2),rgba(126,137,255,0.12)_46%,rgba(19,29,74,0.34))] text-[#d8deff] backdrop-blur-md shadow-[inset_0_1px_0_rgba(176,190,255,0.12),inset_0_-1px_0_rgba(17,25,63,0.3),0_10px_24px_rgba(8,12,30,0.22)]';
   const cleanName = name.replace(' | Metropolis', '').replace(' | Shadow', '');
+  const depositDisabledReason = !address ? 'Connect wallet to deposit' : undefined;
+  const withdrawDisabledReason = !address
+    ? 'Connect wallet to withdraw'
+    : !userShares || userShares === 0n
+      ? 'No deposited shares to withdraw'
+      : undefined;
 
   return (
     <>
-      <div className="vault-card-glow group relative bg-arca-gray/80 backdrop-blur-sm rounded-2xl p-6 border border-white/[0.04] shadow-card transition-all duration-500 hover:border-white/[0.07] hover:-translate-y-[2px] w-full flex flex-col h-full">
+      <div className="vault-card-glow group relative flex h-full w-full flex-col rounded-2xl border border-white/[0.04] bg-arca-gray/80 p-6 shadow-card backdrop-blur-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-[2px] hover:border-white/[0.07]">
 
         {/* DEX Badge — top right */}
-        <div className={`absolute top-5 right-5 flex items-center gap-1.5 rounded-xl border px-2 py-[0.375rem] ${dexPillClass}`}>
-          <img src={dexLogo} alt={dexName} className="h-4 w-4 object-contain" />
-          <span className="text-[9px] font-medium tracking-[0.08em]">{dexName}</span>
-        </div>
+        <DexBadge name={name} compact className="absolute right-5 top-5" />
 
         {/* Token pair + name */}
         <div className="mb-5">
@@ -127,7 +125,7 @@ export function VaultCard({ config }: VaultCardProps) {
                 <span className="text-arca-text-tertiary text-[11px] font-medium uppercase tracking-wider">APR</span>
                 <Tooltip text={getAPYCalculationExplanation()} width="sm" ariaLabel="APR calculation explanation" />
               </div>
-              <div className="text-2xl font-bold text-arca-green tracking-tight">
+              <div className="text-2xl font-bold tracking-tight text-arca-green tabular-nums">
                 {isLoading || aprLoading ? <Skeleton width={60} height={24} /> : formatPercentage(rewardApr ?? 0)}
               </div>
             </div>
@@ -136,7 +134,7 @@ export function VaultCard({ config }: VaultCardProps) {
               <div className="flex items-center gap-1.5 mb-1.5">
                 <span className="text-arca-text-tertiary text-[11px] font-medium uppercase tracking-wider">TVL</span>
               </div>
-              <div className="text-2xl font-bold text-arca-text tracking-tight">
+              <div className="text-2xl font-bold tracking-tight text-arca-text tabular-nums">
                 {isLoading ? <Skeleton width={60} height={24} /> : formatUSD(vaultTVL)}
               </div>
             </div>
@@ -146,14 +144,14 @@ export function VaultCard({ config }: VaultCardProps) {
           <div className="pt-4 border-t border-white/[0.04] space-y-2.5">
             <div className="flex justify-between items-center text-sm">
               <span className="text-arca-text-tertiary">Your Deposit</span>
-              <span className="text-arca-text font-medium">
+              <span className="font-medium text-arca-text tabular-nums">
                 {isLoading ? <Skeleton width={50} height={18} /> : formatUSD(depositedValueUSD)}
               </span>
             </div>
 
             <div className="flex justify-between items-center text-sm">
               <span className="text-arca-text-tertiary">Share of Pool</span>
-              <span className="text-arca-text-secondary">
+              <span className="text-arca-text-secondary tabular-nums">
                 {isLoading ? <Skeleton width={40} height={18} /> : `${sharePercentage.toFixed(2)}%`}
               </span>
             </div>
@@ -163,7 +161,7 @@ export function VaultCard({ config }: VaultCardProps) {
               <div className="flex justify-between items-center mb-1.5">
                 <span className="text-arca-text-tertiary text-[11px] font-medium uppercase tracking-wider">Range</span>
                 {activePercentage !== undefined && activePercentage > 0 && (
-                  <span className="text-arca-text-secondary text-[11px] font-medium">{activePercentage.toFixed(0)}% active</span>
+                  <span className="text-[11px] font-medium text-arca-text-secondary tabular-nums">{activePercentage.toFixed(0)}% active</span>
                 )}
               </div>
               <RangeBar position={position} tokenY={tokenY} compact />
@@ -187,14 +185,18 @@ export function VaultCard({ config }: VaultCardProps) {
           <button
             onClick={() => setShowDepositModal(true)}
             disabled={!address}
-            className="bg-arca-green text-arca-dark font-semibold py-2.5 px-4 rounded-xl text-sm hover:bg-white hover:shadow-glow-green hover:scale-[1.02] transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none"
+            aria-label={depositDisabledReason ?? `Deposit into ${cleanName}`}
+            title={depositDisabledReason}
+            className="arca-focus rounded-xl bg-arca-green px-4 py-2.5 text-sm font-semibold text-arca-dark transition-[background-color,box-shadow,transform,opacity] duration-200 hover:scale-[1.02] hover:bg-white hover:shadow-glow-green active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:scale-100 disabled:hover:shadow-none"
           >
             Deposit
           </button>
           <button
             onClick={() => setShowWithdrawModal(true)}
             disabled={!address || !userShares || userShares === 0n}
-            className="bg-white/[0.04] border border-white/[0.08] text-arca-text-secondary font-medium py-2.5 px-4 rounded-xl text-sm hover:bg-white/[0.08] hover:text-arca-text hover:border-white/[0.12] transition-all duration-200 disabled:opacity-25 disabled:cursor-not-allowed"
+            aria-label={withdrawDisabledReason ?? `Withdraw from ${cleanName}`}
+            title={withdrawDisabledReason}
+            className="arca-focus rounded-xl border border-white/[0.08] bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-arca-text-secondary transition-[background-color,border-color,color,opacity,transform] duration-200 hover:border-white/[0.12] hover:bg-white/[0.08] hover:text-arca-text active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-25 disabled:active:scale-100"
           >
             Withdraw
           </button>

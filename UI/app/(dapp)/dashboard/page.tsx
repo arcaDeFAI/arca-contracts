@@ -18,6 +18,19 @@ export default function Dashboard() {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!selectedVault) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectedVault(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [selectedVault]);
+
   if (!mounted) {
     return null;
   }
@@ -47,7 +60,11 @@ export default function Dashboard() {
           {!isConnected && (
             <div className="bg-amber-500/[0.06] border border-amber-500/[0.12] rounded-2xl p-4 mb-6 animate-fade-in">
               <div className="flex items-center gap-3">
-                <span className="text-lg">⚠️</span>
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-amber-300/[0.14] bg-amber-300/[0.08] text-amber-300" aria-hidden="true">
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                  </svg>
+                </span>
                 <div>
                   <h3 className="text-amber-400 font-medium text-sm mb-0.5">Connect Your Wallet</h3>
                   <p className="text-amber-400/60 text-xs">
@@ -103,14 +120,19 @@ export default function Dashboard() {
           onClick={() => setSelectedVault(null)}
         >
           <div
-            className="relative w-full max-w-[560px] max-h-[78vh] overflow-y-auto rounded-2xl lg:max-w-[600px]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="vault-details-title"
+            className="relative max-h-[78vh] w-full max-w-[560px] overflow-y-auto rounded-2xl lg:max-w-[600px]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between px-1">
-              <h3 className="text-arca-text font-semibold text-sm">Vault Details</h3>
+              <h3 id="vault-details-title" className="text-arca-text font-semibold text-sm">Vault Details</h3>
               <button
                 onClick={() => setSelectedVault(null)}
-                className="text-arca-text-tertiary hover:text-arca-text transition-colors p-1 rounded-lg hover:bg-white/[0.04]"
+                type="button"
+                aria-label="Close vault details"
+                className="arca-focus rounded-lg p-1 text-arca-text-tertiary transition-colors hover:bg-white/[0.04] hover:text-arca-text"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
