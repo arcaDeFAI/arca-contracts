@@ -10,6 +10,7 @@ import { useVaultMetrics } from '@/hooks/useVaultMetrics';
 import { VAULT_CONFIGS } from '@/lib/vaultConfigs';
 import { StatsCard } from '@/components/StatsCard';
 import { VaultTableView } from '@/components/VaultTableView';
+import { WalletNotice } from '@/components/WalletNotice';
 
 // Tab Component
 const FilterTab = ({
@@ -153,19 +154,9 @@ export default function Home() {
 
           {/* Wallet prompt */}
           {!isConnected && (
-            <div className="mb-8 flex items-start gap-3 rounded-2xl border border-amber-300/[0.14] bg-amber-300/[0.055] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] animate-fade-in">
-              <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-xl border border-amber-300/[0.14] bg-amber-300/[0.08] text-amber-300" aria-hidden="true">
-                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 9v4m0 4h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-                </svg>
-              </span>
-              <div>
-                <h3 className="text-amber-400 font-medium text-sm mb-0.5">Wallet Not Connected</h3>
-                <p className="text-amber-400/60 text-xs leading-relaxed">
-                  Connect your wallet to deposit and view personal earnings.
-                </p>
-              </div>
-            </div>
+            <WalletNotice>
+              Connect your wallet to deposit and view personal earnings.
+            </WalletNotice>
           )}
 
           {/* Filter Tabs */}
