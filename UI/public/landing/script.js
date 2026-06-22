@@ -13,6 +13,8 @@ const heroFontFamilies = [
   "UbuntuMonoLocal"
 ];
 
+const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 function waitForHeroFonts() {
   if (!document.fonts?.load) {
     return Promise.resolve();
@@ -27,19 +29,37 @@ function waitForHeroFonts() {
 
 function startHeroWordLoop() {
   const wordTrack = document.getElementById("wordTrack");
-  const wordItems = Array.from(document.querySelectorAll(".word"));
+  const wordItems = Array.from(wordTrack?.querySelectorAll(".word") ?? []);
 
   if (!wordTrack || wordItems.length === 0) {
     return;
   }
+
+  if (!wordTrack.querySelector('[data-loop-clone="true"]')) {
+    const firstClone = wordItems[0].cloneNode(true);
+    firstClone.setAttribute("data-loop-clone", "true");
+    wordTrack.appendChild(firstClone);
+  }
+
+  const loopItems = Array.from(wordTrack.querySelectorAll(".word"));
   let currentWordIndex = 0;
   let isResettingWordLoop = false;
 
-  const getWordHeight = () => wordItems[0].offsetHeight;
+  const getWordHeight = () => loopItems[0].offsetHeight;
 
   function goToWord(index, animated = true) {
     wordTrack.style.transition = animated ? "transform 0.8s ease" : "none";
     wordTrack.style.transform = `translateY(-${index * getWordHeight()}px)`;
+  }
+
+  function resetToFirstWord() {
+    currentWordIndex = 0;
+    goToWord(currentWordIndex, false);
+
+    requestAnimationFrame(() => {
+      wordTrack.style.transition = "transform 0.8s ease";
+      isResettingWordLoop = false;
+    });
   }
 
   goToWord(0, false);
@@ -47,26 +67,22 @@ function startHeroWordLoop() {
   setInterval(() => {
     if (isResettingWordLoop) return;
 
-    if (currentWordIndex === wordItems.length - 1) {
-      isResettingWordLoop = true;
-
-      setTimeout(() => {
-        currentWordIndex = 0;
-        goToWord(currentWordIndex, false);
-
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            wordTrack.style.transition = "transform 0.8s ease";
-            isResettingWordLoop = false;
-          });
-        });
-      }, 1000);
-
-      return;
-    }
-
     currentWordIndex++;
     goToWord(currentWordIndex, true);
+
+    if (currentWordIndex === loopItems.length - 1) {
+      isResettingWordLoop = true;
+      const resetTimeout = window.setTimeout(resetToFirstWord, 850);
+
+      wordTrack.addEventListener(
+        "transitionend",
+        () => {
+          window.clearTimeout(resetTimeout);
+          resetToFirstWord();
+        },
+        { once: true }
+      );
+    }
   }, 1000);
 
   window.addEventListener("resize", () => {
@@ -74,7 +90,9 @@ function startHeroWordLoop() {
   });
 }
 
-waitForHeroFonts().finally(startHeroWordLoop);
+if (!prefersReducedMotion) {
+  waitForHeroFonts().finally(startHeroWordLoop);
+}
 
 // =========================
 // PRICE TICKER MARQUEE
@@ -98,7 +116,9 @@ if (priceTrack) {
     requestAnimationFrame(animateTicker);
   }
 
-  animateTicker();
+  if (!prefersReducedMotion) {
+    animateTicker();
+  }
 }
 
 // =========================
@@ -188,7 +208,7 @@ async function fetchLivePrices() {
 
     updateTickerPrice("ARCA", null);
   } catch {
-    // silently fail — ticker stays at last known value
+    // Ticker stays at last known value.
   }
 }
 
@@ -223,7 +243,8 @@ faqItems.forEach((item) => {
 
   if (item.classList.contains("active")) {
     answer.style.maxHeight = answer.scrollHeight + "px";
-    symbol.textContent = "×";
+    symbol.textContent = "x";
+    question.setAttribute("aria-expanded", "true");
   }
 
   question.addEventListener("click", () => {
@@ -236,12 +257,14 @@ faqItems.forEach((item) => {
       otherItem.classList.remove("active");
       otherAnswer.style.maxHeight = null;
       otherSymbol.textContent = "+";
+      otherItem.querySelector(".faq-question")?.setAttribute("aria-expanded", "false");
     });
 
     if (!isActive) {
       item.classList.add("active");
       answer.style.maxHeight = answer.scrollHeight + "px";
-      symbol.textContent = "×";
+      symbol.textContent = "x";
+      question.setAttribute("aria-expanded", "true");
     }
   });
 });
