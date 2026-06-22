@@ -14,6 +14,9 @@ const heroFontFamilies = [
 ];
 
 const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const prefersStaticMobileText = window.matchMedia?.(
+  "(hover: none), (pointer: coarse), (max-width: 640px)"
+).matches;
 
 function waitForHeroFonts() {
   if (!document.fonts?.load) {
@@ -90,7 +93,7 @@ function startHeroWordLoop() {
   });
 }
 
-if (!prefersReducedMotion) {
+if (!prefersReducedMotion && !prefersStaticMobileText) {
   waitForHeroFonts().finally(startHeroWordLoop);
 }
 
@@ -99,7 +102,7 @@ if (!prefersReducedMotion) {
 // =========================
 const priceTrack = document.getElementById("priceTrack");
 
-if (priceTrack) {
+if (priceTrack && !prefersStaticMobileText) {
   priceTrack.innerHTML += priceTrack.innerHTML;
 
   let tickerX = 0;
@@ -221,18 +224,22 @@ setInterval(fetchLivePrices, 300000);
 const revealCards = document.querySelectorAll(".reveal-card");
 
 if (revealCards.length > 0) {
-  const revealObserver = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("show");
-        }
-      });
-    },
-    { threshold: 0.18 }
-  );
+  if (prefersReducedMotion || prefersStaticMobileText || !("IntersectionObserver" in window)) {
+    revealCards.forEach((card) => card.classList.add("show"));
+  } else {
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("show");
+          }
+        });
+      },
+      { threshold: 0.18 }
+    );
 
-  revealCards.forEach((card) => revealObserver.observe(card));
+    revealCards.forEach((card) => revealObserver.observe(card));
+  }
 }
 const faqItems = document.querySelectorAll(".faq-item");
 
