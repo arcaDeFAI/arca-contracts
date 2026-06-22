@@ -4,10 +4,33 @@ import './landing.css'
 
 export const metadata: Metadata = {
   title: 'Arca DeFi - Vault Management',
-  description: 'AI-powered rebalancing strategies. Optimized ranges, controlled risk, smarter yield.',
+  description: 'Autonomous liquidity strategy management for concentrated-liquidity and DLMM vaults on Sonic.',
 }
 
 export default function LandingPage() {
+  const featureCards = [
+    {
+      step: '01',
+      title: 'Monitor the pool',
+      description: 'arca continuously reads pool and market conditions through its autonomous strategy layer.',
+    },
+    {
+      step: '02',
+      title: 'Deploy liquidity',
+      description: 'Deposited assets are positioned in strategy-defined ranges or bins for the selected market.',
+    },
+    {
+      step: '03',
+      title: 'Rebalance targets',
+      description: 'Proprietary strategy logic adjusts target positioning when changing conditions call for a new range.',
+    },
+    {
+      step: '04',
+      title: 'Adapt capital',
+      description: 'Reserve capital can be reallocated across the deposited pair to support active liquidity management.',
+    },
+  ] as const
+
   return (
     <>
       <section className="hero">
@@ -44,8 +67,8 @@ export default function LandingPage() {
           </div>
 
           <p className="hero-subtitle">
-            AI-powered rebalancing strategies.<br />
-            Optimized ranges, controlled risk, smarter yield.
+            Autonomous liquidity strategy management.<br />
+            Dynamic ranges and in-pair capital allocation on Sonic.
           </p>
 
           <a href="/vaults" className="cta-btn">Go to dApp</a>
@@ -105,29 +128,152 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <main>
+      <section className="model-section" aria-labelledby="model-title">
+        <div className="model-shell">
+          <div className="model-copy">
+            <p className="section-label">The product model</p>
+            <h2 id="model-title">Liquidity management that stays active after deposit.</h2>
+            <p className="model-intro">
+              arca manages concentrated-liquidity positions through autonomous strategy logic. It monitors pools,
+              determines target ranges, and reallocates capital within each deposited pair as conditions evolve.
+            </p>
+            <p className="sonic-note"><span aria-hidden="true" />Built on Sonic&apos;s high-speed infrastructure.</p>
+          </div>
+
+          <div className="model-diagram" aria-label="arca product model: monitor, position, adapt, and manage capital">
+            <div className="model-orbit" aria-hidden="true">
+              <span className="orbit-line orbit-line-one" />
+              <span className="orbit-line orbit-line-two" />
+              <div className="orbit-moons">
+                <span className="orbit-moon orbit-moon-sonic">
+                  <img src="/landing/sonic.png" alt="" />
+                </span>
+                <span className="orbit-moon orbit-moon-shadow">
+                  <img src="/landing/shadow.png" alt="" />
+                </span>
+                <span className="orbit-moon orbit-moon-metro">
+                  <img src="/landing/metro.png" alt="" />
+                </span>
+              </div>
+              <div className="model-core">
+                <img src="/landing/arca.png" alt="" />
+              </div>
+            </div>
+            <ol className="model-actions">
+              <li><span>01</span><strong>Monitor</strong><small>Pool and market conditions</small></li>
+              <li><span>02</span><strong>Position</strong><small>Strategy-defined ranges or bins</small></li>
+              <li><span>03</span><strong>Adapt</strong><small>Targets as conditions evolve</small></li>
+              <li><span>04</span><strong>Manage</strong><small>Reserve capital within the pair</small></li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
       <section className="features-section">
         <div className="features-inner">
+          <div className="section-kicker">Vault workflow</div>
+          <h2 className="features-title">From deposit to an actively managed position</h2>
+          <p className="features-summary">Choose a supported vault and deposit the pair. arca handles positioning and ongoing strategy execution while the app keeps the vault visible.</p>
           <div className="features-grid">
-            <div className="feature-card reveal-card">
-              <div className="feature-icon">&#9900;</div>
-              <h3>AI-Managed Vaults</h3>
-              <p>Deposit once. arca monitors price action, volatility and range efficiency to rebalance positions automatically.</p>
+            {featureCards.map((card, index) => (
+              <div key={card.title} className="feature-card reveal-card" style={{ transitionDelay: `${index * 0.08}s` }}>
+                <div className="feature-step-badge" aria-hidden="true">
+                  <span>{card.step}</span>
+                </div>
+                <h3>{card.title}</h3>
+                <p>{card.description}</p>
+              </div>
+            ))}
+          </div>
+          <div className="workflow-exit">
+            <span>Monitor in the app</span>
+            <span aria-hidden="true">→</span>
+            <span>Withdraw through the supported vault flow</span>
+          </div>
+        </div>
+      </section>
+
+      <section className="strategy-section" aria-labelledby="strategy-title">
+        <div className="strategy-shell">
+          <div className="strategy-heading">
+            <p className="section-label">Adaptive strategy management</p>
+            <h2 id="strategy-title">A rebalance changes where capital is working.</h2>
+            <p>arca monitors autonomously. When proprietary strategy conditions are met, it updates the target position, redeploys liquidity, and continues evaluating the market.</p>
+          </div>
+
+          <div className="range-story" aria-label="Illustrative range rebalance sequence">
+            <div className="range-axis" aria-hidden="true"><span>Lower price</span><span>Market movement</span><span>Higher price</span></div>
+            <div className="range-stage range-stage-current">
+              <div className="range-stage-copy"><span>01</span><strong>Active target</strong><small>Liquidity begins inside a strategy-defined range.</small></div>
+              <div className="range-track" aria-hidden="true"><i className="range-zone zone-left" /><b className="market-marker marker-left" /></div>
             </div>
-            <div className="feature-card reveal-card">
-              <div className="feature-icon">&#9900;</div>
-              <h3>CL &amp; DLMM Optimized</h3>
-              <p>Built for concentrated liquidity and DLMM pools. arca adapts to each pool instead of forcing one-size-fits-all strategies.</p>
+            <div className="range-stage range-stage-condition">
+              <div className="range-stage-copy"><span>02</span><strong>Condition detected</strong><small>The strategy evaluates changing pool and market conditions.</small></div>
+              <div className="range-track" aria-hidden="true"><i className="range-zone zone-left" /><b className="market-marker marker-edge" /><em>Evaluate</em></div>
             </div>
-            <div className="feature-card reveal-card">
-              <div className="feature-icon">&#9900;</div>
-              <h3>Smart Rebalancing Engine</h3>
-              <p>Strategies dynamically adjust liquidity ranges and capital deployment to reduce extreme IL and improve efficiency.</p>
+            <div className="range-stage range-stage-redeployed">
+              <div className="range-stage-copy"><span>03</span><strong>Target redeployed</strong><small>Liquidity and reserve capital adapt within the deposited pair.</small></div>
+              <div className="range-track" aria-hidden="true"><i className="range-zone zone-right" /><b className="market-marker marker-right" /></div>
             </div>
-            <div className="feature-card reveal-card">
-              <div className="feature-icon">&#9900;</div>
-              <h3>Passive Yield, Fully Automated</h3>
-              <p>No manual range management, no constant monitoring. arca handles execution so users can stay positioned with less friction.</p>
+          </div>
+
+          <div className="strategy-boundary">
+            <div>
+              <span className="boundary-title">The strategy can</span>
+              <p>Monitor · adapt · rebalance · reallocate</p>
             </div>
+            <div>
+              <span className="boundary-title">It cannot</span>
+              <p>Remove market risk · guarantee returns · eliminate impermanent loss</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="markets-section" aria-labelledby="markets-title">
+        <div className="markets-shell">
+          <div className="markets-heading">
+            <p className="section-label">Two liquidity structures</p>
+            <h2 id="markets-title">Different mechanics. The same need for active management.</h2>
+          </div>
+
+          <div className="market-comparison">
+            <article className="market-mode">
+              <div className="market-mode-copy">
+                <span className="mode-index">CL</span>
+                <h3>Concentrated liquidity</h3>
+                <p>Liquidity is focused inside a selected price range. When price moves beyond it, capital becomes less productive and positioning needs attention.</p>
+              </div>
+              <div className="distribution-visual cl-visual" aria-label="Illustration of liquidity concentrated within a selected price range">
+                <div className="distribution-bars" aria-hidden="true">
+                  {[2, 3, 5, 8, 12, 18, 25, 31, 34, 31, 25, 18, 12, 8, 5, 3, 2].map((height, index) => <i key={index} style={{ '--bar-height': `${height * 2}px` } as React.CSSProperties} />)}
+                </div>
+                <div className="distribution-range"><span>Active range</span></div>
+              </div>
+            </article>
+
+            <article className="market-mode">
+              <div className="market-mode-copy">
+                <span className="mode-index">DLMM</span>
+                <h3>Bin-based liquidity</h3>
+                <p>Liquidity is distributed across discrete price bins. Bin positioning and reserve allocation still need to respond as market conditions change.</p>
+              </div>
+              <div className="distribution-visual dlmm-visual" aria-label="Illustration of liquidity distributed across discrete price bins">
+                <div className="distribution-bars" aria-hidden="true">
+                  {[3, 5, 9, 15, 23, 31, 34, 28, 21, 15, 10, 7, 4, 2].map((height, index) => <i key={index} style={{ '--bar-height': `${height * 2}px` } as React.CSSProperties} />)}
+                </div>
+                <div className="bin-marker"><span>Active bins</span></div>
+              </div>
+            </article>
+          </div>
+
+          <div className="shared-role" aria-label="arca's shared role across concentrated liquidity and DLMM">
+            <strong>arca&apos;s role across both</strong>
+            <span>Monitor</span><i aria-hidden="true" />
+            <span>Position</span><i aria-hidden="true" />
+            <span>Adjust</span><i aria-hidden="true" />
+            <span>Manage reserve capital</span>
           </div>
         </div>
       </section>
@@ -136,9 +282,9 @@ export default function LandingPage() {
         <div className="faq-shell">
           <div className="faq-grid">
             <div className="faq-left">
-              <div className="faq-pill">&#9900; FAQ&apos;S</div>
+              <div className="faq-pill"><span aria-hidden="true" /> FAQ</div>
               <h2 className="faq-title">Answers</h2>
-              <p className="faq-subtitle">Find answers to common questions about our product.</p>
+              <p className="faq-subtitle">A quick read on how arca manages liquidity, what it supports, and where the risk boundaries are.</p>
               <div className="faq-image-wrap">
                 <img src="/landing/faq-image.png" alt="FAQ visual" className="faq-image" />
               </div>
@@ -146,36 +292,36 @@ export default function LandingPage() {
 
             <div className="faq-right">
               <div className="faq-item active">
-                <button className="faq-question" type="button"><span>What is arca Finance?</span><span className="faq-symbol">×</span></button>
-                <div className="faq-answer"><div className="faq-answer-inner">arca is an AI-powered liquidity management protocol. It automates LP strategies for concentrated liquidity and DLMM pools, handling rebalancing, risk management, and execution so users don&apos;t need to actively manage positions.</div></div>
+                <button className="faq-question" type="button" aria-expanded="true"><span>What is arca Finance?</span><span className="faq-symbol">x</span></button>
+                <div className="faq-answer"><div className="faq-answer-inner">arca is an AI-assisted liquidity management protocol on Sonic. Its autonomous strategy layer monitors supported pools, manages target ranges or bins, and reallocates capital within each deposited pair.</div></div>
               </div>
               <div className="faq-item">
-                <button className="faq-question" type="button"><span>Who is arca for?</span><span className="faq-symbol">+</span></button>
+                <button className="faq-question" type="button" aria-expanded="false"><span>Who is arca for?</span><span className="faq-symbol">+</span></button>
                 <div className="faq-answer"><div className="faq-answer-inner">arca is built for LPs who want onchain yield exposure without constant manual range management. It fits both active DeFi users and users who prefer a more passive workflow.</div></div>
               </div>
               <div className="faq-item">
-                <button className="faq-question" type="button"><span>Which DEXs does arca support?</span><span className="faq-symbol">+</span></button>
-                <div className="faq-answer"><div className="faq-answer-inner">arca currently supports Shadow (concentrated liquidity) and Metropolis (DLMM) pools on Sonic. Additional integrations depend on supported pools and deployment scope.</div></div>
+                <button className="faq-question" type="button" aria-expanded="false"><span>Which markets does arca support?</span><span className="faq-symbol">+</span></button>
+                <div className="faq-answer"><div className="faq-answer-inner">arca supports selected concentrated-liquidity and DLMM pools on Sonic. Available vaults and pairs are shown in the app.</div></div>
               </div>
               <div className="faq-item">
-                <button className="faq-question" type="button"><span>How does the AI rebalancing work?</span><span className="faq-symbol">+</span></button>
-                <div className="faq-answer"><div className="faq-answer-inner">arca monitors pool conditions, volatility, and range efficiency to adapt liquidity positioning. The goal is to reduce manual intervention while improving capital efficiency.</div></div>
+                <button className="faq-question" type="button" aria-expanded="false"><span>How does the AI rebalancing work?</span><span className="faq-symbol">+</span></button>
+                <div className="faq-answer"><div className="faq-answer-inner">arca combines predefined algorithms with adaptive strategy logic. It monitors pool and market conditions, determines target positioning, and adjusts ranges or bins autonomously without exposing proprietary execution conditions.</div></div>
               </div>
               <div className="faq-item">
-                <button className="faq-question" type="button"><span>Do I need to manage my position manually?</span><span className="faq-symbol">+</span></button>
-                <div className="faq-answer"><div className="faq-answer-inner">No. The product is designed to reduce the need for constant manual repositioning by automating the strategy layer.</div></div>
+                <button className="faq-question" type="button" aria-expanded="false"><span>Do I need to manage my position manually?</span><span className="faq-symbol">+</span></button>
+                <div className="faq-answer"><div className="faq-answer-inner">The strategy layer operates autonomously, including ongoing monitoring and target management. Users can review their vault position and use the supported withdrawal flow in the app.</div></div>
               </div>
               <div className="faq-item">
-                <button className="faq-question" type="button"><span>Is arca safe?</span><span className="faq-symbol">+</span></button>
+                <button className="faq-question" type="button" aria-expanded="false"><span>Is arca safe?</span><span className="faq-symbol">+</span></button>
                 <div className="faq-answer"><div className="faq-answer-inner">As with any DeFi product, users should assess smart contract, market, and liquidity risks. arca aims to reduce operational friction, but risk can never be fully removed.</div></div>
               </div>
               <div className="faq-item">
-                <button className="faq-question" type="button"><span>Do I need a large amount of capital to use arca?</span><span className="faq-symbol">+</span></button>
+                <button className="faq-question" type="button" aria-expanded="false"><span>Do I need a large amount of capital to use arca?</span><span className="faq-symbol">+</span></button>
                 <div className="faq-answer"><div className="faq-answer-inner">Not necessarily. Capital requirements depend more on supported pools, gas costs, and strategy fit than on a fixed minimum size.</div></div>
               </div>
               <div className="faq-item">
-                <button className="faq-question" type="button"><span>Where can I learn more?</span><span className="faq-symbol">+</span></button>
-                <div className="faq-answer"><div className="faq-answer-inner">You can explore the app, read the docs, and follow official arca channels for product updates, strategy explanations, and launch details.</div></div>
+                <button className="faq-question" type="button" aria-expanded="false"><span>Where can I learn more?</span><span className="faq-symbol">+</span></button>
+                <div className="faq-answer"><div className="faq-answer-inner">Explore the vault interface and follow official arca channels for current product and strategy information.</div></div>
               </div>
             </div>
           </div>
@@ -203,13 +349,14 @@ export default function LandingPage() {
             </div>
             <div className="contact-footer-row">
               <span>arca Finance</span>
-              <span>All rights reserved, ©2026</span>
+              <span>All rights reserved, © 2026</span>
             </div>
           </div>
         </div>
       </section>
 
       <Script src="/landing/script.js" strategy="afterInteractive" />
+      </main>
     </>
   )
 }
