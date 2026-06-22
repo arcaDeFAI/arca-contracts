@@ -1,23 +1,68 @@
 // =========================
 // HERO WORD LOOP
 // =========================
-const wordTrack = document.getElementById("wordTrack");
-const wordItems = Array.from(document.querySelectorAll(".word"));
+const heroFontFamilies = [
+  "InterHeroLocal",
+  "BrunoLocal",
+  "ElectrolizeLocal",
+  "Jura",
+  "Kelly Slab",
+  "Megrim",
+  "SilkscreenLocal",
+  "SixtyfourLocal",
+  "UbuntuMonoLocal"
+];
 
-if (wordTrack && wordItems.length > 0) {
-  const firstClone = wordItems[0].cloneNode(true);
-  wordTrack.appendChild(firstClone);
+const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-  const allWords = Array.from(wordTrack.querySelectorAll(".word"));
+function waitForHeroFonts() {
+  if (!document.fonts?.load) {
+    return Promise.resolve();
+  }
+
+  const fontLoads = heroFontFamilies.map((family) =>
+    document.fonts.load(`64px "${family}"`)
+  );
+
+  return Promise.allSettled(fontLoads).then(() => document.fonts.ready);
+}
+
+function startHeroWordLoop() {
+  const wordTrack = document.getElementById("wordTrack");
+  const wordItems = Array.from(wordTrack?.querySelectorAll(".word") ?? []);
+
+  if (!wordTrack || wordItems.length === 0) {
+    return;
+  }
+
+  if (!wordTrack.querySelector('[data-loop-clone="true"]')) {
+    const firstClone = wordItems[0].cloneNode(true);
+    firstClone.setAttribute("data-loop-clone", "true");
+    wordTrack.appendChild(firstClone);
+  }
+
+  const loopItems = Array.from(wordTrack.querySelectorAll(".word"));
   let currentWordIndex = 0;
   let isResettingWordLoop = false;
 
-  const getWordHeight = () => allWords[0].offsetHeight;
+  const getWordHeight = () => loopItems[0].offsetHeight;
 
   function goToWord(index, animated = true) {
     wordTrack.style.transition = animated ? "transform 0.8s ease" : "none";
     wordTrack.style.transform = `translateY(-${index * getWordHeight()}px)`;
   }
+
+  function resetToFirstWord() {
+    currentWordIndex = 0;
+    goToWord(currentWordIndex, false);
+
+    requestAnimationFrame(() => {
+      wordTrack.style.transition = "transform 0.8s ease";
+      isResettingWordLoop = false;
+    });
+  }
+
+  goToWord(0, false);
 
   setInterval(() => {
     if (isResettingWordLoop) return;
@@ -25,26 +70,28 @@ if (wordTrack && wordItems.length > 0) {
     currentWordIndex++;
     goToWord(currentWordIndex, true);
 
-    if (currentWordIndex === allWords.length - 1) {
+    if (currentWordIndex === loopItems.length - 1) {
       isResettingWordLoop = true;
+      const resetTimeout = window.setTimeout(resetToFirstWord, 850);
 
-      setTimeout(() => {
-        currentWordIndex = 0;
-        goToWord(currentWordIndex, false);
-
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            wordTrack.style.transition = "transform 0.8s ease";
-            isResettingWordLoop = false;
-          });
-        });
-      }, 800);
+      wordTrack.addEventListener(
+        "transitionend",
+        () => {
+          window.clearTimeout(resetTimeout);
+          resetToFirstWord();
+        },
+        { once: true }
+      );
     }
   }, 1000);
 
   window.addEventListener("resize", () => {
     goToWord(currentWordIndex, false);
   });
+}
+
+if (!prefersReducedMotion) {
+  waitForHeroFonts().finally(startHeroWordLoop);
 }
 
 // =========================
@@ -69,7 +116,9 @@ if (priceTrack) {
     requestAnimationFrame(animateTicker);
   }
 
-  animateTicker();
+  if (!prefersReducedMotion) {
+    animateTicker();
+  }
 }
 
 // =========================
@@ -159,7 +208,7 @@ async function fetchLivePrices() {
 
     updateTickerPrice("ARCA", null);
   } catch {
-    // silently fail — ticker stays at last known value
+    // Ticker stays at last known value.
   }
 }
 
@@ -194,7 +243,8 @@ faqItems.forEach((item) => {
 
   if (item.classList.contains("active")) {
     answer.style.maxHeight = answer.scrollHeight + "px";
-    symbol.textContent = "×";
+    symbol.textContent = "x";
+    question.setAttribute("aria-expanded", "true");
   }
 
   question.addEventListener("click", () => {
@@ -207,12 +257,14 @@ faqItems.forEach((item) => {
       otherItem.classList.remove("active");
       otherAnswer.style.maxHeight = null;
       otherSymbol.textContent = "+";
+      otherItem.querySelector(".faq-question")?.setAttribute("aria-expanded", "false");
     });
 
     if (!isActive) {
       item.classList.add("active");
       answer.style.maxHeight = answer.scrollHeight + "px";
-      symbol.textContent = "×";
+      symbol.textContent = "x";
+      question.setAttribute("aria-expanded", "true");
     }
   });
 });
