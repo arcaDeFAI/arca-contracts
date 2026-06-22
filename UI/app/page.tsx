@@ -355,7 +355,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <Script src="/landing/script.js" strategy="afterInteractive" />
+      <Script src="/landing/script.js?v=ios-text-hotfix-1" strategy="afterInteractive" />
       </main>
     </>
   )
