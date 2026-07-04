@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, type PointerEvent } from 'react';
+import { createPortal } from 'react-dom';
 
 interface SocialLink {
   name: string;
@@ -92,6 +93,40 @@ export function SocialLinks() {
 
   const modalContent = openModal ? LEGAL_COPY[openModal] : null;
 
+  useEffect(() => {
+    if (!openModal) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setOpenModal(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [openModal]);
+
+  const handleModalPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const px = (event.clientX - rect.left) / rect.width;
+    const py = (event.clientY - rect.top) / rect.height;
+
+    setTilt({
+      x: (0.5 - py) * 8,
+      y: (px - 0.5) * 10,
+    });
+  };
+
   return (
     <>
       <div className="py-6">
@@ -146,24 +181,19 @@ export function SocialLinks() {
         </div>
       </div>
 
-      {modalContent && (
+      {modalContent && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm"
+          className="fixed inset-0 z-[var(--z-modal-top-backdrop)] flex items-center justify-center bg-[rgba(2,6,12,0.72)] px-4 backdrop-blur-[14px]"
           onClick={() => setOpenModal(null)}
         >
           <div
-            className="relative w-full max-w-[760px] rounded-[28px] border border-white/[0.12] bg-[linear-gradient(135deg,rgba(22,28,36,0.9),rgba(15,20,28,0.82)_50%,rgba(10,14,20,0.92))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl transition-transform duration-150 ease-out sm:p-8"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="legal-modal-title"
+            className="relative z-[var(--z-modal-top)] w-full max-w-[760px] rounded-[28px] border border-white/[0.12] bg-[linear-gradient(135deg,rgba(22,28,36,0.9),rgba(15,20,28,0.82)_50%,rgba(10,14,20,0.92))] p-6 shadow-[0_30px_80px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-2xl transition-transform duration-150 ease-out sm:p-8"
             onClick={(e) => e.stopPropagation()}
-            onMouseMove={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const px = (e.clientX - rect.left) / rect.width;
-              const py = (e.clientY - rect.top) / rect.height;
-              setTilt({
-                x: (0.5 - py) * 8,
-                y: (px - 0.5) * 10,
-              });
-            }}
-            onMouseLeave={() => setTilt({ x: 0, y: 0 })}
+            onPointerMove={handleModalPointerMove}
+            onPointerLeave={() => setTilt({ x: 0, y: 0 })}
             style={{
               transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
               transformStyle: 'preserve-3d',
@@ -177,7 +207,7 @@ export function SocialLinks() {
                   <div className="mb-2 inline-flex rounded-full border border-arca-green/[0.14] bg-arca-green/[0.06] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-arca-green">
                     arca Legal
                   </div>
-                  <h3 className="text-2xl font-semibold tracking-tight text-arca-text">
+                  <h3 id="legal-modal-title" className="text-2xl font-semibold tracking-tight text-arca-text">
                     {modalContent.title}
                   </h3>
                 </div>
@@ -226,7 +256,8 @@ export function SocialLinks() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

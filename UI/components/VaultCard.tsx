@@ -17,6 +17,7 @@ import { useVaultPositionData } from '@/hooks/useVaultPositionData';
 import { RangeBar } from './RangeBar';
 import { Tooltip } from './Tooltip';
 import { getAPYCalculationExplanation } from '@/hooks/useSubgraphMetrics';
+import { VaultDexBadge } from './VaultDexBadge';
 
 interface VaultCardProps {
   config: VaultConfig;
@@ -82,12 +83,6 @@ export function VaultCard({ config }: VaultCardProps) {
     );
   }
 
-  const isShadow = name.includes('Shadow');
-  const dexName = isShadow ? 'Shadow' : 'Metropolis';
-  const dexLogo = isShadow ? '/shadow-logo.png' : '/metropolis-logo.png';
-  const dexPillClass = isShadow
-    ? 'border-[#8c5a16]/55 bg-[linear-gradient(135deg,rgba(255,184,77,0.22),rgba(255,184,77,0.12)_46%,rgba(89,52,10,0.3))] text-[#ffe2a7] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,238,205,0.18),inset_0_-1px_0_rgba(102,60,12,0.22),0_10px_24px_rgba(27,16,3,0.16)]'
-    : 'border-[#25346f]/70 bg-[linear-gradient(135deg,rgba(126,137,255,0.2),rgba(126,137,255,0.12)_46%,rgba(19,29,74,0.34))] text-[#d8deff] backdrop-blur-md shadow-[inset_0_1px_0_rgba(176,190,255,0.12),inset_0_-1px_0_rgba(17,25,63,0.3),0_10px_24px_rgba(8,12,30,0.22)]';
   const cleanName = name.replace(' | Metropolis', '').replace(' | Shadow', '');
 
   return (
@@ -95,10 +90,7 @@ export function VaultCard({ config }: VaultCardProps) {
       <div className="vault-card-glow group relative bg-arca-gray/80 backdrop-blur-sm rounded-2xl p-6 border border-white/[0.04] shadow-card transition-all duration-500 hover:border-white/[0.07] hover:-translate-y-[2px] w-full flex flex-col h-full">
 
         {/* DEX Badge — top right */}
-        <div className={`absolute top-5 right-5 flex items-center gap-1.5 rounded-xl border px-2 py-[0.375rem] ${dexPillClass}`}>
-          <img src={dexLogo} alt={dexName} className="h-4 w-4 object-contain" />
-          <span className="text-[9px] font-medium tracking-[0.08em]">{dexName}</span>
-        </div>
+        <VaultDexBadge name={name} status={config.status} compact className="absolute right-5 top-5" />
 
         {/* Token pair + name */}
         <div className="mb-5">

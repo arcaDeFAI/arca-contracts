@@ -14,6 +14,7 @@ import { getToken, getTokenByAddress } from '@/lib/tokenRegistry';
 import { useTokenBalance } from '@/hooks/useTokenBalance';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { type UserRewardStructOutput } from '@/lib/typechain';
+import { VaultDexBadge } from './VaultDexBadge';
 
 interface VaultTableViewProps {
   vaults: VaultConfig[];
@@ -242,12 +243,6 @@ export function VaultTableView({
                 const dailyRewardsUSD = metrics.depositedValueUSD && rewardApr > 0
                   ? (metrics.depositedValueUSD * (rewardApr / 100)) / 365
                   : 0;
-                const dexName = isShadow ? 'Shadow' : 'Metropolis';
-                const dexLogo = isShadow ? '/shadow-logo.png' : '/metropolis-logo.png';
-                const dexPillClass = isShadow
-                  ? 'border-[#8c5a16]/55 bg-[linear-gradient(135deg,rgba(255,184,77,0.22),rgba(255,184,77,0.12)_46%,rgba(89,52,10,0.3))] text-[#ffe2a7] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,238,205,0.18),inset_0_-1px_0_rgba(102,60,12,0.22),0_10px_24px_rgba(27,16,3,0.16)]'
-                  : 'border-[#25346f]/70 bg-[linear-gradient(135deg,rgba(126,137,255,0.2),rgba(126,137,255,0.12)_46%,rgba(19,29,74,0.34))] text-[#d8deff] backdrop-blur-md shadow-[inset_0_1px_0_rgba(176,190,255,0.12),inset_0_-1px_0_rgba(17,25,63,0.3),0_10px_24px_rgba(8,12,30,0.22)]';
-
                 return (
                   <div
                     key={vault.vaultAddress}
@@ -274,14 +269,7 @@ export function VaultTableView({
                             {vault.tokenX} / {vault.tokenY}
                           </div>
                           <div className="mt-1 flex items-center gap-1.5">
-                            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-[0.375rem] text-[9px] font-medium tracking-[0.08em] ${dexPillClass}`}>
-                              <img
-                                src={dexLogo}
-                                alt={dexName}
-                                className="h-4 w-4 object-contain"
-                              />
-                              {dexName}
-                            </span>
+                            <VaultDexBadge name={vault.name} status={vault.status} compact />
                           </div>
                         </div>
                       </div>

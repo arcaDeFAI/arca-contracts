@@ -5,6 +5,7 @@
 
 // Tier types - supports all possible vault tiers
 export type VaultTier = 'Active' | 'Premium' | 'Elite' | 'Standard';
+export type VaultStatus = 'active' | 'inactive';
 
 // Base configuration shared by all vaults
 type BaseVaultConfig = {
@@ -12,6 +13,7 @@ type BaseVaultConfig = {
   stratAddress: string;
   name: string;
   tier: VaultTier;
+  status?: VaultStatus;
   tokenX: string;
   tokenY: string;
   // Optional fields that any vault might have
@@ -152,6 +154,7 @@ export const VAULT_CONFIGS: VaultConfig[] = [
     useSubgraphAPR: true, // APY sourced from Goldsky Subgraph with RPC fallback
     name: 'USSD • wS | Shadow',
     tier: 'Premium',
+    status: 'inactive',
     tokenX: 'USSD',
     tokenY: 'wS',
   },

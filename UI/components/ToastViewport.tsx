@@ -63,7 +63,7 @@ export function ToastViewport() {
   if (!toast) return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[10000] flex justify-center px-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-[var(--z-toast)] flex justify-center px-4">
       <div
         className={`pointer-events-auto relative flex w-full max-w-[460px] items-center gap-4 rounded-[20px] border border-white/[0.08] bg-[linear-gradient(135deg,rgba(18,24,31,0.94),rgba(14,20,27,0.9)_48%,rgba(11,16,22,0.96))] px-5 py-4 shadow-[0_24px_70px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_1px_rgba(0,255,136,0.04)] backdrop-blur-xl transition-all duration-300 ${
           visible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
