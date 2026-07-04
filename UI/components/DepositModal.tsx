@@ -251,7 +251,7 @@ export function DepositModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-[9999] p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-[var(--z-modal-backdrop)] p-4 animate-fade-in">
       <div className="bg-arca-gray rounded-2xl p-6 w-full max-w-md border border-white/[0.06] shadow-modal">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

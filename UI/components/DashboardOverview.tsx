@@ -248,7 +248,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
       </div>
 
       <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
-        <div className={`rounded-2xl border border-white/[0.04] bg-arca-gray/80 shadow-card transition-all duration-300 ${showRewardsSection ? 'h-[286px] p-5' : 'h-[84px] p-4'}`}>
+        <div className={`rounded-2xl border border-white/[0.04] bg-arca-gray/80 shadow-card transition-all duration-300 ${showRewardsSection ? 'h-auto min-h-[286px] p-5' : 'h-[84px] p-4'}`}>
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">

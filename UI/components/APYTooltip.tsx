@@ -47,7 +47,7 @@ export function APYTooltip({ className = '' }: APYTooltipProps) {
       
       {showTooltip && typeof window !== 'undefined' && createPortal(
         <div
-          className="fixed z-[9999] w-80 p-3 bg-gray-950 border border-arca-green/50 rounded-lg shadow-[0_0_20px_rgba(0,255,163,0.15)] text-left"
+          className="fixed z-[var(--z-tooltip)] w-80 p-3 bg-gray-950 border border-arca-green/50 rounded-lg shadow-[0_0_20px_rgba(0,255,163,0.15)] text-left"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,

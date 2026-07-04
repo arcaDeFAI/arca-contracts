@@ -99,7 +99,7 @@ export default function Dashboard() {
 
       {isConnected && selectedVault && (
         <div
-          className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/55 px-4 py-4 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-[var(--z-modal-backdrop)] flex items-center justify-center bg-black/55 px-4 py-4 backdrop-blur-sm animate-fade-in"
           onClick={() => setSelectedVault(null)}
         >
           <div

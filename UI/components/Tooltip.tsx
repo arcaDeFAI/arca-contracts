@@ -85,7 +85,7 @@ export function Tooltip({ text, width = 'sm', position: positionProp = 'top', cl
 
       {showTooltip && typeof window !== 'undefined' && createPortal(
         <div
-          className={`fixed z-[9999] ${widthClass} p-3 bg-arca-gray border border-white/[0.08] rounded-xl shadow-elevated text-left animate-fade-in`}
+          className={`fixed z-[var(--z-tooltip)] ${widthClass} p-3 bg-arca-gray border border-white/[0.08] rounded-xl shadow-elevated text-left animate-fade-in`}
           style={{
             width: `${tooltipWidthPx}px`,
             top: `${position.top}px`,
