@@ -86,8 +86,10 @@ const buildQuery = (ts30d: number, ts7d: number) => `
       orderDirection: asc
       first: 1
     ) { amountXPerShare amountYPerShare sqrtPriceX96 lbPrice timestamp }
+    # timestamp_gte keeps this within the 1000-item cap — without it, high-frequency
+    # vaults exhaust the cap on old events before the recent window is ever reached.
     rewardEvents(
-      where: { vault: $vault }
+      where: { vault: $vault, timestamp_gte: "${ts30d}" }
       orderBy: timestamp
       orderDirection: asc
       first: 1000
