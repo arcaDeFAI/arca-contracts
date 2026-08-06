@@ -61,6 +61,10 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
   const [showRateDropdown, setShowRateDropdown] = useState(false)
   const [showSections, setShowSections] = useState(false)
 
+  // Reward-APR subgraph query is still resolving — avgAPY would otherwise read as a
+  // false 0 (indistinguishable from "no rewards") until every vault's query settles.
+  const isAprLoading = vaultMetrics.some(metrics => metrics.aprLoading)
+
   const avgAPY = useMemo(() => {
     let totalWeightedAPY = 0
     let totalTVL = 0
@@ -218,7 +222,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           subtitle={<span className="text-[12px] text-arca-text-tertiary capitalize">Est. {rewardPeriod}</span>}
           value={`$${extrapolatedReward.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           rightElement={RewardDropdown}
-          loading={aggregatedData.isLoading && extrapolatedReward === 0}
+          loading={(aggregatedData.isLoading || isAprLoading) && extrapolatedReward === 0}
           className="z-[300]"
         />
 
@@ -232,7 +236,7 @@ export function DashboardOverview({ vaultConfigs, userAddress }: DashboardOvervi
           subtitle={<span className="text-[11px] text-arca-text-tertiary">{ratePeriod}</span>}
           value={`${calculatedRate.toFixed(2)}%`}
           rightElement={RateDropdown}
-          loading={aggregatedData.isLoading && calculatedRate === 0}
+          loading={(aggregatedData.isLoading || isAprLoading) && calculatedRate === 0}
           className="z-[300]"
         />
 
