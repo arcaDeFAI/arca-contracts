@@ -5,7 +5,7 @@ import { querySubgraph } from '@/lib/subgraph';
 import { usePrices } from '@/contexts/PriceContext';
 import { getTokenPrice, getTokenDecimals } from '@/lib/tokenHelpers';
 import { getTokenByAddress } from '@/lib/tokenRegistry';
-import { type VaultConfig } from '@/lib/vaultConfigs';
+import { VAULT_CONFIGS, type VaultConfig } from '@/lib/vaultConfigs';
 
 // ---- Raw subgraph response types ----
 
@@ -43,64 +43,85 @@ interface RewardEventRaw {
   vault: { id: string };
 }
 
-interface VaultMetricsQueryResult {
-  ilsnapshot: ILSnapshotRaw | null;
-  window30d: SnapshotRaw[];
-  window7d: SnapshotRaw[];
-  rewardEvents: RewardEventRaw[];
-}
+type BatchQueryResult = Record<string, ILSnapshotRaw | null | SnapshotRaw[] | RewardEventRaw[]>;
 
 // ---- GraphQL query ----
+// One request covers every vault (aliased per vault) instead of one request each —
+// also means every vault's metrics resolve together instead of popping in staggered.
 // window30d / window7d: oldest snapshot within 30d / 7d of now → window start point.
 // fee_apr window: 30d if available, else 7d, else all-time (ILSnapshot first→latest).
 
-const buildQuery = (ts30d: number, ts7d: number) => `
-  query GetVaultMetrics($vault: Bytes!) {
-    ilsnapshot(id: $vault) {
-      firstAmountXPerShare
-      firstAmountYPerShare
-      firstTimestamp
-      latestAmountXPerShare
-      latestAmountYPerShare
-      latestTimestamp
-      snapshotCount
-      totalBalanceXSum
-      totalBalanceYSum
-      firstSqrtPriceX96
-      latestSqrtPriceX96
-      firstLBPrice
-      latestLBPrice
-      firstPriceXUsd
-      firstPriceYUsd
-      vault { id }
-    }
-    window30d: snapshots(
-      where: { vault: $vault, timestamp_gte: "${ts30d}" }
-      orderBy: timestamp
-      orderDirection: asc
-      first: 1
-    ) { amountXPerShare amountYPerShare sqrtPriceX96 lbPrice timestamp }
-    window7d: snapshots(
-      where: { vault: $vault, timestamp_gte: "${ts7d}" }
-      orderBy: timestamp
-      orderDirection: asc
-      first: 1
-    ) { amountXPerShare amountYPerShare sqrtPriceX96 lbPrice timestamp }
-    # timestamp_gte keeps this within the 1000-item cap — without it, high-frequency
-    # vaults exhaust the cap on old events before the recent window is ever reached.
-    rewardEvents(
-      where: { vault: $vault, timestamp_gte: "${ts30d}" }
-      orderBy: timestamp
-      orderDirection: asc
-      first: 1000
-    ) {
-      amount
-      timestamp
-      rewardToken
-      vault { id }
-    }
-  }
+const ILSNAPSHOT_FIELDS = `
+  firstAmountXPerShare
+  firstAmountYPerShare
+  firstTimestamp
+  latestAmountXPerShare
+  latestAmountYPerShare
+  latestTimestamp
+  snapshotCount
+  totalBalanceXSum
+  totalBalanceYSum
+  firstSqrtPriceX96
+  latestSqrtPriceX96
+  firstLBPrice
+  latestLBPrice
+  firstPriceXUsd
+  firstPriceYUsd
 `;
+const SNAPSHOT_WINDOW_FIELDS = `amountXPerShare amountYPerShare sqrtPriceX96 lbPrice timestamp`;
+
+function vaultAliasKeys(vaultAddress: string) {
+  const base = 'v' + vaultAddress.toLowerCase().replace(/^0x/, '');
+  return { ils: `${base}_ils`, w30: `${base}_w30`, w7: `${base}_w7`, rw: `${base}_rw` };
+}
+
+const buildBatchQuery = (vaultAddresses: string[], ts30d: number, ts7d: number) => {
+  const parts = vaultAddresses.map((address) => {
+    const id = address.toLowerCase();
+    const { ils, w30, w7, rw } = vaultAliasKeys(address);
+    return `
+      ${ils}: ilsnapshot(id: "${id}") { ${ILSNAPSHOT_FIELDS} }
+      ${w30}: snapshots(
+        where: { vault: "${id}", timestamp_gte: "${ts30d}" }
+        orderBy: timestamp
+        orderDirection: asc
+        first: 1
+      ) { ${SNAPSHOT_WINDOW_FIELDS} }
+      ${w7}: snapshots(
+        where: { vault: "${id}", timestamp_gte: "${ts7d}" }
+        orderBy: timestamp
+        orderDirection: asc
+        first: 1
+      ) { ${SNAPSHOT_WINDOW_FIELDS} }
+      # timestamp_gte keeps this within the 1000-item cap — without it, high-frequency
+      # vaults exhaust the cap on old events before the recent window is ever reached.
+      ${rw}: rewardEvents(
+        where: { vault: "${id}", timestamp_gte: "${ts30d}" }
+        orderBy: timestamp
+        orderDirection: asc
+        first: 1000
+      ) { amount timestamp rewardToken }
+    `;
+  });
+
+  return `query GetAllVaultMetrics {\n${parts.join('\n')}\n}`;
+};
+
+const ALL_VAULT_ADDRESSES = VAULT_CONFIGS.map((v) => v.vaultAddress);
+
+function useBatchedVaultSubgraphData() {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const ts30d = nowSec - 30 * 86400;
+  const ts7d = nowSec - 7 * 86400;
+
+  return useQuery({
+    queryKey: ['subgraph-metrics-batch', ALL_VAULT_ADDRESSES.join(',')],
+    queryFn: () =>
+      querySubgraph<BatchQueryResult>(buildBatchQuery(ALL_VAULT_ADDRESSES, ts30d, ts7d)),
+    staleTime: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+  });
+}
 
 // ---- Public result type ----
 
@@ -141,20 +162,7 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
   const { tokenX = 'S', tokenY = 'USDC', vaultAddress } = config;
   const { prices } = usePrices();
 
-  const nowSec = Math.floor(Date.now() / 1000);
-  const ts30d = nowSec - 30 * 86400;
-  const ts7d = nowSec - 7 * 86400;
-
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['subgraph-metrics', vaultAddress],
-    queryFn: () =>
-      querySubgraph<VaultMetricsQueryResult>(buildQuery(ts30d, ts7d), {
-        vault: vaultAddress.toLowerCase(),
-      }),
-    staleTime: 5 * 60 * 1000,
-    refetchInterval: 5 * 60 * 1000,
-    enabled: !!vaultAddress,
-  });
+  const { data, isLoading, error } = useBatchedVaultSubgraphData();
 
   const empty: SubgraphMetrics = {
     feeApr: null, rewardApr: null, totalApr: null,
@@ -164,7 +172,11 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
 
   if (isLoading || !data) return empty;
 
-  const { ilsnapshot: ilSnapshot, rewardEvents } = data;
+  const { ils, w30, w7, rw } = vaultAliasKeys(vaultAddress);
+  const ilSnapshot = data[ils] as ILSnapshotRaw | null;
+  const window30d = data[w30] as SnapshotRaw[];
+  const window7d = data[w7] as SnapshotRaw[];
+  const rewardEvents = data[rw] as RewardEventRaw[];
   const snapshotCount = Number(ilSnapshot?.snapshotCount ?? 0);
 
   if (!ilSnapshot || snapshotCount < 2) {
@@ -188,8 +200,8 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
   );
 
   // ---- Pick best window start: 30d > 7d > all-time ----
-  const snap30d = data.window30d?.[0];
-  const snap7d = data.window7d?.[0];
+  const snap30d = window30d?.[0];
+  const snap7d = window7d?.[0];
 
   let startAmtX: number;
   let startAmtY: number;
