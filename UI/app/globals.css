@@ -22,6 +22,19 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+:root {
+  --z-base: 0;
+  --z-raised: 10;
+  --z-header: 100;
+  --z-dropdown: 300;
+  --z-tooltip: 500;
+  --z-toast: 8000;
+  --z-modal-backdrop: 9000;
+  --z-modal: 9010;
+  --z-modal-top-backdrop: 11000;
+  --z-modal-top: 11010;
+}
+
 a {
   color: inherit;
   text-decoration: none;
