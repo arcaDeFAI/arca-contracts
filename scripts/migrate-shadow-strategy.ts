@@ -28,6 +28,11 @@
  *                        so it cannot be read back — pass it explicitly or the
  *                        clone keeps initialize()'s 5 seconds.
  *   SKIP_IMPL=1          reuse the implementation already set on the factory
+ *   DEPLOYMENT=<network> read addresses from deployments/metropolis-<network>.json
+ *                        instead of the live network's own file. Needed on a fork,
+ *                        which carries mainnet state but has no deployment file.
+ *   IMPERSONATE=0x...    run as this address without its key. Fork/local only —
+ *                        refused on any chain other than 31337.
  */
 
 import { ethers, network, run } from "hardhat";
@@ -42,6 +47,8 @@ const MAX_AUM_ANNUAL_FEE = 3000;
 const DRY_RUN = process.env.DRY_RUN === "1";
 const SKIP_IMPL = process.env.SKIP_IMPL === "1";
 const COOLDOWN = process.env.COOLDOWN ? Number(process.env.COOLDOWN) : null;
+const DEPLOYMENT_NAME = process.env.DEPLOYMENT || network.name;
+const IMPERSONATE = process.env.IMPERSONATE || null;
 const ONLY_VAULTS = process.env.VAULTS
   ? process.env.VAULTS.split(",").map((a) => a.trim().toLowerCase()).filter(Boolean)
   : null;
@@ -65,7 +72,7 @@ interface VaultPlan {
 }
 
 function loadDeployment(): DeploymentAddresses {
-  const path = `./deployments/metropolis-${network.name}.json`;
+  const path = `./deployments/metropolis-${DEPLOYMENT_NAME}.json`;
   if (!fs.existsSync(path)) {
     throw new Error(`Deployment file not found: ${path}`);
   }
@@ -141,8 +148,25 @@ async function buildPlan(factory: VaultFactory): Promise<VaultPlan[]> {
 }
 
 async function main(): Promise<void> {
-  const [signer] = await ethers.getSigners();
   const cfg = loadDeployment();
+
+  let signer = (await ethers.getSigners())[0];
+
+  if (IMPERSONATE) {
+    // Only ever on a local fork: impersonation is a node feature, and running it
+    // against a real chain would silently do nothing useful.
+    const chainId = Number((await ethers.provider.getNetwork()).chainId);
+    if (chainId !== 31337) {
+      throw new Error(`IMPERSONATE is fork-only, refusing on chainId ${chainId}`);
+    }
+    await ethers.provider.send("hardhat_impersonateAccount", [IMPERSONATE]);
+    await ethers.provider.send("hardhat_setBalance", [
+      IMPERSONATE,
+      "0x21e19e0c9bab2400000", // 10_000 ether, for gas
+    ]);
+    signer = await ethers.getSigner(IMPERSONATE);
+    console.log("⚠️  IMPERSONATING", IMPERSONATE, "(fork only)");
+  }
 
   console.log("=".repeat(64));
   console.log("ShadowStrategy migration");
@@ -156,6 +180,7 @@ async function main(): Promise<void> {
   const factory = (await ethers.getContractAt(
     "VaultFactory",
     cfg.vaultFactory,
+    signer,
   )) as unknown as VaultFactory;
 
   const owner = await factory.owner();
@@ -202,6 +227,7 @@ async function main(): Promise<void> {
     } else {
       const Strategy = await ethers.getContractFactory("ShadowStrategy", {
         libraries: { ShadowPriceHelper: cfg.shadowPriceHelper },
+        signer,
       });
       const args: [string, number] = [cfg.vaultFactory, cfg.shadowMaxRange];
       const impl = await Strategy.deploy(...args);
