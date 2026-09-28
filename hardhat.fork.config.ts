@@ -4,7 +4,18 @@ import "@openzeppelin/hardhat-upgrades";
 import "hardhat-contract-sizer";
 import "hardhat-interface-generator";
 // temp: forge absent
+import { setGlobalDispatcher, Agent } from "undici";
 import * as dotenv from "dotenv";
+
+// Forking pulls large amounts of cold state; undici's default header timeout
+// aborts those reads mid-migration with UND_ERR_HEADERS_TIMEOUT.
+setGlobalDispatcher(
+  new Agent({
+    headersTimeout: 15 * 60 * 1000,
+    bodyTimeout: 15 * 60 * 1000,
+    connectTimeout: 60 * 1000,
+  }),
+);
 import { TASK_COMPILE_SOLIDITY_GET_SOURCE_PATHS } from "hardhat/builtin-tasks/task-names";
 import { subtask } from "hardhat/config";
 import * as glob from "glob";
@@ -78,10 +89,13 @@ const config: HardhatUserConfig = {
       // chains block below, and Sonic (146) is unknown to hardhat, so without an
       // explicit hardfork history every historical call fails.
       forking: {
+        // An ARCHIVE endpoint is required. Both public endpoints were tried and
+        // neither can serve a migration: rpc.soniclabs.com times out, and free
+        // sonic.drpc.org answers HTTP 400, which kills the node (hardhat's fork
+        // backend is EDR/reqwest, so JS-side timeout tuning does not help).
         url: process.env.SONIC_MAINNET_RPC_URL || "https://rpc.soniclabs.com",
-        // Pinned so hardhat caches remote state on disk. Without a pin every run
-        // refetches cold state and the public RPC times out mid-migration.
-        blockNumber: 80040000,
+        // Pinned so remote state is cached on disk across runs.
+        blockNumber: 80048221,
       },
       chains: {
         146: {
