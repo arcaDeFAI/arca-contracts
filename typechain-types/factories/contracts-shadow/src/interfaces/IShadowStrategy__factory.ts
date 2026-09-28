@@ -556,6 +556,54 @@ const _abi = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "int24",
+        name: "tickLower",
+        type: "int24",
+      },
+      {
+        internalType: "int24",
+        name: "tickUpper",
+        type: "int24",
+      },
+      {
+        internalType: "int24",
+        name: "desiredTick",
+        type: "int24",
+      },
+      {
+        internalType: "int24",
+        name: "slippageTick",
+        type: "int24",
+      },
+      {
+        internalType: "uint256",
+        name: "amountX",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "amountY",
+        type: "uint256",
+      },
+      {
+        internalType: "int256",
+        name: "swapAmountIn",
+        type: "int256",
+      },
+      {
+        internalType: "uint256",
+        name: "minSwapAmountOut",
+        type: "uint256",
+      },
+    ],
+    name: "rebalanceWithSwap",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "registerMe",
     outputs: [],

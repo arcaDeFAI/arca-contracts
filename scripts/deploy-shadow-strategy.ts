@@ -160,6 +160,7 @@ interface DeploymentConfig {
   vaultFactory: string;
   shadowStrategyImpl?: string;
   shadowNPM?: string;
+  shadowPriceHelper?: string;
   maxRange?: number;
 }
 
@@ -176,6 +177,7 @@ async function loadDeploymentConfig(): Promise<DeploymentConfig> {
     vaultFactory: deployment.addresses.vaultFactory,
     shadowStrategyImpl: deployment.addresses.shadowStrategyImpl,
     shadowNPM: deployment.addresses.shadowNPM,
+    shadowPriceHelper: deployment.addresses.shadowPriceHelper,
     maxRange: deployment.configuration?.shadowMaxRange || 887272
   };
 }
@@ -262,7 +264,16 @@ async function main() {
     const maxRange = config.maxRange || 887272;
     console.log(`\nDeploying with maxRange: ${maxRange}`);
     
-    const ShadowStrategyFactory = await ethers.getContractFactory("ShadowStrategy");
+    // ShadowStrategy links ShadowPriceHelper for the swap slippage guard
+    if (!config.shadowPriceHelper) {
+      throw new Error(
+        "shadowPriceHelper address missing from the deployment file. " +
+        "ShadowStrategy links that library and cannot be deployed without it."
+      );
+    }
+    const ShadowStrategyFactory = await ethers.getContractFactory("ShadowStrategy", {
+      libraries: { ShadowPriceHelper: config.shadowPriceHelper }
+    });
     const shadowArgs = [config.vaultFactory, maxRange]
     const shadowStrategyImpl = await deployContract(
       "ShadowStrategy Implementation",
@@ -284,6 +295,7 @@ async function main() {
                 address: newImplementation,
                 constructorArguments: shadowArgs,
                 contract: "contracts-shadow/src/ShadowStrategy.sol:ShadowStrategy",
+                libraries: { ShadowPriceHelper: config.shadowPriceHelper },
                 force: true, // Force verification even if already verified
               });
               successMessage = true;

@@ -3,3 +3,7 @@
 /* eslint-disable */
 export * as interfaces from "./interfaces";
 export * as libraries from "./libraries";
+export * as test from "./test";
+export { RamsesV3Factory__factory } from "./RamsesV3Factory__factory";
+export { RamsesV3Pool__factory } from "./RamsesV3Pool__factory";
+export { RamsesV3PoolDeployer__factory } from "./RamsesV3PoolDeployer__factory";

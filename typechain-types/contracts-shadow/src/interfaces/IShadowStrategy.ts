@@ -48,6 +48,7 @@ export interface IShadowStrategyInterface extends Interface {
       | "hasRewards"
       | "initialize"
       | "rebalance"
+      | "rebalanceWithSwap"
       | "registerMe"
       | "resetPendingAumAnnualFee"
       | "setOperator"
@@ -150,6 +151,19 @@ export interface IShadowStrategyInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "rebalanceWithSwap",
+    values: [
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "registerMe",
     values?: undefined
   ): string;
@@ -235,6 +249,10 @@ export interface IShadowStrategyInterface extends Interface {
   decodeFunctionResult(functionFragment: "hasRewards", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "rebalance", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "rebalanceWithSwap",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "resetPendingAumAnnualFee",
@@ -531,6 +549,21 @@ export interface IShadowStrategy extends BaseContract {
     "nonpayable"
   >;
 
+  rebalanceWithSwap: TypedContractMethod<
+    [
+      tickLower: BigNumberish,
+      tickUpper: BigNumberish,
+      desiredTick: BigNumberish,
+      slippageTick: BigNumberish,
+      amountX: BigNumberish,
+      amountY: BigNumberish,
+      swapAmountIn: BigNumberish,
+      minSwapAmountOut: BigNumberish
+    ],
+    [void],
+    "nonpayable"
+  >;
+
   registerMe: TypedContractMethod<[], [void], "nonpayable">;
 
   resetPendingAumAnnualFee: TypedContractMethod<[], [void], "nonpayable">;
@@ -668,6 +701,22 @@ export interface IShadowStrategy extends BaseContract {
       slippageTick: BigNumberish,
       amountX: BigNumberish,
       amountY: BigNumberish
+    ],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
+    nameOrSignature: "rebalanceWithSwap"
+  ): TypedContractMethod<
+    [
+      tickLower: BigNumberish,
+      tickUpper: BigNumberish,
+      desiredTick: BigNumberish,
+      slippageTick: BigNumberish,
+      amountX: BigNumberish,
+      amountY: BigNumberish,
+      swapAmountIn: BigNumberish,
+      minSwapAmountOut: BigNumberish
     ],
     [void],
     "nonpayable"

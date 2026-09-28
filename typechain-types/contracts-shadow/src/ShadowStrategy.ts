@@ -54,11 +54,13 @@ export interface ShadowStrategyInterface extends Interface {
       | "initialize"
       | "processWithdrawalsExternal"
       | "rebalance"
+      | "rebalanceWithSwap"
       | "registerMe"
       | "resetPendingAumAnnualFee"
       | "setOperator"
       | "setPendingAumAnnualFee"
       | "setRebalanceCoolDown"
+      | "uniswapV3SwapCallback"
       | "withdrawAll"
   ): FunctionFragment;
 
@@ -92,6 +94,7 @@ export interface ShadowStrategyInterface extends Interface {
       | "RewardEarned"
       | "RewardForwarded"
       | "SlippageCheckFailed"
+      | "SwapExecuted"
       | "TickValidationFailed"
       | "TokensCollected"
       | "VaultAccountingUpdateFailed"
@@ -203,6 +206,19 @@ export interface ShadowStrategyInterface extends Interface {
     ]
   ): string;
   encodeFunctionData(
+    functionFragment: "rebalanceWithSwap",
+    values: [
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish,
+      BigNumberish
+    ]
+  ): string;
+  encodeFunctionData(
     functionFragment: "registerMe",
     values?: undefined
   ): string;
@@ -221,6 +237,10 @@ export interface ShadowStrategyInterface extends Interface {
   encodeFunctionData(
     functionFragment: "setRebalanceCoolDown",
     values: [BigNumberish]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "uniswapV3SwapCallback",
+    values: [BigNumberish, BigNumberish, BytesLike]
   ): string;
   encodeFunctionData(
     functionFragment: "withdrawAll",
@@ -312,6 +332,10 @@ export interface ShadowStrategyInterface extends Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "rebalance", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "rebalanceWithSwap",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "registerMe", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "resetPendingAumAnnualFee",
@@ -327,6 +351,10 @@ export interface ShadowStrategyInterface extends Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "setRebalanceCoolDown",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "uniswapV3SwapCallback",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -779,6 +807,28 @@ export namespace SlippageCheckFailedEvent {
   export type LogDescription = TypedLogDescription<Event>;
 }
 
+export namespace SwapExecutedEvent {
+  export type InputTuple = [
+    xToY: boolean,
+    amountIn: BigNumberish,
+    amountOut: BigNumberish
+  ];
+  export type OutputTuple = [
+    xToY: boolean,
+    amountIn: bigint,
+    amountOut: bigint
+  ];
+  export interface OutputObject {
+    xToY: boolean;
+    amountIn: bigint;
+    amountOut: bigint;
+  }
+  export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>;
+  export type Filter = TypedDeferredTopicFilter<Event>;
+  export type Log = TypedEventLog<Event>;
+  export type LogDescription = TypedLogDescription<Event>;
+}
+
 export namespace TickValidationFailedEvent {
   export type InputTuple = [
     reason: string,
@@ -1010,6 +1060,21 @@ export interface ShadowStrategy extends BaseContract {
     "nonpayable"
   >;
 
+  rebalanceWithSwap: TypedContractMethod<
+    [
+      tickLower: BigNumberish,
+      tickUpper: BigNumberish,
+      desiredTick: BigNumberish,
+      slippageTick: BigNumberish,
+      amountX: BigNumberish,
+      amountY: BigNumberish,
+      swapAmountIn: BigNumberish,
+      minSwapAmountOut: BigNumberish
+    ],
+    [void],
+    "nonpayable"
+  >;
+
   registerMe: TypedContractMethod<[], [void], "nonpayable">;
 
   resetPendingAumAnnualFee: TypedContractMethod<[], [void], "nonpayable">;
@@ -1028,6 +1093,12 @@ export interface ShadowStrategy extends BaseContract {
 
   setRebalanceCoolDown: TypedContractMethod<
     [coolDown: BigNumberish],
+    [void],
+    "nonpayable"
+  >;
+
+  uniswapV3SwapCallback: TypedContractMethod<
+    [amount0Delta: BigNumberish, amount1Delta: BigNumberish, arg2: BytesLike],
     [void],
     "nonpayable"
   >;
@@ -1190,6 +1261,22 @@ export interface ShadowStrategy extends BaseContract {
     "nonpayable"
   >;
   getFunction(
+    nameOrSignature: "rebalanceWithSwap"
+  ): TypedContractMethod<
+    [
+      tickLower: BigNumberish,
+      tickUpper: BigNumberish,
+      desiredTick: BigNumberish,
+      slippageTick: BigNumberish,
+      amountX: BigNumberish,
+      amountY: BigNumberish,
+      swapAmountIn: BigNumberish,
+      minSwapAmountOut: BigNumberish
+    ],
+    [void],
+    "nonpayable"
+  >;
+  getFunction(
     nameOrSignature: "registerMe"
   ): TypedContractMethod<[], [void], "nonpayable">;
   getFunction(
@@ -1208,6 +1295,13 @@ export interface ShadowStrategy extends BaseContract {
   getFunction(
     nameOrSignature: "setRebalanceCoolDown"
   ): TypedContractMethod<[coolDown: BigNumberish], [void], "nonpayable">;
+  getFunction(
+    nameOrSignature: "uniswapV3SwapCallback"
+  ): TypedContractMethod<
+    [amount0Delta: BigNumberish, amount1Delta: BigNumberish, arg2: BytesLike],
+    [void],
+    "nonpayable"
+  >;
   getFunction(
     nameOrSignature: "withdrawAll"
   ): TypedContractMethod<[], [void], "nonpayable">;
@@ -1407,6 +1501,13 @@ export interface ShadowStrategy extends BaseContract {
     SlippageCheckFailedEvent.InputTuple,
     SlippageCheckFailedEvent.OutputTuple,
     SlippageCheckFailedEvent.OutputObject
+  >;
+  getEvent(
+    key: "SwapExecuted"
+  ): TypedContractEvent<
+    SwapExecutedEvent.InputTuple,
+    SwapExecutedEvent.OutputTuple,
+    SwapExecutedEvent.OutputObject
   >;
   getEvent(
     key: "TickValidationFailed"
@@ -1744,6 +1845,17 @@ export interface ShadowStrategy extends BaseContract {
       SlippageCheckFailedEvent.InputTuple,
       SlippageCheckFailedEvent.OutputTuple,
       SlippageCheckFailedEvent.OutputObject
+    >;
+
+    "SwapExecuted(bool,uint256,uint256)": TypedContractEvent<
+      SwapExecutedEvent.InputTuple,
+      SwapExecutedEvent.OutputTuple,
+      SwapExecutedEvent.OutputObject
+    >;
+    SwapExecuted: TypedContractEvent<
+      SwapExecutedEvent.InputTuple,
+      SwapExecutedEvent.OutputTuple,
+      SwapExecutedEvent.OutputObject
     >;
 
     "TickValidationFailed(string,int24,int24)": TypedContractEvent<

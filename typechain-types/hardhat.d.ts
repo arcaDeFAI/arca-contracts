@@ -282,9 +282,33 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.VaultFactory__factory>;
     getContractFactory(
+      name: "IUniswapV3FlashCallback",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IUniswapV3FlashCallback__factory>;
+    getContractFactory(
+      name: "IUniswapV3MintCallback",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IUniswapV3MintCallback__factory>;
+    getContractFactory(
+      name: "IUniswapV3SwapCallback",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IUniswapV3SwapCallback__factory>;
+    getContractFactory(
+      name: "IERC20Minimal",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IERC20Minimal__factory>;
+    getContractFactory(
+      name: "IRamsesV3Factory",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IRamsesV3Factory__factory>;
+    getContractFactory(
       name: "IRamsesV3Pool",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IRamsesV3Pool__factory>;
+    getContractFactory(
+      name: "IRamsesV3PoolDeployer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IRamsesV3PoolDeployer__factory>;
     getContractFactory(
       name: "IRamsesV3PoolActions",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -314,9 +338,49 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.IRamsesV3PoolState__factory>;
     getContractFactory(
+      name: "Oracle",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Oracle__factory>;
+    getContractFactory(
+      name: "PoolStorage",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.PoolStorage__factory>;
+    getContractFactory(
+      name: "Position",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Position__factory>;
+    getContractFactory(
+      name: "ProtocolActions",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.ProtocolActions__factory>;
+    getContractFactory(
+      name: "Tick",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.Tick__factory>;
+    getContractFactory(
       name: "TickMath",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.TickMath__factory>;
+    getContractFactory(
+      name: "TransferHelper",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TransferHelper__factory>;
+    getContractFactory(
+      name: "RamsesV3Factory",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.RamsesV3Factory__factory>;
+    getContractFactory(
+      name: "RamsesV3Pool",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.RamsesV3Pool__factory>;
+    getContractFactory(
+      name: "RamsesV3PoolDeployer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.RamsesV3PoolDeployer__factory>;
+    getContractFactory(
+      name: "TestRamsesV3Callee",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TestRamsesV3Callee__factory>;
     getContractFactory(
       name: "INonfungiblePositionManager",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -393,6 +457,18 @@ declare module "hardhat/types/runtime" {
       name: "MockVaultFactory",
       signerOrOptions?: ethers.Signer | FactoryOptions
     ): Promise<Contracts.MockVaultFactory__factory>;
+    getContractFactory(
+      name: "IMockVaultAdmin",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.IMockVaultAdmin__factory>;
+    getContractFactory(
+      name: "MockVaultFactoryLite",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.MockVaultFactoryLite__factory>;
+    getContractFactory(
+      name: "TestCloneDeployer",
+      signerOrOptions?: ethers.Signer | FactoryOptions
+    ): Promise<Contracts.TestCloneDeployer__factory>;
     getContractFactory(
       name: "SimpleMockPool",
       signerOrOptions?: ethers.Signer | FactoryOptions
@@ -742,10 +818,40 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.VaultFactory>;
     getContractAt(
+      name: "IUniswapV3FlashCallback",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IUniswapV3FlashCallback>;
+    getContractAt(
+      name: "IUniswapV3MintCallback",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IUniswapV3MintCallback>;
+    getContractAt(
+      name: "IUniswapV3SwapCallback",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IUniswapV3SwapCallback>;
+    getContractAt(
+      name: "IERC20Minimal",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IERC20Minimal>;
+    getContractAt(
+      name: "IRamsesV3Factory",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IRamsesV3Factory>;
+    getContractAt(
       name: "IRamsesV3Pool",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.IRamsesV3Pool>;
+    getContractAt(
+      name: "IRamsesV3PoolDeployer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IRamsesV3PoolDeployer>;
     getContractAt(
       name: "IRamsesV3PoolActions",
       address: string | ethers.Addressable,
@@ -782,10 +888,60 @@ declare module "hardhat/types/runtime" {
       signer?: ethers.Signer
     ): Promise<Contracts.IRamsesV3PoolState>;
     getContractAt(
+      name: "Oracle",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Oracle>;
+    getContractAt(
+      name: "PoolStorage",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.PoolStorage>;
+    getContractAt(
+      name: "Position",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Position>;
+    getContractAt(
+      name: "ProtocolActions",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.ProtocolActions>;
+    getContractAt(
+      name: "Tick",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.Tick>;
+    getContractAt(
       name: "TickMath",
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.TickMath>;
+    getContractAt(
+      name: "TransferHelper",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TransferHelper>;
+    getContractAt(
+      name: "RamsesV3Factory",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.RamsesV3Factory>;
+    getContractAt(
+      name: "RamsesV3Pool",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.RamsesV3Pool>;
+    getContractAt(
+      name: "RamsesV3PoolDeployer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.RamsesV3PoolDeployer>;
+    getContractAt(
+      name: "TestRamsesV3Callee",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TestRamsesV3Callee>;
     getContractAt(
       name: "INonfungiblePositionManager",
       address: string | ethers.Addressable,
@@ -881,6 +1037,21 @@ declare module "hardhat/types/runtime" {
       address: string | ethers.Addressable,
       signer?: ethers.Signer
     ): Promise<Contracts.MockVaultFactory>;
+    getContractAt(
+      name: "IMockVaultAdmin",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.IMockVaultAdmin>;
+    getContractAt(
+      name: "MockVaultFactoryLite",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.MockVaultFactoryLite>;
+    getContractAt(
+      name: "TestCloneDeployer",
+      address: string | ethers.Addressable,
+      signer?: ethers.Signer
+    ): Promise<Contracts.TestCloneDeployer>;
     getContractAt(
       name: "SimpleMockPool",
       address: string | ethers.Addressable,
@@ -1166,9 +1337,33 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.VaultFactory>;
     deployContract(
+      name: "IUniswapV3FlashCallback",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IUniswapV3FlashCallback>;
+    deployContract(
+      name: "IUniswapV3MintCallback",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IUniswapV3MintCallback>;
+    deployContract(
+      name: "IUniswapV3SwapCallback",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IUniswapV3SwapCallback>;
+    deployContract(
+      name: "IERC20Minimal",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC20Minimal>;
+    deployContract(
+      name: "IRamsesV3Factory",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IRamsesV3Factory>;
+    deployContract(
       name: "IRamsesV3Pool",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IRamsesV3Pool>;
+    deployContract(
+      name: "IRamsesV3PoolDeployer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IRamsesV3PoolDeployer>;
     deployContract(
       name: "IRamsesV3PoolActions",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1198,9 +1393,49 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IRamsesV3PoolState>;
     deployContract(
+      name: "Oracle",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Oracle>;
+    deployContract(
+      name: "PoolStorage",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PoolStorage>;
+    deployContract(
+      name: "Position",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Position>;
+    deployContract(
+      name: "ProtocolActions",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ProtocolActions>;
+    deployContract(
+      name: "Tick",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Tick>;
+    deployContract(
       name: "TickMath",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TickMath>;
+    deployContract(
+      name: "TransferHelper",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TransferHelper>;
+    deployContract(
+      name: "RamsesV3Factory",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.RamsesV3Factory>;
+    deployContract(
+      name: "RamsesV3Pool",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.RamsesV3Pool>;
+    deployContract(
+      name: "RamsesV3PoolDeployer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.RamsesV3PoolDeployer>;
+    deployContract(
+      name: "TestRamsesV3Callee",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TestRamsesV3Callee>;
     deployContract(
       name: "INonfungiblePositionManager",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1277,6 +1512,18 @@ declare module "hardhat/types/runtime" {
       name: "MockVaultFactory",
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockVaultFactory>;
+    deployContract(
+      name: "IMockVaultAdmin",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IMockVaultAdmin>;
+    deployContract(
+      name: "MockVaultFactoryLite",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockVaultFactoryLite>;
+    deployContract(
+      name: "TestCloneDeployer",
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TestCloneDeployer>;
     deployContract(
       name: "SimpleMockPool",
       signerOrOptions?: ethers.Signer | DeployContractOptions
@@ -1626,10 +1873,40 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.VaultFactory>;
     deployContract(
+      name: "IUniswapV3FlashCallback",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IUniswapV3FlashCallback>;
+    deployContract(
+      name: "IUniswapV3MintCallback",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IUniswapV3MintCallback>;
+    deployContract(
+      name: "IUniswapV3SwapCallback",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IUniswapV3SwapCallback>;
+    deployContract(
+      name: "IERC20Minimal",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IERC20Minimal>;
+    deployContract(
+      name: "IRamsesV3Factory",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IRamsesV3Factory>;
+    deployContract(
       name: "IRamsesV3Pool",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IRamsesV3Pool>;
+    deployContract(
+      name: "IRamsesV3PoolDeployer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IRamsesV3PoolDeployer>;
     deployContract(
       name: "IRamsesV3PoolActions",
       args: any[],
@@ -1666,10 +1943,60 @@ declare module "hardhat/types/runtime" {
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.IRamsesV3PoolState>;
     deployContract(
+      name: "Oracle",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Oracle>;
+    deployContract(
+      name: "PoolStorage",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.PoolStorage>;
+    deployContract(
+      name: "Position",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Position>;
+    deployContract(
+      name: "ProtocolActions",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.ProtocolActions>;
+    deployContract(
+      name: "Tick",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.Tick>;
+    deployContract(
       name: "TickMath",
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.TickMath>;
+    deployContract(
+      name: "TransferHelper",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TransferHelper>;
+    deployContract(
+      name: "RamsesV3Factory",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.RamsesV3Factory>;
+    deployContract(
+      name: "RamsesV3Pool",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.RamsesV3Pool>;
+    deployContract(
+      name: "RamsesV3PoolDeployer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.RamsesV3PoolDeployer>;
+    deployContract(
+      name: "TestRamsesV3Callee",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TestRamsesV3Callee>;
     deployContract(
       name: "INonfungiblePositionManager",
       args: any[],
@@ -1765,6 +2092,21 @@ declare module "hardhat/types/runtime" {
       args: any[],
       signerOrOptions?: ethers.Signer | DeployContractOptions
     ): Promise<Contracts.MockVaultFactory>;
+    deployContract(
+      name: "IMockVaultAdmin",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.IMockVaultAdmin>;
+    deployContract(
+      name: "MockVaultFactoryLite",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.MockVaultFactoryLite>;
+    deployContract(
+      name: "TestCloneDeployer",
+      args: any[],
+      signerOrOptions?: ethers.Signer | DeployContractOptions
+    ): Promise<Contracts.TestCloneDeployer>;
     deployContract(
       name: "SimpleMockPool",
       args: any[],

@@ -45,4 +45,17 @@ interface IShadowStrategy is IStrategyCommon {
         uint256 amountX,
         uint256 amountY
     ) external;
+
+    // Optional ratio swap variant: swapAmountIn > 0 swaps token X to Y,
+    // < 0 swaps token Y to X, 0 behaves exactly like `rebalance`.
+    function rebalanceWithSwap(
+        int24 tickLower,
+        int24 tickUpper,
+        int24 desiredTick,
+        int24 slippageTick,
+        uint256 amountX,
+        uint256 amountY,
+        int256 swapAmountIn,
+        uint256 minSwapAmountOut
+    ) external;
 }

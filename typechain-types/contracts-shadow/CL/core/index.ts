@@ -5,3 +5,8 @@ import type * as interfaces from "./interfaces";
 export type { interfaces };
 import type * as libraries from "./libraries";
 export type { libraries };
+import type * as test from "./test";
+export type { test };
+export type { RamsesV3Factory } from "./RamsesV3Factory";
+export type { RamsesV3Pool } from "./RamsesV3Pool";
+export type { RamsesV3PoolDeployer } from "./RamsesV3PoolDeployer";

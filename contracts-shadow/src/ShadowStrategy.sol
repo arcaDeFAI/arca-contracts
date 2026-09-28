@@ -17,6 +17,7 @@ import {IMinimalGauge} from "./interfaces/IMinimalGauge.sol";
 import {IMinimalVoter} from "./interfaces/IMinimalVoter.sol";
 import {LiquidityAmounts} from "../CL/periphery/libraries/LiquidityAmounts.sol";
 import {TickMath} from "../CL/core/libraries/TickMath.sol";
+import {ShadowPriceHelper} from "./libraries/ShadowPriceHelper.sol";
 import {IOracleRewardVault} from "../../contracts-metropolis/src/interfaces/IOracleRewardVault.sol";
 import {Math} from "../../contracts-metropolis/src/libraries/Math.sol";
 import {IOracleRewardShadowVault} from "./interfaces/IOracleRewardShadowVault.sol";
@@ -42,6 +43,8 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
 
     // Additional errors not in IStrategyCommon but needed for Shadow
     error Strategy__ActiveIdSlippage();
+    error Strategy__SwapSlippage();
+    error Strategy__InvalidCallback();
 
     // ============ Shadow-Specific Events (NOT in interfaces) ============
     // Position Management
@@ -71,6 +74,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         uint256 depositedY
     );
     event RebalanceAborted(string reason);
+
+    // Swaps
+    event SwapExecuted(bool xToY, uint256 amountIn, uint256 amountOut);
 
     // Rewards
     event RewardEarned(address indexed token, uint256 amount);
@@ -118,6 +124,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         int24 slippageTick;
         uint256 amountX;
         uint256 amountY;
+        // > 0: swap that amount of token X to Y, < 0: swap token Y to X, 0: no swap
+        int256 swapAmountIn;
+        uint256 minSwapAmountOut;
     }
 
     uint256 private constant _PRECISION = 1e18;
@@ -126,6 +135,9 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
     uint256 private constant _SCALED_YEAR = 365 days * _BASIS_POINTS;
     uint256 private constant _SCALED_YEAR_SUB_ONE = _SCALED_YEAR - 1;
     uint256 private constant _POSITION_TIMEOUT = 600; // 10 minutes
+    /// @dev Max deviation tolerated between the executed swap price and the
+    /// pool oracle price. Must also cover the pool swap fee.
+    uint256 private constant _MAX_SWAP_SLIPPAGE_BPS = 300; // 3%
     uint256 private constant _FEEM_AFFILIATE_ID = 236; // Arca's FeeM affiliate ID
 
     IVaultFactory private immutable _factory;
@@ -491,16 +503,55 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         uint256 amountX,
         uint256 amountY
     ) external onlyOperators {
-        // Pack parameters into struct to reduce stack usage
-        RebalanceParams memory params = RebalanceParams({
-            tickLower: tickLower,
-            tickUpper: tickUpper,
-            desiredTick: desiredTick,
-            slippageTick: slippageTick,
-            amountX: amountX,
-            amountY: amountY
-        });
+        _rebalance(
+            RebalanceParams({
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                desiredTick: desiredTick,
+                slippageTick: slippageTick,
+                amountX: amountX,
+                amountY: amountY,
+                swapAmountIn: 0,
+                minSwapAmountOut: 0
+            })
+        );
+    }
 
+    /**
+     * @notice Same as `rebalance`, with an optional ratio swap executed once the
+     * old position is closed and the withdrawal queue is paid out, before the
+     * new position is opened. Lets the operator convert the leftover reserve of
+     * one token so both sides can be deployed into the new range.
+     * @param swapAmountIn > 0 swaps that amount of token X to Y, < 0 swaps
+     * token Y to X, 0 behaves exactly like `rebalance`
+     * @param minSwapAmountOut Minimum output accepted for the swap; a deviation
+     * check against the pool oracle price applies on top of it
+     */
+    function rebalanceWithSwap(
+        int24 tickLower,
+        int24 tickUpper,
+        int24 desiredTick,
+        int24 slippageTick,
+        uint256 amountX,
+        uint256 amountY,
+        int256 swapAmountIn,
+        uint256 minSwapAmountOut
+    ) external onlyOperators {
+        _rebalance(
+            RebalanceParams({
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                desiredTick: desiredTick,
+                slippageTick: slippageTick,
+                amountX: amountX,
+                amountY: amountY,
+                swapAmountIn: swapAmountIn,
+                minSwapAmountOut: minSwapAmountOut
+            })
+        );
+    }
+
+    function _rebalance(RebalanceParams memory params) internal {
         emit RebalanceStarted(
             msg.sender,
             params.tickLower,
@@ -534,6 +585,20 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
             emit WithdrawalProcessingFailed(0, "Failed to process withdrawals");
             emit RebalanceAborted("Withdrawal processing failed");
             return;
+        }
+
+        // Optional ratio swap. Placed after the withdrawal queue has been paid
+        // out, so exiting users are settled on pre-swap balances, and before the
+        // new position is opened. Unlike the steps above this one reverts on
+        // failure: rolling the whole rebalance back leaves the previous position
+        // untouched instead of stranding the funds idle with no position.
+        if (params.swapAmountIn != 0) {
+            bool xToY = params.swapAmountIn > 0;
+            _swap(
+                xToY,
+                uint256(xToY ? params.swapAmountIn : -params.swapAmountIn),
+                params.minSwapAmountOut
+            );
         }
 
         // Enter new position
@@ -705,6 +770,89 @@ contract ShadowStrategy is Clone, ReentrancyGuardUpgradeable, IShadowStrategy {
         } catch {
             return false;
         }
+    }
+
+    // ============ Swaps ============
+
+    /**
+     * @dev Callback used by the Ramses V3 pool to collect the swap input.
+     * Token X is token0 and token Y is token1, enforced at vault creation.
+     */
+    function uniswapV3SwapCallback(
+        int256 amount0Delta,
+        int256 amount1Delta,
+        bytes calldata
+    ) external {
+        if (msg.sender != address(_pool())) revert Strategy__InvalidCallback();
+
+        if (amount0Delta > 0)
+            _tokenX().safeTransfer(msg.sender, uint256(amount0Delta));
+        if (amount1Delta > 0)
+            _tokenY().safeTransfer(msg.sender, uint256(amount1Delta));
+    }
+
+    /**
+     * @dev Swaps `amountIn` through the vault's own pool. Guarded twice: by the
+     * operator supplied `minAmountOut`, and by a deviation check against the
+     * pool oracle price so that a compromised operator cannot drain the vault
+     * by self-sandwiching a swap.
+     */
+    function _swap(
+        bool xToY,
+        uint256 amountIn,
+        uint256 minAmountOut
+    ) internal returns (uint256 amountOut) {
+        if (amountIn == 0 || minAmountOut == 0) revert Strategy__ZeroAmounts();
+
+        // Reference price has to be read before the swap moves the pool.
+        uint256 oracleMinOut = _getOracleMinAmountOut(xToY, amountIn);
+
+        (int256 amount0, int256 amount1) = _pool().swap(
+            address(this),
+            xToY,
+            int256(amountIn),
+            xToY ? TickMath.MIN_SQRT_RATIO + 1 : TickMath.MAX_SQRT_RATIO - 1,
+            ""
+        );
+
+        // The pool returns what it owes us as a negative delta.
+        amountOut = uint256(-(xToY ? amount1 : amount0));
+
+        if (amountOut < minAmountOut || amountOut < oracleMinOut)
+            revert Strategy__SwapSlippage();
+
+        emit SwapExecuted(xToY, amountIn, amountOut);
+    }
+
+    /**
+     * @dev Minimum output implied by the pool oracle price and
+     * `_MAX_SWAP_SLIPPAGE_BPS`. Reuses the vault's own TWAP window so the swap
+     * and the share valuation agree on the reference price, and the already
+     * deployed ShadowPriceHelper library so this contract stays under the
+     * bytecode size limit.
+     */
+    function _getOracleMinAmountOut(
+        bool xToY,
+        uint256 amountIn
+    ) internal view returns (uint256 minOut) {
+        // Wei per wei price of X in Y, scaled by 1e18. Passing 18/18 keeps the
+        // token decimals out of the ratio below, which works on raw amounts.
+        uint256 priceXInY = ShadowPriceHelper.getOraclePrice(
+            _pool(),
+            true,
+            IOracleRewardShadowVault(_vault()).getTwapInterval(),
+            18,
+            18
+        );
+        if (priceXInY == 0) revert Strategy__SwapSlippage();
+
+        uint256 expectedOut = xToY
+            ? amountIn.mulDivRoundDown(priceXInY, _PRECISION)
+            : amountIn.mulDivRoundDown(_PRECISION, priceXInY);
+
+        minOut =
+            (expectedOut * (_BASIS_POINTS - _MAX_SWAP_SLIPPAGE_BPS)) /
+            _BASIS_POINTS;
     }
 
     function _processWithdrawalsInternal() external {

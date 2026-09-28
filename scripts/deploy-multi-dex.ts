@@ -470,10 +470,11 @@ async function main() {
 
   // Deploy Shadow Strategy implementation
   const maxRangeShadow = 887272; // Max tick range for Shadow (from SHADOW_INTEGRATION_PLAN.md)
-  const ShadowStrategy = await ethers.getContractFactory("ShadowStrategy");
-  const shadowStrategyImpl = await deployContract(
+  // ShadowStrategy links ShadowPriceHelper for the swap slippage guard
+  const shadowStrategyImpl = await deployContractWithLibraries<Contract>(
     "ShadowStrategy Implementation",
-    ShadowStrategy,
+    "ShadowStrategy",
+    { ShadowPriceHelper: shadowPriceHelperAddress },
     [proxyAddress, maxRangeShadow],
     gasTracker,
     { gasLimit: 10000000 }

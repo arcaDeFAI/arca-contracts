@@ -209,12 +209,22 @@ async function main() {
     contract: "contracts-metropolis/src/MetropolisStrategy.sol:MetropolisStrategy"
   });
 
-  verifications.push({
+  // ShadowStrategy links ShadowPriceHelper for the swap slippage guard
+  const shadowStrategyEntry: VerificationEntry = {
     name: "ShadowStrategy Implementation",
     address: addresses.shadowStrategyImpl,
     constructorArguments: [addresses.vaultFactory, 887272], // maxRange = 887272 for Shadow
     contract: "contracts-shadow/src/ShadowStrategy.sol:ShadowStrategy"
-  });
+  };
+
+  if (librariesJsonPath) {
+    shadowStrategyEntry.needsLibraries = true;
+    shadowStrategyEntry.librariesPath = librariesJsonPath;
+  } else {
+    console.log("⚠️  Warning: shadowPriceHelper address not available, skipping library linking for ShadowStrategy");
+  }
+
+  verifications.push(shadowStrategyEntry);
 
   let successCount = 0;
   let failCount = 0;
