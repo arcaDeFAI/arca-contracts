@@ -1,8 +1,9 @@
 'use client';
 
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { querySubgraph } from '@/lib/subgraph';
-import { usePrices } from '@/contexts/PriceContext';
+import { usePrices, type TokenPrices } from '@/contexts/PriceContext';
 import { getTokenPrice, getTokenDecimals } from '@/lib/tokenHelpers';
 import { getTokenByAddress } from '@/lib/tokenRegistry';
 import { VAULT_CONFIGS, type VaultConfig } from '@/lib/vaultConfigs';
@@ -159,10 +160,32 @@ function rawToHumanPxInY(sqrtBig: bigint, lbBig: bigint, dX: number, dY: number)
 // ---- Hook ----
 
 export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
-  const { tokenX = 'S', tokenY = 'USDC', vaultAddress } = config;
   const { prices } = usePrices();
-
   const { data, isLoading, error } = useBatchedVaultSubgraphData();
+  return computeSubgraphMetrics(config, data, prices, isLoading, error);
+}
+
+/** Metrics for every configured vault from the one batched query, keyed by lowercase vault address. */
+export function useAllSubgraphMetrics(): Map<string, SubgraphMetrics> {
+  const { prices } = usePrices();
+  const { data, isLoading, error } = useBatchedVaultSubgraphData();
+  return useMemo(() => {
+    const out = new Map<string, SubgraphMetrics>();
+    for (const config of VAULT_CONFIGS) {
+      out.set(config.vaultAddress.toLowerCase(), computeSubgraphMetrics(config, data, prices, isLoading, error));
+    }
+    return out;
+  }, [data, prices, isLoading, error]);
+}
+
+function computeSubgraphMetrics(
+  config: VaultConfig,
+  data: BatchQueryResult | undefined,
+  prices: TokenPrices,
+  isLoading: boolean,
+  error: Error | null,
+): SubgraphMetrics {
+  const { tokenX = 'S', tokenY = 'USDC', vaultAddress } = config;
 
   const empty: SubgraphMetrics = {
     feeApr: null, rewardApr: null, totalApr: null,
@@ -361,20 +384,4 @@ export function useSubgraphMetrics(config: VaultConfig): SubgraphMetrics {
     periodLabel, periodDays: days, ilDays, snapshotCount,
     isLoading: false, error: null,
   };
-}
-
-/**
- * Human-readable explanation of how APR and vs-HODL are calculated.
- * Shown in APYTooltip and DashboardOverview.
- */
-export function getAPYCalculationExplanation(): string {
-  return `APR — Rewards only\nOn-chain reward events ÷ avg TVL × (365 / days).\nWindow: 30d → 7d → all-time.`;
-  /* vs HODL explanation — hidden for now, re-enable when ready
-  Did the vault beat holding 50/50?
-  pps = per-share USD value = (tokensX × priceX) + (tokensY × priceY).
-  vault_return = pps_now / pps_first − 1
-  hodl_return = 0.5 × (priceX change) + 0.5 × (priceY change) since first deposit.
-  vs HODL = vault_return − hodl_return
-  Positive → fees beat IL. Negative → IL exceeded fees.
-  */
 }

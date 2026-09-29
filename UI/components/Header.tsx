@@ -41,7 +41,7 @@ export function Header() {
   }, [isMobileMenuOpen]);
 
   const navItems = [
-    { href: '/vaults', label: 'Vaults', isActive: pathname === '/vaults' || pathname === '/vaults/' },
+    { href: '/vaults', label: 'Vaults', isActive: pathname.startsWith('/vaults') },
     { href: '/dashboard', label: 'Dashboard', isActive: pathname.startsWith('/dashboard') },
     { href: '/staking', label: 'Staking', isActive: pathname.startsWith('/staking') },
   ];
