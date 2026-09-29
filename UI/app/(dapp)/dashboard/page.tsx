@@ -1,125 +1,95 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useAccount } from 'wagmi';
-import { Header } from '@/components/Header';
-import { DashboardVaultCard } from '@/components/DashboardVaultCard';
-import { DashboardOverview } from '@/components/DashboardOverview';
-import { SocialLinks } from '@/components/SocialLinks';
-import { VaultTableView } from '@/components/VaultTableView';
-import { VAULT_CONFIGS, type VaultConfig } from '@/lib/vaultConfigs';
+import { PageShell } from '@/components/PageShell';
+import { PositionCard } from '@/components/vaults/PositionCard';
+import { PortfolioChart } from '@/components/vaults/PortfolioChart';
+import { Card, ConnectWalletButton, Stat } from '@/components/ui';
+import { useVaultsOverview } from '@/hooks/useVaultsOverview';
+import { useSubgraphUserHarvested } from '@/hooks/useSubgraphUserHarvested';
+import { usePoints } from '@/hooks/usePoints';
+import { formatApr, formatUSD } from '@/lib/utils';
 
-export default function Dashboard() {
+export default function DashboardPage() {
+  return (
+    <PageShell>
+      <h1 className="mb-8 text-3xl font-bold tracking-tight text-arca-text">Dashboard</h1>
+      <DashboardContent />
+    </PageShell>
+  );
+}
+
+function DashboardContent() {
   const { address, isConnected } = useAccount();
-  const [mounted, setMounted] = useState(false);
-  const [selectedVault, setSelectedVault] = useState<VaultConfig | null>(null);
+  const { vaults, isLoading } = useVaultsOverview(address);
+  const harvested = useSubgraphUserHarvested(address);
+  const points = usePoints(address);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
+  if (!isConnected) {
+    return (
+      <Card className="flex flex-col items-center p-12 text-center">
+        <p className="mb-5 text-sm text-arca-text-secondary">Connect your wallet to see your deposits and rewards.</p>
+        <ConnectWalletButton />
+      </Card>
+    );
   }
 
+  // Current worth of the user's shares (not the amount originally deposited)
+  const totalValue = vaults.reduce((s, v) => s + v.userUsd, 0);
+  // Value-weighted APR across the user's vaults
+  const weightedApr =
+    totalValue > 0 ? vaults.reduce((s, v) => s + (v.apr ?? 0) * v.userUsd, 0) / totalValue : null;
+  const hasDeposits = totalValue > 0.01;
+
   return (
-    <div className="min-h-screen bg-arca-dark relative">
-      {/* Subtle ambient glow */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-1/3 w-[500px] h-[500px] bg-arca-green/[0.015] rounded-full blur-[120px]" />
-      </div>
+    <>
+      <Card className="mb-8 p-5">
+        <div className={`grid grid-cols-2 gap-6 ${points ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}>
+          <Stat label="Total value" value={formatUSD(totalValue)} loading={isLoading} />
+          <Stat label="Average APR" value={formatApr(weightedApr)} accent loading={isLoading} />
+          <Stat label="Rewards claimed (all time)" value={formatUSD(harvested.totalHarvestedUSD)} loading={harvested.isLoading} />
+          {points && <Stat label="Points" value={Math.floor(points.total).toLocaleString()} />}
+        </div>
+        {points && (
+          <p className="mt-4 text-xs text-arca-text-tertiary">
+            1 point per $1 held per day. Withdrawing early removes some points (all within 7 days, half within 30,
+            a quarter within 90). Points may be used for a future airdrop; no airdrop is guaranteed.
+          </p>
+        )}
+      </Card>
 
-      <div className="relative z-10">
-        <Header />
+      {(hasDeposits || harvested.cumulative.length > 0) && (
+        <PortfolioChart vaults={vaults} claimed={harvested.cumulative} claimedLoading={harvested.isLoading} />
+      )}
 
-        <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-[1400px] mx-auto">
-          {/* Page Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-arca-text tracking-tight mb-1">
-              Dashboard
-            </h1>
-            <p className="text-arca-text-secondary text-sm">
-              Manage positions, claim rewards, and handle withdrawals
-            </p>
-          </div>
+      {!isLoading && !hasDeposits && (
+        <Card className="mb-6 flex flex-col items-center p-10 text-center">
+          <p className="mb-4 text-sm text-arca-text-secondary">You don&apos;t have any deposits yet.</p>
+          <Link
+            href="/vaults"
+            className="rounded-xl bg-arca-green px-4 py-2.5 text-sm font-semibold text-arca-dark transition-colors hover:bg-arca-green/90"
+          >
+            Browse vaults
+          </Link>
+        </Card>
+      )}
 
-          {/* Connection Prompt */}
-          {!isConnected && (
-            <div className="bg-amber-500/[0.06] border border-amber-500/[0.12] rounded-2xl p-4 mb-6 animate-fade-in">
-              <div className="flex items-center gap-3">
-                <span className="text-lg">⚠️</span>
-                <div>
-                  <h3 className="text-amber-400 font-medium text-sm mb-0.5">Connect Your Wallet</h3>
-                  <p className="text-amber-400/60 text-xs">
-                    Connect your wallet to view your dashboard and manage positions.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Dashboard Overview */}
-          {isConnected && (
-            <DashboardOverview
-              vaultConfigs={VAULT_CONFIGS}
-              userAddress={address}
+      {/* One card per vault; a card hides itself unless there is a deposit, rewards or a withdrawal to claim. */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {[...vaults]
+          .sort((a, b) => b.userUsd - a.userUsd)
+          .map((v) => (
+            <PositionCard
+              key={v.config.vaultAddress}
+              config={v.config}
+              depositUsd={v.userUsd}
+              shareRatio={v.totalSupply > 0n ? Number(v.userShares) / Number(v.totalSupply) : 0}
+              apr={v.apr}
+              showVault
             />
-          )}
-
-          {/* Active Vaults Section */}
-          {isConnected && (
-            <>
-              {/* Section Header */}
-              <div className="mb-5 mt-2">
-                <div className="flex items-center gap-2.5 mb-1">
-                  <div className="w-1 h-5 bg-arca-green rounded-full"></div>
-                  <h2 className="text-lg font-semibold text-arca-text">Active Vaults</h2>
-                </div>
-                <p className="text-arca-text-tertiary text-xs ml-[18px]">Click on a vault to view details</p>
-              </div>
-
-              {/* Table + Detail Panel */}
-              <div className="flex flex-col lg:flex-row gap-5">
-                <div className={`transition-all duration-300 ${selectedVault ? 'lg:w-2/3' : 'w-full'}`}>
-                  <VaultTableView
-                    vaults={VAULT_CONFIGS}
-                    userAddress={address}
-                    onVaultClick={(vault) => setSelectedVault(vault)}
-                    selectedVault={selectedVault || undefined}
-                  />
-                </div>
-
-                {selectedVault && (
-                  <div className="w-full lg:w-1/3 transition-all duration-300 animate-fade-in">
-                    <div className="lg:sticky lg:top-20">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-arca-text font-semibold text-sm">Vault Details</h3>
-                        <button
-                          onClick={() => setSelectedVault(null)}
-                          className="text-arca-text-tertiary hover:text-arca-text transition-colors p-1 rounded-lg hover:bg-white/[0.04]"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      <DashboardVaultCard
-                        config={selectedVault}
-                        userAddress={address}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Footer */}
-          <div className="mt-16 pt-6 border-t border-white/[0.04]">
-            <SocialLinks />
-          </div>
-        </main>
+          ))}
       </div>
-    </div>
+    </>
   );
 }
