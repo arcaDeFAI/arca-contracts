@@ -1,7 +1,9 @@
 // Subgraph client for Arca Vaults on Sonic
 // Tracks RewardForwarded events for custom APR calculation
 
-const SUBGRAPH_URL = process.env.NEXT_PUBLIC_SUBGRAPH_URL ||
+// Pinned in code (not an env var) so every environment uses the same, validated subgraph
+// version — bump this after deploying and validating a new version on Goldsky.
+const SUBGRAPH_URL =
   'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.18/gn';
 
 /**
