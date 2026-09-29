@@ -22,6 +22,7 @@ dataSources:
         - RewardEvent
         - Snapshot
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: ShadowStrategy
           file: ./abis/ShadowStrategy.json
@@ -29,6 +30,8 @@ dataSources:
           file: ./abis/MetroVault.json
         - name: CLPool
           file: ./abis/CLPool.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
@@ -52,6 +55,7 @@ dataSources:
         - RewardEvent
         - Snapshot
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: ShadowStrategy
           file: ./abis/ShadowStrategy.json
@@ -59,6 +63,8 @@ dataSources:
           file: ./abis/MetroVault.json
         - name: CLPool
           file: ./abis/CLPool.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
@@ -82,6 +88,7 @@ dataSources:
         - RewardEvent
         - Snapshot
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: ShadowStrategy
           file: ./abis/ShadowStrategy.json
@@ -89,6 +96,8 @@ dataSources:
           file: ./abis/MetroVault.json
         - name: CLPool
           file: ./abis/CLPool.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
@@ -112,6 +121,7 @@ dataSources:
         - RewardEvent
         - Snapshot
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: ShadowStrategy
           file: ./abis/ShadowStrategy.json
@@ -119,6 +129,8 @@ dataSources:
           file: ./abis/MetroVault.json
         - name: CLPool
           file: ./abis/CLPool.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
@@ -142,6 +154,7 @@ dataSources:
         - RewardEvent
         - Snapshot
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: ShadowStrategy
           file: ./abis/ShadowStrategy.json
@@ -149,6 +162,8 @@ dataSources:
           file: ./abis/MetroVault.json
         - name: CLPool
           file: ./abis/CLPool.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: RewardForwarded(indexed address,indexed address,uint256)
           handler: handleRewardForwardedShadow
@@ -173,9 +188,12 @@ dataSources:
         - Vault
         - RewardEvent
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: ERC20
           file: ./abis/ERC20.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Transfer(indexed address,indexed address,uint256)
           handler: handleMetroTransfer
@@ -189,7 +207,7 @@ dataSources:
     source:
       address: "0xBaef4Da824f554c35035211cb997db4ecB75F45f"
       abi: ArcaVault
-      startBlock: 66600000
+      startBlock: 65869710
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -197,12 +215,15 @@ dataSources:
       entities:
         - Vault
         - UserHarvestEvent
+        - UserVaultPosition
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleVaultShareTransfer
       file: ./src/mapping.ts
 
   - kind: ethereum
@@ -211,7 +232,7 @@ dataSources:
     source:
       address: "0x1C0C5A4197b7Fa25a180E6e08eA19A91EBBe5fD2"
       abi: ArcaVault
-      startBlock: 66600000
+      startBlock: 65870192
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -219,12 +240,15 @@ dataSources:
       entities:
         - Vault
         - UserHarvestEvent
+        - UserVaultPosition
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleVaultShareTransfer
       file: ./src/mapping.ts
 
   - kind: ethereum
@@ -233,7 +257,7 @@ dataSources:
     source:
       address: "0x34331E66a634D69D64edC3e21E52A53899e12640"
       abi: ArcaVault
-      startBlock: 66600000
+      startBlock: 65845915
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -241,12 +265,15 @@ dataSources:
       entities:
         - Vault
         - UserHarvestEvent
+        - UserVaultPosition
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleVaultShareTransfer
       file: ./src/mapping.ts
 
   - kind: ethereum
@@ -255,7 +282,7 @@ dataSources:
     source:
       address: "0x727e6D1FF1f1836Bb7Cdfad30e89EdBbef878ab5"
       abi: ArcaVault
-      startBlock: 66600000
+      startBlock: 53706826
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -263,12 +290,15 @@ dataSources:
       entities:
         - Vault
         - UserHarvestEvent
+        - UserVaultPosition
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleVaultShareTransfer
       file: ./src/mapping.ts
 
   - kind: ethereum
@@ -277,7 +307,7 @@ dataSources:
     source:
       address: "0xB6a8129779E57845588Db74435A9aFAE509e1454"
       abi: ArcaVault
-      startBlock: 66600000
+      startBlock: 53707187
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -285,12 +315,15 @@ dataSources:
       entities:
         - Vault
         - UserHarvestEvent
+        - UserVaultPosition
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleVaultShareTransfer
       file: ./src/mapping.ts
 
   - kind: ethereum
@@ -299,7 +332,7 @@ dataSources:
     source:
       address: "0xd4083994F3ce977bcb5d3022041D489B162f5B85"
       abi: ArcaVault
-      startBlock: 66600000
+      startBlock: 53707830
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -307,12 +340,15 @@ dataSources:
       entities:
         - Vault
         - UserHarvestEvent
+        - UserVaultPosition
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleVaultShareTransfer
       file: ./src/mapping.ts
 
   - kind: ethereum
@@ -321,7 +357,7 @@ dataSources:
     source:
       address: "0xc318C24c8A8584B03019D34E586DAa14F208eF2d"
       abi: ArcaVault
-      startBlock: 66600000
+      startBlock: 65870730
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -329,12 +365,15 @@ dataSources:
       entities:
         - Vault
         - UserHarvestEvent
+        - UserVaultPosition
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleVaultShareTransfer
       file: ./src/mapping.ts
 
   - kind: ethereum
@@ -343,7 +382,7 @@ dataSources:
     source:
       address: "0x3a284cc4080F9d88aC2eE330296975C78C53B5cd"
       abi: ArcaVault
-      startBlock: 66600000
+      startBlock: 65873347
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -351,12 +390,15 @@ dataSources:
       entities:
         - Vault
         - UserHarvestEvent
+        - UserVaultPosition
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleVaultShareTransfer
       file: ./src/mapping.ts
 
   # ── Metropolis Strategies (RebalanceStart snapshot) ─────────────────────────
@@ -376,6 +418,7 @@ dataSources:
         - Vault
         - Snapshot
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: MetropolisStrategy
           file: ./abis/MetropolisStrategy.json
@@ -403,6 +446,7 @@ dataSources:
         - Vault
         - Snapshot
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: MetropolisStrategy
           file: ./abis/MetropolisStrategy.json
@@ -430,6 +474,7 @@ dataSources:
         - Vault
         - Snapshot
         - ILSnapshot
+        - VaultDayData
       abis:
         - name: MetropolisStrategy
           file: ./abis/MetropolisStrategy.json
