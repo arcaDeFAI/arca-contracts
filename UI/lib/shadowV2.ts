@@ -7,11 +7,11 @@
  */
 
 export const SHADOW_V2 = {
-  // redeployed 2026-09-30 with the security fixes (conservative deposit
-  // pricing, 12h reward streaming, weekly period sync); previous test vault
-  // 0x0B7896e746265D73f4e4744be6A8618e6E4ee8F5 is emptied
-  vault: '0x1aff5cF620Eee5eB0a8cf5329969D8e0f83d378a',
-  strategy: '0xdE62bdF3E37810c10802E3e54301B6Ca87441d08',
+  // redeployed 2026-09-30 with the one-transaction claim & compound zap;
+  // previous test vaults 0x1aff5cF6…378a and 0x0B7896e7…F5 are emptied
+  vault: '0x07431fe0Ca9F631762E8D9680c41Cf9FB6dcD8e9',
+  strategy: '0x944171A27928fB5ac17E376320D19eb8e9259EdF',
+  zap: '0xcF6843f5Ad429C1826Fd17D5Ec7d60e64F53230B',
   pool: '0x324963c267C354c7660Ce8CA3F5f167E05649970',
 } as const satisfies Record<string, `0x${string}`>;
 
@@ -55,7 +55,6 @@ export const COMPOUND = {
   shadow: '0x3333b97138D4b086720b5aE8A7844b1345a33333',
   usdc: '0x29219dd400f2Bf60E5a23d13Be72B486D4038894',
   ws: '0x039e2fB66102314Ce7b64Ce5Ce3E5183bc94aD38',
-  router: '0x5543c6176FEb9B4b179078205d7C29EEa2e2d695',
   shadowUsdcPool: '0x779cA4E7F14d10489cd32655fc513641bA3a8d8F', // token0 USDC, token1 SHADOW
   shadowUsdcSpacing: 100,
   wsUsdcPool: '0x324963c267C354c7660Ce8CA3F5f167E05649970', // token0 wS, token1 USDC
@@ -73,7 +72,7 @@ export const COMPOUND = {
  * at 2**24 (~16.78M).
  */
 export const V2_GAS = {
-  swap: 1_000_000n,
+  compound: 3_000_000n, // zap: claim + two-hop swap + deposit (774k measured on a fork)
   approve: 200_000n,
   deposit: 2_000_000n,
   withdraw: 4_000_000n,

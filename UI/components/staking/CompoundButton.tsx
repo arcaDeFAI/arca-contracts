@@ -5,58 +5,12 @@ import { useAccount, useCapabilities, useConfig, usePublicClient, useSendCalls, 
 import { waitForCallsStatus } from 'wagmi/actions';
 import { useQueryClient } from '@tanstack/react-query';
 import { encodeFunctionData, encodePacked, formatUnits, type Hex } from 'viem';
-import { SHADOW_V2_VAULT_ABI } from '@/lib/abis/shadowV2Abis';
+import { SHADOW_V2_VAULT_ABI, SHADOW_V2_ZAP_ABI } from '@/lib/abis/shadowV2Abis';
 import { COMPOUND, SHADOW_V2, V2_GAS } from '@/lib/shadowV2';
 import { useTx } from '@/hooks/useTx';
 import { Button, Notice } from '@/components/ui';
 
 const SONIC_CHAIN_ID = 146;
-
-const ERC20_APPROVE_ABI = [
-  {
-    type: 'function',
-    name: 'allowance',
-    stateMutability: 'view',
-    inputs: [
-      { name: 'owner', type: 'address' },
-      { name: 'spender', type: 'address' },
-    ],
-    outputs: [{ name: '', type: 'uint256' }],
-  },
-  {
-    type: 'function',
-    name: 'approve',
-    stateMutability: 'nonpayable',
-    inputs: [
-      { name: 'spender', type: 'address' },
-      { name: 'amount', type: 'uint256' },
-    ],
-    outputs: [{ name: '', type: 'bool' }],
-  },
-] as const;
-
-// Shadow (Ramses V3) SwapRouter: the path is token | tickSpacing (3 bytes) | token ...
-const ROUTER_ABI = [
-  {
-    type: 'function',
-    name: 'exactInput',
-    stateMutability: 'payable',
-    inputs: [
-      {
-        name: 'params',
-        type: 'tuple',
-        components: [
-          { name: 'path', type: 'bytes' },
-          { name: 'recipient', type: 'address' },
-          { name: 'deadline', type: 'uint256' },
-          { name: 'amountIn', type: 'uint256' },
-          { name: 'amountOutMinimum', type: 'uint256' },
-        ],
-      },
-    ],
-    outputs: [{ name: 'amountOut', type: 'uint256' }],
-  },
-] as const;
 
 const POOL_ABI = [
   {
@@ -85,17 +39,18 @@ interface Step {
 }
 
 /**
- * Claim & compound: claim the vault rewards, swap the SHADOW to wS on Shadow
- * (via USDC, cheaper than the direct pools), deposit the wS back into the vault.
+ * Claim & compound in ONE transaction through the vault's zap
+ * (ArcaShadowZapV2): it claims the rewards, swaps the SHADOW to wS on Shadow
+ * (via USDC, cheaper than the direct pools) and deposits the wS back for the
+ * user, all or nothing, from any wallet.
  *
- * With a wallet that supports atomic batches (EIP-5792 wallet_sendCalls,
- * e.g. a MetaMask smart account) it is ONE signature and all-or-nothing.
- * Otherwise the same steps are sent one by one with fixed gas limits (Sonic's
- * gas estimate is too low for deposits).
+ * The first time, the user also approves the zap as claim operator
+ * (vault.setClaimOperator). That approval only lets the zap claim the user's
+ * rewards into the compound; it can never move shares or deposits. Wallets
+ * that support atomic batches (EIP-5792) sign both in one go.
  *
- * The swap minimum and the deposit amount are fixed before signing from the
- * pool prices (minus both pool fees and a 2% margin), so the ~2% margin of wS
- * stays in the wallet when the swap does better than its minimum.
+ * The swap minimum and the share minimum are fixed before signing from the
+ * pool prices, minus both pool fees and a 2% margin.
  */
 export function CompoundButton({ shadowAmount }: { shadowAmount: bigint }) {
   const { address } = useAccount();
@@ -145,66 +100,37 @@ export function CompoundButton({ shadowAmount }: { shadowAmount: bigint }) {
       ['address', 'uint24', 'address', 'uint24', 'address'],
       [COMPOUND.shadow, COMPOUND.shadowUsdcSpacing, COMPOUND.usdc, COMPOUND.wsUsdcSpacing, COMPOUND.ws],
     );
+    const approved = await publicClient.readContract({
+      address: SHADOW_V2.vault,
+      abi: SHADOW_V2_VAULT_ABI,
+      functionName: 'isClaimOperator',
+      args: [address, SHADOW_V2.zap],
+    });
 
-    // Approvals the wallet already gave are skipped: fewer confirmations, and
-    // some wallets (Rabby) show misleading simulation errors on them.
-    const [shadowAllowance, wsAllowance] = await Promise.all([
-      publicClient.readContract({
-        address: COMPOUND.shadow, abi: ERC20_APPROVE_ABI, functionName: 'allowance', args: [address, COMPOUND.router],
-      }),
-      publicClient.readContract({
-        address: COMPOUND.ws, abi: ERC20_APPROVE_ABI, functionName: 'allowance', args: [address, SHADOW_V2.vault],
-      }),
-    ]);
-
-    const steps: Step[] = [
-      {
-        label: 'Claim rewards',
-        to: SHADOW_V2.vault,
-        data: encodeFunctionData({ abi: SHADOW_V2_VAULT_ABI, functionName: 'claim' }),
-        gas: V2_GAS.claim,
-      },
-      {
-        label: 'Approve SHADOW',
-        to: COMPOUND.shadow,
-        data: encodeFunctionData({ abi: ERC20_APPROVE_ABI, functionName: 'approve', args: [COMPOUND.router, shadowAmount] }),
-        gas: V2_GAS.approve,
-      },
-      {
-        label: 'Swap SHADOW → USDC → wS',
-        to: COMPOUND.router,
-        data: encodeFunctionData({
-          abi: ROUTER_ABI,
-          functionName: 'exactInput',
-          args: [{ path, recipient: address, deadline, amountIn: shadowAmount, amountOutMinimum: minWs }],
-        }),
-        gas: V2_GAS.swap,
-      },
-      {
-        label: 'Approve wS',
-        to: COMPOUND.ws,
-        data: encodeFunctionData({ abi: ERC20_APPROVE_ABI, functionName: 'approve', args: [SHADOW_V2.vault, minWs] }),
-        gas: V2_GAS.approve,
-      },
-      {
-        label: 'Deposit',
+    const steps: Step[] = [];
+    if (!approved) {
+      steps.push({
+        label: 'Allow the compound zap (once)',
         to: SHADOW_V2.vault,
         data: encodeFunctionData({
           abi: SHADOW_V2_VAULT_ABI,
-          functionName: 'deposit',
-          args: [minWs, 0n, minShares],
+          functionName: 'setClaimOperator',
+          args: [SHADOW_V2.zap, true],
         }),
-        gas: V2_GAS.deposit,
-      },
-    ];
-    return {
-      steps: steps.filter(
-        (step) =>
-          !(step.label === 'Approve SHADOW' && shadowAllowance >= shadowAmount) &&
-          !(step.label === 'Approve wS' && wsAllowance >= minWs),
-      ),
-      minWs,
-    };
+        gas: V2_GAS.approve,
+      });
+    }
+    steps.push({
+      label: 'Claim, swap to wS and deposit',
+      to: SHADOW_V2.zap,
+      data: encodeFunctionData({
+        abi: SHADOW_V2_ZAP_ABI,
+        functionName: 'compound',
+        args: [path, minWs, minShares, deadline],
+      }),
+      gas: V2_GAS.compound,
+    });
+    return { steps, minWs };
   }
 
   async function compound() {
@@ -214,7 +140,7 @@ export function CompoundButton({ shadowAmount }: { shadowAmount: bigint }) {
       const { steps, minWs } = await buildSteps();
       const wsOut = Number(formatUnits(minWs, 18)).toLocaleString('en-US', { maximumFractionDigits: 4 });
       if (canBatch) {
-        setStatus(`One signature: claim, swap and deposit ≥ ${wsOut} wS`);
+        setStatus(`One signature: allow the zap and compound ≥ ${wsOut} wS`);
         const { id } = await sendCallsAsync({
           chainId: SONIC_CHAIN_ID,
           forceAtomic: true,
@@ -247,9 +173,8 @@ export function CompoundButton({ shadowAmount }: { shadowAmount: bigint }) {
         Claim & compound into wS
       </Button>
       <p className="mt-1.5 text-xs text-arca-text-secondary">
-        {canBatch
-          ? 'One signature: claim → swap to wS → deposit, all or nothing.'
-          : 'Your wallet can’t batch: one confirmation per step (claim, swap, deposit, plus any missing approval).'}
+        One transaction: claim → swap to wS → deposit, all or nothing. The first time, your
+        wallet also asks you to allow the compound zap.
       </p>
       {status && <p className="mt-1.5 text-xs text-arca-text">{status}</p>}
       {(error || tx.error) && (

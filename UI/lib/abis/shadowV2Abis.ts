@@ -1,5 +1,5 @@
 // Generated from the arca-contracts-v2 artifacts (branch shadow-v2). Do not edit by hand.
-// Regenerate after changing ArcaShadowVaultV2 / ArcaShadowStrategyV2.
+// Regenerate after changing ArcaShadowVaultV2 / ArcaShadowStrategyV2 / ArcaShadowZapV2.
 
 export const SHADOW_V2_VAULT_ABI = [
   {
@@ -61,12 +61,22 @@ export const SHADOW_V2_VAULT_ABI = [
   },
   {
     "inputs": [],
+    "name": "ArcaVault__InvalidReceiver",
+    "type": "error"
+  },
+  {
+    "inputs": [],
     "name": "ArcaVault__InvalidStrategy",
     "type": "error"
   },
   {
     "inputs": [],
     "name": "ArcaVault__NoStrategy",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ArcaVault__NotClaimOperator",
     "type": "error"
   },
   {
@@ -139,6 +149,31 @@ export const SHADOW_V2_VAULT_ABI = [
       }
     ],
     "name": "AumFeeSet",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "bool",
+        "name": "approved",
+        "type": "bool"
+      }
+    ],
+    "name": "ClaimOperatorSet",
     "type": "event"
   },
   {
@@ -451,6 +486,30 @@ export const SHADOW_V2_VAULT_ABI = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      }
+    ],
+    "name": "claimFor",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "tokens",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint256[]",
+        "name": "amounts",
+        "type": "uint256[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "decimals",
     "outputs": [
@@ -506,6 +565,40 @@ export const SHADOW_V2_VAULT_ABI = [
       }
     ],
     "name": "deposit",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amountX",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountY",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minShares",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      }
+    ],
+    "name": "depositFor",
     "outputs": [
       {
         "internalType": "uint256",
@@ -603,6 +696,30 @@ export const SHADOW_V2_VAULT_ABI = [
       }
     ],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "isClaimOperator",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -782,6 +899,24 @@ export const SHADOW_V2_VAULT_ABI = [
       }
     ],
     "name": "setAumFee",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "approved",
+        "type": "bool"
+      }
+    ],
+    "name": "setClaimOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1921,6 +2056,164 @@ export const SHADOW_V2_STRATEGY_ABI = [
       }
     ],
     "stateMutability": "nonpayable",
+    "type": "function"
+  }
+] as const;
+
+export const SHADOW_V2_ZAP_ABI = [
+  {
+    "inputs": [
+      {
+        "internalType": "contract IArcaShadowVaultV2Zappable",
+        "name": "vault_",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IShadowSwapRouter",
+        "name": "router_",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "ArcaZap__InvalidPath",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "ArcaZap__NothingToCompound",
+    "type": "error"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "user",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "rewardToken",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "depositToken",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "amountOut",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "name": "Compounded",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "path",
+        "type": "bytes"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minAmountOut",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "minShares",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "deadline",
+        "type": "uint256"
+      }
+    ],
+    "name": "compound",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "shares",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "router",
+    "outputs": [
+      {
+        "internalType": "contract IShadowSwapRouter",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tokenX",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "tokenY",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "vault",
+    "outputs": [
+      {
+        "internalType": "contract IArcaShadowVaultV2Zappable",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   }
 ] as const;
