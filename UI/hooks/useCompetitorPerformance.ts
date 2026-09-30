@@ -25,6 +25,7 @@ const ICHI_ABI = parseAbi([
 ]);
 
 export interface CompetitorResult {
+  manager: Competitor['manager'];
   name: string;
   /** Net vs holding over the window, as a fraction (same definition as our vault's) */
   vsHold: number;
@@ -95,7 +96,7 @@ export function useCompetitorPerformance(config: VaultConfig, first?: SnapshotRa
             if (v0 <= 0) return null; // did not exist yet at the start of the window
             const share = (x1 * px1 + y1 * py1) / v0 - 1;
             const hold = (x0 * px1 + y0 * py1) / v0 - 1;
-            return { name: c.name, vsHold: share - hold };
+            return { manager: c.manager, name: c.name, vsHold: share - hold };
           } catch {
             return null; // not deployed yet at that block, or RPC without history
           }

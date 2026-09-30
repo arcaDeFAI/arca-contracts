@@ -4,38 +4,37 @@ import { Skeleton } from '@/components/ui';
 import { useCompetitorPerformance } from '@/hooks/useCompetitorPerformance';
 import { formatSignedPct, useVaultPerformance } from '@/hooks/useVaultPerformance';
 import { useVaultFees } from '@/hooks/useVaultFees';
-import { getCompetitors } from '@/lib/competitors';
+import { getCompetitors, type Competitor } from '@/lib/competitors';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { cn } from '@/lib/utils';
 
 /**
- * Vaults table cell: how far this vault is ahead of the best other vault on
- * the same pair, since it started (net vs keeping the initial tokens, rewards
+ * Vaults table cell: how far this vault is ahead of `manager`'s vault on the
+ * same pair, since it started (net vs keeping the initial tokens, rewards
  * included — the same numbers as the vault page). "—" when there is none.
  */
-export function CompetitorEdgeCell({ config }: { config: VaultConfig }) {
-  if (getCompetitors(config.vaultAddress).length === 0) return <span className="text-arca-text-tertiary">—</span>;
-  return <EdgeValue config={config} />;
+export function CompetitorEdgeCell({ config, manager }: { config: VaultConfig; manager: Competitor['manager'] }) {
+  if (!getCompetitors(config.vaultAddress).some((c) => c.manager === manager)) {
+    return <span className="text-arca-text-tertiary">—</span>;
+  }
+  return <EdgeValue config={config} manager={manager} />;
 }
 
-function EdgeValue({ config }: { config: VaultConfig }) {
+function EdgeValue({ config, manager }: { config: VaultConfig; manager: Competitor['manager'] }) {
   const { aumFeePct } = useVaultFees(config);
   const { windows, bounds, isLoading } = useVaultPerformance(config, aumFeePct);
   const others = useCompetitorPerformance(config, bounds.all.first, bounds.all.last);
   const ours = windows.all;
+  const other = others.data?.find((o) => o.manager === manager);
 
   if (isLoading || others.isLoading) return <Skeleton className="ml-auto h-4 w-12" />;
-  if (!ours || !others.data || others.data.length === 0) return <span className="text-arca-text-tertiary">—</span>;
+  if (!ours || !other) return <span className="text-arca-text-tertiary">—</span>;
 
-  const best = Math.max(...others.data.map((o) => o.vsHold));
-  const lead = (ours.vsHold - best) * 100;
-  const detail = [`Arca ${formatSignedPct(ours.vsHold)}`, ...others.data.map((o) => `${o.name} ${formatSignedPct(o.vsHold)}`)].join(
-    ' · ',
-  );
+  const lead = (ours.vsHold - other.vsHold) * 100;
   return (
     <span
       className={cn('cursor-help tabular-nums', lead >= 0 ? 'text-arca-green' : 'text-red-400')}
-      title={`Since start, vs keeping the initial tokens: ${detail}`}
+      title={`Since start, vs keeping the initial tokens: Arca ${formatSignedPct(ours.vsHold)}, ${other.name} ${formatSignedPct(other.vsHold)}`}
     >
       {lead >= 0 ? '+' : '−'}
       {Math.abs(lead).toFixed(1)} pts
