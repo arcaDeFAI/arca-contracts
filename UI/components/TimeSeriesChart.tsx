@@ -9,6 +9,14 @@ export interface SeriesPoint {
   value: number | null;
   /** Optional benchmark on the same scale (drawn as a grey line) */
   compare?: number | null;
+  /** Optional extra reference lines, in the order of the chart's `lines` prop */
+  lines?: (number | null)[];
+}
+
+/** An extra dashed reference line (e.g. one token's price). */
+export interface ExtraLine {
+  name: string;
+  color: string;
 }
 
 export const SERIES_COLOR = '#00ff88'; // arca-green — the vault's own series
@@ -30,6 +38,7 @@ export function TimeSeriesChart({
   format,
   axisFormat = format,
   step = false,
+  lines = [],
 }: {
   points: SeriesPoint[];
   name: string;
@@ -37,6 +46,7 @@ export function TimeSeriesChart({
   format: (v: number | null) => string;
   axisFormat?: (v: number) => string;
   step?: boolean;
+  lines?: ExtraLine[];
 }) {
   const fillId = `fill-${useId().replace(/:/g, '')}`;
   return (
@@ -67,9 +77,24 @@ export function TimeSeriesChart({
             tickLine={false}
           />
           <Tooltip
-            content={<PointTooltip name={name} compareName={compareName} format={format} />}
+            content={<PointTooltip name={name} compareName={compareName} format={format} lines={lines} />}
             cursor={{ stroke: 'rgba(255,255,255,0.25)', strokeWidth: 1 }}
           />
+          {lines.map((line, i) => (
+            <Area
+              key={line.name}
+              type="monotone"
+              dataKey={(p: SeriesPoint) => p.lines?.[i] ?? null}
+              name={line.name}
+              stroke={line.color}
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+              fill="none"
+              connectNulls
+              isAnimationActive={false}
+              activeDot={false}
+            />
+          ))}
           {compareName && (
             <Area
               type="monotone"
@@ -102,6 +127,9 @@ export function TimeSeriesChart({
             <th>Date</th>
             <th>{name}</th>
             {compareName && <th>{compareName}</th>}
+            {lines.map((l) => (
+              <th key={l.name}>{l.name}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -110,6 +138,9 @@ export function TimeSeriesChart({
               <td>{dateLabel(p.date)}</td>
               <td>{format(p.value)}</td>
               {compareName && <td>{format(p.compare ?? null)}</td>}
+              {lines.map((l, i) => (
+                <td key={l.name}>{format(p.lines?.[i] ?? null)}</td>
+              ))}
             </tr>
           ))}
         </tbody>
@@ -124,7 +155,13 @@ function PointTooltip({
   name,
   compareName,
   format,
-}: TooltipProps<number, string> & { name: string; compareName?: string; format: (v: number | null) => string }) {
+  lines,
+}: TooltipProps<number, string> & {
+  name: string;
+  compareName?: string;
+  format: (v: number | null) => string;
+  lines: ExtraLine[];
+}) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload as SeriesPoint;
   return (
@@ -132,6 +169,9 @@ function PointTooltip({
       <div className="mb-1 text-arca-text-secondary">{dateLabel(point.date)}</div>
       <TooltipLine color={SERIES_COLOR} value={format(point.value)} label={name} />
       {compareName && <TooltipLine color={COMPARE_COLOR} value={format(point.compare ?? null)} label={compareName} />}
+      {lines.map((l, i) => (
+        <TooltipLine key={l.name} color={l.color} value={format(point.lines?.[i] ?? null)} label={l.name} />
+      ))}
     </div>
   );
 }

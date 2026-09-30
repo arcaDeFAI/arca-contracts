@@ -3,6 +3,7 @@
 import { useAccount } from 'wagmi';
 import { PageShell } from '@/components/PageShell';
 import { VaultList } from '@/components/vaults/VaultList';
+import { CompetitorEdge } from '@/components/vaults/CompetitorEdge';
 import { Skeleton } from '@/components/ui';
 import { useVaultsOverview } from '@/hooks/useVaultsOverview';
 import { isVaultListed } from '@/lib/vaultConfigs';
@@ -46,6 +47,8 @@ function VaultsContent() {
           {isConnected && <HeaderStat label="Your deposits" value={isLoading ? null : formatUSDCompact(userTotal)} />}
         </div>
       </div>
+
+      <CompetitorEdge />
 
       <VaultList vaults={listed} isLoading={isLoading} aprLoading={aprLoading} isConnected={isConnected} />
     </>

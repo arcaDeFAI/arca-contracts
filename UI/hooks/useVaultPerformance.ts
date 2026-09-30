@@ -7,12 +7,13 @@ import { type VaultConfig } from '@/lib/vaultConfigs';
 
 const DAY = 86_400;
 
-interface SnapshotRaw {
+export interface SnapshotRaw {
   amountXPerShare: string;
   amountYPerShare: string;
   priceXUsd: string;
   priceYUsd: string;
   timestamp: string;
+  blockNumber: string;
 }
 interface DayRaw {
   date: number;
@@ -34,7 +35,7 @@ export interface PerformanceWindow {
 
 export type WindowKey = '30d' | 'all';
 
-const snapshotFields = 'amountXPerShare amountYPerShare priceXUsd priceYUsd timestamp';
+const snapshotFields = 'amountXPerShare amountYPerShare priceXUsd priceYUsd timestamp blockNumber';
 const priced = 'priceXUsd_not: null, priceYUsd_not: null, amountXPerShare_gt: "0"';
 
 /**
@@ -108,6 +109,11 @@ export function useVaultPerformance(config: VaultConfig, aumFeePct: number | nul
       '30d': compute(data?.first30[0]),
       all: compute(data?.firstAll[0]),
     } satisfies Record<WindowKey, PerformanceWindow | null>,
+    /** Start and end rebalance snapshot of each window (for comparing other vaults on the same moments) */
+    bounds: {
+      '30d': { first: data?.first30[0], last: data?.last[0] },
+      all: { first: data?.firstAll[0], last: data?.last[0] },
+    } satisfies Record<WindowKey, { first?: SnapshotRaw; last?: SnapshotRaw }>,
   };
 }
 

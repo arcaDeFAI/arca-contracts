@@ -8,7 +8,8 @@ import { getTokenDecimals } from '@/lib/tokenHelpers';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { cn, formatApr, formatUSD, formatUSDCompact } from '@/lib/utils';
 import { Card, Segmented, Skeleton } from '@/components/ui';
-import { COMPARE_COLOR, SERIES_COLOR, TimeSeriesChart, type SeriesPoint } from '@/components/TimeSeriesChart';
+import { COMPARE_COLOR, SERIES_COLOR, TimeSeriesChart, type ExtraLine, type SeriesPoint } from '@/components/TimeSeriesChart';
+import { isStablecoin } from '@/lib/tokenUtils';
 
 type Metric = 'apr' | 'tvl' | 'hold';
 type Range = '7' | '30' | '90' | 'all';
@@ -31,6 +32,8 @@ export function sliceRange<T>(points: T[], range: Range): T[] {
 }
 
 const START = 100;
+/** Dashed "$100 in one token" lines; stablecoins are left out (flat at $100). */
+const TOKEN_COLORS = ['#60a5fa', '#f59e0b'];
 
 /** Token amounts one share held at the first priced rebalance on/after `date` (the "holding" basket). */
 function useStartBasket(config: VaultConfig, date: number | null) {
@@ -57,7 +60,11 @@ function useStartBasket(config: VaultConfig, date: number | null) {
  * Growth of $100 from the first day of the range: the vault (share value + rewards collected,
  * rewards valued the day they were paid) vs holding the tokens one share held on that day.
  */
-function buildHoldSeries(visible: HistoryPoint[], basket: { x: number; y: number } | null): SeriesPoint[] {
+function buildHoldSeries(
+  visible: HistoryPoint[],
+  basket: { x: number; y: number } | null,
+  tokens: { x: boolean; y: boolean },
+): SeriesPoint[] {
   const start = visible.findIndex((p) => p.ppsUsd !== null && p.priceXUsd !== null && p.priceYUsd !== null);
   if (start < 0 || !basket) return [];
   const p0 = visible[start];
@@ -69,7 +76,10 @@ function buildHoldSeries(visible: HistoryPoint[], basket: { x: number; y: number
     if (i > 0 && p.tvlUsd) rewards += p.rewardsUsd / p.tvlUsd;
     const hold = p.priceXUsd !== null && p.priceYUsd !== null ? (basket.x * p.priceXUsd + basket.y * p.priceYUsd) / basket0 : null;
     const vault = p.ppsUsd !== null ? p.ppsUsd / p0.ppsUsd! + rewards : null;
-    return { date: p.date, value: vault === null ? null : START * vault, compare: hold === null ? null : START * hold };
+    const lines: (number | null)[] = [];
+    if (tokens.x) lines.push(p.priceXUsd !== null ? (START * p.priceXUsd) / p0.priceXUsd! : null);
+    if (tokens.y) lines.push(p.priceYUsd !== null ? (START * p.priceYUsd) / p0.priceYUsd! : null);
+    return { date: p.date, value: vault === null ? null : START * vault, compare: hold === null ? null : START * hold, lines };
   });
 }
 
@@ -81,11 +91,18 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
   const visible = useMemo(() => sliceRange(points, range), [points, range]);
   const startDate = metric === 'hold' ? (visible.find((p) => p.ppsUsd !== null)?.date ?? null) : null;
   const basket = useStartBasket(config, startDate);
+  const tokenLines = useMemo(() => {
+    const shown = { x: !isStablecoin(config.tokenX), y: !isStablecoin(config.tokenY) };
+    const lines: ExtraLine[] = [];
+    if (shown.x) lines.push({ name: `$100 in ${config.tokenX}`, color: TOKEN_COLORS[0] });
+    if (shown.y) lines.push({ name: `$100 in ${config.tokenY}`, color: TOKEN_COLORS[1] });
+    return { shown, lines };
+  }, [config.tokenX, config.tokenY]);
 
   const series = useMemo<SeriesPoint[]>(() => {
-    if (metric === 'hold') return buildHoldSeries(visible, basket);
+    if (metric === 'hold') return buildHoldSeries(visible, basket, tokenLines.shown);
     return visible.map((p) => ({ date: p.date, value: metric === 'apr' ? p.apr : p.tvlUsd }));
-  }, [visible, metric, basket]);
+  }, [visible, metric, basket, tokenLines]);
 
   const rangeLabel = RANGE_OPTIONS.find((o) => o.value === range)?.label ?? '';
   const last = series.at(-1);
@@ -124,9 +141,12 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
       </div>
 
       {status === 'ready' && metric === 'hold' && (
-        <div className="-mt-2 mb-3 flex gap-4 text-xs text-arca-text-secondary">
+        <div className="-mt-2 mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-arca-text-secondary">
           <LegendItem color={SERIES_COLOR} label="This vault, rewards included" />
           <LegendItem color={COMPARE_COLOR} label="Holding the same tokens" />
+          {tokenLines.lines.map((l) => (
+            <LegendItem key={l.name} color={l.color} label={l.name} dashed />
+          ))}
         </div>
       )}
 
@@ -154,6 +174,7 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
               points={series}
               name="vault"
               compareName="holding"
+              lines={tokenLines.lines}
               format={(v) => (v === null ? '—' : formatUSD(v))}
               axisFormat={(v) => `$${Math.round(v)}`}
             />
@@ -163,7 +184,7 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
       {status === 'ready' && (
         <p className="mt-3 text-xs text-arca-text-tertiary">
           {metric === 'hold'
-            ? 'Growth of $100 from the start of the period: share value plus rewards collected (valued the day they were paid), vs keeping the tokens instead.'
+            ? 'Growth of $100 from the start of the period: share value plus rewards collected (valued the day they were paid), vs keeping the tokens instead. Dashed lines: $100 kept in a single token.'
             : metric === 'apr'
               ? 'Each point is the APR over the previous 7 days, which smooths out day-to-day swings in rewards.'
               : 'Total value in the vault.'}
@@ -182,10 +203,13 @@ function Headline({ label, value }: { label: string; value: string }) {
   );
 }
 
-function LegendItem({ color, label }: { color: string; label: string }) {
+function LegendItem({ color, label, dashed = false }: { color: string; label: string; dashed?: boolean }) {
   return (
     <span className="flex items-center gap-1.5">
-      <span className="h-0.5 w-4 rounded" style={{ background: color }} />
+      <span
+        className="h-0.5 w-4 rounded"
+        style={dashed ? { background: `repeating-linear-gradient(90deg, ${color} 0 4px, transparent 4px 7px)` } : { background: color }}
+      />
       {label}
     </span>
   );

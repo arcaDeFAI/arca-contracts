@@ -5,6 +5,7 @@ import { type VaultConfig } from '@/lib/vaultConfigs';
 import { cn } from '@/lib/utils';
 import { formatSignedPct, useVaultPerformance, type WindowKey } from '@/hooks/useVaultPerformance';
 import { useVaultFees } from '@/hooks/useVaultFees';
+import { useCompetitorPerformance } from '@/hooks/useCompetitorPerformance';
 import { Card, Segmented, Skeleton } from '@/components/ui';
 
 const WINDOW_OPTIONS = [
@@ -15,9 +16,10 @@ const WINDOW_OPTIONS = [
 /** Public "did the vault beat just holding the tokens?" block. */
 export function PerformanceCard({ config }: { config: VaultConfig }) {
   const { aumFeePct } = useVaultFees(config);
-  const { windows, isLoading } = useVaultPerformance(config, aumFeePct);
+  const { windows, bounds, isLoading } = useVaultPerformance(config, aumFeePct);
   const [key, setKey] = useState<WindowKey>('30d');
   const w = windows[key];
+  const others = useCompetitorPerformance(config, bounds[key].first, bounds[key].last);
 
   return (
     <Card className="p-5">
@@ -44,6 +46,20 @@ export function PerformanceCard({ config }: { config: VaultConfig }) {
               />
             </div>
           </dl>
+          {others.data && others.data.length > 0 && (
+            <div className="mt-4 border-t border-white/[0.06] pt-3">
+              <div className="mb-2 text-xs text-arca-text-secondary">Other vaults on this pair, same period, vs holding</div>
+              <dl className="space-y-1.5 text-sm">
+                <Line label="This vault" value={formatSignedPct(w.vsHold)} tone={w.vsHold >= 0 ? 'good' : 'bad'} />
+                {others.data.map((o) => (
+                  <Line key={o.name} label={o.name} value={formatSignedPct(o.vsHold)} muted />
+                ))}
+              </dl>
+              <p className="mt-2 text-xs text-arca-text-tertiary">
+                Read on-chain at the same moments and valued at the same prices, their compounded rewards included.
+              </p>
+            </div>
+          )}
           <p className="mt-3 text-xs leading-relaxed text-arca-text-tertiary">
             Over {Math.round(w.days)} days, for $1 in the vault. The vault earns rewards (no trading fees); its share
             value also moves with prices, rebalancing and the AUM fee. Past results don&apos;t guarantee future ones.
