@@ -71,7 +71,7 @@ export function VaultList({ vaults, isLoading, aprLoading, isConnected }: VaultL
             <span
               key={m}
               className="cursor-help text-right underline decoration-dotted underline-offset-2"
-              title={`Points ahead of ${m}'s vault on the same pair, since this vault started: net result vs keeping the initial tokens, rewards included. Hover a value for both results.`}
+              title={`How much better than ${m}'s vault on the same pair, since this vault started: net result vs keeping the initial tokens, rewards included. Hover a value for both results.`}
             >
               vs {m}
             </span>

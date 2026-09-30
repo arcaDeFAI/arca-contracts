@@ -37,7 +37,7 @@ function EdgeValue({ config, manager }: { config: VaultConfig; manager: Competit
       title={`Since start, vs keeping the initial tokens: Arca ${formatSignedPct(ours.vsHold)}, ${other.name} ${formatSignedPct(other.vsHold)}`}
     >
       {lead >= 0 ? '+' : '−'}
-      {Math.abs(lead).toFixed(1)} pts
+      {Math.abs(lead).toFixed(1)}%
     </span>
   );
 }
