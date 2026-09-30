@@ -9,6 +9,7 @@ import { getPairName, PLATFORMS } from '@/lib/vaultConfigs';
 import { getTokenLogo } from '@/lib/tokenHelpers';
 import { cn, formatApr, formatUSDCompact } from '@/lib/utils';
 import { Card, PairIcons, Segmented, Skeleton, Sparkline } from '@/components/ui';
+import { CompetitorEdgeCell } from '@/components/vaults/CompetitorEdge';
 
 type SortKey = 'apr' | 'tvl' | 'deposit';
 type PlatformFilter = 'all' | 'shadow' | 'metropolis';
@@ -20,8 +21,8 @@ const PLATFORM_OPTIONS = [
 ] as const;
 
 const TREND_DAYS = 7;
-// Vault | APR | 7D trend | AUM fee | TVL | Your deposit | action
-const COLS = 'md:grid-cols-[minmax(0,1fr)_76px_92px_68px_88px_104px_84px]';
+// Vault | APR | 7D trend | vs others | AUM fee | TVL | Your deposit | action
+const COLS = 'md:grid-cols-[minmax(0,1fr)_76px_92px_84px_68px_88px_104px_84px]';
 
 interface VaultListProps {
   vaults: VaultOverview[];
@@ -66,6 +67,12 @@ export function VaultList({ vaults, isLoading, aprLoading, isConnected }: VaultL
           <span>Vault</span>
           <SortHeader label="APR" active={sort === 'apr'} onClick={() => setSort('apr')} />
           <span className="text-right">7D trend</span>
+          <span
+            className="cursor-help text-right underline decoration-dotted underline-offset-2"
+            title="Lead over the best other vault on the same pair (Beefy, ICHI), since this vault started: net result vs keeping the initial tokens, rewards included. Hover a value for the detail."
+          >
+            vs others
+          </span>
           <span
             className="cursor-help text-right underline decoration-dotted underline-offset-2"
             title="AUM fee: a yearly % of your whole deposit (not of profits), taken in small amounts at each rebalance. E.g. 10% on $1,000 ≈ $0.27 per day."
@@ -147,6 +154,9 @@ function VaultRow({
 
         <span className="hidden justify-end md:flex">
           <Sparkline values={trend} label={`${pair} APR over the last ${TREND_DAYS} days`} />
+        </span>
+        <span className="hidden text-right md:block">
+          <CompetitorEdgeCell config={config} />
         </span>
         <span className="hidden text-right tabular-nums text-arca-text-secondary md:block">
           {vault.aumFeePct === null ? '—' : `${vault.aumFeePct}%`}

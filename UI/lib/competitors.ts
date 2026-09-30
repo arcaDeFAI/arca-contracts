@@ -28,8 +28,3 @@ const COMPETITORS: Record<string, Competitor[]> = {
 export function getCompetitors(vaultAddress: string): Competitor[] {
   return COMPETITORS[vaultAddress.toLowerCase()] ?? [];
 }
-
-/** Our vaults that have at least one competitor to compare with. */
-export function vaultsWithCompetitors(): string[] {
-  return Object.keys(COMPETITORS);
-}

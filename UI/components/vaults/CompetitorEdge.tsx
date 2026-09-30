@@ -1,79 +1,44 @@
 'use client';
 
-import Link from 'next/link';
-import { Card, Skeleton } from '@/components/ui';
+import { Skeleton } from '@/components/ui';
 import { useCompetitorPerformance } from '@/hooks/useCompetitorPerformance';
 import { formatSignedPct, useVaultPerformance } from '@/hooks/useVaultPerformance';
 import { useVaultFees } from '@/hooks/useVaultFees';
-import { vaultsWithCompetitors } from '@/lib/competitors';
-import { getVaultByAddress, type VaultConfig } from '@/lib/vaultConfigs';
+import { getCompetitors } from '@/lib/competitors';
+import { type VaultConfig } from '@/lib/vaultConfigs';
 import { cn } from '@/lib/utils';
 
 /**
- * Vaults list: "us vs other vault managers on the same pairs", net vs
- * holding since our vault started (same numbers as each vault's page).
+ * Vaults table cell: how far this vault is ahead of the best other vault on
+ * the same pair, since it started (net vs keeping the initial tokens, rewards
+ * included — the same numbers as the vault page). "—" when there is none.
  */
-export function CompetitorEdge() {
-  const configs = vaultsWithCompetitors()
-    .map((a) => getVaultByAddress(a))
-    .filter((c): c is VaultConfig => c !== undefined);
-  if (configs.length === 0) return null;
-
-  return (
-    <Card className="mb-6 p-5">
-      <div className="mb-3">
-        <h2 className="font-semibold text-arca-text">Compared with other vaults on the same pairs</h2>
-        <p className="text-xs text-arca-text-secondary">
-          Net result vs just keeping your initial tokens, since each Arca vault started. Rewards included.
-        </p>
-      </div>
-      <div className="divide-y divide-white/[0.06]">
-        {configs.map((c) => (
-          <EdgeRow key={c.vaultAddress} config={c} />
-        ))}
-      </div>
-    </Card>
-  );
+export function CompetitorEdgeCell({ config }: { config: VaultConfig }) {
+  if (getCompetitors(config.vaultAddress).length === 0) return <span className="text-arca-text-tertiary">—</span>;
+  return <EdgeValue config={config} />;
 }
 
-function EdgeRow({ config }: { config: VaultConfig }) {
+function EdgeValue({ config }: { config: VaultConfig }) {
   const { aumFeePct } = useVaultFees(config);
   const { windows, bounds, isLoading } = useVaultPerformance(config, aumFeePct);
   const others = useCompetitorPerformance(config, bounds.all.first, bounds.all.last);
   const ours = windows.all;
 
-  return (
-    <Link
-      href={`/vaults/${config.vaultAddress}`}
-      className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-2.5 text-sm hover:opacity-80"
-    >
-      <span className="font-medium text-arca-text">{config.name}</span>
-      {isLoading || others.isLoading || !ours ? (
-        <Skeleton className="h-4 w-64" />
-      ) : (
-        <span className="flex flex-wrap gap-x-5 tabular-nums">
-          <Value label="Arca" value={ours.vsHold} strong />
-          {(others.data ?? []).map((o) => (
-            <Value key={o.name} label={o.name.replace(/ \(.*\)$/, '')} value={o.vsHold} />
-          ))}
-        </span>
-      )}
-    </Link>
-  );
-}
+  if (isLoading || others.isLoading) return <Skeleton className="ml-auto h-4 w-12" />;
+  if (!ours || !others.data || others.data.length === 0) return <span className="text-arca-text-tertiary">—</span>;
 
-function Value({ label, value, strong = false }: { label: string; value: number; strong?: boolean }) {
+  const best = Math.max(...others.data.map((o) => o.vsHold));
+  const lead = (ours.vsHold - best) * 100;
+  const detail = [`Arca ${formatSignedPct(ours.vsHold)}`, ...others.data.map((o) => `${o.name} ${formatSignedPct(o.vsHold)}`)].join(
+    ' · ',
+  );
   return (
-    <span>
-      <span className="mr-1.5 text-arca-text-secondary">{label}</span>
-      <span
-        className={cn(
-          strong ? 'font-semibold' : 'font-medium',
-          strong ? (value >= 0 ? 'text-arca-green' : 'text-red-400') : 'text-arca-text-secondary',
-        )}
-      >
-        {formatSignedPct(value)}
-      </span>
+    <span
+      className={cn('cursor-help tabular-nums', lead >= 0 ? 'text-arca-green' : 'text-red-400')}
+      title={`Since start, vs keeping the initial tokens: ${detail}`}
+    >
+      {lead >= 0 ? '+' : '−'}
+      {Math.abs(lead).toFixed(1)} pts
     </span>
   );
 }
