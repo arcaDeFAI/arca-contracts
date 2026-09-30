@@ -537,6 +537,12 @@ export function handleHarvested(event: Harvested): void {
   harvestEvent.user = event.params.user
   harvestEvent.token = event.params.token
   harvestEvent.amount = event.params.amount
+  // Priced at claim time, so past claims keep the value the user actually received
+  let price = rewardTokenPriceUsd(event.params.token)
+  if (price.gt(BD_ZERO)) {
+    let decimals = tokenDecimals(event.params.token.toHexString().toLowerCase())
+    harvestEvent.amountUsd = event.params.amount.toBigDecimal().div(pow10(decimals)).times(price)
+  }
   harvestEvent.timestamp = event.block.timestamp
   harvestEvent.blockNumber = event.block.number
   harvestEvent.txHash = event.transaction.hash

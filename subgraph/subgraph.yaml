@@ -219,6 +219,8 @@ dataSources:
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
@@ -244,6 +246,8 @@ dataSources:
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
@@ -269,6 +273,8 @@ dataSources:
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
@@ -294,6 +300,8 @@ dataSources:
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
@@ -319,6 +327,8 @@ dataSources:
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
@@ -344,6 +354,8 @@ dataSources:
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
@@ -369,6 +381,8 @@ dataSources:
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
@@ -394,6 +408,8 @@ dataSources:
       abis:
         - name: ArcaVault
           file: ./abis/ArcaVault.json
+        - name: PriceERC20
+          file: ./abis/PriceERC20.json
       eventHandlers:
         - event: Harvested(indexed address,indexed address,uint256)
           handler: handleHarvested
