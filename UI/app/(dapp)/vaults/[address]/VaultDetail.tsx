@@ -82,9 +82,18 @@ function VaultDetail({ config }: { config: VaultConfig }) {
                 price on the day it was paid. We divide that by the vault&apos;s average size over those 30 days and
                 scale it to a year. It is based on real payouts, so it moves as rewards and deposits change.
               </AboutRow>
-              <AboutRow title="Fee">
-                {aumFeePct === null ? '…' : `${aumFeePct}% per year`} management (AUM) fee on the vault&apos;s assets,
-                taken in small amounts at each rebalance. It is not subtracted from the APR shown.
+              <AboutRow title={`AUM fee${aumFeePct === null ? '' : ` · ${aumFeePct}% per year`}`}>
+                An AUM (assets under management) fee is charged on your <em>whole deposit</em>, not only on profits,
+                so it applies whether the vault earns or not. It&apos;s taken in small amounts at each rebalance
+                (at most one day&apos;s worth per rebalance).
+                {aumFeePct !== null && aumFeePct > 0 && (
+                  <>
+                    {' '}For example, at {aumFeePct}% a $1,000 deposit pays about{' '}
+                    {formatUSD((1000 * aumFeePct) / 100 / 365)} per day, or {formatUSD((1000 * aumFeePct) / 100)} per
+                    year.
+                  </>
+                )}{' '}
+                The APR shown is before this fee; your net yield is roughly APR minus the fee.
               </AboutRow>
             </dl>
           </Card>

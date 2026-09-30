@@ -1,13 +1,14 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRightIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
+import { ChevronUpDownIcon } from '@heroicons/react/20/solid';
 import { type VaultOverview } from '@/hooks/useVaultsOverview';
+import { useAllVaultHistories } from '@/hooks/useVaultHistory';
 import { getPairName, PLATFORMS } from '@/lib/vaultConfigs';
 import { getTokenLogo } from '@/lib/tokenHelpers';
 import { cn, formatApr, formatUSDCompact } from '@/lib/utils';
-import { Card, PairIcons, Segmented, Skeleton } from '@/components/ui';
+import { Card, PairIcons, Segmented, Skeleton, Sparkline } from '@/components/ui';
 
 type SortKey = 'apr' | 'tvl' | 'deposit';
 type PlatformFilter = 'all' | 'shadow' | 'metropolis';
@@ -17,6 +18,10 @@ const PLATFORM_OPTIONS = [
   { value: 'shadow', label: 'Shadow' },
   { value: 'metropolis', label: 'Metropolis' },
 ] as const;
+
+const TREND_DAYS = 7;
+// Vault | APR | 7D trend | AUM fee | TVL | Your deposit | action
+const COLS = 'md:grid-cols-[minmax(0,1fr)_76px_92px_68px_88px_104px_84px]';
 
 interface VaultListProps {
   vaults: VaultOverview[];
@@ -29,6 +34,7 @@ export function VaultList({ vaults, isLoading, aprLoading, isConnected }: VaultL
   const [platform, setPlatform] = useState<PlatformFilter>('all');
   const [onlyMine, setOnlyMine] = useState(false);
   const [sort, setSort] = useState<SortKey>('apr');
+  const { histories } = useAllVaultHistories();
 
   const rows = useMemo(() => {
     const filtered = vaults.filter(
@@ -40,15 +46,15 @@ export function VaultList({ vaults, isLoading, aprLoading, isConnected }: VaultL
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <Segmented options={PLATFORM_OPTIONS} value={platform} onChange={setPlatform} />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <Segmented options={PLATFORM_OPTIONS} value={platform} onChange={setPlatform} size="sm" />
         {isConnected && (
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-arca-text-secondary">
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-arca-text-secondary">
             <input
               type="checkbox"
               checked={onlyMine}
               onChange={(e) => setOnlyMine(e.target.checked)}
-              className="h-4 w-4 accent-[#00ff88]"
+              className="h-3.5 w-3.5 accent-[#00ff88]"
             />
             My vaults
           </label>
@@ -56,24 +62,40 @@ export function VaultList({ vaults, isLoading, aprLoading, isConnected }: VaultL
       </div>
 
       <Card className="overflow-hidden">
-        {/* Column headers (desktop) */}
-        <div className="hidden grid-cols-[1fr_120px_120px_140px_24px] gap-4 border-b border-white/[0.06] px-5 py-3 text-xs text-arca-text-secondary md:grid">
+        <div className={cn('hidden gap-4 border-b border-white/[0.06] px-4 py-2 text-[11px] text-arca-text-secondary md:grid', COLS)}>
           <span>Vault</span>
           <SortHeader label="APR" active={sort === 'apr'} onClick={() => setSort('apr')} />
+          <span className="text-right">7D trend</span>
+          <span
+            className="cursor-help text-right underline decoration-dotted underline-offset-2"
+            title="AUM fee: a yearly % of your whole deposit (not of profits), taken in small amounts at each rebalance. E.g. 10% on $1,000 ≈ $0.27 per day."
+          >
+            AUM fee
+          </span>
           <SortHeader label="TVL" active={sort === 'tvl'} onClick={() => setSort('tvl')} />
           <SortHeader label="Your deposit" active={sort === 'deposit'} onClick={() => setSort('deposit')} />
           <span />
         </div>
 
         {rows.length === 0 && (
-          <div className="px-5 py-12 text-center text-sm text-arca-text-secondary">
+          <div className="px-4 py-10 text-center text-sm text-arca-text-secondary">
             {onlyMine ? "You don't have a deposit in any vault yet." : 'No vaults match this filter.'}
           </div>
         )}
 
-        {rows.map((v) => (
-          <VaultRow key={v.config.vaultAddress} vault={v} isLoading={isLoading} aprLoading={aprLoading} isConnected={isConnected} />
-        ))}
+        {rows.map((v) => {
+          const trend = (histories?.get(v.config.vaultAddress.toLowerCase()) ?? []).slice(-TREND_DAYS).map((p) => p.apr);
+          return (
+            <VaultRow
+              key={v.config.vaultAddress}
+              vault={v}
+              trend={trend}
+              isLoading={isLoading}
+              aprLoading={aprLoading}
+              isConnected={isConnected}
+            />
+          );
+        })}
       </Card>
     </div>
   );
@@ -83,83 +105,110 @@ function SortHeader({ label, active, onClick }: { label: string; active: boolean
   return (
     <button
       onClick={onClick}
-      className={cn('flex items-center justify-end gap-0.5 text-right', active ? 'text-arca-text' : 'hover:text-arca-text')}
+      className={cn('flex items-center justify-end gap-0.5', active ? 'text-arca-text' : 'hover:text-arca-text')}
     >
       {label}
-      <ChevronUpDownIcon className="h-4 w-4 opacity-60" />
+      <ChevronUpDownIcon className="h-3.5 w-3.5 opacity-60" />
     </button>
   );
 }
 
 function VaultRow({
   vault,
+  trend,
   isLoading,
   aprLoading,
   isConnected,
 }: {
   vault: VaultOverview;
+  trend: Array<number | null>;
   isLoading: boolean;
   aprLoading: boolean;
   isConnected: boolean;
 }) {
   const { config, apr, tvlUsd, userUsd } = vault;
+  const held = isConnected && userUsd > 0.01;
+  const pair = getPairName(config);
 
-  const aprCell = aprLoading ? <Skeleton className="ml-auto h-5 w-14" /> : formatApr(apr);
-  const tvlCell = isLoading ? <Skeleton className="ml-auto h-5 w-16" /> : formatUSDCompact(tvlUsd);
-  const depositCell = !isConnected ? '—' : isLoading ? <Skeleton className="ml-auto h-5 w-14" /> : userUsd > 0.01 ? formatUSDCompact(userUsd) : '—';
+  const aprCell = aprLoading ? <Skeleton className="ml-auto h-4 w-12" /> : formatApr(apr);
+  const tvlCell = isLoading ? <Skeleton className="ml-auto h-4 w-14" /> : formatUSDCompact(tvlUsd);
+  const depositCell = !isConnected ? '—' : isLoading ? <Skeleton className="ml-auto h-4 w-12" /> : held ? formatUSDCompact(userUsd) : '—';
 
   return (
+    // The whole row opens the vault page; "Deposit" is a visual cue inside the same link
     <Link
       href={`/vaults/${config.vaultAddress}`}
-      className="group block border-b border-white/[0.04] px-5 py-4 transition-colors last:border-b-0 hover:bg-white/[0.02]"
+      className="group block border-b border-white/[0.04] px-4 py-2.5 transition-colors last:border-b-0 hover:bg-white/[0.025]"
     >
-      {/* Desktop */}
-      <div className="hidden grid-cols-[1fr_120px_120px_140px_24px] items-center gap-4 md:grid">
-        <VaultIdentity vault={vault} />
-        <span className="text-right text-base font-semibold tabular-nums text-arca-green">{aprCell}</span>
-        <span className="text-right tabular-nums text-arca-text">{tvlCell}</span>
-        <span className="text-right tabular-nums text-arca-text">{depositCell}</span>
-        <ChevronRightIcon className="h-5 w-5 text-arca-text-tertiary transition-transform group-hover:translate-x-0.5" />
-      </div>
+      <div className={cn('grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 text-sm', COLS)}>
+        <VaultIdentity vault={vault} held={held} />
 
-      {/* Mobile */}
-      <div className="md:hidden">
-        <div className="mb-3 flex items-center justify-between">
-          <VaultIdentity vault={vault} />
-          <ChevronRightIcon className="h-5 w-5 text-arca-text-tertiary" />
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <MobileCell label="APR" value={aprCell} accent />
-          <MobileCell label="TVL" value={tvlCell} />
-          <MobileCell label="Deposit" value={depositCell} />
-        </div>
+        <span className="text-right font-semibold tabular-nums text-arca-green">{aprCell}</span>
+
+        <span className="hidden justify-end md:flex">
+          <Sparkline values={trend} label={`${pair} APR over the last ${TREND_DAYS} days`} />
+        </span>
+        <span className="hidden text-right tabular-nums text-arca-text-secondary md:block">
+          {vault.aumFeePct === null ? '—' : `${vault.aumFeePct}%`}
+        </span>
+        <span className="hidden text-right tabular-nums text-arca-text md:block">{tvlCell}</span>
+        <span className="hidden text-right tabular-nums text-arca-text md:block">{depositCell}</span>
+        <span className="hidden justify-end md:flex">
+          <span className="rounded-lg bg-white/[0.06] px-3 py-1 text-xs font-medium text-arca-text transition-colors group-hover:bg-arca-green group-hover:text-arca-dark">
+            Deposit
+          </span>
+        </span>
+
+        {/* Mobile: second line with TVL and deposit */}
+        <span className="col-span-2 flex gap-4 pl-[50px] text-xs text-arca-text-secondary md:hidden">
+          <span>TVL {tvlCell}</span>
+          {vault.aumFeePct !== null && <span>AUM fee {vault.aumFeePct}%/yr</span>}
+          {held && <span>You {depositCell}</span>}
+        </span>
       </div>
     </Link>
   );
 }
 
-export function VaultIdentity({ vault, large = false }: { vault: Pick<VaultOverview, 'config'>; large?: boolean }) {
+/**
+ * Pair icons + name with the platform inline. `held` adds the green dot for vaults the user is in.
+ */
+export function VaultIdentity({
+  vault,
+  large = false,
+  held = false,
+}: {
+  vault: Pick<VaultOverview, 'config'>;
+  large?: boolean;
+  held?: boolean;
+}) {
   const { config } = vault;
   const platform = PLATFORMS[config.protocol];
-  return (
-    <div className="flex min-w-0 items-center gap-3">
-      <PairIcons logoX={getTokenLogo(config.tokenX)} logoY={getTokenLogo(config.tokenY)} size={large ? 44 : 36} />
-      <div className="min-w-0">
-        <div className={cn('truncate font-semibold text-arca-text', large && 'text-2xl')}>{getPairName(config)}</div>
-        <div className="flex items-center gap-1.5 text-xs text-arca-text-secondary">
-          <img src={platform.logo} alt="" className="h-3.5 w-3.5 rounded-full object-contain" />
-          {platform.name}
+
+  if (large) {
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <PairIcons logoX={getTokenLogo(config.tokenX)} logoY={getTokenLogo(config.tokenY)} size={44} />
+        <div className="min-w-0">
+          <div className="truncate text-2xl font-semibold text-arca-text">{getPairName(config)}</div>
+          <div className="flex items-center gap-1.5 text-xs text-arca-text-secondary">
+            <img src={platform.logo} alt="" className="h-3.5 w-3.5 rounded-full object-contain" />
+            {platform.name}
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
-function MobileCell({ label, value, accent = false }: { label: string; value: ReactNode; accent?: boolean }) {
   return (
-    <div>
-      <div className="text-xs text-arca-text-secondary">{label}</div>
-      <div className={cn('font-semibold tabular-nums', accent ? 'text-arca-green' : 'text-arca-text')}>{value}</div>
+    <div className="flex min-w-0 items-center gap-2.5">
+      <PairIcons logoX={getTokenLogo(config.tokenX)} logoY={getTokenLogo(config.tokenY)} size={24} />
+      <span className="truncate font-medium text-arca-text">{getPairName(config)}</span>
+      {held && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-arca-green" aria-label="You have a deposit" />}
+      <span className="hidden items-center gap-1 text-xs text-arca-text-tertiary sm:flex">
+        <img src={platform.logo} alt="" className="h-3 w-3 rounded-full object-contain" />
+        {platform.name}
+      </span>
     </div>
   );
 }
