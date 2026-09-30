@@ -9,6 +9,7 @@ import { VaultHistoryChart } from '@/components/vaults/VaultHistoryChart';
 import { DepositWithdrawPanel } from '@/components/vaults/DepositWithdrawPanel';
 import { PositionCard } from '@/components/vaults/PositionCard';
 import { AdminPanel } from '@/components/vaults/AdminPanel';
+import { PerformanceCard } from '@/components/vaults/PerformanceCard';
 import { Card, Stat } from '@/components/ui';
 import { useVaultsOverview } from '@/hooks/useVaultsOverview';
 import { useVaultAdmin } from '@/hooks/useVaultAdmin';
@@ -68,7 +69,7 @@ function VaultDetail({ config }: { config: VaultConfig }) {
 
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="order-2 space-y-6 lg:order-1">
-          <VaultHistoryChart vaultAddress={config.vaultAddress} />
+          <VaultHistoryChart config={config} />
 
           <Card className="p-5">
             <h2 className="mb-4 font-semibold text-arca-text">About this vault</h2>
@@ -98,7 +99,9 @@ function VaultDetail({ config }: { config: VaultConfig }) {
             </dl>
           </Card>
 
-          {role && <AdminPanel config={config} role={role} metrics={vault?.metrics} />}
+          <PerformanceCard config={config} />
+
+          {role && <AdminPanel config={config} role={role} snapshotCount={vault?.metrics?.snapshotCount ?? null} />}
         </div>
 
         <div className="order-1 space-y-6 lg:order-2">

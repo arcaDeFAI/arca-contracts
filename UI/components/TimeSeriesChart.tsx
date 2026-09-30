@@ -7,27 +7,33 @@ export interface SeriesPoint {
   /** unix seconds */
   date: number;
   value: number | null;
+  /** Optional benchmark on the same scale (drawn as a grey line) */
+  compare?: number | null;
 }
 
-const SERIES_COLOR = '#00ff88'; // arca-green — single series, so no legend; the card title names it
+export const SERIES_COLOR = '#00ff88'; // arca-green — the vault's own series
+export const COMPARE_COLOR = '#8b949e'; // neutral grey — a benchmark, never a second brand colour
 const AXIS_INK = '#8b949e'; // arca-text-secondary
 
 export const dateLabel = (unix: number) =>
   new Date(unix * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone: 'UTC' });
 
 /**
- * One-series area chart with a crosshair tooltip and a screen-reader table.
+ * Area chart with a crosshair tooltip and a screen-reader table. One series, plus an optional
+ * `compareName` benchmark read from each point's `compare` (same unit, same axis — never a dual axis).
  * `format` renders values for the axis, tooltip and table; `step` draws a staircase (for running totals).
  */
 export function TimeSeriesChart({
   points,
   name,
+  compareName,
   format,
   axisFormat = format,
   step = false,
 }: {
   points: SeriesPoint[];
   name: string;
+  compareName?: string;
   format: (v: number | null) => string;
   axisFormat?: (v: number) => string;
   step?: boolean;
@@ -39,7 +45,7 @@ export function TimeSeriesChart({
         <AreaChart data={points} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
           <defs>
             <linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={SERIES_COLOR} stopOpacity={0.18} />
+              <stop offset="0%" stopColor={SERIES_COLOR} stopOpacity={compareName ? 0.08 : 0.18} />
               <stop offset="100%" stopColor={SERIES_COLOR} stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -54,15 +60,28 @@ export function TimeSeriesChart({
           />
           <YAxis
             width={56}
+            domain={compareName ? ['auto', 'auto'] : [0, 'auto']}
             tickFormatter={(v: number) => axisFormat(v)}
             tick={{ fill: AXIS_INK, fontSize: 11 }}
             axisLine={false}
             tickLine={false}
           />
           <Tooltip
-            content={<PointTooltip name={name} format={format} />}
+            content={<PointTooltip name={name} compareName={compareName} format={format} />}
             cursor={{ stroke: 'rgba(255,255,255,0.25)', strokeWidth: 1 }}
           />
+          {compareName && (
+            <Area
+              type="monotone"
+              dataKey="compare"
+              stroke={COMPARE_COLOR}
+              strokeWidth={2}
+              fill="none"
+              connectNulls
+              isAnimationActive={false}
+              activeDot={{ r: 4, fill: COMPARE_COLOR, stroke: '#12161e', strokeWidth: 2 }}
+            />
+          )}
           <Area
             type={step ? 'stepAfter' : 'monotone'}
             dataKey="value"
@@ -77,11 +96,12 @@ export function TimeSeriesChart({
       </ResponsiveContainer>
 
       <table className="sr-only">
-        <caption>{name}</caption>
+        <caption>{compareName ? `${name} vs ${compareName}` : name}</caption>
         <thead>
           <tr>
             <th>Date</th>
             <th>{name}</th>
+            {compareName && <th>{compareName}</th>}
           </tr>
         </thead>
         <tbody>
@@ -89,6 +109,7 @@ export function TimeSeriesChart({
             <tr key={p.date}>
               <td>{dateLabel(p.date)}</td>
               <td>{format(p.value)}</td>
+              {compareName && <td>{format(p.compare ?? null)}</td>}
             </tr>
           ))}
         </tbody>
@@ -97,15 +118,30 @@ export function TimeSeriesChart({
   );
 }
 
-function PointTooltip({ active, payload, name, format }: TooltipProps<number, string> & { name: string; format: (v: number | null) => string }) {
+function PointTooltip({
+  active,
+  payload,
+  name,
+  compareName,
+  format,
+}: TooltipProps<number, string> & { name: string; compareName?: string; format: (v: number | null) => string }) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload as SeriesPoint;
   return (
     <div className="rounded-lg border border-white/[0.08] bg-arca-dark px-3 py-2 text-xs shadow-elevated">
-      <div className="mb-0.5 text-arca-text-secondary">{dateLabel(point.date)}</div>
-      <div className="font-semibold tabular-nums text-arca-text">
-        {format(point.value)} <span className="font-normal text-arca-text-secondary">{name}</span>
-      </div>
+      <div className="mb-1 text-arca-text-secondary">{dateLabel(point.date)}</div>
+      <TooltipLine color={SERIES_COLOR} value={format(point.value)} label={name} />
+      {compareName && <TooltipLine color={COMPARE_COLOR} value={format(point.compare ?? null)} label={compareName} />}
+    </div>
+  );
+}
+
+function TooltipLine({ color, value, label }: { color: string; value: string; label: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="h-0.5 w-3 rounded" style={{ background: color }} />
+      <span className="font-semibold tabular-nums text-arca-text">{value}</span>
+      <span className="text-arca-text-secondary">{label}</span>
     </div>
   );
 }

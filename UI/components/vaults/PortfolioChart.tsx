@@ -1,12 +1,24 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { type VaultOverview } from '@/hooks/useVaultsOverview';
-import { useAllVaultHistories } from '@/hooks/useVaultHistory';
+import { useAllVaultHistories, type HistoryPoint } from '@/hooks/useVaultHistory';
+import { querySubgraph } from '@/lib/subgraph';
+import { getTokenDecimals } from '@/lib/tokenHelpers';
 import { cn, formatApr, formatUSD, formatUSDCompact } from '@/lib/utils';
 import { Card, Segmented, Skeleton } from '@/components/ui';
-import { TimeSeriesChart, type SeriesPoint } from '@/components/TimeSeriesChart';
+import { COMPARE_COLOR, SERIES_COLOR, TimeSeriesChart, type SeriesPoint } from '@/components/TimeSeriesChart';
 import { ChartPlaceholder, RANGE_OPTIONS, sliceRange } from './VaultHistoryChart';
+
+function LegendItem({ color, label }: { color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <span className="h-0.5 w-4 rounded" style={{ background: color }} />
+      {label}
+    </span>
+  );
+}
 
 type Metric = 'value' | 'apr' | 'claimed';
 type Range = (typeof RANGE_OPTIONS)[number]['value'];
@@ -20,9 +32,44 @@ const METRIC_OPTIONS = [
 const DAY = 86_400;
 const SHARE_UNIT = 1e24; // VaultDayData.ppsUsd is the USD value of 1e24 raw shares
 
+/**
+ * Tokens per 1e24 shares at each held vault's first priced rebalance on/after `date`, keyed by
+ * lowercase vault address — the "if you had held" basket. One batched request.
+ */
+function useStartBaskets(held: VaultOverview[], date: number | null) {
+  const ids = held.map((v) => v.config.vaultAddress.toLowerCase());
+  const { data } = useQuery({
+    queryKey: ['subgraph', 'startBaskets', ids.join(','), date],
+    queryFn: () =>
+      querySubgraph<Record<string, Array<{ amountXPerShare: string; amountYPerShare: string }>>>(`{
+        ${ids
+          .map(
+            (id) => `v${id.slice(2)}: snapshots(where: { vault: "${id}", timestamp_gte: "${date}", priceXUsd_not: null, priceYUsd_not: null, amountXPerShare_gt: "0" },
+              orderBy: timestamp, orderDirection: asc, first: 1) { amountXPerShare amountYPerShare }`,
+          )
+          .join('\n')}
+      }`),
+    enabled: date !== null && ids.length > 0,
+    staleTime: Infinity,
+  });
+  if (!data) return null;
+  const out = new Map<string, { x: number; y: number }>();
+  for (const v of held) {
+    const id = v.config.vaultAddress.toLowerCase();
+    const s = data[`v${id.slice(2)}`]?.[0];
+    if (s) {
+      out.set(id, {
+        x: Number(s.amountXPerShare) / 10 ** getTokenDecimals(v.config.tokenX),
+        y: Number(s.amountYPerShare) / 10 ** getTokenDecimals(v.config.tokenY),
+      });
+    }
+  }
+  return out;
+}
+
 const NOTES: Record<Metric, string> = {
   value:
-    'What your current vault shares were worth each day. Your own deposits and withdrawals are left out, so the line shows only how the vaults performed (including token price moves). Rewards are separate.',
+    'Your current vault shares each day, plus the rewards they earned since the start of the period, vs holding the tokens those shares had on day one. Your own deposits and withdrawals are left out, so it shows only how the vaults performed.',
   apr: 'APR of the vaults you hold, weighted by how much you have in each today.',
   claimed: 'Claimed rewards, valued at today’s token prices.',
 };
@@ -46,32 +93,51 @@ export function PortfolioChart({
 
   const held = useMemo(() => vaults.filter((v) => v.userUsd > 0.01), [vaults]);
 
-  const valueSeries = useMemo<SeriesPoint[]>(() => {
+  // Days where every held vault has a share price and token prices, with each vault's data that day
+  const valueDays = useMemo(() => {
     if (!histories || held.length === 0) return [];
-    // date → summed value of the user's current shares, and how many held vaults were priced that day
-    const byDate = new Map<number, { usd: number; count: number }>();
-    for (const v of held) {
-      const shares = Number(v.userShares) / SHARE_UNIT;
-      for (const p of histories.get(v.config.vaultAddress.toLowerCase()) ?? []) {
-        if (p.ppsUsd === null) continue;
-        const acc = byDate.get(p.date) ?? { usd: 0, count: 0 };
-        acc.usd += shares * p.ppsUsd;
-        acc.count += 1;
-        byDate.set(p.date, acc);
+    const byVault = held.map((v) => new Map((histories.get(v.config.vaultAddress.toLowerCase()) ?? []).map((p) => [p.date, p])));
+    const dates = [...new Set(byVault.flatMap((m) => [...m.keys()]))].sort((a, b) => a - b);
+    const out: Array<{ date: number; vaults: HistoryPoint[] }> = [];
+    for (const date of dates) {
+      const day = byVault.map((m) => m.get(date));
+      if (day.every((p): p is HistoryPoint => !!p && p.ppsUsd !== null && p.priceXUsd !== null && p.priceYUsd !== null)) {
+        out.push({ date, vaults: day });
       }
     }
-    const points = [...byDate.entries()]
-      .filter(([, acc]) => acc.count === held.length) // only days where every held vault has a price
-      .sort(([a], [b]) => a - b)
-      .map(([date, acc]) => ({ date, value: acc.usd }));
+    return out;
+  }, [histories, held]);
 
-    // End on today's live value so the chart matches the "Total value" stat
+  const visibleValueDays = useMemo(() => sliceRange(valueDays, range), [valueDays, range]);
+  const baskets = useStartBaskets(held, metric === 'value' ? (visibleValueDays[0]?.date ?? null) : null);
+
+  const valueSeries = useMemo<SeriesPoint[]>(() => {
+    if (visibleValueDays.length === 0 || !baskets) return [];
     const today = Math.floor(Date.now() / 1000 / DAY) * DAY;
     const live = held.reduce((s, v) => s + v.userUsd, 0);
-    if (points.at(-1)?.date === today) points[points.length - 1] = { date: today, value: live };
-    else if (points.length > 0) points.push({ date: today, value: live });
-    return points;
-  }, [histories, held]);
+    const rewards = held.map(() => 0);
+    let holdScale = 1;
+
+    return visibleValueDays.map(({ date, vaults: day }, i) => {
+      let position = 0;
+      let hold = 0;
+      held.forEach((v, k) => {
+        const shares = Number(v.userShares) / SHARE_UNIT;
+        const p = day[k];
+        const value = shares * p.ppsUsd!;
+        // Rewards these shares earned that day (valued the day they were paid); none before the start
+        if (i > 0 && p.tvlUsd) rewards[k] += value * (p.rewardsUsd / p.tvlUsd);
+        const b = baskets.get(v.config.vaultAddress.toLowerCase());
+        hold += b ? shares * (b.x * p.priceXUsd! + b.y * p.priceYUsd!) : value;
+        position += value;
+      });
+      // Both lines start at the same value (the basket comes from the first rebalance in the range)
+      if (i === 0 && hold > 0) holdScale = position / hold;
+      // End on today's live value so the chart matches the "Total value" stat
+      if (date === today) position = live;
+      return { date, value: position + rewards.reduce((s, r) => s + r, 0), compare: hold * holdScale };
+    });
+  }, [visibleValueDays, baskets, held]);
 
   const aprSeries = useMemo<SeriesPoint[]>(() => {
     if (!histories) return [];
@@ -105,14 +171,14 @@ export function PortfolioChart({
 
   let headline: { label: string; value: string; change?: { usd: number; pct: number } };
   if (metric === 'value') {
-    const first = series[0]?.value ?? null;
-    const last = series.at(-1)?.value ?? null;
+    const last = series.at(-1);
+    const hold = last?.compare ?? null;
     headline = {
-      label: `Position value · change over ${rangeLabel}`,
-      value: formatUSD(last ?? 0),
+      label: `Your position + rewards · ${rangeLabel}`,
+      value: formatUSD(last?.value ?? 0),
       change:
-        first !== null && last !== null && first > 0
-          ? { usd: last - first, pct: ((last - first) / first) * 100 }
+        last?.value != null && hold !== null && hold > 0
+          ? { usd: last.value - hold, pct: ((last.value - hold) / hold) * 100 }
           : undefined,
     };
   } else if (metric === 'apr') {
@@ -148,7 +214,7 @@ export function PortfolioChart({
               <span className={cn('text-sm font-medium tabular-nums', headline.change.usd >= 0 ? 'text-arca-green' : 'text-red-400')}>
                 {headline.change.usd >= 0 ? '+' : '−'}
                 {formatUSD(Math.abs(headline.change.usd))} ({headline.change.pct >= 0 ? '+' : ''}
-                {headline.change.pct.toFixed(1)}%)
+                {headline.change.pct.toFixed(1)}%){metric === 'value' && ' vs holding'}
               </span>
             )}
           </div>
@@ -159,13 +225,26 @@ export function PortfolioChart({
         </div>
       </div>
 
+      {metric === 'value' && !empty && (
+        <div className="-mt-2 mb-3 flex gap-4 text-xs text-arca-text-secondary">
+          <LegendItem color={SERIES_COLOR} label="Your position + rewards" />
+          <LegendItem color={COMPARE_COLOR} label="If you had held" />
+        </div>
+      )}
+
       <div className="h-40">
         {loading ? (
           <Skeleton className="h-full w-full" />
         ) : empty ? (
           <ChartPlaceholder>{emptyMessage}</ChartPlaceholder>
         ) : metric === 'value' ? (
-          <TimeSeriesChart points={series} name="value" format={(v) => formatUSD(v ?? 0)} axisFormat={formatUSDCompact} />
+          <TimeSeriesChart
+            points={series}
+            name="your position"
+            compareName="if held"
+            format={(v) => formatUSD(v ?? 0)}
+            axisFormat={formatUSDCompact}
+          />
         ) : metric === 'apr' ? (
           <TimeSeriesChart points={series} name="APR" format={formatApr} axisFormat={(v) => `${Math.round(v)}%`} />
         ) : (
