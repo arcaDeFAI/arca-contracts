@@ -14,6 +14,8 @@ export interface VaultOverview {
   tvlUsd: number;
   /** Reward APR shown to users (never negative); null while unknown */
   apr: number | null;
+  /** Annual AUM fee in % (e.g. 10); null while loading */
+  aumFeePct: number | null;
   metrics: SubgraphMetrics | undefined;
   userShares: bigint;
   totalSupply: bigint;
@@ -35,6 +37,16 @@ export function useVaultsOverview(userAddress?: string) {
       abi: METRO_STRAT_ABI,
       functionName: 'getBalances' as const,
     })),
+  });
+
+  // AUM fee in basis points (strategy.getAumAnnualFee), same call on both protocols
+  const feeQ = useReadContracts({
+    contracts: VAULT_CONFIGS.map((c) => ({
+      address: c.stratAddress as `0x${string}`,
+      abi: METRO_STRAT_ABI,
+      functionName: 'getAumAnnualFee' as const,
+    })),
+    query: { staleTime: 10 * 60 * 1000 },
   });
 
   const supplyQ = useReadContracts({
@@ -83,9 +95,12 @@ export function useVaultsOverview(userAddress?: string) {
       }
       if (apr !== null) apr = Math.max(0, apr);
 
-      return { config, tvlUsd, apr, metrics, userShares, totalSupply, userUsd };
+      const feeBps = feeQ.data?.[i]?.result;
+      const aumFeePct = feeBps !== undefined ? Number(feeBps) / 100 : null;
+
+      return { config, tvlUsd, apr, aumFeePct, metrics, userShares, totalSupply, userUsd };
     });
-  }, [balancesQ.data, supplyQ.data, userQ.data, userAddress, prices, metricsByVault, histories]);
+  }, [balancesQ.data, supplyQ.data, userQ.data, feeQ.data, userAddress, prices, metricsByVault, histories]);
 
   const isLoading = balancesQ.isLoading || supplyQ.isLoading || pricesLoading;
   const aprLoading = [...metricsByVault.values()].some((m) => m.isLoading);

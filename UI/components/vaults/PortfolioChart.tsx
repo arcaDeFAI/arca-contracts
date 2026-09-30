@@ -159,7 +159,7 @@ export function PortfolioChart({
         </div>
       </div>
 
-      <div className="h-56">
+      <div className="h-40">
         {loading ? (
           <Skeleton className="h-full w-full" />
         ) : empty ? (

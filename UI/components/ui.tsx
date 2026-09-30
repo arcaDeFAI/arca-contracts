@@ -124,6 +124,36 @@ export function Skeleton({ className }: { className?: string }) {
   return <div className={cn('animate-pulse rounded-lg bg-white/[0.06]', className)} />;
 }
 
+/** Tiny trend line (Arca green) for table rows. Null values are skipped. */
+export function Sparkline({
+  values,
+  label,
+  width = 72,
+  height = 22,
+}: {
+  values: Array<number | null>;
+  label: string;
+  width?: number;
+  height?: number;
+}) {
+  const pts = values.map((v, i) => ({ v, i })).filter((p): p is { v: number; i: number } => p.v !== null);
+  if (pts.length < 2) return <span className="text-arca-text-tertiary">—</span>;
+  const min = Math.min(...pts.map((p) => p.v));
+  const max = Math.max(...pts.map((p) => p.v));
+  const span = max - min || 1;
+  const pad = 2;
+  const x = (i: number) => pad + (i / (values.length - 1)) * (width - pad * 2);
+  const y = (v: number) => pad + (1 - (v - min) / span) * (height - pad * 2);
+  const d = pts.map((p, k) => `${k === 0 ? 'M' : 'L'}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
+  const last = pts[pts.length - 1];
+  return (
+    <svg width={width} height={height} role="img" aria-label={label} className="overflow-visible">
+      <path d={d} fill="none" stroke="#00ff88" strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={x(last.i)} cy={y(last.v)} r={2} fill="#00ff88" />
+    </svg>
+  );
+}
+
 export function PairIcons({ logoX, logoY, size = 32 }: { logoX: string; logoY: string; size?: number }) {
   return (
     <div className="flex shrink-0 items-center">

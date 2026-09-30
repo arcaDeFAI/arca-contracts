@@ -1,17 +1,15 @@
 'use client';
 
-import Link from 'next/link';
 import { useAccount, useWriteContract } from 'wagmi';
 import { METRO_VAULT_ABI, SHADOW_VAULT_ABI } from '@/lib/typechain';
 import { getTokenByAddress } from '@/lib/tokenRegistry';
 import { getTokenPrice } from '@/lib/tokenHelpers';
-import { formatApr, formatTokenAmount, formatUSD } from '@/lib/utils';
+import { formatTokenAmount, formatUSD } from '@/lib/utils';
 import { isShadowVault, type VaultConfig } from '@/lib/vaultConfigs';
 import { usePrices } from '@/contexts/PriceContext';
 import { useVaultPosition, type PendingReward } from '@/hooks/useVaultPosition';
 import { useTx } from '@/hooks/useTx';
 import { Button, Card, Notice } from '@/components/ui';
-import { VaultIdentity } from './VaultList';
 
 export function rewardsUsd(rewards: PendingReward[], prices: Record<string, number>): number {
   return rewards.reduce((sum, r) => {
@@ -21,16 +19,30 @@ export function rewardsUsd(rewards: PendingReward[], prices: Record<string, numb
   }, 0);
 }
 
+/** Below this, claiming isn't worth a click (gas is ~$0.0005 on Sonic); rewards keep accruing. */
+export const MIN_CLAIM_USD = 0.01;
+
+/**
+ * Whether rewards are worth claiming. If any pending reward token has no USD price, claiming
+ * stays allowed so a missing price feed never blocks real rewards.
+ */
+export function canClaimRewards(rewards: PendingReward[], prices: Record<string, number>): boolean {
+  const pending = rewards.filter((r) => r.amount > 0n);
+  if (pending.length === 0) return false;
+  const unpriced = pending.some((r) => {
+    const def = getTokenByAddress(r.token);
+    return !def || getTokenPrice(def.symbol, prices) <= 0;
+  });
+  return unpriced || rewardsUsd(pending, prices) >= MIN_CLAIM_USD;
+}
+
 interface PositionCardProps {
   config: VaultConfig;
   depositUsd: number;
   shareRatio: number;
-  /** Dashboard mode: title the card with the vault (linked) and its APR instead of "Your position". */
-  apr?: number | null;
-  showVault?: boolean;
 }
 
-export function PositionCard({ config, depositUsd, shareRatio, apr = null, showVault = false }: PositionCardProps) {
+export function PositionCard({ config, depositUsd, shareRatio }: PositionCardProps) {
   const { address } = useAccount();
   const { prices } = usePrices();
   const { writeContractAsync } = useWriteContract();
@@ -40,28 +52,17 @@ export function PositionCard({ config, depositUsd, shareRatio, apr = null, showV
   const vault = config.vaultAddress as `0x${string}`;
   const abi = isShadowVault(config) ? SHADOW_VAULT_ABI : METRO_VAULT_ABI;
   const pendingUsd = rewardsUsd(position.pendingRewards, prices);
+  const claimable = canClaimRewards(position.pendingRewards, prices);
   const hasWithdrawals = position.queuedShares > 0n || position.claimableWithdrawals.length > 0;
 
   if (!address || (depositUsd < 0.01 && !position.hasPendingRewards && !hasWithdrawals)) return null;
 
   return (
     <Card className="p-5">
-      {showVault ? (
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <Link href={`/vaults/${config.vaultAddress}`} className="min-w-0 hover:opacity-80">
-            <VaultIdentity vault={{ config }} />
-          </Link>
-          <div className="text-right">
-            <div className="text-lg font-semibold tabular-nums text-arca-text">{formatUSD(depositUsd)}</div>
-            <div className="text-xs text-arca-green">{formatApr(apr)} APR</div>
-          </div>
-        </div>
-      ) : (
-        <div className="mb-4 flex items-baseline justify-between">
-          <h2 className="font-semibold text-arca-text">Your position</h2>
-          <span className="text-xl font-semibold tabular-nums text-arca-text">{formatUSD(depositUsd)}</span>
-        </div>
-      )}
+      <div className="mb-4 flex items-baseline justify-between">
+        <h2 className="font-semibold text-arca-text">Your position</h2>
+        <span className="text-xl font-semibold tabular-nums text-arca-text">{formatUSD(depositUsd)}</span>
+      </div>
 
       {/* Rewards */}
       <div className="rounded-xl bg-white/[0.03] p-3.5">
@@ -80,10 +81,13 @@ export function PositionCard({ config, depositUsd, shareRatio, apr = null, showV
               </div>
             );
           })}
+        {position.hasPendingRewards && !claimable && (
+          <p className="mt-2 text-[11px] text-arca-text-tertiary">You can claim once rewards reach {formatUSD(MIN_CLAIM_USD)}.</p>
+        )}
         <Button
           variant="secondary"
           className="mt-3 w-full"
-          disabled={!position.hasPendingRewards}
+          disabled={!claimable}
           loading={tx.pending === 'claim'}
           onClick={() => tx.send('claim', () => writeContractAsync({ address: vault, abi, functionName: 'claim' }))}
         >
