@@ -1010,6 +1010,23 @@ export class UserHarvestEvent extends Entity {
     this.set("amount", Value.fromBigInt(value));
   }
 
+  get amountUsd(): BigDecimal | null {
+    let value = this.get("amountUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set amountUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("amountUsd");
+    } else {
+      this.set("amountUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
   get timestamp(): BigInt {
     let value = this.get("timestamp");
     if (!value || value.kind == ValueKind.NULL) {

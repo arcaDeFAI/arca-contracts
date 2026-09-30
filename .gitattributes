@@ -11,3 +11,4 @@
 *.woff2 binary
 *.eot binary
 *.mp4 binary
+*.wasm binary

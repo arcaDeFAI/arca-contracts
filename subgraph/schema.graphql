@@ -109,6 +109,7 @@ type UserHarvestEvent @entity(immutable: true) {
   user: Bytes!                  # user wallet address (indexed for filtering)
   token: Bytes!                 # reward token address
   amount: BigInt!
+  amountUsd: BigDecimal         # value at the moment of the claim (null if the token has no price source)
   timestamp: BigInt!
   blockNumber: BigInt!
   txHash: Bytes!
