@@ -4,13 +4,14 @@ import { useReadContract } from 'wagmi';
 import { parseAbi } from 'viem';
 import { ShieldCheckIcon } from '@heroicons/react/20/solid';
 import { useVaultPositionData } from '@/hooks/useVaultPositionData';
-import { type SubgraphMetrics } from '@/hooks/useSubgraphMetrics';
 import { useVaultHistory } from '@/hooks/useVaultHistory';
+import { useVaultFees } from '@/hooks/useVaultFees';
+import { formatSignedPct, useVaultPerformance } from '@/hooks/useVaultPerformance';
 import { type AdminRole } from '@/hooks/useVaultAdmin';
 import { usePrices } from '@/contexts/PriceContext';
 import { METRO_STRAT_ABI } from '@/lib/typechain';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
-import { cn, formatApr, formatUSD } from '@/lib/utils';
+import { cn, formatUSD } from '@/lib/utils';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { Card } from '@/components/ui';
 
@@ -31,12 +32,27 @@ function timeAgo(unixSeconds: number): string {
   return `${Math.floor(mins / 1440)} days ago`;
 }
 
-function pct(v: number | null): string {
-  return v === null ? '—' : `${v >= 0 ? '+' : ''}${v.toFixed(2)}%`;
+const negate = (v: number | undefined) => (v === undefined ? undefined : -v);
+
+function BreakdownRow({ label, a, b, strong = false }: { label: string; a?: number; b?: number; strong?: boolean }) {
+  const cell = (v?: number) => (
+    <td className={cn('py-1 text-right', v === undefined ? 'text-arca-text-tertiary' : v >= 0 ? 'text-arca-green' : 'text-red-400')}>
+      {v === undefined ? '—' : formatSignedPct(v)}
+    </td>
+  );
+  return (
+    <tr className={cn(strong && 'border-t border-white/[0.06] font-semibold')}>
+      <td className="py-1 text-arca-text-secondary">{label}</td>
+      {cell(a)}
+      {cell(b)}
+    </tr>
+  );
 }
 
-export function AdminPanel({ config, role, metrics }: { config: VaultConfig; role: AdminRole; metrics: SubgraphMetrics | undefined }) {
+export function AdminPanel({ config, role, snapshotCount }: { config: VaultConfig; role: AdminRole; snapshotCount: number | null }) {
   const { prices } = usePrices();
+  const { aumFeePct } = useVaultFees(config);
+  const perf = useVaultPerformance(config, aumFeePct);
   const position = useVaultPositionData({
     vaultAddress: config.vaultAddress,
     stratAddress: config.stratAddress,
@@ -107,12 +123,26 @@ export function AdminPanel({ config, role, metrics }: { config: VaultConfig; rol
         <Item label="Liquidity active" value={activePct === null ? '—' : `${activePct.toFixed(0)}%`} />
         <Item label="Idle" value={formatUSD(idleUsd)} />
         <Item label="Last rebalance" value={lastRebalance ? timeAgo(Number(lastRebalance)) : '—'} />
-        <Item label="Snapshots" value={metrics ? String(metrics.snapshotCount) : '—'} />
-        <Item label={`Reward APR (${metrics?.periodLabel ?? '—'})`} value={formatApr(metrics?.rewardApr ?? null)} />
-        <Item label={`Fee APR (${metrics?.periodLabel ?? '—'})`} value={formatApr(metrics?.feeApr ?? null)} />
-        <Item label="vs HODL (since start)" value={pct(metrics?.vsHodl ?? null)} />
-        <Item label="IL (since start)" value={pct(metrics?.il ?? null)} />
+        <Item label="Snapshots" value={snapshotCount === null ? '—' : String(snapshotCount)} />
+        <Item label="AUM fee" value={aumFeePct === null ? '—' : `${aumFeePct}% / year`} />
       </dl>
+
+      {/* Where the depositor's return came from, vs holding the same tokens. No trading fees: gauge LPs earn emissions only. */}
+      <table className="mt-4 w-full text-sm">
+        <thead>
+          <tr className="text-xs text-arca-text-secondary">
+            <th className="pb-1.5 text-left font-normal">vs holding</th>
+            <th className="pb-1.5 text-right font-normal">30D</th>
+            <th className="pb-1.5 text-right font-normal">Since start</th>
+          </tr>
+        </thead>
+        <tbody className="tabular-nums">
+          <BreakdownRow label="Rewards" a={perf.windows['30d']?.rewardReturn} b={perf.windows.all?.rewardReturn} />
+          <BreakdownRow label="AUM fee" a={negate(perf.windows['30d']?.aumFeeCost)} b={negate(perf.windows.all?.aumFeeCost)} />
+          <BreakdownRow label="Rebalancing IL" a={perf.windows['30d']?.rebalancingIl} b={perf.windows.all?.rebalancingIl} />
+          <BreakdownRow label="Net vs holding" a={perf.windows['30d']?.vsHold} b={perf.windows.all?.vsHold} strong />
+        </tbody>
+      </table>
 
       {unpricedRewardEvents > 0 && (
         <p className="mt-4 text-xs text-amber-300/90">

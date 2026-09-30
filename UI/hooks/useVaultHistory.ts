@@ -10,6 +10,8 @@ export interface VaultDayDataRaw {
   rewardsUsd: string;
   tvlUsd: string | null;
   ppsUsd: string | null;
+  priceXUsd: string | null;
+  priceYUsd: string | null;
   unpricedRewardEvents: number;
 }
 
@@ -21,6 +23,9 @@ export interface HistoryPoint {
   tvlUsd: number | null;
   /** USD value of 1e24 raw vault shares at the day's last rebalance (carried forward) */
   ppsUsd: number | null;
+  /** Token USD prices at the day's last rebalance (carried forward) */
+  priceXUsd: number | null;
+  priceYUsd: number | null;
   rewardsUsd: number;
 }
 
@@ -64,7 +69,7 @@ export function useAllVaultHistories() {
       const parts = VAULT_CONFIGS.map((c) => {
         const id = c.vaultAddress.toLowerCase();
         return `v${id.slice(2)}: vaultDayDatas(where: { vault: "${id}" }, orderBy: date, orderDirection: asc, first: 1000) {
-          date rewardsUsd tvlUsd ppsUsd unpricedRewardEvents
+          date rewardsUsd tvlUsd ppsUsd priceXUsd priceYUsd unpricedRewardEvents
         }`;
       });
       return querySubgraph<Record<string, VaultDayDataRaw[]>>(`query AllVaultHistories {\n${parts.join('\n')}\n}`);
@@ -101,14 +106,25 @@ export function buildHistory(rows: VaultDayDataRaw[]): HistoryPoint[] {
 
   const byDate = new Map(rows.map((r) => [r.date, r]));
   const today = Math.floor(Date.now() / 1000 / DAY) * DAY;
-  const daily: Array<{ date: number; rewardsUsd: number; tvlUsd: number | null; ppsUsd: number | null }> = [];
+  const daily: Array<Omit<HistoryPoint, 'apr'>> = [];
   let lastTvl: number | null = null;
   let lastPps: number | null = null;
+  let lastPx: number | null = null;
+  let lastPy: number | null = null;
   for (let d = rows[0].date; d <= today; d += DAY) {
     const row = byDate.get(d);
     if (row?.tvlUsd) lastTvl = Number(row.tvlUsd);
     if (row?.ppsUsd && Number(row.ppsUsd) > 0) lastPps = Number(row.ppsUsd);
-    daily.push({ date: d, rewardsUsd: row ? Number(row.rewardsUsd) : 0, tvlUsd: lastTvl, ppsUsd: lastPps });
+    if (row?.priceXUsd && Number(row.priceXUsd) > 0) lastPx = Number(row.priceXUsd);
+    if (row?.priceYUsd && Number(row.priceYUsd) > 0) lastPy = Number(row.priceYUsd);
+    daily.push({
+      date: d,
+      rewardsUsd: row ? Number(row.rewardsUsd) : 0,
+      tvlUsd: lastTvl,
+      ppsUsd: lastPps,
+      priceXUsd: lastPx,
+      priceYUsd: lastPy,
+    });
   }
 
   return daily.map((day, i) => {
@@ -120,7 +136,7 @@ export function buildHistory(rows: VaultDayDataRaw[]): HistoryPoint[] {
       const avgTvl = withTvl.reduce((s, w) => s + (w.tvlUsd ?? 0), 0) / withTvl.length;
       apr = (rewards / avgTvl) * (365 / window.length) * 100;
     }
-    return { date: day.date, apr, tvlUsd: day.tvlUsd, ppsUsd: day.ppsUsd, rewardsUsd: day.rewardsUsd };
+    return { ...day, apr };
   });
 }
 
