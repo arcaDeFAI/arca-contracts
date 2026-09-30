@@ -24,7 +24,7 @@ export function CompetitorEdge() {
       <div className="mb-3">
         <h2 className="font-semibold text-arca-text">Compared with other vaults on the same pairs</h2>
         <p className="text-xs text-arca-text-secondary">
-          Net result vs simply holding the tokens, since each Arca vault started. Rewards included.
+          Net result vs just keeping your initial tokens, since each Arca vault started. Rewards included.
         </p>
       </div>
       <div className="divide-y divide-white/[0.06]">

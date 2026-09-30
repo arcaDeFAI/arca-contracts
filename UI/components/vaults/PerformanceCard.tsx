@@ -7,6 +7,7 @@ import { formatSignedPct, useVaultPerformance, type WindowKey } from '@/hooks/us
 import { useVaultFees } from '@/hooks/useVaultFees';
 import { useCompetitorPerformance } from '@/hooks/useCompetitorPerformance';
 import { Card, Segmented, Skeleton } from '@/components/ui';
+import { dateLabel } from '@/components/TimeSeriesChart';
 
 const WINDOW_OPTIONS = [
   { value: '30d', label: '30D' },
@@ -20,6 +21,7 @@ export function PerformanceCard({ config }: { config: VaultConfig }) {
   const [key, setKey] = useState<WindowKey>('30d');
   const w = windows[key];
   const others = useCompetitorPerformance(config, bounds[key].first, bounds[key].last);
+  const since = bounds[key].first ? dateLabel(Number(bounds[key].first.timestamp)) : null;
 
   return (
     <Card className="p-5">
@@ -36,7 +38,7 @@ export function PerformanceCard({ config }: { config: VaultConfig }) {
         <>
           <dl className="space-y-2 text-sm">
             <Line label="This vault, rewards included" value={formatSignedPct(w.vaultReturn)} />
-            <Line label="Holding the same tokens instead" value={formatSignedPct(w.holdReturn)} muted />
+            <Line label={`If you had just kept your initial tokens (${since ?? 'start'})`} value={formatSignedPct(w.holdReturn)} muted />
             <div className="border-t border-white/[0.06] pt-2">
               <Line
                 label="Difference"
@@ -61,7 +63,8 @@ export function PerformanceCard({ config }: { config: VaultConfig }) {
             </div>
           )}
           <p className="mt-3 text-xs leading-relaxed text-arca-text-tertiary">
-            Over {Math.round(w.days)} days, for $1 in the vault. The vault earns rewards (no trading fees); its share
+            Over {Math.round(w.days)} days, for $1 in the vault. Initial tokens: the {config.tokenX} / {config.tokenY} mix
+            the vault held on {since ?? 'the first day'}, kept untouched. The vault earns rewards (no trading fees); its share
             value also moves with prices, rebalancing and the AUM fee. Past results don&apos;t guarantee future ones.
           </p>
         </>

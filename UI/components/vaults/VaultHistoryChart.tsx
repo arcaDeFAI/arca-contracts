@@ -143,7 +143,7 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
       {status === 'ready' && metric === 'hold' && (
         <div className="-mt-2 mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-arca-text-secondary">
           <LegendItem color={SERIES_COLOR} label="This vault, rewards included" />
-          <LegendItem color={COMPARE_COLOR} label="Holding the same tokens" />
+          <LegendItem color={COMPARE_COLOR} label="If you had just kept your initial tokens" />
           {tokenLines.lines.map((l) => (
             <LegendItem key={l.name} color={l.color} label={l.name} dashed />
           ))}
@@ -184,7 +184,7 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
       {status === 'ready' && (
         <p className="mt-3 text-xs text-arca-text-tertiary">
           {metric === 'hold'
-            ? 'Growth of $100 from the start of the period: share value plus rewards collected (valued the day they were paid), vs keeping the tokens instead. Dashed lines: $100 kept in a single token.'
+            ? 'Growth of $100 from the start of the period: share value plus rewards collected (valued the day they were paid), vs just keeping your initial tokens (the token mix the vault held on the first day, untouched). Dashed lines: $100 kept in a single token.'
             : metric === 'apr'
               ? 'Each point is the APR over the previous 7 days, which smooths out day-to-day swings in rewards.'
               : 'Total value in the vault.'}
