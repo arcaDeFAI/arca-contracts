@@ -171,6 +171,381 @@ export class Vault extends Entity {
       "ilSnapshot",
     );
   }
+
+  get dayData(): VaultDayDataLoader {
+    return new VaultDayDataLoader(
+      "Vault",
+      this.get("id")!.toBytes().toHexString(),
+      "dayData",
+    );
+  }
+
+  get lastTvlUsd(): BigDecimal | null {
+    let value = this.get("lastTvlUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set lastTvlUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("lastTvlUsd");
+    } else {
+      this.set("lastTvlUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get lastPpsUsd(): BigDecimal | null {
+    let value = this.get("lastPpsUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set lastPpsUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("lastPpsUsd");
+    } else {
+      this.set("lastPpsUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get pointsIndex(): BigDecimal | null {
+    let value = this.get("pointsIndex");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set pointsIndex(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("pointsIndex");
+    } else {
+      this.set("pointsIndex", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get pointsIndexUpdatedAt(): BigInt | null {
+    let value = this.get("pointsIndexUpdatedAt");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set pointsIndexUpdatedAt(value: BigInt | null) {
+    if (!value) {
+      this.unset("pointsIndexUpdatedAt");
+    } else {
+      this.set("pointsIndexUpdatedAt", Value.fromBigInt(<BigInt>value));
+    }
+  }
+}
+
+export class UserVaultPosition extends Entity {
+  constructor(id: Bytes) {
+    super();
+    this.set("id", Value.fromBytes(id));
+  }
+
+  save(): void {
+    let id = this.get("id");
+    assert(id != null, "Cannot save UserVaultPosition entity without an ID");
+    if (id) {
+      assert(
+        id.kind == ValueKind.BYTES,
+        `Entities of type UserVaultPosition must have an ID of type Bytes but the id '${id.displayData()}' is of type ${id.displayKind()}`,
+      );
+      store.set("UserVaultPosition", id.toBytes().toHexString(), this);
+    }
+  }
+
+  static loadInBlock(id: Bytes): UserVaultPosition | null {
+    return changetype<UserVaultPosition | null>(
+      store.get_in_block("UserVaultPosition", id.toHexString()),
+    );
+  }
+
+  static load(id: Bytes): UserVaultPosition | null {
+    return changetype<UserVaultPosition | null>(
+      store.get("UserVaultPosition", id.toHexString()),
+    );
+  }
+
+  get id(): Bytes {
+    let value = this.get("id");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set id(value: Bytes) {
+    this.set("id", Value.fromBytes(value));
+  }
+
+  get user(): Bytes {
+    let value = this.get("user");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set user(value: Bytes) {
+    this.set("user", Value.fromBytes(value));
+  }
+
+  get vault(): Bytes {
+    let value = this.get("vault");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set vault(value: Bytes) {
+    this.set("vault", Value.fromBytes(value));
+  }
+
+  get shares(): BigInt {
+    let value = this.get("shares");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set shares(value: BigInt) {
+    this.set("shares", Value.fromBigInt(value));
+  }
+
+  get avgEntryTime(): BigInt {
+    let value = this.get("avgEntryTime");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigInt();
+    }
+  }
+
+  set avgEntryTime(value: BigInt) {
+    this.set("avgEntryTime", Value.fromBigInt(value));
+  }
+
+  get points(): BigDecimal {
+    let value = this.get("points");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set points(value: BigDecimal) {
+    this.set("points", Value.fromBigDecimal(value));
+  }
+
+  get indexSnapshot(): BigDecimal {
+    let value = this.get("indexSnapshot");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set indexSnapshot(value: BigDecimal) {
+    this.set("indexSnapshot", Value.fromBigDecimal(value));
+  }
+}
+
+export class VaultDayData extends Entity {
+  constructor(id: Bytes) {
+    super();
+    this.set("id", Value.fromBytes(id));
+  }
+
+  save(): void {
+    let id = this.get("id");
+    assert(id != null, "Cannot save VaultDayData entity without an ID");
+    if (id) {
+      assert(
+        id.kind == ValueKind.BYTES,
+        `Entities of type VaultDayData must have an ID of type Bytes but the id '${id.displayData()}' is of type ${id.displayKind()}`,
+      );
+      store.set("VaultDayData", id.toBytes().toHexString(), this);
+    }
+  }
+
+  static loadInBlock(id: Bytes): VaultDayData | null {
+    return changetype<VaultDayData | null>(
+      store.get_in_block("VaultDayData", id.toHexString()),
+    );
+  }
+
+  static load(id: Bytes): VaultDayData | null {
+    return changetype<VaultDayData | null>(
+      store.get("VaultDayData", id.toHexString()),
+    );
+  }
+
+  get id(): Bytes {
+    let value = this.get("id");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set id(value: Bytes) {
+    this.set("id", Value.fromBytes(value));
+  }
+
+  get vault(): Bytes {
+    let value = this.get("vault");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBytes();
+    }
+  }
+
+  set vault(value: Bytes) {
+    this.set("vault", Value.fromBytes(value));
+  }
+
+  get date(): i32 {
+    let value = this.get("date");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set date(value: i32) {
+    this.set("date", Value.fromI32(value));
+  }
+
+  get rewardsUsd(): BigDecimal {
+    let value = this.get("rewardsUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      throw new Error("Cannot return null for a required field.");
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set rewardsUsd(value: BigDecimal) {
+    this.set("rewardsUsd", Value.fromBigDecimal(value));
+  }
+
+  get unpricedRewardEvents(): i32 {
+    let value = this.get("unpricedRewardEvents");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set unpricedRewardEvents(value: i32) {
+    this.set("unpricedRewardEvents", Value.fromI32(value));
+  }
+
+  get tvlUsd(): BigDecimal | null {
+    let value = this.get("tvlUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set tvlUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("tvlUsd");
+    } else {
+      this.set("tvlUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get ppsUsd(): BigDecimal | null {
+    let value = this.get("ppsUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set ppsUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("ppsUsd");
+    } else {
+      this.set("ppsUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get priceXUsd(): BigDecimal | null {
+    let value = this.get("priceXUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set priceXUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("priceXUsd");
+    } else {
+      this.set("priceXUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get priceYUsd(): BigDecimal | null {
+    let value = this.get("priceYUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set priceYUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("priceYUsd");
+    } else {
+      this.set("priceYUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
+  get rebalanceCount(): i32 {
+    let value = this.get("rebalanceCount");
+    if (!value || value.kind == ValueKind.NULL) {
+      return 0;
+    } else {
+      return value.toI32();
+    }
+  }
+
+  set rebalanceCount(value: i32) {
+    this.set("rebalanceCount", Value.fromI32(value));
+  }
 }
 
 export class RewardEvent extends Entity {
@@ -635,6 +1010,23 @@ export class UserHarvestEvent extends Entity {
     this.set("amount", Value.fromBigInt(value));
   }
 
+  get amountUsd(): BigDecimal | null {
+    let value = this.get("amountUsd");
+    if (!value || value.kind == ValueKind.NULL) {
+      return null;
+    } else {
+      return value.toBigDecimal();
+    }
+  }
+
+  set amountUsd(value: BigDecimal | null) {
+    if (!value) {
+      this.unset("amountUsd");
+    } else {
+      this.set("amountUsd", Value.fromBigDecimal(<BigDecimal>value));
+    }
+  }
+
   get timestamp(): BigInt {
     let value = this.get("timestamp");
     if (!value || value.kind == ValueKind.NULL) {
@@ -999,5 +1391,23 @@ export class ILSnapshotLoader extends Entity {
   load(): ILSnapshot[] {
     let value = store.loadRelated(this._entity, this._id, this._field);
     return changetype<ILSnapshot[]>(value);
+  }
+}
+
+export class VaultDayDataLoader extends Entity {
+  _entity: string;
+  _field: string;
+  _id: string;
+
+  constructor(entity: string, id: string, field: string) {
+    super();
+    this._entity = entity;
+    this._id = id;
+    this._field = field;
+  }
+
+  load(): VaultDayData[] {
+    let value = store.loadRelated(this._entity, this._id, this._field);
+    return changetype<VaultDayData[]>(value);
   }
 }

@@ -36,8 +36,49 @@ export class Harvested__Params {
   }
 }
 
+export class Transfer extends ethereum.Event {
+  get params(): Transfer__Params {
+    return new Transfer__Params(this);
+  }
+}
+
+export class Transfer__Params {
+  _event: Transfer;
+
+  constructor(event: Transfer) {
+    this._event = event;
+  }
+
+  get from(): Address {
+    return this._event.parameters[0].value.toAddress();
+  }
+
+  get to(): Address {
+    return this._event.parameters[1].value.toAddress();
+  }
+
+  get value(): BigInt {
+    return this._event.parameters[2].value.toBigInt();
+  }
+}
+
 export class ArcaVault extends ethereum.SmartContract {
   static bind(address: Address): ArcaVault {
     return new ArcaVault("ArcaVault", address);
+  }
+
+  getStrategy(): Address {
+    let result = super.call("getStrategy", "getStrategy():(address)", []);
+
+    return result[0].toAddress();
+  }
+
+  try_getStrategy(): ethereum.CallResult<Address> {
+    let result = super.tryCall("getStrategy", "getStrategy():(address)", []);
+    if (result.reverted) {
+      return new ethereum.CallResult();
+    }
+    let value = result.value;
+    return ethereum.CallResult.fromValue(value[0].toAddress());
   }
 }

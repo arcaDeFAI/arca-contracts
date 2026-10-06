@@ -179,6 +179,29 @@ export function getShadowVaults(): ShadowVaultConfig[] {
   return VAULT_CONFIGS.filter(isShadowVault);
 }
 
+// No rebalance/reward activity in 50-90+ days — hidden from the vault list, but depositors
+// still see them on /dashboard and can open their page to withdraw.
+const INACTIVE_VAULTS = new Set([
+  '0x1c0c5a4197b7fa25a180e6e08ea19a91ebbe5fd2', // wS • USSD | Metropolis
+  '0x34331e66a634d69d64edc3e21e52a53899e12640', // WETH • wS | Metropolis
+  '0xc318c24c8a8584b03019d34e586daa14f208ef2d', // USSD • USDC | Shadow
+  '0x3a284cc4080f9d88ac2ee330296975c78c53b5cd', // USSD • wS | Shadow
+]);
+
+export function isVaultListed(vault: VaultConfig): boolean {
+  return !INACTIVE_VAULTS.has(vault.vaultAddress.toLowerCase());
+}
+
+/** "wS / USDC" */
+export function getPairName(vault: VaultConfig): string {
+  return `${vault.tokenX} / ${vault.tokenY}`;
+}
+
+export const PLATFORMS = {
+  metropolis: { name: 'Metropolis', logo: '/MetropolisLogo.png' },
+  shadow: { name: 'Shadow', logo: '/SHadowLogo.jpg' },
+} as const;
+
 /**
  * Get vault by address (case-insensitive)
  */

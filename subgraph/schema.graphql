@@ -14,6 +14,46 @@ type Vault @entity {
   rewardEvents: [RewardEvent!]! @derivedFrom(field: "vault")
   snapshots: [Snapshot!]!       @derivedFrom(field: "vault")
   ilSnapshot: ILSnapshot        @derivedFrom(field: "vault")
+  dayData: [VaultDayData!]!     @derivedFrom(field: "vault")
+  # USD TVL at the most recent rebalance — carried into days with rewards but no rebalance.
+  lastTvlUsd: BigDecimal
+  # ── Points ──
+  # USD value of 1e24 raw shares at the most recent rebalance
+  lastPpsUsd: BigDecimal
+  # Cumulative points earned per raw share (sum of pps/1e24 × days). A user earns
+  # shares × (pointsIndex − their indexSnapshot) — the reward-per-share pattern.
+  pointsIndex: BigDecimal
+  pointsIndexUpdatedAt: BigInt
+}
+
+# ── Points (airdrop) ───────────────────────────────────────────────────────────
+# 1 point per $1 held per day. Shares leaving a wallet (withdrawal request, transfer, burn)
+# forfeit their share of the position's points, scaled by holding time (penaltyRate).
+type UserVaultPosition @entity {
+  id: Bytes!                         # vaultAddress + userAddress
+  user: Bytes!
+  vault: Vault!
+  shares: BigInt!
+  avgEntryTime: BigInt!              # share-weighted deposit time
+  points: BigDecimal!                # settled; the UI adds shares × index growth since indexSnapshot
+  indexSnapshot: BigDecimal!
+}
+
+# One row per vault per UTC day — drives the APR / TVL history charts.
+#   reward_apr(day) = rewardsUsd / tvlUsd * 365 * 100
+# Rewards are valued at the reward token's USD price at the moment they were forwarded,
+# so history stays accurate when the reward token price moves later.
+type VaultDayData @entity {
+  id: Bytes!                    # vaultAddress + dayIndex (i32)
+  vault: Vault!
+  date: Int!                    # unix timestamp of 00:00 UTC for this day
+  rewardsUsd: BigDecimal!       # sum of priced rewards forwarded to the vault this day
+  unpricedRewardEvents: Int!    # reward events whose token could not be priced (excluded above)
+  tvlUsd: BigDecimal            # TVL at the day's last rebalance, else carried from Vault.lastTvlUsd
+  ppsUsd: BigDecimal            # USD value of 1e24 shares at the day's last rebalance
+  priceXUsd: BigDecimal
+  priceYUsd: BigDecimal
+  rebalanceCount: Int!
 }
 
 type RewardEvent @entity(immutable: true) {
@@ -69,6 +109,7 @@ type UserHarvestEvent @entity(immutable: true) {
   user: Bytes!                  # user wallet address (indexed for filtering)
   token: Bytes!                 # reward token address
   amount: BigInt!
+  amountUsd: BigDecimal         # value at the moment of the claim (null if the token has no price source)
   timestamp: BigInt!
   blockNumber: BigInt!
   txHash: Bytes!

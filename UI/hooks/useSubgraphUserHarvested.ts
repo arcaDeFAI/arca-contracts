@@ -23,6 +23,8 @@ interface SubgraphUserHarvestedResult {
   firstHarvestTimestamp: number | null;
   /** Per-vault summary keyed by lowercase vault address */
   harvestsByVault: Map<string, VaultHarvestSummary>;
+  /** Running total of claimed USD, one point per UTC day with a claim (unix seconds) */
+  cumulative: Array<{ date: number; usd: number }>;
   isLoading: boolean;
 }
 
@@ -74,6 +76,7 @@ export function useSubgraphUserHarvested(
     const events = data?.userHarvestEvents ?? [];
 
     const harvestsByVault = new Map<string, VaultHarvestSummary>();
+    const cumulative: Array<{ date: number; usd: number }> = [];
     let totalHarvestedUSD = 0;
     let firstHarvestTimestamp: number | null = null;
 
@@ -96,6 +99,12 @@ export function useSubgraphUserHarvested(
 
       const amountUSD = (Number(event.amount) / 1e18) * price;
       totalHarvestedUSD += amountUSD;
+
+      // Events arrive oldest-first, so the running total is monotonic
+      const day = Math.floor(Number(event.timestamp) / 86_400) * 86_400;
+      const last = cumulative.at(-1);
+      if (last && last.date === day) last.usd = totalHarvestedUSD;
+      else cumulative.push({ date: day, usd: totalHarvestedUSD });
 
       // Accumulate per-vault
       const existing = harvestsByVault.get(vaultKey);
@@ -121,6 +130,7 @@ export function useSubgraphUserHarvested(
       totalHarvestedUSD,
       firstHarvestTimestamp,
       harvestsByVault,
+      cumulative,
       isLoading,
     };
   }, [data, prices, isLoading]);
