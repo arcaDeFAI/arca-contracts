@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import Script from 'next/script'
 import type { Metadata } from 'next'
 import './landing.css'
@@ -45,7 +46,7 @@ export default function LandingPage() {
             <img src="/landing/arca.png" alt="arca logo" className="logo" />
             <span className="brand-text">arca Finance</span>
           </div>
-          <a href="/vaults" className="cta-btn small">arca App</a>
+          <Link href="/vaults" className="cta-btn small">arca App</Link>
         </header>
 
         <div className="hero-content">
@@ -71,7 +72,7 @@ export default function LandingPage() {
             Dynamic ranges and in-pair capital allocation on Sonic.
           </p>
 
-          <a href="/vaults" className="cta-btn">Go to dApp</a>
+          <Link href="/vaults" className="cta-btn">Go to dApp</Link>
 
           <div className="price-ticker-wrap">
             <div className="price-ticker">
