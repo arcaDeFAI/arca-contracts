@@ -1,174 +1,53 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import { Header } from '@/components/Header';
-import { VaultCard } from '@/components/VaultCard';
-import { SocialLinks } from '@/components/SocialLinks';
-import { formatUSD } from '@/lib/utils';
-import { useVaultMetrics } from '@/hooks/useVaultMetrics';
-import { VAULT_CONFIGS } from '@/lib/vaultConfigs';
-import { StatsCard } from '@/components/StatsCard';
+import { PageShell } from '@/components/PageShell';
+import { VaultList } from '@/components/vaults/VaultList';
+import { Skeleton } from '@/components/ui';
+import { useVaultsOverview } from '@/hooks/useVaultsOverview';
+import { isVaultListed } from '@/lib/vaultConfigs';
+import { formatUSDCompact } from '@/lib/utils';
 
-// No rebalance/reward activity in 50-90+ days — hidden from this listing, but existing
-// depositors still see these on /dashboard (which filters by user position, not this list).
-const INACTIVE_VAULTS = new Set([
-  '0x1c0c5a4197b7fa25a180e6e08ea19a91ebbe5fd2', // wS • USSD | Metropolis
-  '0x34331e66a634d69d64edc3e21e52a53899e12640', // WETH • wS | Metropolis
-  '0xc318c24c8a8584b03019d34e586daa14f208ef2d', // USSD • USDC | Shadow
-  '0x3a284cc4080f9d88ac2ee330296975c78c53b5cd', // USSD • wS | Shadow
-]);
-const visibleVaultConfigs = VAULT_CONFIGS.filter(
-  v => !INACTIVE_VAULTS.has(v.vaultAddress.toLowerCase()),
-);
-
-// Tab Component
-const FilterTab = ({
-  label,
-  isActive,
-  onClick
-}: {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${isActive
-      ? 'bg-arca-green/[0.1] text-arca-green shadow-sm'
-      : 'text-arca-text-secondary hover:text-arca-text hover:bg-white/[0.04]'
-      }`}
-  >
-    {label}
-  </button>
-);
-
-export default function Home() {
-  const { address, isConnected } = useAccount();
-  const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'All' | 'Metropolis' | 'Shadow'>('All');
-
-  const allVaultMetrics = visibleVaultConfigs.map(config =>
-    useVaultMetrics(config, address)
+export default function VaultsPage() {
+  return (
+    <PageShell>
+      <VaultsContent />
+    </PageShell>
   );
+}
 
-  const totalTVL = useMemo(() => {
-    return allVaultMetrics.reduce((sum, metrics) => sum + (metrics.vaultTVL || 0), 0);
-  }, [allVaultMetrics]);
+function HeaderStat({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div className="text-right">
+      <div className="text-[11px] text-arca-text-secondary">{label}</div>
+      {value === null ? <Skeleton className="ml-auto mt-1 h-5 w-16" /> : <div className="text-lg font-semibold tabular-nums text-arca-text">{value}</div>}
+    </div>
+  );
+}
 
-  const userTotalBalance = useMemo(() => {
-    return allVaultMetrics.reduce((sum, metrics) => sum + (metrics.depositedValueUSD || 0), 0);
-  }, [allVaultMetrics]);
+function VaultsContent() {
+  const { address, isConnected } = useAccount();
+  const { vaults, isLoading, aprLoading } = useVaultsOverview(address);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  const displayedVaults = visibleVaultConfigs.filter(vault => {
-    if (activeTab === 'All') return true;
-    if (activeTab === 'Metropolis') return vault.name.includes('Metropolis');
-    if (activeTab === 'Shadow') return vault.name.includes('Shadow');
-    return true;
-  });
+  // Deposits in unlisted (retired) vaults still count toward the user's total and stay reachable via "My vaults".
+  const listed = vaults.filter((v) => isVaultListed(v.config) || v.userUsd > 0.01);
+  const totalTvl = vaults.reduce((s, v) => s + v.tvlUsd, 0);
+  const userTotal = vaults.reduce((s, v) => s + v.userUsd, 0);
 
   return (
-    <div className="min-h-screen bg-arca-dark relative selection:bg-arca-green/20">
-      {/* Subtle background gradient */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-arca-green/[0.02] rounded-full blur-[120px]" />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-arca-green/[0.015] rounded-full blur-[100px]" />
+    <>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="mb-1 text-2xl font-bold tracking-tight text-arca-text">Vaults</h1>
+          <p className="text-sm text-arca-text-secondary">Automated liquidity that rebalances and earns rewards for you.</p>
+        </div>
+        <div className="flex gap-8">
+          <HeaderStat label="Total value locked" value={isLoading ? null : formatUSDCompact(totalTvl)} />
+          {isConnected && <HeaderStat label="Your deposits" value={isLoading ? null : formatUSDCompact(userTotal)} />}
+        </div>
       </div>
 
-      <div className="relative z-10 flex flex-col min-h-screen">
-        <Header />
-
-        <main className="w-full px-4 sm:px-6 lg:px-8 py-8 flex-1 max-w-[1400px] mx-auto">
-
-          {/* Page Header */}
-          <div className="flex flex-col gap-6 mb-10">
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-arca-text tracking-tight mb-2">
-                Yield Vaults
-              </h1>
-              <p className="text-arca-text-secondary text-sm max-w-xl leading-relaxed">
-                Earn high-yield APR on your crypto through automated Metropolis & Shadow strategies.
-              </p>
-            </div>
-
-            {/* Stats Row */}
-            <div className="flex flex-wrap gap-3 w-full">
-              <div className="flex-1 min-w-[180px] max-w-[260px]">
-                <StatsCard
-                  title="Total TVL"
-                  value={allVaultMetrics.some(m => m.isLoading) ? undefined : formatUSD(totalTVL)}
-                  loading={allVaultMetrics.some(m => m.isLoading)}
-                  className="h-full"
-                />
-              </div>
-
-              <div className="flex-1 min-w-[180px] max-w-[260px]">
-                <StatsCard
-                  title="Your Balance"
-                  value={!isConnected ? '--' : (allVaultMetrics.some(m => m.isLoading) ? undefined : formatUSD(userTotalBalance))}
-                  loading={isConnected && allVaultMetrics.some(m => m.isLoading)}
-                  className="h-full"
-                />
-              </div>
-
-              <div className="flex-1 min-w-[180px] max-w-[260px]">
-                <StatsCard
-                  title="Active Vaults"
-                  value={visibleVaultConfigs.length}
-                  className="h-full"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Wallet prompt */}
-          {!isConnected && (
-            <div className="bg-amber-500/[0.06] border border-amber-500/[0.12] rounded-2xl p-4 mb-8 flex items-start gap-3 animate-fade-in">
-              <span className="text-lg mt-0.5">⚠️</span>
-              <div>
-                <h3 className="text-amber-400 font-medium text-sm mb-0.5">Wallet Not Connected</h3>
-                <p className="text-amber-400/60 text-xs leading-relaxed">
-                  Connect your wallet to deposit and view personal earnings.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Filter Tabs */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-            <div className="flex bg-arca-gray/60 p-1 rounded-2xl border border-white/[0.04]">
-              <FilterTab label="All Strategies" isActive={activeTab === 'All'} onClick={() => setActiveTab('All')} />
-              <FilterTab label="Metropolis" isActive={activeTab === 'Metropolis'} onClick={() => setActiveTab('Metropolis')} />
-              <FilterTab label="Shadow" isActive={activeTab === 'Shadow'} onClick={() => setActiveTab('Shadow')} />
-            </div>
-
-            <span className="text-xs text-arca-text-tertiary hidden sm:block">
-              {displayedVaults.length} vault{displayedVaults.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-
-          {/* Vault Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-            {displayedVaults.map((vault, index) => (
-              <div key={index} className="animate-fade-up" style={{ animationDelay: `${index * 60}ms`, animationFillMode: 'both' }}>
-                <VaultCard config={vault} />
-              </div>
-            ))}
-          </div>
-
-          {/* Footer */}
-          <div className="mt-20 pt-8 border-t border-white/[0.04]">
-            <SocialLinks />
-          </div>
-
-        </main>
-      </div>
-    </div>
+      <VaultList vaults={listed} isLoading={isLoading} aprLoading={aprLoading} isConnected={isConnected} />
+    </>
   );
 }

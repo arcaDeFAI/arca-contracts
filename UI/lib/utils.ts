@@ -49,9 +49,23 @@ export function formatUSD(amount: number): string {
   }).format(amount)
 }
 
+// $1.2M / $450K / $12.34 — for headline numbers and tables
+export function formatUSDCompact(amount: number): string {
+  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(2)}M`
+  if (amount >= 10_000) return `$${(amount / 1_000).toFixed(1)}K`
+  return formatUSD(amount)
+}
+
 // Format percentage
 export function formatPercentage(value: number): string {
   return `${value.toFixed(2)}%`
+}
+
+// APR for display: null → "—", large values without decimals
+export function formatApr(value: number | null): string {
+  if (value === null || !Number.isFinite(value)) return '—'
+  if (value >= 1000) return `${Math.round(value).toLocaleString()}%`
+  return `${value.toFixed(value >= 100 ? 0 : 1)}%`
 }
 
 /**

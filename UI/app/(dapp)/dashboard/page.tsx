@@ -1,125 +1,86 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { Header } from '@/components/Header';
-import { DashboardVaultCard } from '@/components/DashboardVaultCard';
-import { DashboardOverview } from '@/components/DashboardOverview';
-import { SocialLinks } from '@/components/SocialLinks';
-import { VaultTableView } from '@/components/VaultTableView';
-import { VAULT_CONFIGS, type VaultConfig } from '@/lib/vaultConfigs';
+import { PageShell } from '@/components/PageShell';
+import { PositionsTable } from '@/components/vaults/PositionsTable';
+import { PortfolioChart } from '@/components/vaults/PortfolioChart';
+import { Card, ConnectWalletButton, Skeleton } from '@/components/ui';
+import { useVaultsOverview } from '@/hooks/useVaultsOverview';
+import { useSubgraphUserHarvested } from '@/hooks/useSubgraphUserHarvested';
+import { usePoints } from '@/hooks/usePoints';
+import { cn, formatApr, formatUSD } from '@/lib/utils';
 
-export default function Dashboard() {
+export default function DashboardPage() {
+  return (
+    <PageShell>
+      <DashboardContent />
+    </PageShell>
+  );
+}
+
+function HeaderStat({ label, value, accent = false }: { label: string; value: string | null; accent?: boolean }) {
+  return (
+    <div className="text-right">
+      <div className="text-[11px] text-arca-text-secondary">{label}</div>
+      {value === null ? (
+        <Skeleton className="ml-auto mt-1 h-5 w-16" />
+      ) : (
+        <div className={cn('text-lg font-semibold tabular-nums', accent ? 'text-arca-green' : 'text-arca-text')}>{value}</div>
+      )}
+    </div>
+  );
+}
+
+function DashboardContent() {
   const { address, isConnected } = useAccount();
-  const [mounted, setMounted] = useState(false);
-  const [selectedVault, setSelectedVault] = useState<VaultConfig | null>(null);
+  const { vaults, isLoading } = useVaultsOverview(address);
+  const harvested = useSubgraphUserHarvested(address);
+  const points = usePoints(address);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return null;
+  if (!isConnected) {
+    return (
+      <>
+        <h1 className="mb-6 text-2xl font-bold tracking-tight text-arca-text">Dashboard</h1>
+        <Card className="flex flex-col items-center p-12 text-center">
+          <p className="mb-5 text-sm text-arca-text-secondary">Connect your wallet to see your deposits and rewards.</p>
+          <ConnectWalletButton />
+        </Card>
+      </>
+    );
   }
 
+  // Current worth of the user's shares (not the amount originally deposited)
+  const totalValue = vaults.reduce((s, v) => s + v.userUsd, 0);
+  // Value-weighted APR across the user's vaults
+  const weightedApr =
+    totalValue > 0 ? vaults.reduce((s, v) => s + (v.apr ?? 0) * v.userUsd, 0) / totalValue : null;
+  const hasDeposits = totalValue > 0.01;
+
   return (
-    <div className="min-h-screen bg-arca-dark relative">
-      {/* Subtle ambient glow */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-0 right-1/3 w-[500px] h-[500px] bg-arca-green/[0.015] rounded-full blur-[120px]" />
+    <>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight text-arca-text">Dashboard</h1>
+        <div className="flex flex-wrap gap-6 sm:gap-8">
+          <HeaderStat label="Total value" value={isLoading ? null : formatUSD(totalValue)} />
+          <HeaderStat label="Average APR" value={isLoading ? null : formatApr(weightedApr)} accent />
+          <HeaderStat label="Rewards claimed" value={harvested.isLoading ? null : formatUSD(harvested.totalHarvestedUSD)} />
+          {points && <HeaderStat label="Points" value={Math.floor(points.total).toLocaleString()} />}
+        </div>
       </div>
 
-      <div className="relative z-10">
-        <Header />
+      {points && (
+        <p className="-mt-3 mb-6 text-right text-[11px] text-arca-text-tertiary">
+          1 point per $1 per day · early withdrawals remove points · a future airdrop is not guaranteed
+        </p>
+      )}
 
-        <main className="w-full px-4 sm:px-6 lg:px-8 py-6 max-w-[1400px] mx-auto">
-          {/* Page Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-arca-text tracking-tight mb-1">
-              Dashboard
-            </h1>
-            <p className="text-arca-text-secondary text-sm">
-              Manage positions, claim rewards, and handle withdrawals
-            </p>
-          </div>
-
-          {/* Connection Prompt */}
-          {!isConnected && (
-            <div className="bg-amber-500/[0.06] border border-amber-500/[0.12] rounded-2xl p-4 mb-6 animate-fade-in">
-              <div className="flex items-center gap-3">
-                <span className="text-lg">⚠️</span>
-                <div>
-                  <h3 className="text-amber-400 font-medium text-sm mb-0.5">Connect Your Wallet</h3>
-                  <p className="text-amber-400/60 text-xs">
-                    Connect your wallet to view your dashboard and manage positions.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Dashboard Overview */}
-          {isConnected && (
-            <DashboardOverview
-              vaultConfigs={VAULT_CONFIGS}
-              userAddress={address}
-            />
-          )}
-
-          {/* Active Vaults Section */}
-          {isConnected && (
-            <>
-              {/* Section Header */}
-              <div className="mb-5 mt-2">
-                <div className="flex items-center gap-2.5 mb-1">
-                  <div className="w-1 h-5 bg-arca-green rounded-full"></div>
-                  <h2 className="text-lg font-semibold text-arca-text">Active Vaults</h2>
-                </div>
-                <p className="text-arca-text-tertiary text-xs ml-[18px]">Click on a vault to view details</p>
-              </div>
-
-              {/* Table + Detail Panel */}
-              <div className="flex flex-col lg:flex-row gap-5">
-                <div className={`transition-all duration-300 ${selectedVault ? 'lg:w-2/3' : 'w-full'}`}>
-                  <VaultTableView
-                    vaults={VAULT_CONFIGS}
-                    userAddress={address}
-                    onVaultClick={(vault) => setSelectedVault(vault)}
-                    selectedVault={selectedVault || undefined}
-                  />
-                </div>
-
-                {selectedVault && (
-                  <div className="w-full lg:w-1/3 transition-all duration-300 animate-fade-in">
-                    <div className="lg:sticky lg:top-20">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-arca-text font-semibold text-sm">Vault Details</h3>
-                        <button
-                          onClick={() => setSelectedVault(null)}
-                          className="text-arca-text-tertiary hover:text-arca-text transition-colors p-1 rounded-lg hover:bg-white/[0.04]"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      <DashboardVaultCard
-                        config={selectedVault}
-                        userAddress={address}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Footer */}
-          <div className="mt-16 pt-6 border-t border-white/[0.04]">
-            <SocialLinks />
-          </div>
-        </main>
+      <div className="mb-6">
+        <PositionsTable vaults={vaults} emptyHint={!isLoading && !hasDeposits} />
       </div>
-    </div>
+
+      {(hasDeposits || harvested.cumulative.length > 0) && (
+        <PortfolioChart vaults={vaults} claimed={harvested.cumulative} claimedLoading={harvested.isLoading} />
+      )}
+    </>
   );
 }
