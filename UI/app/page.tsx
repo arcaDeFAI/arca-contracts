@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import './landing.css'
 
 export const metadata: Metadata = {
-  title: 'Arca DeFi - Vault Management',
+  title: 'arca Finance | Liquidity Vaults on Sonic',
   description: 'Autonomous liquidity strategy management for concentrated-liquidity and DLMM vaults on Sonic.',
 }
 
@@ -293,7 +293,7 @@ export default function LandingPage() {
             <div className="faq-right">
               <div className="faq-item active">
                 <button className="faq-question" type="button" aria-expanded="true"><span>What is arca Finance?</span><span className="faq-symbol">x</span></button>
-                <div className="faq-answer"><div className="faq-answer-inner">arca is an AI-assisted liquidity management protocol on Sonic. Its autonomous strategy layer monitors supported pools, manages target ranges or bins, and reallocates capital within each deposited pair.</div></div>
+                <div className="faq-answer"><div className="faq-answer-inner">arca is an algorithmic liquidity management protocol on Sonic. Its autonomous strategy layer monitors supported pools, manages target ranges or bins, and reallocates capital within each deposited pair.</div></div>
               </div>
               <div className="faq-item">
                 <button className="faq-question" type="button" aria-expanded="false"><span>Who is arca for?</span><span className="faq-symbol">+</span></button>
@@ -304,8 +304,8 @@ export default function LandingPage() {
                 <div className="faq-answer"><div className="faq-answer-inner">arca supports selected concentrated-liquidity and DLMM pools on Sonic. Available vaults and pairs are shown in the app.</div></div>
               </div>
               <div className="faq-item">
-                <button className="faq-question" type="button" aria-expanded="false"><span>How does the AI rebalancing work?</span><span className="faq-symbol">+</span></button>
-                <div className="faq-answer"><div className="faq-answer-inner">arca combines predefined algorithms with adaptive strategy logic. It monitors pool and market conditions, determines target positioning, and adjusts ranges or bins autonomously without exposing proprietary execution conditions.</div></div>
+                <button className="faq-question" type="button" aria-expanded="false"><span>How does the rebalancing work?</span><span className="faq-symbol">+</span></button>
+                <div className="faq-answer"><div className="faq-answer-inner">arca runs predefined, rule-based algorithms. It monitors pool and market conditions, determines target positioning, and adjusts ranges or bins autonomously without exposing proprietary execution conditions.</div></div>
               </div>
               <div className="faq-item">
                 <button className="faq-question" type="button" aria-expanded="false"><span>Do I need to manage my position manually?</span><span className="faq-symbol">+</span></button>
