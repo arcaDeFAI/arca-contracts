@@ -4,7 +4,7 @@ import { Providers } from '../providers'
 import { BackgroundPattern } from '@/components/BackgroundPattern'
 
 export const metadata: Metadata = {
-  title: 'Arca DeFi - Vault Management',
+  title: 'arca Finance | Liquidity Vaults on Sonic',
   description: 'Deposit and earn yield on your crypto assets across our strategic vaults',
   manifest: '/manifest.json',
   icons: {
@@ -17,14 +17,14 @@ export const metadata: Metadata = {
     apple: '/arca-logo.png',
   },
   openGraph: {
-    title: 'Arca DeFi - Vault Management',
+    title: 'arca Finance | Liquidity Vaults on Sonic',
     description: 'Deposit and earn yield on your crypto assets across our strategic vaults',
     images: ['/arca-logo.png'],
-    siteName: 'Arca DeFi',
+    siteName: 'arca Finance',
   },
   twitter: {
     card: 'summary',
-    title: 'Arca DeFi - Vault Management',
+    title: 'arca Finance | Liquidity Vaults on Sonic',
     description: 'Deposit and earn yield on your crypto assets across our strategic vaults',
     images: ['/arca-logo.png'],
   },

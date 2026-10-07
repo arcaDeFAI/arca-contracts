@@ -25,7 +25,7 @@ const sonic = {
 const projectId = process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '';
 
 const config = getDefaultConfig({
-  appName: 'Arca DeFi',
+  appName: 'arca Finance',
   projectId: projectId || 'arca-defi', // Fallback project ID
   chains: [sonic], // Only Sonic chain supported
   ssr: false,

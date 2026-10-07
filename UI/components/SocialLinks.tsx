@@ -60,8 +60,8 @@ const LEGAL_COPY: Record<Exclude<LegalModalType, null>, { title: string; body: s
       'These smart contracts are not controlled by arca Finance after deployment, may interact with third-party protocols (e.g. DEX liquidity pools), and operate based on predefined logic and market conditions.',
       'arca Finance does not guarantee performance of strategies, continuity of third-party integrations, or profitability or risk mitigation outcomes.',
       '5. Vault & Strategy Disclaimer',
-      'arca Finance provides AI-assisted liquidity management strategies. These include automated rebalancing, capital allocation between active ranges and reserved funds, and market-informed adjustments.',
-      'However, strategies are not risk-free, users may experience losses, including impermanent loss, and AI outputs are probabilistic, not deterministic.',
+      'arca Finance provides algorithmic liquidity management strategies. These include automated rebalancing, capital allocation between active ranges and reserved funds, and market-informed adjustments.',
+      'However, strategies are not risk-free, users may experience losses, including impermanent loss, and strategy outcomes depend on market conditions and are never guaranteed.',
       'All usage is at the user’s own risk.',
       '6. No Financial Advice',
       'arca Finance does not provide investment advice, financial recommendations, or tax or legal guidance.',
@@ -175,7 +175,7 @@ export function SocialLinks() {
               className="-mt-2 mb-3 h-auto w-[116px] object-contain opacity-92 xl:w-[128px]"
             />
             <p className="max-w-[300px] self-end text-[11px] font-medium uppercase tracking-[0.16em] text-arca-text-secondary xl:text-right">
-              AI-powered Rebalancing Strategies
+              Algorithmic Rebalancing Strategies
             </p>
           </div>
         </div>
