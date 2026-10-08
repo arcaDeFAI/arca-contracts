@@ -56,7 +56,8 @@ function PositionRow({ vault }: { vault: VaultOverview }) {
   const position = useVaultPosition(config, address, shareRatio);
 
   const hasWithdrawal = position.queuedShares > 0n || position.claimableWithdrawals.length > 0;
-  if (!address || (userUsd < 0.01 && !position.hasPendingRewards && !hasWithdrawal)) return null;
+  // Shares, not USD value, decide visibility, so a slow price read can't hide a position
+  if (!address || (userShares === 0n && !position.hasPendingRewards && !hasWithdrawal)) return null;
 
   const vaultAddr = config.vaultAddress as `0x${string}`;
   const abi = isShadowVault(config) ? SHADOW_VAULT_ABI : METRO_VAULT_ABI;
