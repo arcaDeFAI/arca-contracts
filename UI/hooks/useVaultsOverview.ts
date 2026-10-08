@@ -102,7 +102,8 @@ export function useVaultsOverview(userAddress?: string) {
     });
   }, [balancesQ.data, supplyQ.data, userQ.data, feeQ.data, userAddress, prices, metricsByVault, histories]);
 
-  const isLoading = balancesQ.isLoading || supplyQ.isLoading || pricesLoading;
+  // Includes the user's balances, so "no deposits" is never shown before they have loaded
+  const isLoading = balancesQ.isLoading || supplyQ.isLoading || pricesLoading || (!!userAddress && userQ.isLoading);
   const aprLoading = [...metricsByVault.values()].some((m) => m.isLoading);
 
   return { vaults, isLoading, aprLoading };

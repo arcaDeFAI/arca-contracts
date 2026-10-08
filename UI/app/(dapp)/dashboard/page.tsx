@@ -54,7 +54,7 @@ function DashboardContent() {
   // Value-weighted APR across the user's vaults
   const weightedApr =
     totalValue > 0 ? vaults.reduce((s, v) => s + (v.apr ?? 0) * v.userUsd, 0) / totalValue : null;
-  const hasDeposits = totalValue > 0.01;
+  const hasDeposits = vaults.some((v) => v.userShares > 0n);
 
   return (
     <>
