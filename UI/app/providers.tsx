@@ -5,7 +5,7 @@ import {
   getDefaultConfig,
   RainbowKitProvider,
 } from '@rainbow-me/rainbowkit';
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider, http } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PriceProvider } from '@/contexts/PriceContext';
 
@@ -16,6 +16,8 @@ const sonic = {
   nativeCurrency: { decimals: 18, name: 'S', symbol: 'S' },
   rpcUrls: { default: { http: ['https://rpc.soniclabs.com'] } },
   blockExplorers: { default: { name: 'Sonic Explorer', url: 'https://sonicscan.org' } },
+  // Lets viem/wagmi fold many contract reads into one eth_call (verified deployed on Sonic)
+  contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11', blockCreated: 60 } },
   iconUrl: '/SonicLogoRound.png',
   iconBackground: '#0066FF',
   testnet: false,
@@ -29,21 +31,25 @@ const config = getDefaultConfig({
   projectId: projectId || 'arca-defi', // Fallback project ID
   chains: [sonic], // Only Sonic chain supported
   ssr: false,
+  // The public RPC rate-limits bursts: the dashboard alone makes 60+ reads per load. Multicall
+  // folds individual reads into a few eth_calls, and JSON-RPC batching sends those together.
+  batch: { multicall: { wait: 16 } },
+  transports: {
+    [sonic.id]: http('https://rpc.soniclabs.com', { batch: { batchSize: 20, wait: 16 } }),
+  },
 });
 
-// Configure QueryClient - Optimized for reliable data fetching
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 3, // Retry failed queries 3 times
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
-      refetchOnWindowFocus: true, // Refetch when user returns to tab
-      refetchOnMount: true, // Always refetch when component mounts
-      refetchOnReconnect: true, // Refetch when network reconnects
-      staleTime: 20000, // Data is fresh for 20 seconds
-      gcTime: 5 * 60 * 1000, // Keep unused data in cache for 5 minutes
-      refetchInterval: 30000, // Auto-refetch every 30 seconds for live data
-      networkMode: 'online', // Only fetch when online
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 4000), // fail fast instead of hanging ~15s
+      refetchOnWindowFocus: false, // a tab switch shouldn't re-run every query at once
+      refetchOnReconnect: true,
+      staleTime: 30_000,
+      gcTime: 5 * 60 * 1000,
+      refetchInterval: 60_000, // live balances/rewards; heavy subgraph queries set their own longer staleTime
+      networkMode: 'online',
     },
   },
 });
