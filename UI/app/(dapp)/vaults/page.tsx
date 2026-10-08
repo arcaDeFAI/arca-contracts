@@ -30,7 +30,8 @@ function VaultsContent() {
   const { vaults, isLoading, aprLoading } = useVaultsOverview(address);
 
   // Deposits in unlisted (retired) vaults still count toward the user's total and stay reachable via "My vaults".
-  const listed = vaults.filter((v) => isVaultListed(v.config) || v.userUsd > 0.01);
+  // Based on shares, not USD value, so a slow price/TVL read can't make a user's vault disappear
+  const listed = vaults.filter((v) => isVaultListed(v.config) || v.userShares > 0n);
   const totalTvl = vaults.reduce((s, v) => s + v.tvlUsd, 0);
   const userTotal = vaults.reduce((s, v) => s + v.userUsd, 0);
 
