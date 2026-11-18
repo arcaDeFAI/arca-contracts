@@ -12,6 +12,7 @@ import { useTx } from '@/hooks/useTx';
 import { Card } from '@/components/ui';
 import { VaultIdentity } from './VaultList';
 import { canClaimRewards, MIN_CLAIM_USD, rewardsUsd } from './PositionCard';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 // Vault | Value | APR | Rewards | Withdrawal
 const COLS = 'md:grid-cols-[minmax(0,1fr)_96px_72px_176px_184px]';
@@ -83,7 +84,7 @@ function PositionRow({ vault }: { vault: VaultOverview }) {
               title={claimable ? undefined : `Claimable once rewards reach ${formatUSD(MIN_CLAIM_USD)}`}
               disabled={!claimable || tx.pending !== null}
               loading={tx.pending === 'claim'}
-              onClick={() => tx.send('claim', () => writeContractAsync({ address: vaultAddr, abi, functionName: 'claim' }))}
+              onClick={() => tx.send('claim', () => writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vaultAddr, abi, functionName: 'claim' }))}
             >
               Claim
             </RowButton>
@@ -102,7 +103,7 @@ function PositionRow({ vault }: { vault: VaultOverview }) {
                 loading={tx.pending === 'redeem'}
                 onClick={() =>
                   tx.send('redeem', () =>
-                    writeContractAsync({ address: vaultAddr, abi, functionName: 'redeemQueuedWithdrawal', args: [ready.round, address] }),
+                    writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vaultAddr, abi, functionName: 'redeemQueuedWithdrawal', args: [ready.round, address] }),
                   )
                 }
               >
@@ -117,7 +118,7 @@ function PositionRow({ vault }: { vault: VaultOverview }) {
                 loading={tx.pending === 'cancel'}
                 onClick={() =>
                   tx.send('cancel', () =>
-                    writeContractAsync({ address: vaultAddr, abi, functionName: 'cancelQueuedWithdrawal', args: [position.queuedShares] }),
+                    writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vaultAddr, abi, functionName: 'cancelQueuedWithdrawal', args: [position.queuedShares] }),
                   )
                 }
               >

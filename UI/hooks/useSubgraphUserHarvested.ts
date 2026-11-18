@@ -45,24 +45,42 @@ export function useSubgraphUserHarvested(
     queryFn: async () => {
       if (!userAddress) return { userHarvestEvents: [] };
 
-      const query = `
-        query GetUserHarvests($user: Bytes!, $first: Int!) {
+      const PAGE = 1000;
+      const buildQuery = (fields: string) => `
+        query GetUserHarvests($user: Bytes!, $lastId: Bytes!) {
           userHarvestEvents(
-            where: { user: $user }
-            orderBy: timestamp
+            where: { user: $user, id_gt: $lastId }
+            orderBy: id
             orderDirection: asc
-            first: $first
+            first: ${PAGE}
           ) {
-            ${USER_HARVEST_EVENT_FIELDS}
+            ${fields}
           }
         }
       `;
+      // Every claim, page by page: active wallets have far more than one page of 1000
+      const fetchAll = async (fields: string): Promise<UserHarvestsResponse> => {
+        const all: UserHarvestsResponse['userHarvestEvents'] = [];
+        let lastId = '0x';
+        for (;;) {
+          const page = (await querySubgraph<UserHarvestsResponse>(buildQuery(fields), { user: userAddress.toLowerCase(), lastId }))
+            ?.userHarvestEvents ?? [];
+          all.push(...page);
+          if (page.length < PAGE) break;
+          lastId = page[page.length - 1].id;
+        }
+        all.sort((a, b) => Number(a.timestamp) - Number(b.timestamp));
+        return { userHarvestEvents: all };
+      };
 
-      const result = await querySubgraph<UserHarvestsResponse>(query, {
-        user: userAddress.toLowerCase(),
-        first: 1000,
-      });
-      return result ?? { userHarvestEvents: [] };
+      // amountUsd (value at claim time) exists from subgraph 1.0.19. Ask for it first and fall
+      // back to the older schema, so this works before and after the subgraph switch.
+      try {
+        return await fetchAll(`${USER_HARVEST_EVENT_FIELDS} amountUsd`);
+      } catch (err) {
+        if (!(err instanceof Error) || !err.message.includes('amountUsd')) throw err;
+        return fetchAll(USER_HARVEST_EVENT_FIELDS);
+      }
     },
     enabled: !!userAddress,
     staleTime: 30_000,              // 30 seconds — stale quickly so any focus/mount refetches
@@ -85,19 +103,24 @@ export function useSubgraphUserHarvested(
       const tokenAddr = event.token.toLowerCase();
       const timestampMs = Number(event.timestamp) * 1000;
 
-      // USD value using token registry + price context
-      const tokenDef = getTokenByAddress(tokenAddr);
-      let price = 0;
-      if (tokenDef && prices) {
-        price = getTokenPrice(tokenDef.symbol, prices);
-      } else if (
-        (tokenAddr === '0x0000000000000000000000000000000000000000' || tokenAddr === 's') &&
-        prices
-      ) {
-        price = prices.sonic ?? 0;
+      // USD value at the moment of the claim (subgraph 1.0.19+). Without it — older subgraph or a
+      // token with no on-chain price source — fall back to today's price from the price feed.
+      let amountUSD: number;
+      if (event.amountUsd != null) {
+        amountUSD = Number(event.amountUsd);
+      } else {
+        const tokenDef = getTokenByAddress(tokenAddr);
+        let price = 0;
+        if (tokenDef && prices) {
+          price = getTokenPrice(tokenDef.symbol, prices);
+        } else if (
+          (tokenAddr === '0x0000000000000000000000000000000000000000' || tokenAddr === 's') &&
+          prices
+        ) {
+          price = prices.sonic ?? 0;
+        }
+        amountUSD = (Number(event.amount) / 10 ** (tokenDef?.decimals ?? 18)) * price;
       }
-
-      const amountUSD = (Number(event.amount) / 1e18) * price;
       totalHarvestedUSD += amountUSD;
 
       // Events arrive oldest-first, so the running total is monotonic

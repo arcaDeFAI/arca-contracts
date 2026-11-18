@@ -16,17 +16,31 @@ import { useTx } from '@/hooks/useTx';
 import { formatDuration, useVaultFees } from '@/hooks/useVaultFees';
 import { penaltyRate, usePoints } from '@/hooks/usePoints';
 import { Button, Card, ConnectWalletButton, Notice, Segmented, Spinner } from '@/components/ui';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
-type Tab = 'deposit' | 'withdraw';
+export type DepositTab = 'deposit' | 'withdraw';
 
 const TAB_OPTIONS = [
   { value: 'deposit', label: 'Deposit' },
   { value: 'withdraw', label: 'Withdraw' },
 ] as const;
 
-export function DepositWithdrawPanel({ config, userShares }: { config: VaultConfig; userShares: bigint }) {
+/** Deposit / Withdraw. */
+export function DepositWithdrawPanel({
+  config,
+  userShares,
+  tab: controlledTab,
+  onTabChange,
+}: {
+  config: VaultConfig;
+  userShares: bigint;
+  tab?: DepositTab;
+  onTabChange?: (tab: DepositTab) => void;
+}) {
   const { isConnected } = useAccount();
-  const [tab, setTab] = useState<Tab>('deposit');
+  const [localTab, setLocalTab] = useState<DepositTab>('deposit');
+  const tab = controlledTab ?? localTab;
+  const setTab = onTabChange ?? setLocalTab;
 
   return (
     <Card className="p-5">
@@ -35,7 +49,9 @@ export function DepositWithdrawPanel({ config, userShares }: { config: VaultConf
       </div>
       {!isConnected ? (
         <div className="py-6 text-center">
-          <p className="mb-4 text-sm text-arca-text-secondary">Connect your wallet to {tab}.</p>
+          <p className="mb-4 text-sm text-arca-text-secondary">
+            Connect your wallet to {tab}.
+          </p>
           <ConnectWalletButton />
 
         </div>
@@ -87,8 +103,8 @@ function DepositForm({ config }: { config: VaultConfig }) {
 
   const { data: allowances } = useReadContracts({
     contracts: [
-      { address: tokenXDef?.address ?? undefined, abi: ERC20_ABI, functionName: 'allowance', args: [address as `0x${string}`, vault] },
-      { address: tokenYDef?.address ?? undefined, abi: ERC20_ABI, functionName: 'allowance', args: [address as `0x${string}`, vault] },
+      { chainId: SONIC_CHAIN_ID, address: tokenXDef?.address ?? undefined, abi: ERC20_ABI, functionName: 'allowance', args: [address as `0x${string}`, vault] },
+      { chainId: SONIC_CHAIN_ID, address: tokenYDef?.address ?? undefined, abi: ERC20_ABI, functionName: 'allowance', args: [address as `0x${string}`, vault] },
     ],
     query: { enabled: !!address },
   });
@@ -126,17 +142,17 @@ function DepositForm({ config }: { config: VaultConfig }) {
       let ok = false;
       if (step.key === 'approveX' && tokenXDef?.address) {
         ok = await tx.send('approveX', () =>
-          writeContractAsync({ address: tokenXDef.address!, abi: ERC20_ABI, functionName: 'approve', args: [vault, parsedX] }),
+          writeContractAsync({ chainId: SONIC_CHAIN_ID, address: tokenXDef.address!, abi: ERC20_ABI, functionName: 'approve', args: [vault, parsedX] }),
         );
       } else if (step.key === 'approveY' && tokenYDef?.address) {
         ok = await tx.send('approveY', () =>
-          writeContractAsync({ address: tokenYDef.address!, abi: ERC20_ABI, functionName: 'approve', args: [vault, parsedY] }),
+          writeContractAsync({ chainId: SONIC_CHAIN_ID, address: tokenYDef.address!, abi: ERC20_ABI, functionName: 'approve', args: [vault, parsedY] }),
         );
       } else if (step.key === 'deposit') {
         ok = await tx.send('deposit', () =>
           isNativeX
-            ? writeContractAsync({ address: vault, abi: METRO_VAULT_ABI, functionName: 'depositNative', args: [parsedX, parsedY, 0n], value: parsedX })
-            : writeContractAsync({ address: vault, abi: METRO_VAULT_ABI, functionName: 'deposit', args: [parsedX, parsedY, 0n] }),
+            ? writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vault, abi: METRO_VAULT_ABI, functionName: 'depositNative', args: [parsedX, parsedY, 0n], value: parsedX })
+            : writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vault, abi: METRO_VAULT_ABI, functionName: 'deposit', args: [parsedX, parsedY, 0n] }),
         );
       }
       if (!ok) {
@@ -277,7 +293,7 @@ function WithdrawForm({ config, userShares }: { config: VaultConfig; userShares:
     (Number(y) / 10 ** (getToken(config.tokenY)?.decimals ?? 18)) * getTokenPrice(config.tokenY, prices);
 
   // Whole position in USD — the typed amount is converted to the same fraction of the user's shares
-  const { data: fullPreview } = useReadContract({
+  const { data: fullPreview } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: vault,
     abi: METRO_VAULT_ABI,
     functionName: 'previewAmounts',
@@ -296,7 +312,7 @@ function WithdrawForm({ config, userShares }: { config: VaultConfig; userShares:
     shares = (userShares * BigInt(Math.round(fraction * 1_000_000))) / 1_000_000n;
   }
 
-  const { data: preview } = useReadContract({
+  const { data: preview } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: vault,
     abi: METRO_VAULT_ABI,
     functionName: 'previewAmounts',
@@ -323,7 +339,7 @@ function WithdrawForm({ config, userShares }: { config: VaultConfig; userShares:
   async function handleWithdraw() {
     setQueued(false);
     const ok = await tx.send('withdraw', () =>
-      writeContractAsync({ address: vault, abi: METRO_VAULT_ABI, functionName: 'queueWithdrawal', args: [shares, address as `0x${string}`] }),
+      writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vault, abi: METRO_VAULT_ABI, functionName: 'queueWithdrawal', args: [shares, address as `0x${string}`] }),
     );
     if (ok) {
       setQueued(true);

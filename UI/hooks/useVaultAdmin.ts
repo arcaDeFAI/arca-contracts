@@ -3,6 +3,7 @@
 import { useReadContract, useReadContracts } from 'wagmi';
 import { parseAbi } from 'viem';
 import { type VaultConfig } from '@/lib/vaultConfigs';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 const VAULT_ABI = parseAbi(['function getFactory() view returns (address)']);
 const FACTORY_ABI = parseAbi([
@@ -19,7 +20,7 @@ export type AdminRole = 'owner' | 'operator';
  * rebalance timing) are shown only to these wallets.
  */
 export function useVaultAdmin(config: VaultConfig, userAddress?: string): { role: AdminRole | null } {
-  const { data: factory } = useReadContract({
+  const { data: factory } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: config.vaultAddress as `0x${string}`,
     abi: VAULT_ABI,
     functionName: 'getFactory',
@@ -28,9 +29,9 @@ export function useVaultAdmin(config: VaultConfig, userAddress?: string): { role
 
   const { data } = useReadContracts({
     contracts: [
-      { address: factory, abi: FACTORY_ABI, functionName: 'owner' },
-      { address: factory, abi: FACTORY_ABI, functionName: 'getDefaultOperator' },
-      { address: config.stratAddress as `0x${string}`, abi: STRATEGY_ABI, functionName: 'getOperator' },
+      { chainId: SONIC_CHAIN_ID, address: factory, abi: FACTORY_ABI, functionName: 'owner' },
+      { chainId: SONIC_CHAIN_ID, address: factory, abi: FACTORY_ABI, functionName: 'getDefaultOperator' },
+      { chainId: SONIC_CHAIN_ID, address: config.stratAddress as `0x${string}`, abi: STRATEGY_ABI, functionName: 'getOperator' },
     ],
     query: { enabled: !!userAddress && !!factory, staleTime: Infinity },
   });
