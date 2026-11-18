@@ -9,7 +9,6 @@ import { getPairName, PLATFORMS } from '@/lib/vaultConfigs';
 import { getTokenLogo } from '@/lib/tokenHelpers';
 import { cn, formatApr, formatUSDCompact } from '@/lib/utils';
 import { Card, PairIcons, Segmented, Skeleton, Sparkline } from '@/components/ui';
-import { CompetitorEdgeCell } from '@/components/vaults/CompetitorEdge';
 
 type SortKey = 'apr' | 'tvl' | 'deposit';
 type PlatformFilter = 'all' | 'shadow' | 'metropolis';
@@ -21,8 +20,8 @@ const PLATFORM_OPTIONS = [
 ] as const;
 
 const TREND_DAYS = 7;
-// Vault | APR | 7D trend | vs Beefy | vs ICHI | AUM fee | TVL | Your deposit | action
-const COLS = 'md:grid-cols-[minmax(0,1fr)_76px_92px_80px_80px_68px_88px_104px_84px]';
+// Vault | APR | 7D trend | TVL | Your deposit | action
+const COLS = 'md:grid-cols-[minmax(0,1fr)_76px_92px_88px_104px_84px]';
 
 interface VaultListProps {
   vaults: VaultOverview[];
@@ -67,21 +66,6 @@ export function VaultList({ vaults, isLoading, aprLoading, isConnected }: VaultL
           <span>Vault</span>
           <SortHeader label="APR" active={sort === 'apr'} onClick={() => setSort('apr')} />
           <span className="text-right">7D trend</span>
-          {(['Beefy', 'ICHI'] as const).map((m) => (
-            <span
-              key={m}
-              className="cursor-help text-right underline decoration-dotted underline-offset-2"
-              title={`How much better than ${m}'s vault on the same pair, since this vault started: net result vs keeping the initial tokens, rewards included. Hover a value for both results.`}
-            >
-              vs {m}
-            </span>
-          ))}
-          <span
-            className="cursor-help text-right underline decoration-dotted underline-offset-2"
-            title="AUM fee: a yearly % of your whole deposit (not of profits), taken in small amounts at each rebalance. E.g. 10% on $1,000 ≈ $0.27 per day."
-          >
-            AUM fee
-          </span>
           <SortHeader label="TVL" active={sort === 'tvl'} onClick={() => setSort('tvl')} />
           <SortHeader label="Your deposit" active={sort === 'deposit'} onClick={() => setSort('deposit')} />
           <span />
@@ -158,15 +142,6 @@ function VaultRow({
         <span className="hidden justify-end md:flex">
           <Sparkline values={trend} label={`${pair} APR over the last ${TREND_DAYS} days`} />
         </span>
-        <span className="hidden text-right md:block">
-          <CompetitorEdgeCell config={config} manager="beefy" />
-        </span>
-        <span className="hidden text-right md:block">
-          <CompetitorEdgeCell config={config} manager="ichi" />
-        </span>
-        <span className="hidden text-right tabular-nums text-arca-text-secondary md:block">
-          {vault.aumFeePct === null ? '—' : `${vault.aumFeePct}%`}
-        </span>
         <span className="hidden text-right tabular-nums text-arca-text md:block">{tvlCell}</span>
         <span className="hidden text-right tabular-nums text-arca-text md:block">{depositCell}</span>
         <span className="hidden justify-end md:flex">
@@ -178,7 +153,6 @@ function VaultRow({
         {/* Mobile: second line with TVL and deposit */}
         <span className="col-span-2 flex gap-4 pl-[50px] text-xs text-arca-text-secondary md:hidden">
           <span>TVL {tvlCell}</span>
-          {vault.aumFeePct !== null && <span>AUM fee {vault.aumFeePct}%/yr</span>}
           {held && <span>You {depositCell}</span>}
         </span>
       </div>

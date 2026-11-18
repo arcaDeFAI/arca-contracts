@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { usePublicClient } from 'wagmi';
+import { useAccount, usePublicClient, useSwitchChain } from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
 import { BaseError, ContractFunctionRevertedError, UserRejectedRequestError, type Hash } from 'viem';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 // Vault revert reasons (BaseVault__* on Metropolis, ShadowVault__* on Shadow) in plain words
 const REVERT_MESSAGES: Record<string, string> = {
@@ -33,9 +34,13 @@ function describeError(err: unknown): string {
  * balances, rewards and withdrawals update without a page reload.
  *
  * `pending` holds the key of the action in flight, so each button can show its own spinner.
+ * The wallet is switched to `chainId` (Sonic by default) before signing: the site also
+ * supports other chains for cross-chain deposits, and a vault transaction must never go there.
  */
-export function useTx() {
-  const publicClient = usePublicClient();
+export function useTx(chainId: number = SONIC_CHAIN_ID) {
+  const publicClient = usePublicClient({ chainId });
+  const { chainId: walletChainId } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
   const queryClient = useQueryClient();
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +50,7 @@ export function useTx() {
     setPending(key);
     setError(null);
     try {
+      if (walletChainId !== chainId) await switchChainAsync({ chainId });
       const hash = await write();
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       if (receipt.status !== 'success') throw new Error('Transaction reverted.');

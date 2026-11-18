@@ -14,6 +14,7 @@ import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { cn, formatUSD } from '@/lib/utils';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { Card } from '@/components/ui';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 const LAST_REBALANCE_ABI = parseAbi(['function getLastRebalance() view returns (uint256)']);
 const EXPLORER = 'https://sonicscan.org/address/';
@@ -65,9 +66,9 @@ export function AdminPanel({ config, role, snapshotCount }: { config: VaultConfi
   const { unpricedRewardEvents } = useVaultHistory(config.vaultAddress);
 
   const strat = config.stratAddress as `0x${string}`;
-  const { data: balances } = useReadContract({ address: strat, abi: METRO_STRAT_ABI, functionName: 'getBalances' });
-  const { data: idle } = useReadContract({ address: strat, abi: METRO_STRAT_ABI, functionName: 'getIdleBalances' });
-  const { data: lastRebalance } = useReadContract({ address: strat, abi: LAST_REBALANCE_ABI, functionName: 'getLastRebalance' });
+  const { data: balances } = useReadContract({ chainId: SONIC_CHAIN_ID, address: strat, abi: METRO_STRAT_ABI, functionName: 'getBalances' });
+  const { data: idle } = useReadContract({ chainId: SONIC_CHAIN_ID, address: strat, abi: METRO_STRAT_ABI, functionName: 'getIdleBalances' });
+  const { data: lastRebalance } = useReadContract({ chainId: SONIC_CHAIN_ID, address: strat, abi: LAST_REBALANCE_ABI, functionName: 'getLastRebalance' });
 
   const toUsd = (x: bigint, y: bigint) =>
     (Number(x) / 10 ** getTokenDecimals(config.tokenX)) * getTokenPrice(config.tokenX, prices) +
@@ -127,11 +128,11 @@ export function AdminPanel({ config, role, snapshotCount }: { config: VaultConfi
         <Item label="AUM fee" value={aumFeePct === null ? '—' : `${aumFeePct}% / year`} />
       </dl>
 
-      {/* Where the depositor's return came from, vs holding the same tokens. No trading fees: gauge LPs earn emissions only. */}
+      {/* Where the depositor's return came from, vs holding 50/50. No trading fees: gauge LPs earn emissions only. */}
       <table className="mt-4 w-full text-sm">
         <thead>
           <tr className="text-xs text-arca-text-secondary">
-            <th className="pb-1.5 text-left font-normal">vs holding</th>
+            <th className="pb-1.5 text-left font-normal">vs holding 50/50</th>
             <th className="pb-1.5 text-right font-normal">30D</th>
             <th className="pb-1.5 text-right font-normal">Since start</th>
           </tr>
@@ -139,7 +140,7 @@ export function AdminPanel({ config, role, snapshotCount }: { config: VaultConfi
         <tbody className="tabular-nums">
           <BreakdownRow label="Rewards" a={perf.windows['30d']?.rewardReturn} b={perf.windows.all?.rewardReturn} />
           <BreakdownRow label="AUM fee" a={negate(perf.windows['30d']?.aumFeeCost)} b={negate(perf.windows.all?.aumFeeCost)} />
-          <BreakdownRow label="Rebalancing IL" a={perf.windows['30d']?.rebalancingIl} b={perf.windows.all?.rebalancingIl} />
+          <BreakdownRow label="Rebalancing + token mix" a={perf.windows['30d']?.rebalancingIl} b={perf.windows.all?.rebalancingIl} />
           <BreakdownRow label="Net vs holding" a={perf.windows['30d']?.vsHold} b={perf.windows.all?.vsHold} strong />
         </tbody>
       </table>

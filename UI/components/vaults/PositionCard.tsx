@@ -10,6 +10,7 @@ import { usePrices } from '@/contexts/PriceContext';
 import { useVaultPosition, type PendingReward } from '@/hooks/useVaultPosition';
 import { useTx } from '@/hooks/useTx';
 import { Button, Card, Notice } from '@/components/ui';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 export function rewardsUsd(rewards: PendingReward[], prices: Record<string, number>): number {
   return rewards.reduce((sum, r) => {
@@ -89,7 +90,7 @@ export function PositionCard({ config, depositUsd, shareRatio }: PositionCardPro
           className="mt-3 w-full"
           disabled={!claimable}
           loading={tx.pending === 'claim'}
-          onClick={() => tx.send('claim', () => writeContractAsync({ address: vault, abi, functionName: 'claim' }))}
+          onClick={() => tx.send('claim', () => writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vault, abi, functionName: 'claim' }))}
         >
           Claim rewards
         </Button>
@@ -104,7 +105,7 @@ export function PositionCard({ config, depositUsd, shareRatio }: PositionCardPro
             disabled={tx.pending !== null}
             onClick={() =>
               tx.send(`redeem-${w.round}`, () =>
-                writeContractAsync({ address: vault, abi, functionName: 'redeemQueuedWithdrawal', args: [w.round, address] }),
+                writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vault, abi, functionName: 'redeemQueuedWithdrawal', args: [w.round, address] }),
               )
             }
           >
@@ -125,7 +126,7 @@ export function PositionCard({ config, depositUsd, shareRatio }: PositionCardPro
             disabled={tx.pending !== null}
             onClick={() =>
               tx.send('cancel', () =>
-                writeContractAsync({ address: vault, abi, functionName: 'cancelQueuedWithdrawal', args: [position.queuedShares] }),
+                writeContractAsync({ chainId: SONIC_CHAIN_ID, address: vault, abi, functionName: 'cancelQueuedWithdrawal', args: [position.queuedShares] }),
               )
             }
           >

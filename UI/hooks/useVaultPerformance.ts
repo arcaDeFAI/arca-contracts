@@ -27,7 +27,7 @@ export interface PerformanceWindow {
   shareReturn: number;   // USD value of one share: price moves + rebalancing IL − AUM fee (no fees: gauge LPs earn emissions only)
   rewardReturn: number;  // rewards paid per $1 held (sum of daily rewards ÷ that day's TVL)
   vaultReturn: number;   // shareReturn + rewardReturn — what a depositor actually got
-  holdReturn: number;    // holding the exact tokens one share held at the start
+  holdReturn: number;    // holding 50/50: the share's starting value split half in each token, untouched
   vsHold: number;        // vaultReturn − holdReturn
   aumFeeCost: number;    // AUM fee over the window (≈ fee% × days/365)
   rebalancingIl: number; // what's left: shareReturn − holdReturn + aumFeeCost (≤ 0 means IL)
@@ -39,7 +39,7 @@ const snapshotFields = 'amountXPerShare amountYPerShare priceXUsd priceYUsd time
 const priced = 'priceXUsd_not: null, priceYUsd_not: null, amountXPerShare_gt: "0"';
 
 /**
- * Depositor performance vs simply holding the tokens, per window. Computed from rebalance
+ * Depositor performance vs holding the two tokens 50/50, per window. Computed from rebalance
  * snapshots (share composition + USD prices) and daily rewards in the subgraph.
  */
 export function useVaultPerformance(config: VaultConfig, aumFeePct: number | null) {
@@ -80,7 +80,8 @@ export function useVaultPerformance(config: VaultConfig, aumFeePct: number | nul
     const pps0 = ax0 * px0 + ay0 * py0;
     if (pps0 <= 0) return null;
     const shareReturn = (ax1 * px1 + ay1 * py1) / pps0 - 1;
-    const holdReturn = (ax0 * px1 + ay0 * py1) / pps0 - 1;
+    // same benchmark as the dashboard: $1 split 50/50 into the two tokens at the start
+    const holdReturn = 0.5 * (px1 / px0) + 0.5 * (py1 / py0) - 1;
 
     let rewardReturn = 0;
     let tvl: number | null = null;

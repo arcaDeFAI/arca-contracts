@@ -95,7 +95,7 @@ export function useCompetitorPerformance(config: VaultConfig, first?: SnapshotRa
             const v0 = x0 * px0 + y0 * py0;
             if (v0 <= 0) return null; // did not exist yet at the start of the window
             const share = (x1 * px1 + y1 * py1) / v0 - 1;
-            const hold = (x0 * px1 + y0 * py1) / v0 - 1;
+            const hold = 0.5 * (px1 / px0) + 0.5 * (py1 / py0) - 1; // 50/50, same as our vault
             return { manager: c.manager, name: c.name, vsHold: share - hold };
           } catch {
             return null; // not deployed yet at that block, or RPC without history

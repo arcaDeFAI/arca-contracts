@@ -5,6 +5,7 @@ import { useReadContract, useReadContracts } from 'wagmi';
 import { parseAbi } from 'viem';
 import { METRO_VAULT_ABI, SHADOW_VAULT_ABI, SHADOW_STRAT_ABI, METRO_STRAT_ABI } from '@/lib/typechain';
 import { isShadowVault, type VaultConfig } from '@/lib/vaultConfigs';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 export interface PendingReward {
   token: `0x${string}`;
@@ -34,7 +35,7 @@ export function useVaultPosition(config: VaultConfig, userAddress: string | unde
   const user = userAddress as `0x${string}` | undefined;
 
   // ── Rewards already in the vault ─────────────────────────────────────────
-  const { data: vaultRewardsRaw } = useReadContract({
+  const { data: vaultRewardsRaw } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: vault,
     abi: shadow ? SHADOW_VAULT_ABI : METRO_VAULT_ABI,
     functionName: 'getPendingRewards',
@@ -44,7 +45,7 @@ export function useVaultPosition(config: VaultConfig, userAddress: string | unde
   const vaultRewards = vaultRewardsRaw as readonly UserRewardRaw[] | undefined;
 
   // ── Shadow: rewards still in the gauge ───────────────────────────────────
-  const { data: rewardStatusRaw } = useReadContract({
+  const { data: rewardStatusRaw } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: strat,
     abi: SHADOW_STRAT_ABI,
     functionName: 'getRewardStatus',
@@ -53,13 +54,13 @@ export function useVaultPosition(config: VaultConfig, userAddress: string | unde
   const rewardStatus = rewardStatusRaw as RewardStatusRaw | undefined;
 
   // ── Metropolis: rewards still in the LB rewarder for the active bins ─────
-  const { data: metroRange } = useReadContract({
+  const { data: metroRange } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: strat,
     abi: METRO_STRAT_ABI,
     functionName: 'getRange',
     query: { enabled: !shadow },
   });
-  const { data: hooksParams } = useReadContract({
+  const { data: hooksParams } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: shadow ? undefined : (config.lbBookAddress as `0x${string}`),
     abi: LB_HOOKS_ABI,
     functionName: 'getLBHooksParameters',
@@ -73,7 +74,7 @@ export function useVaultPosition(config: VaultConfig, userAddress: string | unde
     for (let i = Number(lower); i <= Number(upper); i++) ids.push(BigInt(i));
     return ids;
   }, [metroRange]);
-  const { data: unharvestedMetro } = useReadContract({
+  const { data: unharvestedMetro } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: rewarder,
     abi: LB_REWARDER_ABI,
     functionName: 'getPendingRewards',
@@ -96,13 +97,13 @@ export function useVaultPosition(config: VaultConfig, userAddress: string | unde
   }, [vaultRewards, rewardStatus, unharvestedMetro, shareRatio, shadow]);
 
   // ── Withdrawals ──────────────────────────────────────────────────────────
-  const { data: currentRound } = useReadContract({
+  const { data: currentRound } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: vault,
     abi: METRO_VAULT_ABI,
     functionName: 'getCurrentRound',
   });
 
-  const { data: queuedShares } = useReadContract({
+  const { data: queuedShares } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: vault,
     abi: METRO_VAULT_ABI,
     functionName: 'getQueuedWithdrawal',
@@ -114,6 +115,7 @@ export function useVaultPosition(config: VaultConfig, userAddress: string | unde
   const pastRounds = user && currentRound ? Number(currentRound) : 0;
   const { data: pastRoundResults } = useReadContracts({
     contracts: Array.from({ length: pastRounds }, (_, i) => ({
+      chainId: SONIC_CHAIN_ID,
       address: vault,
       abi: METRO_VAULT_ABI,
       functionName: 'getQueuedWithdrawal' as const,

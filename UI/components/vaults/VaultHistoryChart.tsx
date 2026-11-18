@@ -1,10 +1,7 @@
 'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { averageApr, useVaultHistory, type HistoryPoint } from '@/hooks/useVaultHistory';
-import { querySubgraph } from '@/lib/subgraph';
-import { getTokenDecimals } from '@/lib/tokenHelpers';
 import { type VaultConfig } from '@/lib/vaultConfigs';
 import { cn, formatApr, formatUSD, formatUSDCompact } from '@/lib/utils';
 import { Card, Segmented, Skeleton } from '@/components/ui';
@@ -17,7 +14,7 @@ type Range = '7' | '30' | '90' | 'all';
 const METRIC_OPTIONS = [
   { value: 'apr', label: 'APR' },
   { value: 'tvl', label: 'TVL' },
-  { value: 'hold', label: 'vs Holding' },
+  { value: 'hold', label: 'Performance' },
 ] as const;
 
 export const RANGE_OPTIONS = [
@@ -35,46 +32,20 @@ const START = 100;
 /** Dashed "$100 in one token" lines; stablecoins are left out (flat at $100). */
 const TOKEN_COLORS = ['#60a5fa', '#f59e0b'];
 
-/** Token amounts one share held at the first priced rebalance on/after `date` (the "holding" basket). */
-function useStartBasket(config: VaultConfig, date: number | null) {
-  const id = config.vaultAddress.toLowerCase();
-  const { data } = useQuery({
-    queryKey: ['subgraph', 'startBasket', id, date],
-    queryFn: () =>
-      querySubgraph<{ snapshots: Array<{ amountXPerShare: string; amountYPerShare: string }> }>(`{
-        snapshots(where: { vault: "${id}", timestamp_gte: "${date}", priceXUsd_not: null, priceYUsd_not: null, amountXPerShare_gt: "0" },
-          orderBy: timestamp, orderDirection: asc, first: 1) { amountXPerShare amountYPerShare }
-      }`),
-    enabled: date !== null,
-    staleTime: Infinity,
-  });
-  const s = data?.snapshots[0];
-  if (!s) return null;
-  return {
-    x: Number(s.amountXPerShare) / 10 ** getTokenDecimals(config.tokenX),
-    y: Number(s.amountYPerShare) / 10 ** getTokenDecimals(config.tokenY),
-  };
-}
-
 /**
  * Growth of $100 from the first day of the range: the vault (share value + rewards collected,
- * rewards valued the day they were paid) vs holding the tokens one share held on that day.
+ * rewards valued the day they were paid) vs the same $100 held 50/50 in the two tokens from that day.
  */
-function buildHoldSeries(
-  visible: HistoryPoint[],
-  basket: { x: number; y: number } | null,
-  tokens: { x: boolean; y: boolean },
-): SeriesPoint[] {
+function buildHoldSeries(visible: HistoryPoint[], tokens: { x: boolean; y: boolean }): SeriesPoint[] {
   const start = visible.findIndex((p) => p.ppsUsd !== null && p.priceXUsd !== null && p.priceYUsd !== null);
-  if (start < 0 || !basket) return [];
+  if (start < 0) return [];
   const p0 = visible[start];
-  const basket0 = basket.x * p0.priceXUsd! + basket.y * p0.priceYUsd!;
-  if (basket0 <= 0) return [];
 
   let rewards = 0;
   return visible.slice(start).map((p, i) => {
     if (i > 0 && p.tvlUsd) rewards += p.rewardsUsd / p.tvlUsd;
-    const hold = p.priceXUsd !== null && p.priceYUsd !== null ? (basket.x * p.priceXUsd + basket.y * p.priceYUsd) / basket0 : null;
+    const hold =
+      p.priceXUsd !== null && p.priceYUsd !== null ? 0.5 * (p.priceXUsd / p0.priceXUsd!) + 0.5 * (p.priceYUsd / p0.priceYUsd!) : null;
     const vault = p.ppsUsd !== null ? p.ppsUsd / p0.ppsUsd! + rewards : null;
     const lines: (number | null)[] = [];
     if (tokens.x) lines.push(p.priceXUsd !== null ? (START * p.priceXUsd) / p0.priceXUsd! : null);
@@ -89,8 +60,6 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
   const [range, setRange] = useState<Range>('30');
 
   const visible = useMemo(() => sliceRange(points, range), [points, range]);
-  const startDate = metric === 'hold' ? (visible.find((p) => p.ppsUsd !== null)?.date ?? null) : null;
-  const basket = useStartBasket(config, startDate);
   const tokenLines = useMemo(() => {
     const shown = { x: !isStablecoin(config.tokenX), y: !isStablecoin(config.tokenY) };
     const lines: ExtraLine[] = [];
@@ -100,9 +69,9 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
   }, [config.tokenX, config.tokenY]);
 
   const series = useMemo<SeriesPoint[]>(() => {
-    if (metric === 'hold') return buildHoldSeries(visible, basket, tokenLines.shown);
+    if (metric === 'hold') return buildHoldSeries(visible, tokenLines.shown);
     return visible.map((p) => ({ date: p.date, value: metric === 'apr' ? p.apr : p.tvlUsd }));
-  }, [visible, metric, basket, tokenLines]);
+  }, [visible, metric, tokenLines]);
 
   const rangeLabel = RANGE_OPTIONS.find((o) => o.value === range)?.label ?? '';
   const last = series.at(-1);
@@ -122,7 +91,7 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
           {diff !== null && (
             <span className={cn('text-sm font-medium', diff >= 0 ? 'text-arca-green' : 'text-red-400')}>
               {diff >= 0 ? '+' : '−'}
-              {formatUSD(Math.abs(diff))} vs holding
+              {formatUSD(Math.abs(diff))} vs holding 50/50
             </span>
           )}
         </div>
@@ -143,7 +112,7 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
       {status === 'ready' && metric === 'hold' && (
         <div className="-mt-2 mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-arca-text-secondary">
           <LegendItem color={SERIES_COLOR} label="This vault, rewards included" />
-          <LegendItem color={COMPARE_COLOR} label="If you had just kept your initial tokens" />
+          <LegendItem color={COMPARE_COLOR} label="Held 50/50" />
           {tokenLines.lines.map((l) => (
             <LegendItem key={l.name} color={l.color} label={l.name} dashed />
           ))}
@@ -173,7 +142,7 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
             <TimeSeriesChart
               points={series}
               name="vault"
-              compareName="holding"
+              compareName="held 50/50"
               lines={tokenLines.lines}
               format={(v) => (v === null ? '—' : formatUSD(v))}
               axisFormat={(v) => `$${Math.round(v)}`}
@@ -184,7 +153,7 @@ export function VaultHistoryChart({ config }: { config: VaultConfig }) {
       {status === 'ready' && (
         <p className="mt-3 text-xs text-arca-text-tertiary">
           {metric === 'hold'
-            ? 'Growth of $100 from the start of the period: share value plus rewards collected (valued the day they were paid), vs just keeping your initial tokens (the token mix the vault held on the first day, untouched). Dashed lines: $100 kept in a single token.'
+            ? 'Growth of $100 from the start of the period: share value plus rewards collected (valued the day they were paid), vs the same $100 split 50/50 into the two tokens on the first day and held. Dashed lines: $100 kept in a single token.'
             : metric === 'apr'
               ? 'Each point is the APR over the previous 7 days, which smooths out day-to-day swings in rewards.'
               : 'Total value in the vault.'}

@@ -4,7 +4,7 @@
 // Pinned in code (not an env var) so every environment uses the same, validated subgraph
 // version — bump this after deploying and validating a new version on Goldsky.
 const SUBGRAPH_URL =
-  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.18/gn';
+  'https://api.goldsky.com/api/public/project_cmkigrmrzomyu01uffa1n57a5/subgraphs/arca-vaults/1.0.19/gn';
 
 /**
  * Unix timestamp (seconds) of the Sonic block this subgraph starts indexing from.
@@ -76,6 +76,8 @@ export interface SnapshotEntity {
 }
 
 export interface UserHarvestEventEntity {
+  /** USD value at claim time — subgraph 1.0.19+, null when the token had no price source */
+  amountUsd?: string | null;
   id: string;
   vault: { id: string };
   user: string;
