@@ -113,6 +113,8 @@ export function TimeSeriesChart({
             stroke={SERIES_COLOR}
             strokeWidth={2}
             fill={`url(#${fillId})`}
+            // fill down to the bottom of the chart, never up towards 0 when values are negative
+            baseValue="dataMin"
             connectNulls
             isAnimationActive={false}
             activeDot={{ r: 4, fill: SERIES_COLOR, stroke: '#12161e', strokeWidth: 2 }}

@@ -3,6 +3,7 @@
 import { useReadContract } from 'wagmi';
 import { parseAbi } from 'viem';
 import { type VaultConfig } from '@/lib/vaultConfigs';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 const STRATEGY_ABI = parseAbi(['function getAumAnnualFee() view returns (uint256)']);
 const VAULT_ABI = parseAbi(['function getFactory() view returns (address)']);
@@ -17,21 +18,21 @@ const FACTORY_ABI = parseAbi(['function getDepositToWithdrawCooldown() view retu
  * Cooldown: after each deposit, a wallet can't queue a withdrawal until this many seconds have passed.
  */
 export function useVaultFees(config: VaultConfig) {
-  const { data: aumBps } = useReadContract({
+  const { data: aumBps } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: config.stratAddress as `0x${string}`,
     abi: STRATEGY_ABI,
     functionName: 'getAumAnnualFee',
     query: { staleTime: 10 * 60 * 1000 },
   });
 
-  const { data: factory } = useReadContract({
+  const { data: factory } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: config.vaultAddress as `0x${string}`,
     abi: VAULT_ABI,
     functionName: 'getFactory',
     query: { staleTime: Infinity },
   });
 
-  const { data: cooldown } = useReadContract({
+  const { data: cooldown } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: factory,
     abi: FACTORY_ABI,
     functionName: 'getDepositToWithdrawCooldown',

@@ -8,6 +8,7 @@ import { usePrices } from '@/contexts/PriceContext';
 import { getTokenDecimals, getTokenPrice } from '@/lib/tokenHelpers';
 import { useAllSubgraphMetrics, type SubgraphMetrics } from './useSubgraphMetrics';
 import { averageApr, MIN_APR_HISTORY_DAYS, useAllVaultHistories } from './useVaultHistory';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 export interface VaultOverview {
   config: VaultConfig;
@@ -33,6 +34,7 @@ export function useVaultsOverview(userAddress?: string) {
 
   const balancesQ = useReadContracts({
     contracts: VAULT_CONFIGS.map((c) => ({
+      chainId: SONIC_CHAIN_ID,
       address: c.stratAddress as `0x${string}`,
       abi: METRO_STRAT_ABI,
       functionName: 'getBalances' as const,
@@ -42,6 +44,7 @@ export function useVaultsOverview(userAddress?: string) {
   // AUM fee in basis points (strategy.getAumAnnualFee), same call on both protocols
   const feeQ = useReadContracts({
     contracts: VAULT_CONFIGS.map((c) => ({
+      chainId: SONIC_CHAIN_ID,
       address: c.stratAddress as `0x${string}`,
       abi: METRO_STRAT_ABI,
       functionName: 'getAumAnnualFee' as const,
@@ -51,6 +54,7 @@ export function useVaultsOverview(userAddress?: string) {
 
   const supplyQ = useReadContracts({
     contracts: VAULT_CONFIGS.map((c) => ({
+      chainId: SONIC_CHAIN_ID,
       address: c.vaultAddress as `0x${string}`,
       abi: METRO_VAULT_ABI,
       functionName: 'totalSupply' as const,
@@ -59,6 +63,7 @@ export function useVaultsOverview(userAddress?: string) {
 
   const userQ = useReadContracts({
     contracts: VAULT_CONFIGS.map((c) => ({
+      chainId: SONIC_CHAIN_ID,
       address: c.vaultAddress as `0x${string}`,
       abi: METRO_VAULT_ABI,
       functionName: 'balanceOf' as const,

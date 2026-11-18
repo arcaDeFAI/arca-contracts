@@ -7,7 +7,7 @@ import { MetroVault } from "../generated/MetroStrategyUSSDUSDC/MetroVault"
 import { CLPool } from "../generated/ShadowStrategyUSSDUSDC/CLPool"
 import { LBPair } from "../generated/MetroStrategyUSSDUSDC/LBPair"
 import { PriceERC20 } from "../generated/ShadowStrategyUSSDUSDC/PriceERC20"
-import { Vault, RewardEvent, Snapshot, ILSnapshot, UserHarvestEvent, TokenPrice, VaultDayData, UserVaultPosition } from "../generated/schema"
+import { Vault, RewardEvent, Snapshot, ILSnapshot, UserHarvestEvent, TokenPrice, VaultDayData, UserVaultPosition, UserShareEvent } from "../generated/schema"
 
 // â”€â”€ Shadow: Strategy â†’ Vault address map â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function getShadowVault(strategy: Bytes): Bytes {
@@ -358,6 +358,8 @@ function recordSnapshot(
     if (vault) {
       vault.lastTvlUsd = tvlUsd
       if (ppsUsd.gt(BD_ZERO)) vault.lastPpsUsd = ppsUsd
+      vault.lastPriceXUsd = priceXUsd
+      vault.lastPriceYUsd = priceYUsd
       vault.save()
     }
     let day = getOrCreateDayData(vaultAddress, timestamp)
@@ -636,6 +638,22 @@ function settledPosition(vault: Vault, user: Address, timestamp: BigInt): UserVa
   return pos
 }
 
+// One row of a wallet's share history, valued at the vault's last rebalance prices
+function recordShareEvent(event: ShareTransfer, vault: Vault, user: Address, kind: string, side: i32): void {
+  let row = new UserShareEvent(event.transaction.hash.concatI32(event.logIndex.toI32()).concatI32(side))
+  row.user = user
+  row.vault = vault.id
+  row.timestamp = event.block.timestamp
+  row.kind = kind
+  row.shares = event.params.value
+  row.valueUsd = vault.lastPpsUsd !== null
+    ? event.params.value.toBigDecimal().times(vault.lastPpsUsd!).div(SHARE_UNIT)
+    : null
+  row.priceXUsd = vault.lastPriceXUsd
+  row.priceYUsd = vault.lastPriceYUsd
+  row.save()
+}
+
 // Vault share Transfer. Shares leaving a wallet (withdrawal request to the strategy, transfer,
 // burn) forfeit points; shares arriving (deposit, transfer, cancelled withdrawal) blend the entry time.
 export function handleVaultShareTransfer(event: ShareTransfer): void {
@@ -656,6 +674,8 @@ export function handleVaultShareTransfer(event: ShareTransfer): void {
       pos.shares = pos.shares.minus(taken)
     }
     pos.save()
+    let toStrat = !strategy.reverted && to.equals(strategy.value)
+    recordShareEvent(event, vault, from, toStrat || to.equals(ZERO_ADDRESS) ? "withdraw" : "transferOut", 0)
   }
 
   let toStrategy = !strategy.reverted && to.equals(strategy.value)
@@ -668,5 +688,6 @@ export function handleVaultShareTransfer(event: ShareTransfer): void {
     }
     pos.shares = total
     pos.save()
+    recordShareEvent(event, vault, to, from.equals(ZERO_ADDRESS) ? "deposit" : fromStrategy ? "cancel" : "transferIn", 1)
   }
 }

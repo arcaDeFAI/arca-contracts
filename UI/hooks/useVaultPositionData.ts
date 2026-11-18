@@ -3,6 +3,7 @@
 import { useReadContract } from 'wagmi';
 import { METRO_VAULT_ABI, SHADOW_STRAT_ABI, LB_BOOK_ABI, CL_POOL_ABI } from '@/lib/typechain';
 import { getTokenDecimals } from '@/lib/tokenHelpers';
+import { SONIC_CHAIN_ID } from '@/lib/chains';
 
 interface UseVaultPositionDataProps {
   vaultAddress: string;
@@ -81,21 +82,21 @@ export function useVaultPositionData({
   const dY = getTokenDecimals(tokenY);
 
   // ── Metro ─────────────────────────────────────────────────────────────────
-  const { data: activeIdReal } = useReadContract({
+  const { data: activeIdReal } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: lbBookAddress as `0x${string}`,
     abi: LB_BOOK_ABI,
     functionName: 'getActiveId',
     query: { enabled: !!lbBookAddress && isMetropolis },
   });
 
-  const { data: binStepData } = useReadContract({
+  const { data: binStepData } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: lbBookAddress as `0x${string}`,
     abi: LB_BOOK_ABI,
     functionName: 'getBinStep',
     query: { enabled: !!lbBookAddress && isMetropolis },
   });
 
-  const { data: rangeDataMetro } = useReadContract({
+  const { data: rangeDataMetro } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: vaultAddress as `0x${string}`,
     abi: METRO_VAULT_ABI,
     functionName: 'getRange',
@@ -103,14 +104,14 @@ export function useVaultPositionData({
   });
 
   // ── Shadow ────────────────────────────────────────────────────────────────
-  const { data: slot0Data } = useReadContract({
+  const { data: slot0Data } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: clpoolAddress as `0x${string}`,
     abi: CL_POOL_ABI,
     functionName: 'slot0',
     query: { enabled: !!clpoolAddress && isShadow },
   });
 
-  const { data: rangeDataShadow } = useReadContract({
+  const { data: rangeDataShadow } = useReadContract({ chainId: SONIC_CHAIN_ID,
     address: stratAddress as `0x${string}`,
     abi: SHADOW_STRAT_ABI,
     functionName: 'getRange',
